@@ -47,7 +47,7 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                     <Link href="/" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: '2px', lineHeight: 1, textDecoration: 'none' }}>
                         <span style={{ fontSize: '1.5rem', fontWeight: 900, letterSpacing: '-0.05em' }} className="gradient-text">Modern Portfolio Tracker</span>
-                        <span style={{ fontSize: '0.7rem', opacity: 0.6, fontWeight: 500, color: 'var(--text-secondary)' }}>Track your wealth.</span>
+                        <span style={{ fontSize: '0.7rem', opacity: 0.6, fontWeight: 500, color: 'var(--text-secondary)' }}>Track your wealth in modern way!</span>
                     </Link>
                 </div>
 
