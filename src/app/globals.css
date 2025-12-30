@@ -272,86 +272,77 @@ body.light .glass-input:focus {
     display: none;
   }
 
-  .navbar-search-container {
-    display: none;
-  }
+  .navbar-search-container {}
 
   /* Hide search in top nav on mobile, maybe restore elsewhere */
 
-  /* Asset Table Mobile Card View */
+  /* Asset Table Mobile Compact View (Single Line) */
   .asset-table-header {
     display: none !important;
   }
 
   .asset-table-grid {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    /* Two main columns */
-    gap: 0.5rem 1rem !important;
-    /* Row Gap 0.5rem, Col Gap 1rem */
-    padding: 0.8rem !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0.8rem 1rem !important;
     border: none !important;
-    /* Remove individual borders */
     background: transparent !important;
-    /* Let nth-child handle bg */
     border-bottom: 1px solid var(--glass-border) !important;
-    align-items: center;
     width: 100%;
     margin: 0 !important;
     box-sizing: border-box;
+    gap: 0.5rem !important;
+    height: auto !important;
+    /* Let content define height but keep it tight */
   }
 
-  /* Zebra Striping for Mobile Rows */
-  /* We need a parent selector context usually, but since these are divs in a container, 
-     we rely on the component wrapping them. If SortableAssetRow is the direct child, 
-     we might need to style that or ensure these grids alternate. 
-     Assuming DashboardV2 renders mapped divs. */
+  /* Zebra Striping logic remains from component style injection, layout handled here */
 
-  /* NAME (Top Left - Full Width) */
+  /* 1. ASSET (Name/Icon) - Left Aligned */
   .asset-table-grid>div:nth-child(1) {
-    grid-column: 1 / -1;
-    width: 100%;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    padding-bottom: 0.4rem;
-    margin-bottom: 0.2rem;
+    flex: 1 !important;
+    /* Grow to fill space */
+    width: auto !important;
+    margin: 0 !important;
+    border: none !important;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    /* Prevent text spill */
   }
 
-  /* PRICE (Left Col) */
-  .asset-table-grid>div:nth-child(2) {
-    text-align: left !important;
-    justify-content: flex-start !important;
-  }
-
-  /* HOLDINGS (Right Col) */
-  .asset-table-grid>div:nth-child(3) {
-    text-align: right !important;
-    justify-content: flex-end !important;
-    /* Label 'Shares' logic needs to be inside component or assumed known */
-  }
-
-  /* VALUE (Left Col - Row 2) */
-  .asset-table-grid>div:nth-child(4) {
-    text-align: left !important;
-    justify-content: flex-start !important;
-    /* Force it to clean new row if needed, but grid flow handles it */
-  }
-
-  /* P&L (Right Col - Row 2 - Combined Daily/Total if needed or stacked) */
-  /* Let's hide Daily on mobile to save space, show Total P&L */
-  .asset-table-grid>div:nth-child(5) {
-    display: none !important;
-  }
-
-  .asset-table-grid>div:nth-child(6) {
-    /* Total P&L */
-    text-align: right !important;
-    justify-content: flex-end !important;
-  }
-
-  /* ACTIONS (Absolute or Bottom) */
+  /* HIDE Columns: Price (2), Holdings (3), Daily P&L (5), Actions (7) */
+  .asset-table-grid>div:nth-child(2),
+  .asset-table-grid>div:nth-child(3),
+  .asset-table-grid>div:nth-child(5),
   .asset-table-grid>div:nth-child(7) {
     display: none !important;
-    /* Hide actions on mobile list to reduce clutter, click for details? */
+  }
+
+  /* 4. VALUE (Total EUR) - Right Aligned */
+  .asset-table-grid>div:nth-child(4) {
+    width: auto !important;
+    text-align: right !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    white-space: nowrap;
+  }
+
+  /* 6. TOTAL P&L (Percentage/Value) - Right Aligned (Next to Value) */
+  .asset-table-grid>div:nth-child(6) {
+    width: auto !important;
+    text-align: right !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    font-size: 0.85rem !important;
+    white-space: nowrap;
+    margin-left: 0.5rem;
+    /* Gap between Value and P&L */
   }
 
 
