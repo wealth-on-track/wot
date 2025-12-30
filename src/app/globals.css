@@ -276,6 +276,15 @@ body.light .glass-input:focus {
 
   /* Hide search in top nav on mobile, maybe restore elsewhere */
 
+  /* Sortable Row Layout Fix */
+  .sortable-asset-row {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden;
+    /* Force containment */
+  }
+
   /* Asset Table Mobile Compact View (2-Row Grid) */
   .asset-table-header {
     display: none !important;
@@ -283,11 +292,12 @@ body.light .glass-input:focus {
 
   .asset-table-grid {
     display: grid !important;
-    /* Use minmax(0, ...) to allow shrinking below content size */
-    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) !important;
+    /* Strict columns: 55% Left, 45% Right approx, allowing shrink */
+    grid-template-columns: minmax(0, 5.5fr) minmax(0, 4.5fr) !important;
     grid-template-rows: auto auto !important;
     align-items: center !important;
-    padding: 0.8rem 1rem !important;
+    padding: 0.6rem 0.5rem !important;
+    /* Reduced side padding from 1rem to 0.5rem */
     border: none !important;
     background: transparent !important;
     border-bottom: 1px solid var(--glass-border) !important;
@@ -295,30 +305,29 @@ body.light .glass-input:focus {
     max-width: 100% !important;
     margin: 0 !important;
     box-sizing: border-box !important;
-    gap: 0.3rem 0.5rem !important;
-    /* Row Gap, Col Gap */
+    gap: 0.2rem 0.5rem !important;
     height: auto !important;
+    overflow: hidden !important;
+    /* Clip any potential spill */
   }
 
-  /* Ensure grid items can shrink */
+  /* Ensure ALL grid items truncate and don't expand */
   .asset-table-grid>div {
     min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
-
-
 
   /* Zebra Striping logic remains */
 
-  /* 1. ASSET (Name/Icon) - Row 1, Col 1 (Spans 1 to start) */
+  /* 1. ASSET (Name/Icon) - Row 1, Col 1 */
   .asset-table-grid>div:nth-child(1) {
     grid-column: 1;
     grid-row: 1;
     width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
     display: flex;
     align-items: center;
-    overflow: hidden;
   }
 
   /* 2. PRICE - Row 2, Col 1 */
@@ -331,39 +340,29 @@ body.light .glass-input:focus {
     opacity: 0.7;
     justify-content: flex-start !important;
     margin-top: 0.1rem;
+    align-items: center;
+    /* Ensure vertical center */
   }
 
-  /* 3. HOLDINGS - Row 2, Col 1 (Next to Price? or Hidden?) */
-  /* Let's Try: Price | Holdings in same cell? No, separate divs. 
-     We can put Price in Row 2 Col 1. Holdings?
-     Maybe user meant Cost = Holdings * Price? 
-     Let's put Holdings in Row 2, Col 1 as well? 
-     Actually grid placement allows overlapping but that's bad.
-     Let's make Price Row 2 Col 1.
-     Hidden: Holdings (3) for now unless space permits.
-     User asked for "Cost and Price". Holdings is close to Cost.
-     Let's try to fit both in Row 2 Col 1 using flex if possible? 
-     No, they are separate divs. 
-     Let's put Price in Row 2 Col 1. 
-  */
+  /* 3. HOLDINGS - Hidden */
   .asset-table-grid>div:nth-child(3) {
     display: none !important;
   }
 
-  /* 4. VALUE (Total EUR) - Row 1, Col 2 (Right Aligned) */
+  /* 4. VALUE - Row 1, Col 2 (Right Aligned) */
   .asset-table-grid>div:nth-child(4) {
     grid-column: 2;
     grid-row: 1;
-    width: auto !important;
+    width: 100% !important;
+    /* Fill cell */
     text-align: right !important;
     display: flex !important;
     justify-content: flex-end !important;
     font-weight: 700 !important;
     font-size: 1rem !important;
-    white-space: nowrap;
   }
 
-  /* 5. Daily P&L - Still hidden */
+  /* 5. Daily P&L - Hidden */
   .asset-table-grid>div:nth-child(5) {
     display: none !important;
   }
@@ -372,12 +371,11 @@ body.light .glass-input:focus {
   .asset-table-grid>div:nth-child(6) {
     grid-column: 2;
     grid-row: 2;
-    width: auto !important;
+    width: 100% !important;
     text-align: right !important;
     display: flex !important;
     justify-content: flex-end !important;
     font-size: 0.8rem !important;
-    white-space: nowrap;
     margin-left: 0;
   }
 
