@@ -287,120 +287,169 @@ body.light .glass-input:focus {
     /* Force containment */
   }
 
-  /* Asset Table Mobile Compact View (Single Row Grid) */
+  /* Asset Table Mobile Compact View (2-Row Grid) */
   .asset-table-header {
     display: none !important;
   }
 
   .asset-table-grid {
     display: grid !important;
-    /* Asset | Price | Value | P&L % */
-    /* Allocate space: Asset flex-shrinks, others need strict width or auto */
-    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr) !important;
-    grid-template-rows: auto !important;
+    /*
+      Grid Template: 3 Columns
+      Col 1: Asset Info (Wide)
+      Col 2: Price / Cost (Right Aligned)
+      Col 3: Value / Total P&L (Right Aligned)
+    */
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1.2fr) !important;
+    grid-template-rows: auto auto !important;
+    /* Two logical rows within the grid items */
     align-items: center !important;
     padding: 0.6rem 0.2rem !important;
     border: none !important;
     background: transparent !important;
     border-bottom: 1px solid var(--glass-border) !important;
     width: 100% !important;
-    max-width: 100% !important;
     margin: 0 !important;
-    box-sizing: border-box !important;
     gap: 0.2rem !important;
     height: auto !important;
-    overflow: hidden !important;
   }
 
-  /* 1. ASSET (Name/Icon) - Row 1, Col 1 */
+  /* -------------------------------------------------------------
+     COLUMN 1: ASSET INFO (Spans 2 visual rows via flex column inside)
+     ------------------------------------------------------------- */
   .asset-table-grid>div:nth-child(1) {
     grid-column: 1;
-    grid-row: 1;
+    grid-row: 1 / span 2;
+    /* Span full height */
     width: 100% !important;
     display: flex;
     align-items: center;
     overflow: hidden;
   }
 
-  /* Ensure logo is small on mobile */
   .asset-table-grid>div:nth-child(1)>div:first-child {
-    width: 1.5rem !important;
-    height: 1.5rem !important;
-    font-size: 0.8rem !important;
+    width: 2rem !important;
+    /* Slightly larger logo */
+    height: 2rem !important;
   }
 
   .asset-table-grid>div:nth-child(1) span {
-    font-size: 0.75rem !important;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
   }
 
-  /* 2. PRICE - Row 1, Col 2 */
+  /* Subtitle (Ticker) adjustments if needed */
+  .asset-table-grid>div:nth-child(1) span:nth-of-type(2) {
+    font-size: 0.7rem !important;
+    opacity: 0.6;
+    font-weight: 500 !important;
+  }
+
+
+  /* -------------------------------------------------------------
+     COLUMN 2: PRICE (Top) & COST (Bottom)
+     ------------------------------------------------------------- */
+  /* PRICE Cell */
   .asset-table-grid>div:nth-child(2) {
-    display: flex !important;
     grid-column: 2;
     grid-row: 1;
-    font-size: 0.75rem !important;
-    opacity: 0.9;
-    justify-content: flex-end !important;
+    /* Top Row */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
     text-align: right !important;
-    white-space: nowrap !important;
+    line-height: 1.1;
   }
 
-  /* Hide Cost (Secondary Span) */
+  /* Show Current Price (Primary) */
+  .asset-table-grid>div:nth-child(2)>span:nth-of-type(1) {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    display: block !important;
+  }
+
+  /* Show Avg Cost (Secondary) - RE-ENABLED for Mobile */
   .asset-table-grid>div:nth-child(2)>span:nth-of-type(2) {
-    display: none !important;
+    display: block !important;
+    /* Unhide */
+    font-size: 0.65rem !important;
+    opacity: 0.5;
+    margin-top: 2px;
   }
 
-  /* 3. HOLDINGS - Hidden */
-  .asset-table-grid>div:nth-child(3) {
-    display: none !important;
-  }
-
-  /* 4. VALUE - Row 1, Col 3 */
+  /* -------------------------------------------------------------
+     COLUMN 3: VALUE (Top) & TOTAL P&L (Bottom)
+     ------------------------------------------------------------- */
+  /* VALUE Cell - using the 'Value' column div */
   .asset-table-grid>div:nth-child(4) {
     grid-column: 3;
     grid-row: 1;
-    width: 100% !important;
-    text-align: right !important;
+    /* Top Row */
     display: flex !important;
-    justify-content: flex-end !important;
-    font-weight: 700 !important;
-    font-size: 0.8rem !important;
-    white-space: nowrap !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    text-align: right !important;
+    line-height: 1.1;
   }
 
-  /* Hide "Total" Label (Secondary Span) */
+  /* Total Value (Primary) */
+  .asset-table-grid>div:nth-child(4)>span:nth-of-type(1) {
+    font-size: 0.8rem !important;
+    font-weight: 800 !important;
+    display: block !important;
+  }
+
+  /* Hide "Total" Label */
   .asset-table-grid>div:nth-child(4)>span:nth-of-type(2) {
     display: none !important;
   }
 
-  /* 5. Daily P&L - Hidden */
+  /* TOTAL P&L Cell - Moved to be under Value */
+  .asset-table-grid>div:nth-child(6) {
+    grid-column: 3;
+    grid-row: 2;
+    /* Bottom Row */
+    display: flex !important;
+    flex-direction: row !important;
+    /* Percent + Amount on same line? Or stacked? Request implied strict alignment */
+    /* Let's try side-by-side for P&L to save vertical space, or stack small */
+    justify-content: flex-end !important;
+    align-items: center !important;
+    gap: 4px;
+    text-align: right !important;
+    margin-top: 2px;
+  }
+
+  /* P&L Amount (Primary) - Unhide */
+  .asset-table-grid>div:nth-child(6)>span:nth-of-type(1) {
+    display: block !important;
+    font-size: 0.65rem !important;
+    font-weight: 600 !important;
+  }
+
+  /* P&L Percent (Secondary) */
+  .asset-table-grid>div:nth-child(6)>span:nth-of-type(2) {
+    font-size: 0.65rem !important;
+    opacity: 0.9;
+  }
+
+
+  /* -------------------------------------------------------------
+     HIDDEN COLUMNS
+     ------------------------------------------------------------- */
+  /* Holdings (Col 3 in DOM) - Hidden */
+  .asset-table-grid>div:nth-child(3) {
+    display: none !important;
+  }
+
+  /* Daily P&L (Col 5 in DOM) - Hidden */
   .asset-table-grid>div:nth-child(5) {
     display: none !important;
   }
 
-  /* 6. TOTAL P&L - Row 1, Col 4 */
-  .asset-table-grid>div:nth-child(6) {
-    grid-column: 4;
-    grid-row: 1;
-    width: 100% !important;
-    text-align: right !important;
-    display: flex !important;
-    justify-content: flex-end !important;
-    font-size: 0.75rem !important;
-    margin-left: 0;
-    white-space: nowrap !important;
-  }
-
-  /* Hide Absolute Value, Show Percentage Only */
-  .asset-table-grid>div:nth-child(6)>span:nth-of-type(1) {
-    display: none !important;
-  }
-
-  .asset-table-grid>div:nth-child(6)>span:nth-of-type(2) {
-    font-size: 0.75rem !important;
-  }
-
-  /* 7. Actions - Hidden */
+  /* Actions (Col 7 in DOM) - Hidden */
   .asset-table-grid>div:nth-child(7) {
     display: none !important;
   }
