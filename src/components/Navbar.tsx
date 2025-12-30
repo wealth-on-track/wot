@@ -38,8 +38,11 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                 {/* Left: Logo */}
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                     <Link href="/" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: '2px', lineHeight: 1, textDecoration: 'none' }}>
-                        <span className="gradient-text navbar-logo-text">Modern Portfolio Tracker</span>
-                        <span className="navbar-slogan">Track your wealth in modern way!</span>
+                        <span className="gradient-text navbar-logo-text">
+                            <span className="desktop-only">Modern Portfolio Tracker</span>
+                            <span className="mobile-only">MPT</span>
+                        </span>
+                        <span className="navbar-slogan desktop-only">Track your wealth in modern way!</span>
                     </Link>
                 </div>
 

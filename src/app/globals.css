@@ -200,6 +200,7 @@ body.light .glass-input:focus {
   font-size: 1.5rem;
   fontWeight: 900;
   letterSpacing: -0.05em;
+  white-space: nowrap;
 }
 
 .navbar-slogan {
@@ -286,19 +287,19 @@ body.light .glass-input:focus {
     /* Force containment */
   }
 
-  /* Asset Table Mobile Compact View (2-Row Grid) */
+  /* Asset Table Mobile Compact View (Single Row Grid) */
   .asset-table-header {
     display: none !important;
   }
 
   .asset-table-grid {
     display: grid !important;
-    /* Strict columns: 55% Left, 45% Right approx, allowing shrink */
-    grid-template-columns: minmax(0, 5.5fr) minmax(0, 4.5fr) !important;
-    grid-template-rows: auto auto !important;
+    /* Asset | Price | Value | P&L % */
+    /* Allocate space: Asset flex-shrinks, others need strict width or auto */
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr) !important;
+    grid-template-rows: auto !important;
     align-items: center !important;
-    padding: 0.6rem 0.5rem !important;
-    /* Reduced side padding from 1rem to 0.5rem */
+    padding: 0.6rem 0.2rem !important;
     border: none !important;
     background: transparent !important;
     border-bottom: 1px solid var(--glass-border) !important;
@@ -306,21 +307,10 @@ body.light .glass-input:focus {
     max-width: 100% !important;
     margin: 0 !important;
     box-sizing: border-box !important;
-    gap: 0.2rem 0.5rem !important;
+    gap: 0.2rem !important;
     height: auto !important;
     overflow: hidden !important;
-    /* Clip any potential spill */
   }
-
-  /* Ensure ALL grid items truncate and don't expand */
-  .asset-table-grid>div {
-    min-width: 0 !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-  }
-
-  /* Zebra Striping logic remains */
 
   /* 1. ASSET (Name/Icon) - Row 1, Col 1 */
   .asset-table-grid>div:nth-child(1) {
@@ -329,20 +319,35 @@ body.light .glass-input:focus {
     width: 100% !important;
     display: flex;
     align-items: center;
+    overflow: hidden;
   }
 
-  /* 2. PRICE - Row 2, Col 1 */
+  /* Ensure logo is small on mobile */
+  .asset-table-grid>div:nth-child(1)>div:first-child {
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+    font-size: 0.8rem !important;
+  }
+
+  .asset-table-grid>div:nth-child(1) span {
+    font-size: 0.75rem !important;
+  }
+
+  /* 2. PRICE - Row 1, Col 2 */
   .asset-table-grid>div:nth-child(2) {
     display: flex !important;
-    /* Unhide */
-    grid-column: 1;
-    grid-row: 2;
+    grid-column: 2;
+    grid-row: 1;
     font-size: 0.75rem !important;
-    opacity: 0.7;
-    justify-content: flex-start !important;
-    margin-top: 0.1rem;
-    align-items: center;
-    /* Ensure vertical center */
+    opacity: 0.9;
+    justify-content: flex-end !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+  }
+
+  /* Hide Cost (Secondary Span) */
+  .asset-table-grid>div:nth-child(2)>span:nth-of-type(2) {
+    display: none !important;
   }
 
   /* 3. HOLDINGS - Hidden */
@@ -350,17 +355,22 @@ body.light .glass-input:focus {
     display: none !important;
   }
 
-  /* 4. VALUE - Row 1, Col 2 (Right Aligned) */
+  /* 4. VALUE - Row 1, Col 3 */
   .asset-table-grid>div:nth-child(4) {
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 1;
     width: 100% !important;
-    /* Fill cell */
     text-align: right !important;
     display: flex !important;
     justify-content: flex-end !important;
     font-weight: 700 !important;
-    font-size: 1rem !important;
+    font-size: 0.8rem !important;
+    white-space: nowrap !important;
+  }
+
+  /* Hide "Total" Label (Secondary Span) */
+  .asset-table-grid>div:nth-child(4)>span:nth-of-type(2) {
+    display: none !important;
   }
 
   /* 5. Daily P&L - Hidden */
@@ -368,16 +378,26 @@ body.light .glass-input:focus {
     display: none !important;
   }
 
-  /* 6. TOTAL P&L - Row 2, Col 2 (Right Aligned) */
+  /* 6. TOTAL P&L - Row 1, Col 4 */
   .asset-table-grid>div:nth-child(6) {
-    grid-column: 2;
-    grid-row: 2;
+    grid-column: 4;
+    grid-row: 1;
     width: 100% !important;
     text-align: right !important;
     display: flex !important;
     justify-content: flex-end !important;
-    font-size: 0.8rem !important;
+    font-size: 0.75rem !important;
     margin-left: 0;
+    white-space: nowrap !important;
+  }
+
+  /* Hide Absolute Value, Show Percentage Only */
+  .asset-table-grid>div:nth-child(6)>span:nth-of-type(1) {
+    display: none !important;
+  }
+
+  .asset-table-grid>div:nth-child(6)>span:nth-of-type(2) {
+    font-size: 0.75rem !important;
   }
 
   /* 7. Actions - Hidden */
@@ -415,7 +435,7 @@ body.light .glass-input:focus {
 
   /* Reduce padding for the main card to allow more space */
   .positions-card {
-    padding: 0.5rem !important;
+    padding: 0.2rem !important;
   }
 
   /* Ensure no horizontal scroll on the entire page in mobile */
