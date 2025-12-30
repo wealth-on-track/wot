@@ -116,7 +116,7 @@ export function DetailedAssetCard({
 
     return (
         <div
-            className="glass-panel"
+            className="glass-panel detailed-asset-card"
             style={{
                 borderRadius: '0.75rem',
                 padding: '1rem',
@@ -138,7 +138,7 @@ export function DetailedAssetCard({
                 <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
                     <AssetLogo symbol={asset.symbol} logoUrl={logoUrl} />
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ fontWeight: 800, fontSize: '1.1rem', lineHeight: 1 }}>{companyName}</div>
+                        <div className="truncate-text" style={{ fontWeight: 800, fontSize: '1.1rem', lineHeight: 1 }}>{companyName}</div>
                         <div style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: '2px', fontWeight: 600 }}>{asset.symbol} • {asset.type}</div>
                     </div>
                 </div>
