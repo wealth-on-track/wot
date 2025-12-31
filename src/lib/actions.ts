@@ -146,7 +146,7 @@ export async function addAsset(prevState: string | undefined, formData: FormData
                 country: country || null,
                 platform: platform || null,
                 isin: isin || null,
-                name: (await getAssetName(symbol, type)) || symbol,
+                name: (await getAssetName(symbol, type, exchange || undefined)) || symbol,
             },
         });
 

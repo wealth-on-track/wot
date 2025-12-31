@@ -1,4 +1,5 @@
 import { getYahooQuote, searchYahoo } from './yahooApi';
+import { getTefasFundInfo } from './tefasApi';
 import { cleanAssetName } from '@/lib/companyNames';
 
 export interface MarketData {
@@ -14,11 +15,16 @@ export interface PriceResult {
     currency?: string;
 }
 
-export async function getAssetName(symbol: string, type: string): Promise<string | null> {
+export async function getAssetName(symbol: string, type: string, exchange?: string): Promise<string | null> {
     // CASH is simple
     if (type === 'CASH') return null;
 
     try {
+        if (exchange === 'TEFAS' || (type === 'FUND' && symbol.length === 3 && !symbol.includes('.'))) {
+            const tefasData = await getTefasFundInfo(symbol);
+            if (tefasData) return tefasData.title;
+        }
+
         let searchSymbol = symbol;
 
         // Handle BIST stocks suffix for search as well
@@ -56,7 +62,7 @@ export async function getAssetName(symbol: string, type: string): Promise<string
     return null;
 }
 
-export async function getMarketPrice(symbol: string, type: string): Promise<PriceResult | null> {
+export async function getMarketPrice(symbol: string, type: string, exchange?: string): Promise<PriceResult | null> {
 
     // CASH assets always have a price of 1.0 (relative to themselves)
     // The valuation logic converts this 1.0 * quantity (which is the amount) to the target currency.
@@ -65,6 +71,19 @@ export async function getMarketPrice(symbol: string, type: string): Promise<Pric
             price: 1.0,
             timestamp: new Date().toLocaleString('tr-TR')
         };
+    }
+
+    // TEFAS Fund Check
+    if (exchange === 'TEFAS' || (type === 'FUND' && symbol.length === 3 && !symbol.includes('.'))) {
+        // Try TEFAS
+        const tefasData = await getTefasFundInfo(symbol);
+        if (tefasData) {
+            return {
+                price: tefasData.price,
+                timestamp: tefasData.lastUpdated || new Date().toLocaleString('tr-TR'),
+                currency: 'TRY'
+            };
+        }
     }
 
     // Try Yahoo Finance API

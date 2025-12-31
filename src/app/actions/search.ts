@@ -1,6 +1,7 @@
 "use server";
 
 import { searchYahoo } from "@/services/yahooApi";
+import { getTefasFundInfo } from "@/services/tefasApi";
 import { SymbolOption, getCountryFromExchange, getExchangeName } from "@/lib/symbolSearch";
 import { cleanAssetName } from "@/lib/companyNames";
 
@@ -40,6 +41,30 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
         };
         // Prepend to results
         mappedResults.unshift(cashOption);
+    }
+
+    // Check for TEFAS Fund (if query is 3 letters)
+    if (upperQuery.length === 3) {
+        // Try fetching it to see if it exists
+        // Note: This makes the search slower for 3 letter queries, but it's necessary since we don't have a DB
+        // We run it in parallel with other logic if possible, but here we just await or fire and forget?
+        // Let's await it to be sure.
+        try {
+            const tefasFund = await getTefasFundInfo(upperQuery);
+            if (tefasFund) {
+                mappedResults.unshift({
+                    symbol: tefasFund.code,
+                    fullName: tefasFund.title,
+                    exchange: 'TEFAS',
+                    type: 'FUND',
+                    currency: 'TRY',
+                    country: 'Turkey',
+                    rawName: tefasFund.title.toUpperCase()
+                });
+            }
+        } catch (e) {
+            // ignore
+        }
     }
 
     // Heuristic Filtering:

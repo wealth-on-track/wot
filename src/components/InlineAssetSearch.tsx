@@ -57,7 +57,7 @@ export function InlineAssetSearch() {
                     setBuyPrice("1");
                     return;
                 }
-                const data = await getMarketPriceAction(selectedSymbol.symbol, selectedSymbol.type);
+                const data = await getMarketPriceAction(selectedSymbol.symbol, selectedSymbol.type, selectedSymbol.exchange);
                 if (data) {
                     setMarketData(data);
                     setBuyPrice(data.price.toString());
