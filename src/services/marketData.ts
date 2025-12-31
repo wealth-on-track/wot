@@ -35,7 +35,7 @@ export async function getAssetName(symbol: string, type: string, exchange?: stri
         // Handle Crypto Pairs (e.g. BTC-EUR -> search "BTC-EUR" or just "BTC")
         // If symbol has hyphen, let's try searching it directly first.
 
-        if (symbol === 'GAUTRY') return "Gram Altın (Vadesiz)";
+        if (symbol === 'GAUTRY') return "GR Altın";
 
         const results = await searchYahoo(searchSymbol);
 

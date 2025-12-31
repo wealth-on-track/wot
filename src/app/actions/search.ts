@@ -44,17 +44,17 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
     }
 
     // GRAM GOLD / ALTIN Special Handling
-    const gramKeywords = ["GRAM", "ALTIN", "GOLD", "GAU", "XAU"];
+    const gramKeywords = ["GRAM", "ALTIN", "GOLD", "GAU", "XAU", "GAUTRY", "XAUTRY"];
     if (gramKeywords.some(k => upperQuery.includes(k))) {
         // Add Gram Gold option
         mappedResults.unshift({
             symbol: 'GAUTRY',
-            fullName: 'Gram Altın (Vadesiz)',
+            fullName: 'GR Altın',
             exchange: 'Forex',
             type: 'GOLD',
             currency: 'TRY',
             country: 'Turkey',
-            rawName: 'GRAM ALTIN'
+            rawName: 'GR ALTIN'
         });
     }
 
