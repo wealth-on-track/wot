@@ -495,6 +495,18 @@ body.light .glass-input:focus {
     overflow-x: hidden !important;
     width: 100% !important;
   }
+
+  /* Compact Currency on Mobile */
+  .currency-selector-btn {
+    width: auto !important;
+    min-width: 0 !important;
+    padding: 0.3rem 0.5rem !important;
+  }
+}
+
+/* Default Currency Width */
+.currency-selector-btn {
+  width: 110px;
 }
 
 /* Dashboard Layout Default (Desktop) */

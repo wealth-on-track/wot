@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useCurrency } from '@/context/CurrencyContext';
 import { ChevronDown } from 'lucide-react';
 
+import { getCurrencySymbol } from '@/lib/currency';
+
 export function CurrencySelector() {
     const { currency, setCurrency } = useCurrency();
     const [isOpen, setIsOpen] = useState(false);
@@ -28,6 +30,7 @@ export function CurrencySelector() {
         <div ref={wrapperRef} style={{ position: 'relative' }}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
+                className="currency-selector-btn"
                 style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -42,12 +45,14 @@ export function CurrencySelector() {
                     fontWeight: 600,
                     cursor: 'pointer',
                     transition: 'all 0.2s',
-                    width: '110px',
                     whiteSpace: 'nowrap',
                     justifyContent: 'space-between'
                 }}
             >
-                {currency === 'ORG' ? 'ORG CCY' : currency}
+                <span className="desktop-only">{currency === 'ORG' ? 'ORG CCY' : currency}</span>
+                <span className="mobile-only" style={{ fontSize: '0.9rem', fontWeight: 800 }}>
+                    {currency === 'ORG' ? 'ORG' : getCurrencySymbol(currency)}
+                </span>
                 <ChevronDown size={14} style={{ opacity: 0.7, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
             </button>
 
