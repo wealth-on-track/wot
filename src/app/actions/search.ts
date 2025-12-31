@@ -45,7 +45,8 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
 
     // GRAM GOLD / ALTIN Special Handling
     const gramKeywords = ["GRAM", "ALTIN", "GOLD", "GAU", "XAU", "GAUTRY", "XAUTRY"];
-    if (gramKeywords.some(k => upperQuery.includes(k))) {
+    // Check if query is in keyword OR keyword starts with query (partial match)
+    if (gramKeywords.some(k => upperQuery.includes(k) || k.startsWith(upperQuery))) {
         // Add Gram Gold option
         mappedResults.unshift({
             symbol: 'GAUTRY',
@@ -60,7 +61,7 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
 
     // SILVER / GÜMÜŞ Special Handling
     const silverKeywords = ["GUMUS", "GÜMÜŞ", "SILVER", "XAG", "XAGTRY"];
-    if (silverKeywords.some(k => upperQuery.includes(k))) {
+    if (silverKeywords.some(k => upperQuery.includes(k) || k.startsWith(upperQuery))) {
         mappedResults.unshift({
             symbol: 'XAGTRY',
             fullName: 'GR Gümüş',
