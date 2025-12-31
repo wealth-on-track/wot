@@ -94,8 +94,8 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
 
     if (hasStrongEquityMatch) {
         return mappedResults.filter(r => {
-            // Always keep stocks
-            if (r.type === 'STOCK') return true;
+            // Always keep stocks and special types
+            if (r.type === 'STOCK' || r.type === 'GOLD' || r.type === 'CASH' || r.exchange === 'TEFAS') return true;
 
             // For others (ETF, FUND), exclude if they are likely just tracking the equity
             // e.g. "YieldMax NVDA Option...", "GraniteShares 3x Long NVIDIA"
