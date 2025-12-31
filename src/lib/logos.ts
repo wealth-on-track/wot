@@ -24,7 +24,7 @@ export const getLogoUrl = (symbol: string, type: string, exchange?: string, coun
     // 3. COMMODITIES: Static High-Quality Icons
     if (t === 'GOLD' || t === 'COMMODITY') {
         // Updated to a cleaner, professional gold icon (Bars/Ingots)
-        if (s === 'XAU' || s.includes('GOLD')) return 'https://cdn-icons-png.flaticon.com/512/9334/9334575.png';
+        if (s === 'XAU' || s === 'GAUTRY' || s.includes('GOLD')) return 'https://cdn-icons-png.flaticon.com/512/9334/9334575.png';
         if (s === 'XAG' || s.includes('SILVER')) return 'https://cdn-icons-png.flaticon.com/512/2908/2908842.png'; // Silver Bar
         if (s.includes('OIL') || s === 'BRENT' || s === 'WTI') return 'https://cdn-icons-png.flaticon.com/512/2908/2908848.png'; // Oil Drop
     }

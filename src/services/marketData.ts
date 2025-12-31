@@ -35,6 +35,8 @@ export async function getAssetName(symbol: string, type: string, exchange?: stri
         // Handle Crypto Pairs (e.g. BTC-EUR -> search "BTC-EUR" or just "BTC")
         // If symbol has hyphen, let's try searching it directly first.
 
+        if (symbol === 'GAUTRY') return "Gram Altın (Vadesiz)";
+
         const results = await searchYahoo(searchSymbol);
 
         if (results && results.length > 0) {
@@ -94,6 +96,8 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
             searchSymbol = `${symbol}.IS`;
         } else if (symbol === 'XAU') {
             searchSymbol = 'GC=F'; // Gold Futures (working ticker)
+        } else if (symbol === 'GAUTRY') {
+            searchSymbol = 'XAUTRY=X'; // Ounce Gold in TRY
         } else if (type === 'STOCK' && !symbol.includes('.')) {
             // Check if it's a known BIST stock or trust Yahoo to find it? 
             // Better to try direct symbol first.
@@ -103,8 +107,16 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
         const quote = await getYahooQuote(searchSymbol);
 
         if (quote && quote.regularMarketPrice) {
+            let price = quote.regularMarketPrice;
+
+            // Conversion for Gram Gold
+            if (symbol === 'GAUTRY') {
+                // XAUTRY=X is per Ounce. 1 Ounce = 31.1035 Grams
+                price = price / 31.1034768;
+            }
+
             return {
-                price: quote.regularMarketPrice,
+                price: price,
                 timestamp: quote.regularMarketTime ? new Date(quote.regularMarketTime).toLocaleString('tr-TR') : new Date().toLocaleString('tr-TR'),
                 currency: quote.currency
             };

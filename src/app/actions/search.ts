@@ -43,6 +43,21 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
         mappedResults.unshift(cashOption);
     }
 
+    // GRAM GOLD / ALTIN Special Handling
+    const gramKeywords = ["GRAM", "ALTIN", "GOLD", "GAU", "XAU"];
+    if (gramKeywords.some(k => upperQuery.includes(k))) {
+        // Add Gram Gold option
+        mappedResults.unshift({
+            symbol: 'GAUTRY',
+            fullName: 'Gram Altın (Vadesiz)',
+            exchange: 'Forex',
+            type: 'GOLD',
+            currency: 'TRY',
+            country: 'Turkey',
+            rawName: 'GRAM ALTIN'
+        });
+    }
+
     // Check for TEFAS Fund (if query is 3 letters)
     if (upperQuery.length === 3) {
         // Try fetching it to see if it exists
