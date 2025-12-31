@@ -106,10 +106,32 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
 
         const quote = await getYahooQuote(searchSymbol);
 
+        // Special handling for GAUTRY fallback
+        if (symbol === 'GAUTRY' && (!quote || !quote.regularMarketPrice)) {
+            // Fallback: Calculate via XAUUSD * USDTRY / 31.10
+            try {
+                const [xau, usdtry] = await Promise.all([
+                    getYahooQuote('XAUUSD=X'),
+                    getYahooQuote('USDTRY=X')
+                ]);
+
+                if (xau?.regularMarketPrice && usdtry?.regularMarketPrice) {
+                    const gramPrice = (xau.regularMarketPrice * usdtry.regularMarketPrice) / 31.1034768;
+                    return {
+                        price: gramPrice,
+                        timestamp: new Date().toLocaleString('tr-TR'),
+                        currency: 'TRY'
+                    };
+                }
+            } catch (err) {
+                console.error("Failed to calculate derived gold price", err);
+            }
+        }
+
         if (quote && quote.regularMarketPrice) {
             let price = quote.regularMarketPrice;
 
-            // Conversion for Gram Gold
+            // Conversion for Gram Gold (if we got the primary XAUTRY quote)
             if (symbol === 'GAUTRY') {
                 // XAUTRY=X is per Ounce. 1 Ounce = 31.1035 Grams
                 price = price / 31.1034768;
