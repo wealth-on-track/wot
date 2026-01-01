@@ -977,6 +977,8 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
     const [gridColumns, setGridColumns] = useState<1 | 2>(2);
     const [timePeriod, setTimePeriod] = useState("ALL");
     const [isTimeSelectorHovered, setIsTimeSelectorHovered] = useState(false);
+    const [isGroupingSelectorHovered, setIsGroupingSelectorHovered] = useState(false);
+    const [isViewSelectorHovered, setIsViewSelectorHovered] = useState(false);
     const { currency: globalCurrency } = useCurrency();
     const positionsViewCurrency = globalCurrency;
 
@@ -1118,7 +1120,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
         }
     };
 
-    const pLTitle = timePeriod === 'ALL' ? 'Total P&L' : `P&L (${timePeriod})`;
+    const pLTitle = `P&L (${timePeriod})`;
 
     // Get unique values for each filter
     const types = Array.from(new Set(assets.map(a => a.type).filter(Boolean))) as string[];
@@ -1354,76 +1356,116 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                             </div>
 
                             {/* RIGHT: View Mode & Columns - Desktop Only */}
-                            <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
 
-                                {/* Group Assets Button */}
-                                <button
-                                    onClick={() => setIsGroupingEnabled(!isGroupingEnabled)}
+                                {/* 1. Grouping Selector (Smart Pill) */}
+                                <div
+                                    onMouseEnter={() => setIsGroupingSelectorHovered(true)}
+                                    onMouseLeave={() => setIsGroupingSelectorHovered(false)}
                                     style={{
-                                        background: isGroupingEnabled ? 'var(--bg-active)' : 'rgba(255,255,255,0.03)',
-                                        border: isGroupingEnabled ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.08)',
-                                        borderRadius: '0.4rem',
-                                        color: isGroupingEnabled ? 'var(--text-active)' : 'var(--text-secondary)',
-                                        padding: '0.3rem 0.6rem',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 700,
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s'
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        background: 'var(--glass-shine)',
+                                        backdropFilter: 'blur(10px)',
+                                        borderRadius: '2rem',
+                                        padding: '0.3rem',
+                                        border: '1px solid var(--glass-border)',
+                                        boxShadow: isGroupingSelectorHovered ? '0 4px 20px rgba(0,0,0,0.1)' : 'none',
+                                        transition: 'all 0.3s ease',
+                                        height: '2.4rem'
                                     }}
                                 >
-                                    {isGroupingEnabled ? "Ungroup" : "Group Assets"}
-                                </button>
+                                    {[
+                                        { value: false, label: 'Flat' },
+                                        { value: true, label: 'Groups' }
+                                    ].map(item => {
+                                        const isActive = isGroupingEnabled === item.value;
+                                        const isVisible = isGroupingSelectorHovered || isActive;
 
+                                        return (
+                                            <button
+                                                key={item.label}
+                                                onClick={() => setIsGroupingEnabled(item.value)}
+                                                style={{
+                                                    background: isActive ? '#6366f1' : 'transparent',
+                                                    border: 'none',
+                                                    borderRadius: '1.5rem',
+                                                    color: isActive ? '#fff' : 'var(--text-secondary)',
+                                                    maxWidth: isVisible ? '100px' : '0px',
+                                                    padding: isVisible ? '0.3rem 0.8rem' : '0',
+                                                    margin: isVisible ? '0 2px' : '0',
+                                                    opacity: isVisible ? 1 : 0,
+                                                    overflow: 'hidden',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: isActive ? 700 : 600,
+                                                    cursor: 'pointer',
+                                                    whiteSpace: 'nowrap',
+                                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}
+                                            >
+                                                {item.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
 
-                                {/* View Mode Toggles (List -> Grid -> Detailed) + Column Controls Inline */}
-                                <div style={{ display: 'flex', gap: '0.1rem', background: 'var(--glass-bg)', borderRadius: '0.5rem', padding: '0.2rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                {/* 2. View Mode Selector (Smart Pill) */}
+                                <div
+                                    onMouseEnter={() => setIsViewSelectorHovered(true)}
+                                    onMouseLeave={() => setIsViewSelectorHovered(false)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        background: 'var(--glass-shine)',
+                                        backdropFilter: 'blur(10px)',
+                                        borderRadius: '2rem',
+                                        padding: '0.3rem',
+                                        border: '1px solid var(--glass-border)',
+                                        boxShadow: isViewSelectorHovered ? '0 4px 20px rgba(0,0,0,0.1)' : 'none',
+                                        transition: 'all 0.3s ease',
+                                        height: '2.4rem'
+                                    }}
+                                >
+                                    {[
+                                        { value: 'list', icon: List, label: 'List' },
+                                        { value: 'grid', icon: LayoutGrid, label: 'Grid' },
+                                        { value: 'detailed', icon: LayoutTemplate, label: 'Cards' }
+                                    ].map((item) => {
+                                        const isActive = viewMode === item.value;
+                                        const isVisible = isViewSelectorHovered || isActive;
+                                        const Icon = item.icon;
 
-                                    {/* List View Button */}
-                                    <button
-                                        onClick={() => setViewMode("list")}
-                                        style={{
-                                            background: viewMode === "list" ? 'var(--bg-active)' : 'transparent',
-                                            border: 'none', borderRadius: '0.4rem',
-                                            color: viewMode === "list" ? 'var(--text-active)' : 'var(--text-muted)',
-                                            padding: '0.3rem 0.6rem',
-                                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
-                                            transition: 'all 0.2s'
-                                        }}
-                                        title="List View"
-                                    >
-                                        <List size={16} strokeWidth={viewMode === "list" ? 2.5 : 2} />
-                                    </button>
-
-                                    {/* Grid View Button */}
-                                    <button
-                                        onClick={() => setViewMode("grid")}
-                                        style={{
-                                            background: viewMode === "grid" ? 'var(--bg-active)' : 'transparent',
-                                            border: 'none', borderRadius: '0.4rem',
-                                            color: viewMode === "grid" ? 'var(--text-active)' : 'var(--text-muted)',
-                                            padding: '0.3rem 0.6rem',
-                                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
-                                            transition: 'all 0.2s'
-                                        }}
-                                        title="Grid View"
-                                    >
-                                        <LayoutGrid size={16} strokeWidth={viewMode === "grid" ? 2.5 : 2} />
-                                    </button>
-                                    <button
-                                        onClick={() => setViewMode("detailed")}
-                                        title="Detailed Cards"
-                                        style={{
-                                            background: viewMode === "detailed" ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                                            border: 'none',
-                                            borderRadius: '0.4rem',
-                                            color: viewMode === "detailed" ? '#6366f1' : 'var(--text-muted)',
-                                            padding: '0.35rem',
-                                            cursor: 'pointer',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                        }}
-                                    >
-                                        <LayoutTemplate size={16} />
-                                    </button>
+                                        return (
+                                            <button
+                                                key={item.value}
+                                                onClick={() => setViewMode(item.value as any)}
+                                                title={item.label}
+                                                style={{
+                                                    background: isActive ? '#6366f1' : 'transparent',
+                                                    border: 'none',
+                                                    borderRadius: '1.5rem',
+                                                    color: isActive ? '#fff' : 'var(--text-secondary)',
+                                                    maxWidth: isVisible ? '100px' : '0px',
+                                                    padding: isVisible ? '0.3rem 0.8rem' : '0',
+                                                    margin: isVisible ? '0 2px' : '0',
+                                                    opacity: isVisible ? 1 : 0,
+                                                    overflow: 'hidden',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '0.3rem'
+                                                }}
+                                            >
+                                                <Icon size={14} strokeWidth={isActive ? 2.5 : 2} />
+                                                <span style={{ fontSize: '0.75rem', fontWeight: isActive ? 700 : 600 }}>{item.label}</span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
