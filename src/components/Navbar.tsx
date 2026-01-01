@@ -73,22 +73,24 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                                     My Portfolio
                                 </Link>
                             )}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
                                 <ThemeToggle />
                                 <CurrencySelector />
                                 <form action={handleSignOut} style={{ margin: 0 }}>
                                     <button
                                         type="submit"
                                         style={{
-                                            background: 'none',
-                                            border: 'none',
+                                            background: 'transparent',
+                                            border: '1px solid transparent',
                                             cursor: 'pointer',
-                                            padding: 0,
+                                            padding: '0.25rem 0.4rem',
+                                            borderRadius: '0.4rem',
                                             display: 'flex',
                                             flexDirection: 'column',
                                             alignItems: 'flex-end',
                                             gap: '1px',
-                                            textAlign: 'right'
+                                            textAlign: 'right',
+                                            transition: 'background 0.2s'
                                         }}
                                         className="group"
                                     >

@@ -9,18 +9,19 @@ export function ThemeToggle() {
     return (
         <button
             onClick={toggleTheme}
-            className="glass-button"
             style={{
-                background: 'var(--glass-bg)',
+                background: 'transparent',
                 color: 'var(--text-primary)',
-                border: '1px solid var(--glass-border)',
-                padding: '0.4rem',
+                border: '1px solid transparent',
+                padding: '0.25rem 0.4rem',
                 borderRadius: '0.4rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                height: '2rem', // Fixed height to match others potentially
+                width: '2rem'
             }}
             title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
