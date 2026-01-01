@@ -387,6 +387,7 @@ function AssetTableRow({
                             </>
                         ) : (
                             <button
+                                className="row-edit-button"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setIsEditing(true);

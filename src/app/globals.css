@@ -228,6 +228,26 @@ body.light .glass-input:focus {
   transition: all 0.3s ease;
 }
 
+/* ROW BUTTON VISIBILITY (Web/Desktop) */
+@media (min-width: 769px) {
+  .row-edit-button {
+    opacity: 0;
+    transition: opacity 0.2s ease, background 0.2s ease;
+  }
+
+  .asset-table-grid:hover .row-edit-button {
+    opacity: 1;
+  }
+}
+
+/* On mobile, keep it visible or rely on different logic implies touch */
+@media (max-width: 768px) {
+  .row-edit-button {
+    opacity: 1;
+    /* Always visible on mobile if rendered */
+  }
+}
+
 .asset-table-header {
   display: grid;
   grid-template-columns: minmax(220px, 1.8fr) 1fr 1fr 1.1fr 1.2fr 50px;
@@ -485,7 +505,7 @@ body.light .glass-input:focus {
 
   /* Daily P&L (Col 5 in DOM) - Hidden */
   /* Daily P&L - OLD RULE REMOVED, now consolidated P&L is child 5 which we show */
-  
+
   /* Actions (Col 6 in DOM) - Hidden */
   .asset-table-grid>div:nth-child(6) {
     display: none !important;
