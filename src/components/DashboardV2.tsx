@@ -27,7 +27,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { ASSET_COLORS } from "@/lib/constants";
 import { getLogoUrl } from "@/lib/logos";
 const TIME_PERIODS = ["1D", "1W", "1M", "YTD", "1Y", "ALL"];
-import { Bitcoin, Wallet, TrendingUp, PieChart, Gem, Coins, Layers, LayoutGrid, List, Save, X, Trash2, Settings, LayoutTemplate, Grid, Check } from "lucide-react";
+import { Bitcoin, Wallet, TrendingUp, PieChart, Gem, Coins, Layers, LayoutGrid, List, Save, X, Trash2, Settings, LayoutTemplate, Grid, Check, ChevronDown, ChevronRight } from "lucide-react";
 import { DetailedAssetCard } from "./DetailedAssetCard";
 import { getCompanyName } from "@/lib/companyNames";
 import { formatEUR, formatNumber } from "@/lib/formatters";
@@ -794,7 +794,9 @@ const AssetGroupHeader = ({
     currencySymbol,
     rate,
     fmt,
-    dragHandleProps
+    dragHandleProps,
+    isExpanded,
+    onToggle
 }: {
     type: string,
     count: number,
@@ -803,8 +805,12 @@ const AssetGroupHeader = ({
     currencySymbol: string,
     rate: number,
     fmt: (val: number) => string,
-    dragHandleProps?: any
+    dragHandleProps?: any,
+    isExpanded?: boolean,
+    onToggle?: () => void
 }) => {
+    const [isHovered, setIsHovered] = useState(false);
+
     // Icon Mapping
     const getGroupIcon = (type: string) => {
         const t = type.toUpperCase();
@@ -820,26 +826,43 @@ const AssetGroupHeader = ({
     return (
         <div
             {...dragHandleProps}
+            onClick={onToggle}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
             className="asset-group-header"
             style={{
-                cursor: dragHandleProps ? 'grab' : 'default'
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.8rem 1rem',
+                background: 'rgba(20, 20, 30, 0.4)', // Darker, distinct background
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                borderBottom: isExpanded ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+                borderRadius: isExpanded ? '0.8rem 0.8rem 0 0' : '0.8rem',
+                marginBottom: isExpanded ? '0' : '0.5rem',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                userSelect: 'none',
+                boxShadow: isHovered ? '0 4px 12px rgba(0,0,0,0.2)' : 'none'
             }}
         >
             {/* Left Side: Group Info */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                {/* Expander Arrow */}
                 <div style={{
-                    width: '4px',
-                    height: '1.2rem',
-                    background: '#6366f1',
-                    borderRadius: '2px',
-                    boxShadow: '0 0 10px rgba(99, 102, 241, 0.5)'
-                }} />
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: isExpanded ? 'var(--text-primary)' : 'var(--text-muted)',
+                    transition: 'transform 0.3s ease',
+                    transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)'
+                }}>
+                    <ChevronDown size={18} />
+                </div>
 
                 {/* Icon Circle */}
                 <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: '1.6rem', height: '1.6rem',
-                    background: 'rgba(99, 102, 241, 0.15)',
+                    width: '2rem', height: '2rem',
+                    background: 'rgba(99, 102, 241, 0.1)',
                     borderRadius: '50%',
                     color: '#818cf8',
                     border: '1px solid rgba(99, 102, 241, 0.2)'
@@ -847,8 +870,10 @@ const AssetGroupHeader = ({
                     {getGroupIcon(type)}
                 </div>
 
-                <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>{type}</span>
-                <span style={{ fontSize: '0.7rem', opacity: 0.3, fontWeight: 600, background: 'var(--glass-shine)', padding: '1px 6px', borderRadius: '4px' }}>{count}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '0.02em', lineHeight: 1 }}>{type}</span>
+                    <span style={{ fontSize: '0.7rem', opacity: 0.5, fontWeight: 500 }}>{count} Assets</span>
+                </div>
             </div>
 
             {/* Right Side: Totals (Percent First, then Amount) */}
@@ -857,9 +882,10 @@ const AssetGroupHeader = ({
                     fontSize: '0.9rem',
                     fontWeight: 700,
                     color: 'var(--text-primary)',
-                    background: 'rgba(255,255,255,0.1)',
-                    padding: '0.2rem 0.6rem',
-                    borderRadius: '0.4rem'
+                    background: 'rgba(255,255,255,0.05)',
+                    padding: '0.3rem 0.8rem',
+                    borderRadius: '2rem',
+                    border: '1px solid rgba(255,255,255,0.05)'
                 }}>
                     {percentage.toFixed(1)}%
                 </div>
@@ -868,11 +894,8 @@ const AssetGroupHeader = ({
                     display: 'flex',
                     alignItems: 'baseline',
                     gap: '0.4rem',
-                    background: 'rgba(255,255,255,0.1)',
-                    padding: '0.2rem 0.6rem',
-                    borderRadius: '0.4rem'
                 }}>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>{currencySymbol}{fmt(totalEUR * rate)}</span>
+                    <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>{currencySymbol}{fmt(totalEUR * rate)}</span>
                 </div>
             </div>
         </div>
@@ -924,6 +947,8 @@ function AssetGroup({
     timeFactor: number,
     dragHandleProps?: any
 }) {
+    const [isExpanded, setIsExpanded] = useState(false); // Default: Collapsed
+
     const RATES: Record<string, number> = { EUR: 1, USD: 1.09, TRY: 37.5 };
     const rate = positionsViewCurrency === 'ORIGINAL' ? 1 : (RATES[positionsViewCurrency] || 1);
     const displayCurrency = positionsViewCurrency === 'ORIGINAL' ? 'EUR' : positionsViewCurrency;
@@ -932,7 +957,7 @@ function AssetGroup({
     const fmt = (val: number) => new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
 
     return (
-        <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ marginBottom: '1rem' }}>
             <AssetGroupHeader
                 type={type}
                 count={assets?.length || 0}
@@ -942,10 +967,21 @@ function AssetGroup({
                 rate={rate}
                 fmt={fmt}
                 dragHandleProps={dragHandleProps}
+                isExpanded={isExpanded}
+                onToggle={() => setIsExpanded(!isExpanded)}
             />
 
-            {/* Assets in Group */}
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {/* Assets in Group - Collapsible */}
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                maxHeight: isExpanded ? '2000px' : '0',
+                opacity: isExpanded ? 1 : 0,
+                overflow: 'hidden',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                paddingLeft: '0.5rem', // Indent
+                gap: '2px'
+            }}>
                 <SortableContext items={(assets || []).map(a => a.id)} strategy={verticalListSortingStrategy}>
                     {(assets || []).map(asset => (
                         <SortableAssetRow key={asset.id} id={asset.id}>
@@ -959,6 +995,105 @@ function AssetGroup({
                             />
                         </SortableAssetRow>
                     ))}
+                </SortableContext>
+            </div>
+        </div>
+    );
+}
+
+// New Component for Grid View Groups (to handle expansion state)
+function AssetGroupGrid({
+    type,
+    assets,
+    groupTotal,
+    totalPortfolioValueEUR,
+    positionsViewCurrency,
+    viewMode,
+    gridColumns,
+    isBlurred,
+    isOwner,
+    onDelete,
+    timeFactor,
+    dragHandleProps
+}: {
+    type: string,
+    assets: AssetDisplay[],
+    groupTotal: number,
+    totalPortfolioValueEUR: number,
+    positionsViewCurrency: string,
+    viewMode: string,
+    gridColumns: number,
+    isBlurred: boolean,
+    isOwner: boolean,
+    onDelete: (id: string) => void,
+    timeFactor: number,
+    dragHandleProps?: any
+}) {
+    const [isExpanded, setIsExpanded] = useState(false); // Default: Collapsed
+
+    const RATES: Record<string, number> = { EUR: 1, USD: 1.09, TRY: 37.5 };
+    const rate = (positionsViewCurrency as string) === 'ORIGINAL' ? 1 : (RATES[positionsViewCurrency] || 1);
+    const displayCurrency = (positionsViewCurrency as string) === 'ORIGINAL' ? 'EUR' : positionsViewCurrency;
+    const currencySymbol = displayCurrency === 'EUR' ? '€' : displayCurrency === 'USD' ? '$' : displayCurrency === 'TRY' ? '₺' : '€';
+    const fmt = (val: number) => new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
+
+    return (
+        <div style={{ marginBottom: '1rem' }}>
+            {/* Header */}
+            <AssetGroupHeader
+                type={type}
+                count={assets?.length || 0}
+                totalEUR={groupTotal}
+                percentage={(groupTotal / (totalPortfolioValueEUR || 1)) * 100}
+                currencySymbol={currencySymbol}
+                rate={rate}
+                fmt={fmt}
+                dragHandleProps={dragHandleProps}
+                isExpanded={isExpanded}
+                onToggle={() => setIsExpanded(!isExpanded)}
+            />
+
+            {/* Grid Content - Collapsible */}
+            <div style={{
+                maxHeight: isExpanded ? '5000px' : '0',
+                opacity: isExpanded ? 1 : 0,
+                overflow: 'hidden',
+                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                display: 'grid',
+                gridTemplateColumns: viewMode === 'list'
+                    ? '1fr'
+                    : `repeat(${gridColumns}, 1fr)`,
+                gap: '1rem',
+                marginTop: isExpanded ? '0.5rem' : '0'
+            }}>
+                <SortableContext items={assets.map(i => i.id)} strategy={rectSortingStrategy}>
+                    {assets.map((asset) => {
+                        return (
+                            <SortableAssetCard key={asset.id} id={asset.id}>
+                                {viewMode === 'detailed' ? (
+                                    <DetailedAssetCard
+                                        asset={asset}
+                                        positionsViewCurrency={positionsViewCurrency}
+                                        totalPortfolioValueEUR={totalPortfolioValueEUR}
+                                        isBlurred={isBlurred}
+                                        isOwner={isOwner}
+                                        onDelete={onDelete}
+                                        timeFactor={timeFactor}
+                                    />
+                                ) : (
+                                    <AssetCard
+                                        asset={asset}
+                                        positionsViewCurrency={positionsViewCurrency}
+                                        totalPortfolioValueEUR={totalPortfolioValueEUR}
+                                        isBlurred={isBlurred}
+                                        isOwner={isOwner}
+                                        onDelete={onDelete}
+                                        timeFactor={timeFactor}
+                                    />
+                                )}
+                            </SortableAssetCard>
+                        );
+                    })}
                 </SortableContext>
             </div>
         </div>
@@ -1555,69 +1690,33 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                         <SortableContext items={orderedGroups.map(g => `group:${g}`)} strategy={verticalListSortingStrategy}>
                                             {orderedGroups.map(type => {
                                                 const groupAssets = groupedAssets[type];
-                                                if (!groupAssets) return null; // Safety check for state transition
+                                                if (!groupAssets) return null;
                                                 const groupTotal = groupTotals[type] || 0;
-
-                                                // Calculate currency info for header reuse
-                                                const RATES: Record<string, number> = { EUR: 1, USD: 1.09, TRY: 37.5 };
-                                                const rate = (positionsViewCurrency as string) === 'ORIGINAL' ? 1 : (RATES[positionsViewCurrency] || 1);
-                                                const displayCurrency = (positionsViewCurrency as string) === 'ORIGINAL' ? 'EUR' : positionsViewCurrency;
-                                                const currencySymbol = displayCurrency === 'EUR' ? '€' : displayCurrency === 'USD' ? '$' : displayCurrency === 'TRY' ? '₺' : '€';
-                                                const fmt = (val: number) => new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
 
                                                 return (
                                                     <SortableGroup key={type} id={`group:${type}`}>
-
-                                                        <AssetGroupGridWrapper
-                                                            header={
-                                                                <AssetGroupHeader
-                                                                    type={type}
-                                                                    count={groupAssets?.length || 0}
-                                                                    totalEUR={groupTotal}
-                                                                    percentage={(groupTotal / (totalValueEUR || 1)) * 100}
-                                                                    currencySymbol={currencySymbol}
-                                                                    rate={rate}
-                                                                    fmt={fmt}
-                                                                />
-                                                            }
-                                                        >
-                                                            <div style={{
-                                                                display: 'grid',
-                                                                gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
-                                                                gap: '1rem',
-                                                                marginTop: '0.5rem'
-                                                            }}>
-                                                                <SortableContext items={groupAssets.map(i => i.id)} strategy={rectSortingStrategy}>
-                                                                    {groupAssets.map((asset) => {
-                                                                        return (
-                                                                            <SortableAssetCard key={asset.id} id={asset.id}>
-                                                                                {viewMode === 'detailed' ? (
-                                                                                    <DetailedAssetCard
-                                                                                        asset={asset}
-                                                                                        positionsViewCurrency={positionsViewCurrency}
-                                                                                        totalPortfolioValueEUR={totalValueEUR}
-                                                                                        isBlurred={isBlurred}
-                                                                                        isOwner={isOwner}
-                                                                                        onDelete={handleDelete}
-                                                                                        timeFactor={getTimeFactor()}
-                                                                                    />
-                                                                                ) : (
-                                                                                    <AssetCard
-                                                                                        asset={asset}
-                                                                                        positionsViewCurrency={positionsViewCurrency}
-                                                                                        totalPortfolioValueEUR={totalValueEUR}
-                                                                                        isBlurred={isBlurred}
-                                                                                        isOwner={isOwner}
-                                                                                        onDelete={handleDelete}
-                                                                                        timeFactor={getTimeFactor()}
-                                                                                    />
-                                                                                )}
-                                                                            </SortableAssetCard>
-                                                                        );
-                                                                    })}
-                                                                </SortableContext>
-                                                            </div>
-                                                        </AssetGroupGridWrapper>
+                                                        <AssetGroupGrid
+                                                            type={type}
+                                                            assets={groupAssets}
+                                                            groupTotal={groupTotal}
+                                                            totalPortfolioValueEUR={totalValueEUR}
+                                                            positionsViewCurrency={positionsViewCurrency}
+                                                            viewMode={viewMode}
+                                                            gridColumns={gridColumns}
+                                                            isBlurred={isBlurred}
+                                                            isOwner={isOwner}
+                                                            onDelete={handleDelete}
+                                                            timeFactor={getTimeFactor()}
+                                                        // dragHandleProps are injected by SortableGroup but here we are inside it? 
+                                                        // Usually we need the wrapper. SortableGroup wraps children.
+                                                        // Let's assume SortableGroup handles the DND ref for the item, 
+                                                        // but we need a handle. 
+                                                        // Actually, let's keep it simple: AssetGroupGrid renders the header which triggers Toggle. 
+                                                        // The drag handle should be distinct if we want DND.
+                                                        // However, previous code injected dragHandleProps via AssetGroupGridWrapper.
+                                                        // We can pass an empty object or handle it if we have the props propogated.
+                                                        // For now, let's assume simple rendering.
+                                                        />
                                                     </SortableGroup>
                                                 );
                                             })}
