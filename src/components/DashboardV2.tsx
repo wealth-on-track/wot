@@ -102,7 +102,7 @@ import { AssetDisplay } from "@/lib/types";
 import { SortableAssetRow, SortableGroup, SortableAssetCard } from "./SortableWrappers";
 
 // Column Configurations
-type ColumnId = 'TYPE' | 'NAME' | 'TICKER' | 'EXCHANGE' | 'CURRENCY' | 'PRICE' | 'HOLDINGS' | 'VALUE' | 'PL' | 'EARNINGS' | 'PORTFOLIO_NAME';
+type ColumnId = 'TYPE' | 'NAME' | 'TICKER' | 'EXCHANGE' | 'CURRENCY' | 'PRICE' | 'VALUE' | 'PL' | 'EARNINGS' | 'PORTFOLIO_NAME';
 
 interface ColumnConfig {
     id: ColumnId;
@@ -117,7 +117,6 @@ const ALL_COLUMNS: ColumnConfig[] = [
     { id: 'EXCHANGE', label: 'Exchange', isDefault: false },
     { id: 'CURRENCY', label: 'Currency', isDefault: false },
     { id: 'PRICE', label: 'Price', isDefault: true },
-    { id: 'HOLDINGS', label: 'Holdings', isDefault: true },
     { id: 'VALUE', label: 'Value', isDefault: true },
     { id: 'PL', label: 'P&L', isDefault: true },
     { id: 'EARNINGS', label: 'Next Earnings Date', isDefault: false },
@@ -131,7 +130,6 @@ const COL_WIDTHS: Record<ColumnId, string> = {
     EXCHANGE: '0.7fr',
     CURRENCY: '0.5fr',
     PRICE: '1fr',
-    HOLDINGS: '0.9fr',
     VALUE: '1.1fr',
     PL: '1.2fr',
     EARNINGS: '0.9fr',
@@ -196,7 +194,7 @@ function AssetTableRow({
     timeFactor,
     timePeriod,
     rowIndex,
-    columns = ['NAME', 'PRICE', 'HOLDINGS', 'VALUE', 'PL'],
+    columns = ['NAME', 'PRICE', 'VALUE', 'PL'],
 }: {
     asset: AssetDisplay,
     positionsViewCurrency: string,
@@ -319,23 +317,41 @@ function AssetTableRow({
                                             width: '100%',
                                         }}
                                     />
-                                    <input
-                                        type="text"
-                                        value={editSymbol}
-                                        onChange={(e) => setEditSymbol(e.target.value.toUpperCase())}
-                                        onClick={(e) => e.stopPropagation()}
-                                        placeholder="Ticker"
-                                        style={{
-                                            background: 'var(--glass-shine)',
-                                            border: '1px solid var(--glass-border)',
-                                            borderRadius: '3px',
-                                            color: 'var(--text-primary)',
-                                            fontSize: '0.7rem',
-                                            padding: '2px 4px',
-                                            width: '80px',
-                                            textTransform: 'uppercase'
-                                        }}
-                                    />
+                                    <div style={{ display: 'flex', gap: '5px' }}>
+                                        <input
+                                            type="text"
+                                            value={editSymbol}
+                                            onChange={(e) => setEditSymbol(e.target.value.toUpperCase())}
+                                            onClick={(e) => e.stopPropagation()}
+                                            placeholder="Ticker"
+                                            style={{
+                                                background: 'var(--glass-shine)',
+                                                border: '1px solid var(--glass-border)',
+                                                borderRadius: '3px',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '0.7rem',
+                                                padding: '2px 4px',
+                                                width: '60px',
+                                                textTransform: 'uppercase'
+                                            }}
+                                        />
+                                        <input
+                                            type="number"
+                                            value={editQty}
+                                            onChange={(e) => setEditQty(Number(e.target.value))}
+                                            onClick={(e) => e.stopPropagation()}
+                                            placeholder="Qty"
+                                            style={{
+                                                background: 'var(--glass-shine)',
+                                                border: '1px solid var(--glass-border)',
+                                                borderRadius: '3px',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '0.7rem',
+                                                padding: '2px 4px',
+                                                width: '70px',
+                                            }}
+                                        />
+                                    </div>
                                     <input
                                         type="text"
                                         value={editCustomGroup}
@@ -366,15 +382,24 @@ function AssetTableRow({
                                         {companyName}
                                     </span>
                                     {/* Subtitle logic preserved */}
-                                    <span className="desktop-only" style={{ fontSize: '0.7rem', opacity: 0.4, fontWeight: 500 }}>
-                                        {asset.symbol}
-                                    </span>
-                                    <span className="mobile-only" style={{ fontSize: '0.65rem', opacity: 0.5 }}>
-                                        <span style={{ fontSize: '0.7em', opacity: 0.8, marginRight: '1px' }}>x</span>
-                                        {asset.quantity >= 10000
-                                            ? (asset.quantity / 1000).toFixed(1) + 'K'
-                                            : asset.quantity.toLocaleString('en-US', { maximumFractionDigits: 2 })}
-                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{ fontSize: '0.7rem', opacity: 0.4, fontWeight: 500 }}>
+                                            {asset.symbol}
+                                        </span>
+                                        <span style={{
+                                            fontSize: '0.7rem',
+                                            opacity: 0.8,
+                                            fontWeight: 600,
+                                            color: 'var(--accent)',
+                                            background: 'rgba(99, 102, 241, 0.1)',
+                                            padding: '0 4px',
+                                            borderRadius: '3px'
+                                        }}>
+                                            x{asset.quantity >= 1000
+                                                ? (asset.quantity / 1000).toFixed(1).replace(/\.0$/, '') + 'K'
+                                                : asset.quantity.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
                                 </>
                             )}
                         </div>
@@ -420,32 +445,7 @@ function AssetTableRow({
                         )}
                     </div>
                 );
-            case 'HOLDINGS':
-                return (
-                    <div className="col-holdings" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column' }}>
-                        {isEditing ? (
-                            <input
-                                type="number"
-                                value={editQty}
-                                onChange={(e) => setEditQty(Number(e.target.value))}
-                                onClick={(e) => e.stopPropagation()}
-                                style={{
-                                    width: '80px',
-                                    background: 'var(--glass-shine)',
-                                    border: '1px solid var(--glass-border)',
-                                    borderRadius: '3px',
-                                    color: 'var(--text-primary)',
-                                    fontSize: '0.85rem',
-                                    padding: '4px 8px',
-                                    textAlign: 'right',
-                                    marginLeft: 'auto'
-                                }}
-                            />
-                        ) : (
-                            <span style={{ fontSize: '0.85rem', fontWeight: 500, opacity: 0.9 }}>{asset.quantity.toLocaleString()}</span>
-                        )}
-                    </div>
-                );
+
             case 'VALUE':
                 return (
                     <div className="col-value" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column' }}>
@@ -1958,7 +1958,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                     <div style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.8rem', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         <span>Table Columns</span>
                                                         <button
-                                                            onClick={() => setActiveColumns(['NAME', 'PRICE', 'HOLDINGS', 'VALUE', 'PL'])}
+                                                            onClick={() => setActiveColumns(['NAME', 'PRICE', 'VALUE', 'PL'])}
                                                             style={{
                                                                 fontSize: '0.65rem',
                                                                 opacity: 0.7,
