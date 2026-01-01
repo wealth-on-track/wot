@@ -1346,8 +1346,25 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
     const [assetToDelete, setAssetToDelete] = useState<AssetDisplay | null>(null);
 
     // Column State
-    const [activeColumns, setActiveColumns] = useState<ColumnId[]>(ALL_COLUMNS.filter(c => c.isDefault).map(c => c.id));
+    const [activeColumns, setActiveColumns] = useState<ColumnId[]>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('user_columns');
+            if (saved) {
+                try {
+                    return JSON.parse(saved);
+                } catch (e) {
+                    console.error("Failed to parse user columns", e);
+                }
+            }
+        }
+        return ALL_COLUMNS.filter(c => c.isDefault).map(c => c.id);
+    });
     const [isAdjustListOpen, setIsAdjustListOpen] = useState(false);
+
+    // Persist Columns
+    useEffect(() => {
+        localStorage.setItem('user_columns', JSON.stringify(activeColumns));
+    }, [activeColumns]);
 
     const { currency: globalCurrency } = useCurrency();
     const positionsViewCurrency = globalCurrency;
