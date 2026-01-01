@@ -34,13 +34,13 @@ export function CurrencySelector() {
                 style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.4rem',
+                    gap: '0.2rem',
                     background: isOpen ? 'var(--bg-active)' : 'transparent',
                     border: '1px solid',
                     borderColor: isOpen ? 'var(--accent)' : 'transparent',
                     borderRadius: '0.4rem',
                     color: 'var(--text-primary)',
-                    padding: '0.3rem 0.6rem',
+                    padding: '0.25rem 0.4rem',
                     fontSize: '0.75rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -62,8 +62,9 @@ export function CurrencySelector() {
                     position: 'absolute',
                     top: '110%',
                     right: 0,
-                    width: '140px', // Increased width for "Default (Symbol)"
-                    padding: '0.3rem',
+                    minWidth: '100px',
+                    width: 'max-content',
+                    padding: '0.2rem',
                     borderRadius: '0.5rem',
                     zIndex: 100,
                     display: 'flex',
@@ -89,8 +90,8 @@ export function CurrencySelector() {
                                     border: 'none',
                                     borderRadius: '0.3rem',
                                     color: currency === curr ? 'var(--text-active)' : 'var(--text-secondary)',
-                                    padding: '0.4rem 0.8rem',
-                                    fontSize: '0.8rem',
+                                    padding: '0.3rem 0.6rem',
+                                    fontSize: '0.75rem',
                                     fontWeight: currency === curr ? 700 : 500,
                                     cursor: 'pointer',
                                     textAlign: 'left',
@@ -98,7 +99,8 @@ export function CurrencySelector() {
                                     transition: 'all 0.1s',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'space-between'
+                                    justifyContent: 'space-between',
+                                    gap: '0.5rem'
                                 }}
                             >
                                 {label}
