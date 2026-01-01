@@ -149,13 +149,15 @@ const DraggableHeader = ({ id, children, onToggle }: { id: string, children: Rea
         transition,
         cursor: isDragging ? 'grabbing' : 'grab',
         zIndex: isDragging ? 20 : 1,
-        opacity: isDragging ? 0.8 : 1
+        opacity: isDragging ? 0.8 : 1,
+        touchAction: 'none', // Critical for touch/pointer events
+        userSelect: 'none' as const // Prevent text selection while dragging
     };
 
     return (
-        <div ref={setNodeRef} style={style} className={`col-${id.toLowerCase()}`}>
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={`col-${id.replace('col:', '').toLowerCase()}`}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                <span {...attributes} {...listeners} style={{ cursor: 'grab', opacity: 0.3 }}><GripVertical size={12} /></span>
+                <span style={{ opacity: 0.3 }}><GripVertical size={12} /></span>
                 {children}
             </div>
         </div>
@@ -1755,20 +1757,19 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                     border: 'none',
                                                     borderRadius: '1.5rem',
                                                     color: '#fff',
-                                                    padding: '0.3rem 0.6rem',
+                                                    padding: '0.3rem 0.8rem',
                                                     fontSize: '0.75rem',
                                                     fontWeight: 700,
                                                     cursor: 'pointer',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    gap: '0.4rem',
+                                                    gap: '0.3rem',
                                                     transition: 'all 0.2s',
-                                                    boxShadow: '0 2px 10px rgba(99, 102, 241, 0.3)'
                                                 }}
                                                 title="Adjust List Columns"
                                             >
-                                                <SlidersHorizontal size={14} />
+                                                <SlidersHorizontal size={14} strokeWidth={2.5} />
                                                 {isAdjustListOpen && <span>Adjust</span>}
                                             </button>
                                         </div>
