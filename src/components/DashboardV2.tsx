@@ -1535,6 +1535,23 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
         { id: 'platform', label: 'Platform', items: platforms, active: platformFilter, setter: setPlatformFilter, icon: '🏦' },
     ];
 
+    // Close Adjust List on outside click
+    const adjustListRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (adjustListRef.current && !adjustListRef.current.contains(event.target as Node)) {
+                setIsAdjustListOpen(false);
+            }
+        };
+
+        if (isAdjustListOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isAdjustListOpen]);
+
     const activeFiltersCount = [typeFilter, exchangeFilter, currencyFilter, countryFilter, sectorFilter, platformFilter].filter(Boolean).length;
 
     return (
@@ -1870,7 +1887,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
 
                                     {/* 3. Adjust List Button (Only in List View) */}
                                     {viewMode === 'list' && (
-                                        <div style={{ position: 'relative' }}>
+                                        <div ref={adjustListRef} style={{ position: 'relative' }}>
                                             <div style={{
                                                 display: 'flex',
                                                 alignItems: 'center',

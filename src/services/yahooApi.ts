@@ -20,6 +20,7 @@ export interface YahooQuote {
     symbol: string;
     marketState?: string;
     regularMarketPreviousClose?: number;
+    earningsTimestamp?: number;
 }
 
 async function searchDirect(query: string): Promise<YahooSymbol[]> {
@@ -158,7 +159,8 @@ export async function getYahooQuote(symbol: string): Promise<YahooQuote | null> 
             currency: result.currency,
             regularMarketTime: result.regularMarketTime,
             marketState: result.marketState,
-            regularMarketPreviousClose: result.regularMarketPreviousClose
+            regularMarketPreviousClose: (result as any).main_regularMarketPreviousClose || result.regularMarketPreviousClose,
+            earningsTimestamp: (result as any).earningsTimestamp || (result as any).earningsTimestampStart
         };
 
         // Save to DB (async, don't await strictly if not needed, but safer to await)

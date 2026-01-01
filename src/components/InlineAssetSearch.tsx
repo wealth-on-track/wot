@@ -246,25 +246,57 @@ export function InlineAssetSearch() {
                     zIndex: 1000,
                     boxShadow: 'var(--shadow-lg)'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <span style={{ fontSize: '1.25rem' }}>{getCountryFlag(selectedSymbol.country)}</span>
-                        <div>
-                            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary)' }}>
-                                {selectedSymbol.symbol} - {selectedSymbol.fullName}
-                            </div>
-                            <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>
-                                {selectedSymbol.exchange} • {selectedSymbol.type} • {selectedSymbol.currency}
-                            </div>
+                    {/* Structured Asset Details */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, 1fr)',
+                        gap: '0.75rem',
+                        marginBottom: '1.25rem',
+                        padding: '1rem',
+                        background: 'rgba(255,255,255,0.03)',
+                        borderRadius: '0.5rem',
+                        border: '1px solid rgba(255,255,255,0.05)'
+                    }}>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase' }}>Type</span>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{selectedSymbol.type}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase' }}>Ticker</span>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{selectedSymbol.symbol}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gridColumn: 'span 2' }}>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase' }}>Name</span>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{selectedSymbol.fullName}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase' }}>Exchange</span>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{selectedSymbol.exchange}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase' }}>Currency</span>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{selectedSymbol.currency}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase' }}>Price</span>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--primary)' }}>
+                                {marketData ? `${marketData.price.toLocaleString()} ${marketData.currency || selectedSymbol.currency}` : 'Loading...'}
+                            </span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.5, textTransform: 'uppercase' }}>Next Earnings</span>
+                            <span style={{
+                                fontSize: '0.9rem',
+                                fontWeight: 500,
+                                textDecoration: selectedSymbol.type !== 'STOCK' ? 'line-through' : 'none',
+                                opacity: selectedSymbol.type !== 'STOCK' ? 0.5 : 1
+                            }}>
+                                {selectedSymbol.type === 'STOCK'
+                                    ? (marketData?.nextEarningsDate || 'N/A')
+                                    : (marketData?.nextEarningsDate || 'N/A')}
+                            </span>
                         </div>
                     </div>
-
-                    {marketData && (
-                        <div style={{ fontSize: '0.8rem', opacity: 0.7, marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                            Last Price: <strong style={{ color: 'var(--primary)' }}>{marketData.price.toLocaleString()} {selectedSymbol.currency}</strong>
-                            <br />
-                            <span style={{ fontSize: '0.7rem' }}>Retrieved: {marketData.timestamp}</span>
-                        </div>
-                    )}
 
                     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         <div style={{ display: 'flex', gap: '0.75rem' }}>

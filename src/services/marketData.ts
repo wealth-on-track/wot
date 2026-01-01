@@ -16,6 +16,7 @@ export interface PriceResult {
     change24h?: number;
     changePercent?: number;
     previousClose?: number;
+    nextEarningsDate?: string;
 }
 
 export async function getAssetName(symbol: string, type: string, exchange?: string): Promise<string | null> {
@@ -199,7 +200,8 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                 currency: quote.currency,
                 previousClose: previousClose,
                 change24h: change24h,
-                changePercent: previousClose ? (change24h / previousClose) * 100 : 0
+                changePercent: previousClose ? (change24h / previousClose) * 100 : 0,
+                nextEarningsDate: quote.earningsTimestamp ? new Date(quote.earningsTimestamp * 1000).toLocaleDateString('tr-TR') : undefined
             };
         }
     } catch (error) {

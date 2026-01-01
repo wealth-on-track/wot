@@ -37,6 +37,7 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
     const [sector, setSector] = useState("");
     const [platform, setPlatform] = useState("");
     const [isin, setIsin] = useState(""); // For ETFs/Funds
+    const [customGroup, setCustomGroup] = useState(""); // Portfolio Name
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showOptional, setShowOptional] = useState(false);
@@ -56,7 +57,8 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
         if (country) formData.append('country', country); // Note: Backend needs to support this
         if (sector) formData.append('sector', sector);
         if (isin && type === 'FUND') formData.append('isin', isin); // Append ISIN if it exists and type is FUND
-        // Platform is currently not in backend schema in evidence, but user requested it. 
+        if (customGroup) formData.append('customGroup', customGroup);
+        // Platform is currently not in backend schema in evidence, but user requested it.  
         // We will send it, but if backend ignores it, that's fine for now (MVP).
 
         const res = await addAsset(undefined, formData);
@@ -304,6 +306,22 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
                                         />
                                     </div>
                                 )}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', gridColumn: 'span 2' }}>
+                                    <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Portfolio Name</label>
+                                    <input
+                                        value={customGroup} onChange={e => setCustomGroup(e.target.value)}
+                                        placeholder="e.g. Retirement, Kids, Risky"
+                                        className="glass-input"
+                                        style={{ padding: '0.5rem', fontSize: '0.85rem' }}
+                                        list="portfolio-options"
+                                    />
+                                    <datalist id="portfolio-options">
+                                        <option value="Long Term" />
+                                        <option value="Short Term" />
+                                        <option value="Retirement" />
+                                        <option value="Crypto HODL" />
+                                    </datalist>
+                                </div>
                             </div>
                         )}
 
