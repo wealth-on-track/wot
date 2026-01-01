@@ -47,6 +47,7 @@ interface DetailedAssetCardProps {
     isOwner: boolean;
     onDelete: (id: string) => void;
     timeFactor: number;
+    timePeriod: string;
 }
 
 export function DetailedAssetCard({
@@ -56,7 +57,8 @@ export function DetailedAssetCard({
     isBlurred,
     isOwner,
     onDelete,
-    timeFactor
+    timeFactor,
+    timePeriod
 }: DetailedAssetCardProps) {
     const router = useRouter();
     const [isEditing, setIsEditing] = useState(false);
@@ -91,8 +93,15 @@ export function DetailedAssetCard({
 
     const profit = totalVal - totalCost;
     const profitPct = asset.plPercentage;
-    const periodProfitVal = profit * timeFactor;
-    const periodProfitPctVal = profitPct * timeFactor;
+
+    let periodProfitVal = profit * timeFactor;
+    let periodProfitPctVal = profitPct * timeFactor;
+
+    if (timePeriod === '1D') {
+        periodProfitPctVal = asset.dailyChangePercentage || 0;
+        const conversionRate = displayCurrency === 'EUR' ? 1 : (RATES[displayCurrency] || 1);
+        periodProfitVal = (asset.dailyChange || 0) * conversionRate;
+    }
 
     const logoUrl = getLogoUrl(asset.symbol, asset.type, asset.exchange, asset.country);
     const companyName = getCompanyName(asset.symbol, asset.type, asset.name);

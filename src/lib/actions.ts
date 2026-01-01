@@ -109,6 +109,7 @@ const AssetSchema = z.object({
     country: z.string().optional(),
     platform: z.string().optional(),
     isin: z.string().optional(),
+    customGroup: z.string().optional(),
 });
 
 export async function addAsset(prevState: string | undefined, formData: FormData) {
@@ -123,7 +124,7 @@ export async function addAsset(prevState: string | undefined, formData: FormData
         return "Invalid input. Please check all fields.";
     }
 
-    const { symbol, type, quantity, buyPrice, currency, exchange, sector, country, platform, isin } = validatedFields.data;
+    const { symbol, type, quantity, buyPrice, currency, exchange, sector, country, platform, isin, customGroup } = validatedFields.data;
 
     try {
         const user = await prisma.user.findUnique({
@@ -146,6 +147,7 @@ export async function addAsset(prevState: string | undefined, formData: FormData
                 country: country || null,
                 platform: platform || null,
                 isin: isin || null,
+                customGroup: customGroup || null,
                 name: (await getAssetName(symbol, type, exchange || undefined)) || symbol,
             },
         });
@@ -187,9 +189,10 @@ const UpdateAssetSchema = z.object({
     buyPrice: z.coerce.number().nonnegative(),
     name: z.string().optional(),
     symbol: z.string().toUpperCase().optional(),
+    customGroup: z.string().optional(),
 });
 
-export async function updateAsset(assetId: string, data: { quantity: number; buyPrice: number; name?: string; symbol?: string }) {
+export async function updateAsset(assetId: string, data: { quantity: number; buyPrice: number; name?: string; symbol?: string; customGroup?: string }) {
     const session = await auth();
     if (!session?.user?.email) return { error: "Not authenticated" };
 
@@ -216,6 +219,7 @@ export async function updateAsset(assetId: string, data: { quantity: number; buy
                 buyPrice: validated.data.buyPrice,
                 ...(validated.data.name && { name: validated.data.name }),
                 ...(validated.data.symbol && { symbol: validated.data.symbol }),
+                ...(validated.data.customGroup !== undefined && { customGroup: validated.data.customGroup }),
             }
         });
 

@@ -15,5 +15,6 @@ export interface AssetDisplay {
     dailyChange?: number;
     dailyChangePercentage?: number;
     platform?: string;
+    customGroup?: string | null;
 
 }

@@ -164,8 +164,16 @@ const DraggableHeader = ({ id, children, onToggle }: { id: string, children: Rea
             id={id} // Explicitly pass ID for debugging
             className={`col-${id.replace('col:', '').toLowerCase()}`}
         >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                <span style={{ opacity: 0.3 }}><GripVertical size={12} /></span>
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-start', // Use flex-start for left alignment
+                gap: '8px',
+                height: '100%',
+                paddingLeft: '0.5rem',
+                borderRight: '1px dashed rgba(255,255,255,0.05)' // Subtle separator
+            }}>
+                <span style={{ opacity: 0.3, cursor: 'grab' }}><GripVertical size={12} /></span>
                 {children}
             </div>
         </div>
@@ -183,8 +191,9 @@ function AssetTableRow({
     isOwner,
     onDelete,
     timeFactor,
+    timePeriod,
     rowIndex,
-    columns = ['NAME', 'PRICE', 'HOLDINGS', 'VALUE', 'PL']
+    columns = ['NAME', 'PRICE', 'HOLDINGS', 'VALUE', 'PL'],
 }: {
     asset: AssetDisplay,
     positionsViewCurrency: string,
@@ -193,7 +202,8 @@ function AssetTableRow({
     onDelete: (id: string) => void,
     timeFactor: number,
     rowIndex?: number,
-    columns?: ColumnId[]
+    columns?: ColumnId[],
+    timePeriod: string
 }) {
     const router = useRouter();
     const [isEditing, setIsEditing] = useState(false);
@@ -201,6 +211,7 @@ function AssetTableRow({
     const [editCost, setEditCost] = useState(asset.buyPrice);
     const [editName, setEditName] = useState(asset.name || "");
     const [editSymbol, setEditSymbol] = useState(asset.symbol);
+    const [editCustomGroup, setEditCustomGroup] = useState(asset.customGroup || ""); // New
     const [isSaving, setIsSaving] = useState(false);
     const [justUpdated, setJustUpdated] = useState(false);
 
@@ -218,9 +229,22 @@ function AssetTableRow({
     const totalProfitVal = displayTotalValue - displayCostBasis;
     const totalProfitPct = asset.plPercentage;
 
-    // P&L based on Time Factor
-    const periodProfitVal = totalProfitVal * timeFactor;
-    const periodProfitPct = totalProfitPct * timeFactor;
+    // P&L based on Time Factor or Real 1D Data
+    let periodProfitVal = totalProfitVal * timeFactor;
+    let periodProfitPct = totalProfitPct * timeFactor;
+
+    if (timePeriod === '1D') {
+        // Use Real 1D Data
+        periodProfitPct = asset.dailyChangePercentage || 0;
+
+        // Convert dailyChange (EUR) to display currency
+        // dailyChange is in EUR. 
+        // We need rate from EUR to DisplayCurrency
+        // implementation of getRate(from, to). 
+        // If displayCurrency is 'ORG', it is asset.currency.
+        const conversionRate = getRate('EUR', displayCurrency);
+        periodProfitVal = (asset.dailyChange || 0) * conversionRate;
+    }
 
     const isPeriodProfit = periodProfitVal >= 0;
 
@@ -235,7 +259,8 @@ function AssetTableRow({
             quantity: Number(editQty),
             buyPrice: Number(editCost),
             name: editName,
-            symbol: editSymbol
+            symbol: editSymbol,
+            customGroup: editCustomGroup // New
         });
 
         if (res.error) {
@@ -308,6 +333,22 @@ function AssetTableRow({
                                             padding: '2px 4px',
                                             width: '80px',
                                             textTransform: 'uppercase'
+                                        }}
+                                    />
+                                    <input
+                                        type="text"
+                                        value={editCustomGroup}
+                                        onChange={(e) => setEditCustomGroup(e.target.value)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        placeholder="Portfolio Name"
+                                        style={{
+                                            background: 'var(--glass-shine)',
+                                            border: '1px solid var(--glass-border)',
+                                            borderRadius: '3px',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '0.7rem',
+                                            padding: '2px 4px',
+                                            width: '100%',
                                         }}
                                     />
                                 </>
@@ -472,6 +513,7 @@ function AssetTableRow({
                                                 setIsEditing(true);
                                                 setEditName(asset.name || "");
                                                 setEditSymbol(asset.symbol);
+                                                setEditCustomGroup(asset.customGroup || ""); // New
                                                 setEditQty(asset.quantity);
                                                 setEditCost(asset.buyPrice);
                                             }}
@@ -528,7 +570,7 @@ function AssetTableRow({
 }
 
 // Reusable Asset Card Component
-function AssetCard({ asset, positionsViewCurrency, totalPortfolioValueEUR, isBlurred, isOwner, onDelete, timeFactor, rank }: {
+function AssetCard({ asset, positionsViewCurrency, totalPortfolioValueEUR, isBlurred, isOwner, onDelete, timeFactor, timePeriod, rank }: {
     asset: AssetDisplay,
     positionsViewCurrency: string,
     totalPortfolioValueEUR: number,
@@ -536,6 +578,7 @@ function AssetCard({ asset, positionsViewCurrency, totalPortfolioValueEUR, isBlu
     isOwner: boolean,
     onDelete: (id: string) => void,
     timeFactor: number,
+    timePeriod: string,
     rank?: number
 }) {
     const router = useRouter(); // Initialize router
@@ -544,6 +587,7 @@ function AssetCard({ asset, positionsViewCurrency, totalPortfolioValueEUR, isBlu
     const [isEditing, setIsEditing] = useState(false);
     const [editQty, setEditQty] = useState(asset.quantity);
     const [editCost, setEditCost] = useState(asset.buyPrice);
+    const [editCustomGroup, setEditCustomGroup] = useState(asset.customGroup || ""); // New
     const [isSaving, setIsSaving] = useState(false);
     const [justUpdated, setJustUpdated] = useState(false); // New state for flash effect
 
@@ -583,8 +627,14 @@ function AssetCard({ asset, positionsViewCurrency, totalPortfolioValueEUR, isBlu
     // Weight Calculation
     const weight = totalPortfolioValueEUR > 0 ? (asset.totalValueEUR / totalPortfolioValueEUR) * 100 : 0;
 
-    const periodProfitVal = profit * timeFactor;
-    const periodProfitPctVal = profitPct * timeFactor;
+    let periodProfitVal = profit * timeFactor;
+    let periodProfitPctVal = profitPct * timeFactor;
+
+    if (timePeriod === '1D') {
+        periodProfitPctVal = asset.dailyChangePercentage || 0;
+        const conversionRate = getRate('EUR', displayCurrency);
+        periodProfitVal = (asset.dailyChange || 0) * conversionRate;
+    }
 
     const logoUrl = getLogoUrl(asset.symbol, asset.type, asset.exchange, asset.country);
     const companyName = getCompanyName(asset.symbol, asset.type, asset.name);
@@ -595,7 +645,11 @@ function AssetCard({ asset, positionsViewCurrency, totalPortfolioValueEUR, isBlu
         if (isSaving) return;
         setIsSaving(true);
 
-        const res = await updateAsset(asset.id, { quantity: Number(editQty), buyPrice: Number(editCost) });
+        const res = await updateAsset(asset.id, {
+            quantity: Number(editQty),
+            buyPrice: Number(editCost),
+            customGroup: editCustomGroup // New
+        });
         if (res.error) {
             alert(res.error);
             setIsSaving(false);
@@ -652,6 +706,7 @@ function AssetCard({ asset, positionsViewCurrency, totalPortfolioValueEUR, isBlu
                                     if (!isEditing) {
                                         setEditQty(asset.quantity);
                                         setEditCost(asset.buyPrice);
+                                        setEditCustomGroup(asset.customGroup || ""); // New
                                     }
                                 }}
                                 onPointerDown={(e) => e.stopPropagation()} // Stop DnD start
@@ -728,6 +783,27 @@ function AssetCard({ asset, positionsViewCurrency, totalPortfolioValueEUR, isBlu
                                     value={editCost}
                                     onChange={(e) => setEditCost(e.target.value as any)}
                                     onPointerDown={e => e.stopPropagation()}
+                                    style={{
+                                        background: 'rgba(0,0,0,0.3)',
+                                        border: '1px solid var(--glass-border)',
+                                        borderRadius: '0.3rem',
+                                        padding: '0.4rem',
+                                        color: 'var(--text-primary)',
+                                        fontSize: '0.9rem',
+                                        width: '100%'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Portfolio Name Input */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                                <label style={{ fontSize: '0.7rem', opacity: 0.7, fontWeight: 600 }}>Portfolio Name</label>
+                                <input
+                                    type="text"
+                                    value={editCustomGroup}
+                                    onChange={(e) => setEditCustomGroup(e.target.value)}
+                                    onPointerDown={e => e.stopPropagation()}
+                                    placeholder="Optional"
                                     style={{
                                         background: 'rgba(0,0,0,0.3)',
                                         border: '1px solid var(--glass-border)',
@@ -1055,7 +1131,8 @@ function AssetGroup({
     onDelete,
     timeFactor,
     dragHandleProps,
-    columns
+    columns,
+    timePeriod
 }: {
     type: string,
     assets: AssetDisplay[],
@@ -1066,7 +1143,8 @@ function AssetGroup({
     onDelete: (id: string) => void,
     timeFactor: number,
     dragHandleProps?: any,
-    columns?: ColumnId[]
+    columns?: ColumnId[],
+    timePeriod: string
 }) {
     const [isExpanded, setIsExpanded] = useState(false); // Default: Collapsed
 
@@ -1114,6 +1192,7 @@ function AssetGroup({
                                 onDelete={onDelete}
                                 timeFactor={timeFactor}
                                 columns={columns}
+                                timePeriod={timePeriod}
                             />
                         </SortableAssetRow>
                     ))}
@@ -1136,7 +1215,8 @@ function AssetGroupGrid({
     isOwner,
     onDelete,
     timeFactor,
-    dragHandleProps
+    dragHandleProps,
+    timePeriod
 }: {
     type: string,
     assets: AssetDisplay[],
@@ -1149,7 +1229,8 @@ function AssetGroupGrid({
     isOwner: boolean,
     onDelete: (id: string) => void,
     timeFactor: number,
-    dragHandleProps?: any
+    dragHandleProps?: any,
+    timePeriod: string
 }) {
     const [isExpanded, setIsExpanded] = useState(false); // Default: Collapsed
 
@@ -1201,6 +1282,7 @@ function AssetGroupGrid({
                                         isOwner={isOwner}
                                         onDelete={onDelete}
                                         timeFactor={timeFactor}
+                                        timePeriod={timePeriod}
                                     />
                                 ) : (
                                     <AssetCard
@@ -1211,6 +1293,7 @@ function AssetGroupGrid({
                                         isOwner={isOwner}
                                         onDelete={onDelete}
                                         timeFactor={timeFactor}
+                                        timePeriod={timePeriod}
                                     />
                                 )}
                             </SortableAssetCard>
@@ -1322,7 +1405,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
         if (!isGroupingEnabled) return { 'All Assets': sortedAssets };
 
         return sortedAssets.reduce((acc, asset) => {
-            const groupKey = asset.type || 'Other'; // Ensure a default group key
+            const groupKey = asset.customGroup || asset.type || 'Other'; // Prioritize custom portfolio name
             if (!acc[groupKey]) acc[groupKey] = [];
             acc[groupKey].push(asset);
             return acc;
@@ -1920,6 +2003,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                             onDelete={handleDelete}
                                                             timeFactor={getTimeFactor()}
                                                             columns={activeColumns}
+                                                            timePeriod={timePeriod}
                                                         />
                                                     </SortableGroup>
                                                 ))}
@@ -1937,6 +2021,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                             timeFactor={getTimeFactor()}
                                                             rowIndex={index}
                                                             columns={activeColumns}
+                                                            timePeriod={timePeriod}
                                                         />
                                                     </SortableAssetRow>
                                                 ))}
@@ -1972,6 +2057,8 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                                 isOwner={isOwner}
                                                                 onDelete={handleDelete}
                                                                 timeFactor={getTimeFactor()}
+                                                                timePeriod={timePeriod}
+                                                            // dragHandleProps are injected by SortableGroup but here we are inside it?
                                                             // dragHandleProps are injected by SortableGroup but here we are inside it? 
                                                             // Usually we need the wrapper. SortableGroup wraps children.
                                                             // Let's assume SortableGroup handles the DND ref for the item, 
@@ -2006,6 +2093,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                                         isOwner={isOwner}
                                                                         onDelete={handleDelete}
                                                                         timeFactor={getTimeFactor()}
+                                                                        timePeriod={timePeriod}
                                                                     />
                                                                 ) : (
                                                                     <AssetCard
@@ -2016,6 +2104,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                                         isOwner={isOwner}
                                                                         onDelete={handleDelete}
                                                                         timeFactor={getTimeFactor()}
+                                                                        timePeriod={timePeriod}
                                                                     />
                                                                 )}
                                                             </SortableAssetCard>

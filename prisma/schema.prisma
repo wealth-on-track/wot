@@ -1,7 +1,7 @@
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -44,6 +44,7 @@ model Asset {
   sector      String?  // Technology, Finance, Energy, Automotive, Robotics, etc.
   country     String?  // Netherlands, France, USA, China, Turkey, etc.
   platform    String?  // Degiro, Is Bankasi, ING Bank, Binance, etc.
+  customGroup String?  // User defined portfolio/group name
   isin        String?  // US0378331005, etc.
   
   createdAt   DateTime @default(now())

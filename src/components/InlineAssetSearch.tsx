@@ -19,7 +19,9 @@ export function InlineAssetSearch() {
     const [marketData, setMarketData] = useState<PriceResult | null>(null);
     const [quantity, setQuantity] = useState("");
     const [buyPrice, setBuyPrice] = useState("");
-    const [showManualModal, setShowManualModal] = useState(false); // New state
+    const [customGroup, setCustomGroup] = useState(""); // New state
+    const [showAdvanced, setShowAdvanced] = useState(false); // New state
+    const [showManualModal, setShowManualModal] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
 
@@ -109,6 +111,7 @@ export function InlineAssetSearch() {
         formData.append('exchange', selectedSymbol.exchange || '');
         formData.append('quantity', quantity);
         formData.append('buyPrice', buyPrice);
+        if (customGroup) formData.append('customGroup', customGroup);
 
         const result = await addAsset(undefined, formData);
         if (result === 'success') {
@@ -118,6 +121,8 @@ export function InlineAssetSearch() {
             setShowQuantityForm(false);
             setQuantity("");
             setBuyPrice("");
+            setCustomGroup("");
+            setShowAdvanced(false);
             router.refresh();
         }
     };
@@ -261,36 +266,64 @@ export function InlineAssetSearch() {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.75rem' }}>
-                        <input
-                            type="number"
-                            step="any"
-                            required
-                            value={quantity}
-                            onChange={(e) => setQuantity(e.target.value)}
-                            placeholder={selectedSymbol.type === 'CASH' ? "Amount" : "Quantity"}
-                            className="glass-input"
-                            style={{ flex: 1, fontSize: '0.85rem', padding: '0.6rem' }}
-                        />
-                        {selectedSymbol.type !== 'CASH' && (
+                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <input
                                 type="number"
                                 step="any"
                                 required
-                                value={buyPrice}
-                                onChange={(e) => setBuyPrice(e.target.value)}
-                                placeholder={"Price (" + selectedSymbol.currency + ")"}
+                                value={quantity}
+                                onChange={(e) => setQuantity(e.target.value)}
+                                placeholder={selectedSymbol.type === 'CASH' ? "Amount" : "Quantity"}
                                 className="glass-input"
                                 style={{ flex: 1, fontSize: '0.85rem', padding: '0.6rem' }}
                             />
-                        )}
-                        <button
-                            type="submit"
-                            className="glass-button"
-                            style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', fontWeight: 600 }}
-                        >
-                            Add
-                        </button>
+                            {selectedSymbol.type !== 'CASH' && (
+                                <input
+                                    type="number"
+                                    step="any"
+                                    required
+                                    value={buyPrice}
+                                    onChange={(e) => setBuyPrice(e.target.value)}
+                                    placeholder={"Price (" + selectedSymbol.currency + ")"}
+                                    className="glass-input"
+                                    style={{ flex: 1, fontSize: '0.85rem', padding: '0.6rem' }}
+                                />
+                            )}
+                            <button
+                                type="submit"
+                                className="glass-button"
+                                style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', fontWeight: 600 }}
+                            >
+                                Add
+                            </button>
+                        </div>
+
+                        {/* Advanced Options Toggle */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <button
+                                type="button"
+                                onClick={() => setShowAdvanced(!showAdvanced)}
+                                style={{
+                                    background: 'transparent', border: 'none', cursor: 'pointer',
+                                    fontSize: '0.75rem', opacity: 0.7, textAlign: 'left',
+                                    display: 'flex', alignItems: 'center', gap: '0.3rem', width: 'fit-content'
+                                }}
+                            >
+                                {showAdvanced ? '▼' : '▶'} Advanced
+                            </button>
+
+                            {showAdvanced && (
+                                <input
+                                    type="text"
+                                    value={customGroup}
+                                    onChange={(e) => setCustomGroup(e.target.value)}
+                                    placeholder="Portfolio Name (Optional)"
+                                    className="glass-input"
+                                    style={{ width: '100%', fontSize: '0.85rem', padding: '0.6rem' }}
+                                />
+                            )}
+                        </div>
                     </form>
                 </div>
             )}
