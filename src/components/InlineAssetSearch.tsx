@@ -331,31 +331,20 @@ export function InlineAssetSearch() {
                             </button>
                         </div>
 
-                        {/* Advanced Options Toggle */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <button
-                                type="button"
-                                onClick={() => setShowAdvanced(!showAdvanced)}
-                                style={{
-                                    background: 'transparent', border: 'none', cursor: 'pointer',
-                                    fontSize: '0.75rem', opacity: 0.7, textAlign: 'left',
-                                    display: 'flex', alignItems: 'center', gap: '0.3rem', width: 'fit-content'
-                                }}
-                            >
-                                {showAdvanced ? '▼' : '▶'} Advanced
-                            </button>
-
-                            {showAdvanced && (
-                                <input
-                                    type="text"
-                                    value={customGroup}
-                                    onChange={(e) => setCustomGroup(e.target.value)}
-                                    placeholder="Portfolio Name (Optional)"
-                                    className="glass-input"
-                                    style={{ width: '100%', fontSize: '0.85rem', padding: '0.6rem' }}
-                                />
-                            )}
-                        </div>
+                        {/* Portfolio Name - Always Visible */}
+                        <input
+                            type="text"
+                            value={customGroup}
+                            onChange={(e) => setCustomGroup(e.target.value)}
+                            placeholder="(Optional) Add asset to your specific portfolio"
+                            className="glass-input"
+                            style={{
+                                width: '100%',
+                                fontSize: '0.85rem',
+                                padding: '0.6rem',
+                                opacity: 0.6 // Faded look
+                            }}
+                        />
                     </form>
                 </div>
             )}
