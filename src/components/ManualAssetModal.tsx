@@ -199,12 +199,25 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                                 <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Avg. Cost *</label>
-                                <input
-                                    type="number" step="any" required
-                                    value={buyPrice} onChange={e => setBuyPrice(e.target.value)}
-                                    className="glass-input"
-                                    style={{ padding: '0.6rem', fontSize: '0.9rem', width: '100%' }}
-                                />
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="number" step="any" required
+                                        value={buyPrice} onChange={e => setBuyPrice(e.target.value)}
+                                        className="glass-input"
+                                        style={{ padding: '0.6rem', fontSize: '0.9rem', width: '100%', paddingRight: '2.5rem' }}
+                                    />
+                                    <span style={{
+                                        position: 'absolute',
+                                        right: '0.8rem',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        fontSize: '0.75rem',
+                                        opacity: 0.6,
+                                        pointerEvents: 'none'
+                                    }}>
+                                        {currency}
+                                    </span>
+                                </div>
                             </div>
                         </div>
 

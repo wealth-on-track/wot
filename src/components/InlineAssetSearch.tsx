@@ -311,16 +311,29 @@ export function InlineAssetSearch() {
                                 style={{ flex: 1, fontSize: '0.85rem', padding: '0.6rem' }}
                             />
                             {selectedSymbol.type !== 'CASH' && (
-                                <input
-                                    type="number"
-                                    step="any"
-                                    required
-                                    value={buyPrice}
-                                    onChange={(e) => setBuyPrice(e.target.value)}
-                                    placeholder={"Price (" + selectedSymbol.currency + ")"}
-                                    className="glass-input"
-                                    style={{ flex: 1, fontSize: '0.85rem', padding: '0.6rem' }}
-                                />
+                                <div style={{ position: 'relative', flex: 1 }}>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        required
+                                        value={buyPrice}
+                                        onChange={(e) => setBuyPrice(e.target.value)}
+                                        placeholder="Price"
+                                        className="glass-input"
+                                        style={{ width: '100%', fontSize: '0.85rem', padding: '0.6rem', paddingRight: '2.5rem' }}
+                                    />
+                                    <span style={{
+                                        position: 'absolute',
+                                        right: '0.8rem',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        fontSize: '0.75rem',
+                                        opacity: 0.6,
+                                        pointerEvents: 'none'
+                                    }}>
+                                        {selectedSymbol.currency}
+                                    </span>
+                                </div>
                             )}
                             <button
                                 type="submit"
