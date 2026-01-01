@@ -2195,6 +2195,9 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                 <AllocationCard assets={assets} totalValueEUR={totalValueEUR} isBlurred={isBlurred} />
                             </>
                         )}
+                        <div style={{ marginTop: 'auto', padding: '1rem', opacity: 0.2, fontSize: '0.6rem', textAlign: 'center' }}>
+                            Build: 2026-01-02-001
+                        </div>
                     </div>
                 </div>
 
