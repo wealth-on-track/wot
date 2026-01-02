@@ -1338,6 +1338,12 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
     const [viewMode, setViewMode] = useState<"list" | "grid" | "detailed">("list");
     const [gridColumns, setGridColumns] = useState<1 | 2>(2);
     const [timePeriod, setTimePeriod] = useState("ALL");
+
+    // DEBUG: Deployment Check
+    useEffect(() => {
+        console.log("MPT Dashboard v0.1.1 - List View Update Loaded");
+    }, []);
+
     const [isTimeSelectorHovered, setIsTimeSelectorHovered] = useState(false);
     const [isGroupingSelectorHovered, setIsGroupingSelectorHovered] = useState(false);
     const [isViewSelectorHovered, setIsViewSelectorHovered] = useState(false);
