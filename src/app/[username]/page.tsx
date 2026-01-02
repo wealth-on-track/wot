@@ -6,6 +6,8 @@ import { ClientWrapper } from "@/components/ClientWrapper";
 import { getPortfolioMetrics } from "@/lib/portfolio";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
     const { username } = await params;
     const session = await auth();
