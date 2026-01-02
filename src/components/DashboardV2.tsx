@@ -1341,7 +1341,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
 
     // DEBUG: Deployment Check
     useEffect(() => {
-        console.log("MPT Dashboard v0.1.2 - List View Update Loaded (Force Dynamic)");
+        console.log("MPT Dashboard v0.1.3 - Deployment Forced (No Lint)");
     }, []);
 
     const [isTimeSelectorHovered, setIsTimeSelectorHovered] = useState(false);
