@@ -90,7 +90,8 @@ export async function getPortfolioMetrics(assets: any[]): Promise<{ totalValueEU
             sector: asset.sector || undefined,
             country: asset.country || undefined,
             platform: asset.platform || undefined,
-            customGroup: asset.customGroup || undefined
+            customGroup: asset.customGroup || undefined,
+            rank: asset.rank || 0, // Pass rank
         };
     }));
 
