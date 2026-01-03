@@ -245,29 +245,37 @@ export async function updateAsset(assetId: string, data: { quantity: number; buy
         try {
             const user = await prisma.user.findUnique({
                 where: { email: session.user.email },
-                include: { portfolio: true }
+                include: {
+                    portfolio: {
+                        include: { assets: { select: { id: true } } }
+                    }
+                }
             });
 
             if (!user?.portfolio) return { error: "Unauthorized" };
 
-            // Verify all assets belong to user (Optional optimization: Just try update and depend on where clause? 
-            // Better to be safe, but doing findMany for all ids might be heavy if list is huge. 
-            // For reordering, we can just run updates where portfolioId matches.)
+            // Verify all item IDs belong to the user's portfolio
+            const userAssetIds = new Set(user.portfolio.assets.map(a => a.id));
+            const invalidIds = validated.data.filter(item => !userAssetIds.has(item.id));
 
+            if (invalidIds.length > 0) {
+                console.error("Attempted to reorder unauthorized assets:", invalidIds);
+                return { error: "Unauthorized asset modification" };
+            }
+
+            // Execute updates in transaction using direct ID updates (we verified ownership above)
             await prisma.$transaction(
                 validated.data.map((item) =>
-                    prisma.asset.updateMany({
-                        where: {
-                            id: item.id,
-                            portfolioId: user.portfolio!.id
-                        },
+                    prisma.asset.update({
+                        where: { id: item.id },
                         data: { rank: item.rank }
                     })
                 )
             );
 
-            revalidatePath('/'); // Clear cache
-            revalidatePath('/[username]');
+            // Revalidate specific username page to ensure fresh data
+            revalidatePath(`/${user.username}`);
+            revalidatePath('/');
 
             return { success: true };
         } catch (error) {
