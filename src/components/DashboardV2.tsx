@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useId } from "react";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useRouter } from "next/navigation"; // Added router
 import { InlineAssetSearch } from "./InlineAssetSearch";
@@ -1597,8 +1597,13 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
 
     const activeFiltersCount = [typeFilter, exchangeFilter, currencyFilter, countryFilter, sectorFilter, platformFilter].filter(Boolean).length;
 
+
+    // Use a unique ID for DndContext to prevent hydration mismatches with server rendering
+    const dndContextId = useId();
+
     return (
         <DndContext
+            id={dndContextId}
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}

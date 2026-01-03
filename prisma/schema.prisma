@@ -1,60 +1,56 @@
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
 model User {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  email     String   @unique
+  id        String     @id @default(cuid())
+  username  String     @unique
+  email     String     @unique
   password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
   portfolio Portfolio?
 }
 
 model Portfolio {
   id        String   @id @default(cuid())
   userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id])
-  assets    Asset[]
   isPublic  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  assets    Asset[]
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Asset {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   portfolioId String
-  portfolio   Portfolio @relation(fields: [portfolioId], references: [id])
-  
-  type        String   // STOCK, CRYPTO, GOLD, BOND, FUND, CASH
-  symbol      String   // AAPL, BTC, XAU
+  type        String
+  symbol      String
   name        String?
   quantity    Float
-  buyPrice    Float    // Average buy price in original currency
-  currency    String   // USD, EUR, TRY, BTC, ETH
-  exchange    String?  // NASDAQ, BIST, NYSE, Euronext Amsterdam, Xetra, etc.
-  sector      String?  // Technology, Finance, Energy, Automotive, Robotics, etc.
-  country     String?  // Netherlands, France, USA, China, Turkey, etc.
-  platform    String?  // Degiro, Is Bankasi, ING Bank, Binance, etc.
-  customGroup String?  // User defined portfolio/group name
-  isin        String?  // US0378331005, etc.
-  rank        Int      @default(0) // Custom sort order
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  buyPrice    Float
+  currency    String
+  exchange    String?
+  sector      String?
+  country     String?
+  platform    String?
+  isin        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  customGroup String?
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id])
 }
 
 model PriceCache {
-  symbol     String   @id
-  price      Float
-  currency   String
-  updatedAt  DateTime @updatedAt // Used to check if cache is stale
+  symbol    String   @id
+  price     Float
+  currency  String
+  updatedAt DateTime @updatedAt
 }
