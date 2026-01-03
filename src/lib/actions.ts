@@ -4,6 +4,17 @@
 import { z } from "zod";
 import fs from "fs";
 
+const LOG_FILE = "/Users/ardaak/Downloads/Projects/PT/server_action.log";
+function debugLog(msg: string) {
+    try {
+        fs.appendFileSync(LOG_FILE, new Date().toISOString() + ": " + msg + "\n");
+    } catch (e) {
+        // ignore
+    }
+}
+
+
+
 function logToFile(message: string) {
     fs.appendFileSync("server_debug.log", new Date().toISOString() + " - " + message + "\n");
 }
@@ -245,6 +256,7 @@ const ReorderSchema = z.array(z.object({
 }));
 
 export async function reorderAssets(items: { id: string; rank: number }[]) {
+    debugLog(`Action triggered. Items: ${items.length}`);
     console.log("[Reorder] Action triggered. Items count:", items.length);
 
     const session = await auth();
@@ -302,6 +314,7 @@ export async function reorderAssets(items: { id: string; rank: number }[]) {
 
         return { success: true };
     } catch (error) {
+        debugLog(`Reorder error: ${error}`);
         console.error("Reorder error:", error);
         return { error: "Failed to reorder" };
     }

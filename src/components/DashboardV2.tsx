@@ -1332,7 +1332,9 @@ function AssetGroupGrid({
 export default function Dashboard({ username, isOwner, totalValueEUR, assets, isBlurred }: DashboardProps) {
     const router = useRouter();
     // Initialize items with default sort (Weight Descending)
-    const [items, setItems] = useState<AssetDisplay[]>([]);
+    // Initialize items with default sort (Rank then Value)
+    // Fix: Initialize with assets prop to avoid hydration mismatch/flash
+    const [items, setItems] = useState<AssetDisplay[]>(assets);
     const [orderedGroups, setOrderedGroups] = useState<string[]>([]);
     const [isGroupingEnabled, setIsGroupingEnabled] = useState(false);
     const [viewMode, setViewMode] = useState<"list" | "grid" | "detailed">("list");
@@ -1352,28 +1354,37 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
     const [assetToDelete, setAssetToDelete] = useState<AssetDisplay | null>(null);
 
     // Column State
-    const [activeColumns, setActiveColumns] = useState<ColumnId[]>(() => {
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('user_columns');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    if (Array.isArray(parsed)) {
-                        // Filter out any columns that no longer exist in ALL_COLUMNS
-                        return parsed.filter((id: string) => ALL_COLUMNS.some(c => c.id === id));
-                    }
-                } catch (e) {
-                    console.error("Failed to parse user columns", e);
-                }
-            }
-        }
-        return ALL_COLUMNS.filter(c => c.isDefault).map(c => c.id);
-    });
+    // Fix: Initialize with default columns to match Server Side Rendering
+    const [activeColumns, setActiveColumns] = useState<ColumnId[]>(
+        ALL_COLUMNS.filter(c => c.isDefault).map(c => c.id)
+    );
     const [isAdjustListOpen, setIsAdjustListOpen] = useState(false);
 
-    // Persist Columns
+    // Persist Columns & Load from LocalStorage on Mount
     useEffect(() => {
-        localStorage.setItem('user_columns', JSON.stringify(activeColumns));
+        // Load from LocalStorage
+        const saved = localStorage.getItem('user_columns');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed)) {
+                    // Filter out any columns that no longer exist in ALL_COLUMNS
+                    const validColumns = parsed.filter((id: string) => ALL_COLUMNS.some(c => c.id === id));
+                    if (validColumns.length > 0) {
+                        setActiveColumns(validColumns);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to parse user columns", e);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        // Save to LocalStorage
+        if (activeColumns.length > 0) {
+            localStorage.setItem('user_columns', JSON.stringify(activeColumns));
+        }
     }, [activeColumns]);
 
     const { currency: globalCurrency } = useCurrency();
@@ -1381,7 +1392,13 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
 
     // Update items when assets prop changes (initial load or refetch)
     useEffect(() => {
-        const sorted = [...assets].sort((a, b) => b.totalValueEUR - a.totalValueEUR);
+        // Ensure we preserve order if rank is present, otherwise value sort
+        const sorted = [...assets].sort((a, b) => {
+            if ((a.rank ?? 0) !== (b.rank ?? 0)) {
+                return (a.rank ?? 0) - (b.rank ?? 0);
+            }
+            return b.totalValueEUR - a.totalValueEUR;
+        });
         setItems(sorted);
     }, [assets]);
 
@@ -1532,7 +1549,12 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                     id: item.id,
                     rank: index
                 }));
-                reorderAssets(updates);
+                reorderAssets(updates).then(res => {
+                    console.log("[Reorder] Response:", res);
+                    if (res && res.error) {
+                        console.error("[Reorder] Error from server:", res.error);
+                    }
+                });
             }
         }
     }
