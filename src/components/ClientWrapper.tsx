@@ -42,7 +42,9 @@ export function ClientWrapper({ username, isOwner, totalValueEUR, assets, navbar
                 opacity: 0.3,
                 color: 'var(--text-secondary)'
             }}>
-                v{versionData.version} - {versionData.buildDate} - {versionData.buildTime}
+                <a href="/CHANGELOG.md" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    v{versionData.version} - {versionData.buildDate} - {versionData.buildTime}
+                </a>
             </div>
         </CurrencyProvider>
     );
