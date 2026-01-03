@@ -1900,7 +1900,10 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                             return (
                                                 <button
                                                     key={item.label}
-                                                    onClick={() => setGroupingKey(item.value)}
+                                                    onClick={() => {
+                                                        setOrderedGroups([]); // Reset order to prevent stale keys causing NaN
+                                                        setGroupingKey(item.value);
+                                                    }}
                                                     style={{
                                                         background: isActive ? '#6366f1' : 'transparent',
                                                         border: 'none',
@@ -2135,8 +2138,8 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                         )}
 
                                         {groupingKey !== 'none' ? (
-                                            <SortableContext items={orderedGroups.map(g => `group:${g}`)} strategy={verticalListSortingStrategy}>
-                                                {orderedGroups.map(type => (
+                                            <SortableContext items={orderedGroups.filter(g => groupedAssets[g]).map(g => `group:${g}`)} strategy={verticalListSortingStrategy}>
+                                                {orderedGroups.filter(type => groupedAssets[type]).map(type => (
                                                     <SortableGroup key={type} id={`group:${type}`}>
                                                         <AssetGroup
                                                             type={type}
