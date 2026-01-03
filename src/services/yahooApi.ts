@@ -139,6 +139,9 @@ export async function getYahooQuote(symbol: string): Promise<YahooQuote | null> 
 
     // Fetch from API
     try {
+        // Random jitter to prevent synchronized requests from multiple workers triggers 429
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 2000));
+
         const result = await yahooFinance.quote(symbol);
         if (!result || !result.symbol) {
             console.warn(`[YahooApi] No result from Yahoo Finance for ${symbol}`);
@@ -183,7 +186,20 @@ export async function getYahooQuote(symbol: string): Promise<YahooQuote | null> 
 
         return quote;
 
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.message?.includes('429') || error?.status === 429) {
+            console.warn(`[YahooApi] Rate Limit (429) for ${symbol}. Returning stale DB data if available.`);
+            // If rate limited, try to pull from DB even if "stale" (older than 5 mins) as a failsafe
+            const dbCachedFallback = await prisma.priceCache.findUnique({ where: { symbol } });
+            if (dbCachedFallback) {
+                return {
+                    symbol: dbCachedFallback.symbol,
+                    regularMarketPrice: dbCachedFallback.price,
+                    currency: dbCachedFallback.currency,
+                    regularMarketTime: dbCachedFallback.updatedAt
+                };
+            }
+        }
         console.error(`[YahooApi] Library quote error for ${symbol}:`, error);
     }
 
