@@ -108,6 +108,7 @@ type ColumnId = 'TYPE' | 'NAME' | 'TICKER' | 'EXCHANGE' | 'CURRENCY' | 'PRICE' |
 interface ColumnConfig {
     id: ColumnId;
     label: string;
+    headerLabel?: string;
     isDefault: boolean;
 }
 
@@ -122,7 +123,7 @@ const ALL_COLUMNS: ColumnConfig[] = [
     { id: 'VALUE', label: 'Value (Org)', isDefault: true },
     { id: 'VALUE_EUR', label: 'Value (€)', isDefault: false },
     { id: 'PL', label: 'P&L', isDefault: true },
-    { id: 'EARNINGS', label: 'NED', isDefault: false },
+    { id: 'EARNINGS', label: 'Next Earnings Date (NED)', headerLabel: 'NED', isDefault: false },
     { id: 'PORTFOLIO_NAME', label: 'Portfolio', isDefault: false },
 ];
 
@@ -181,7 +182,7 @@ const DraggableHeader = ({ id, children, onToggle, columnsCount = 4 }: { id: str
                 gap: isUltraHighDensity ? '1px' : '3px',
                 height: '100%',
                 paddingLeft: isUltraHighDensity ? '0.1rem' : '0.3rem',
-                borderRight: '1px solid rgba(255,255,255,0.08)',
+                borderRight: '1px solid rgba(255,255,255,0.18)',
                 background: isDragging ? 'rgba(255,255,255,0.05)' : 'transparent',
                 overflow: 'hidden'
             }}>
@@ -319,7 +320,7 @@ function AssetTableRow({
 
     const commonCellStyles: React.CSSProperties = {
         padding: cellPadding,
-        borderRight: '1px solid rgba(255,255,255,0.06)',
+        borderRight: '1px solid rgba(255,255,255,0.15)',
         display: 'flex',
         alignItems: 'center',
         overflow: 'hidden',
@@ -499,7 +500,13 @@ function AssetTableRow({
                             </div>
                         ) : (
                             <>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                <div style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'flex-end',
+                                    transition: 'transform 0.2s',
+                                    transform: isHovered && isOwner ? 'translateX(-12px)' : 'none'
+                                }}>
                                     <span style={{ fontSize: fontSizeMain, fontWeight: 700, color: isPeriodProfit ? '#10b981' : '#ef4444' }}>
                                         {isPeriodProfit ? '▲' : '▼'}{fmt(periodProfitPct)}%
                                     </span>
@@ -512,11 +519,11 @@ function AssetTableRow({
                                 {isOwner && (
                                     <div className="edit-trigger" style={{
                                         position: 'absolute',
-                                        right: '-4px',
+                                        right: '1px',
                                         top: '50%',
                                         transform: 'translateY(-50%)',
                                         opacity: isHovered ? 1 : 0,
-                                        transition: 'opacity 0.2s',
+                                        transition: 'all 0.2s',
                                         zIndex: 10
                                     }}>
                                         <button
@@ -535,11 +542,14 @@ function AssetTableRow({
                                                 color: '#fff',
                                                 cursor: 'pointer',
                                                 padding: '2px',
-                                                borderRadius: '50%',
-                                                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)'
+                                                borderRadius: '0.3rem',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
                                             }}
                                         >
-                                            <Settings size={12} />
+                                            <Settings size={isUltraHighDensity ? 10 : 12} />
                                         </button>
                                     </div>
                                 )}
@@ -2144,7 +2154,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                                 return (
                                                                     <DraggableHeader key={colId} id={`col:${colId}`} columnsCount={activeColumns.length}>
                                                                         <span style={{ fontSize: activeColumns.length > 8 ? '0.65rem' : '0.7rem', fontWeight: 700, opacity: 0.8, letterSpacing: '0.05em' }}>
-                                                                            {colId === 'PORTFOLIO_NAME' ? <Briefcase size={activeColumns.length > 8 ? 11 : 13} strokeWidth={2.5} /> : colDef?.label.toUpperCase()}
+                                                                            {colId === 'PORTFOLIO_NAME' ? <Briefcase size={activeColumns.length > 8 ? 11 : 13} strokeWidth={2.5} /> : (colDef?.headerLabel || colDef?.label || colId).toUpperCase()}
                                                                         </span>
                                                                     </DraggableHeader>
                                                                 );

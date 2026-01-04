@@ -1,6 +1,6 @@
 {
-    "version": "v121",
+    "version": "v122",
     "buildDate": "04/01/2026",
-    "buildTime": "16:38",
-    "description": "Optimized table layout for 12-column fit: shortened 'NED' header, enabled 2-line headers, and added visible column separators."
+    "buildTime": "16:55",
+    "description": "Implemented content-shifting hover gear, visible column separators, and clearer 'Next Earnings Date (NED)' terminology."
 }

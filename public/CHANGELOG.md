@@ -1,5 +1,11 @@
 # Changelog
 
+## v122 - 04/01/2026 16:55
+- Feature: **Content-Shifting Gear**. When hovering over an asset, the P&L text now smoothly slides left to make room for the gear icon on the far right.
+- UI: Updated **Next Earnings Date (NED)** in the column selection menu for better clarity while keeping it as **NED** on the dashboard.
+- UI: Increased visibility of **vertical column separators** (15-18% opacity) for better data distinction.
+- UI: Gear icon is now slightly smaller in ultra-high density mode for a cleaner look.
+
 ## v121 - 04/01/2026 16:38
 - UI: Shortened **Next Earnings Date** to **NED** in the table header to save space.
 - UI: Enabled **2-line headers** so labels can wrap elegantly without being cut off.
