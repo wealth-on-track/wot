@@ -103,7 +103,7 @@ import { AssetDisplay } from "@/lib/types";
 import { SortableAssetRow, SortableGroup, SortableAssetCard } from "./SortableWrappers";
 
 // Column Configurations
-type ColumnId = 'TYPE' | 'NAME' | 'TICKER' | 'EXCHANGE' | 'CURRENCY' | 'PRICE' | 'VALUE' | 'PL' | 'EARNINGS' | 'PORTFOLIO_NAME';
+type ColumnId = 'TYPE' | 'NAME' | 'TICKER' | 'EXCHANGE' | 'CURRENCY' | 'PRICE' | 'PRICE_EUR' | 'VALUE' | 'VALUE_EUR' | 'PL' | 'EARNINGS' | 'PORTFOLIO_NAME';
 
 interface ColumnConfig {
     id: ColumnId;
@@ -118,7 +118,9 @@ const ALL_COLUMNS: ColumnConfig[] = [
     { id: 'EXCHANGE', label: 'Exchange', isDefault: false },
     { id: 'CURRENCY', label: 'Currency', isDefault: false },
     { id: 'PRICE', label: 'Price', isDefault: true },
+    { id: 'PRICE_EUR', label: 'Price (€)', isDefault: false },
     { id: 'VALUE', label: 'Value', isDefault: true },
+    { id: 'VALUE_EUR', label: 'Value (€)', isDefault: false },
     { id: 'PL', label: 'P&L', isDefault: true },
     { id: 'EARNINGS', label: 'Next Earnings Date', isDefault: false },
     { id: 'PORTFOLIO_NAME', label: 'Portfolio', isDefault: false },
@@ -131,7 +133,9 @@ const COL_WIDTHS: Record<ColumnId, string> = {
     EXCHANGE: '0.7fr',
     CURRENCY: '0.5fr',
     PRICE: '1fr',
+    PRICE_EUR: '1fr',
     VALUE: '1.1fr',
+    VALUE_EUR: '1.1fr',
     PL: '1.2fr',
     EARNINGS: '0.9fr',
     PORTFOLIO_NAME: '0.9fr'
@@ -446,6 +450,13 @@ function AssetTableRow({
                         )}
                     </div>
                 );
+            case 'PRICE_EUR':
+                return (
+                    <div className="col-price-eur" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 500, opacity: 0.9 }}>€{fmt(asset.currentPrice * getRate(asset.currency, 'EUR'))}</span>
+                        <span style={{ fontSize: '0.7rem', opacity: 0.3 }}>€{fmt(asset.buyPrice * getRate(asset.currency, 'EUR'))}</span>
+                    </div>
+                );
 
             case 'VALUE':
                 return (
@@ -454,6 +465,16 @@ function AssetTableRow({
                         <span className="cost-basis-display" style={{ fontSize: '0.7rem', opacity: 0.5 }}>{currencySymbol}{fmt(displayCostBasis, 0, 0)}</span>
                     </div>
                 );
+            case 'VALUE_EUR':
+                {
+                    const costEUR = (asset.buyPrice * asset.quantity) * getRate(asset.currency, 'EUR');
+                    return (
+                        <div className="col-value-eur" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>€{fmt(asset.totalValueEUR, 0, 0)}</span>
+                            <span className="cost-basis-display" style={{ fontSize: '0.7rem', opacity: 0.5 }}>€{fmt(costEUR, 0, 0)}</span>
+                        </div>
+                    );
+                }
             case 'PL':
                 return (
                     <div className="col-pl" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center' }}>

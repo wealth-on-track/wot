@@ -1,6 +1,6 @@
 {
-    "version": "v1.1.5",
+    "version": "v1.1.6",
     "buildDate": "04/01/2026",
-    "buildTime": "11:00",
-    "description": "Added Total Value input for pension funds (BES) to make portfolio tracking easier."
+    "buildTime": "14:55",
+    "description": "Added Price (€) and Value (€) columns to the asset list view."
 }

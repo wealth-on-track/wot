@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.6 - 04/01/2026 14:55
+- Feature: Added **Price (€)** and **Value (€)** column options to the asset list. This allows users to track their asset costs and total values in Euro, regardless of the asset's original currency.
+
+
 ## v1.1.5 - 04/01/2026 11:00
 - Feature: Added **Total Value** input for pension funds (BES) and ETFs. You can now enter the total amount you have in your account, and the app will automatically calculate the quantity based on the unit price.
 
