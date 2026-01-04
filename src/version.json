@@ -1,6 +1,6 @@
 {
-    "version": "v128",
+    "version": "v129",
     "buildDate": "04/01/2026",
-    "buildTime": "19:35",
-    "description": "Absolute Vertical Continuity. Rebuilt group headers to align with the table grid, ensuring unbroken column separators from header to bottom."
+    "buildTime": "19:40",
+    "description": "True Column Separation (abc/def style). Eliminated all horizontal gaps and borders between header, groups, and rows to form absolute continuous vertical separators."
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## v129 - 04/01/2026 19:40
+- UI: **Absolute Column Separation (abc/def Mode)**. Eliminated all horizontal gaps and inter-row/group spaces. Vertical separators now form a 100% solid, unbroken line from the top of the table to the bottom.
+- UI: Removed all `border-bottom` from rows and group headers to prioritize continuous vertical flow.
+- UI: Strengthened vertical dividers to `rgba(0,0,0,0.6)` for a bold, architectural grid appearance.
+- Fix: Removed legacy margins from group wrappers that were breaking column continuity.
+
 ## v128 - 04/01/2026 19:35
 - UI: **Absolute Vertical Continuity**. Rebuilt the Asset Group headers to utilize the same internal grid system as the asset list. This allows the vertical dividers to extend seamlessly from the header through group titles to the bottom of the table.
 - UI: **Solid Grid Architecture**. Removed all inter-row and inter-group margins and padding to ensure a 100% flush, gap-free table layout with prominent vertical separators.

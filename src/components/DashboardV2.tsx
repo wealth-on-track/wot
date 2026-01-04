@@ -182,8 +182,8 @@ const DraggableHeader = ({ id, children, onToggle, columnsCount = 4 }: { id: str
                 gap: isUltraHighDensity ? '1px' : '3px',
                 height: '100%',
                 paddingLeft: isUltraHighDensity ? '0.05rem' : '0.2rem',
-                borderRight: '1px solid rgba(0,0,0,0.4)',
-                borderBottom: '1px solid rgba(0,0,0,0.2)',
+                borderRight: '1px solid rgba(0,0,0,0.6)',
+                borderBottom: 'none',
                 background: isDragging ? 'rgba(0,0,0,0.05)' : 'transparent',
                 overflow: 'hidden'
             }}>
@@ -321,8 +321,8 @@ function AssetTableRow({
 
     const commonCellStyles: React.CSSProperties = {
         padding: cellPadding,
-        borderRight: '1px solid rgba(0,0,0,0.4)',
-        borderBottom: '1px solid rgba(0,0,0,0.2)',
+        borderRight: '1px solid rgba(0,0,0,0.6)',
+        borderBottom: 'none',
         display: 'flex',
         alignItems: 'center',
         overflow: 'hidden',
@@ -1097,7 +1097,7 @@ const AssetGroupHeader = ({
                 padding: '0',
                 background: 'linear-gradient(90deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.15))',
                 borderRadius: '0',
-                borderBottom: '1px solid rgba(0,0,0,0.3)',
+                borderBottom: 'none',
                 marginBottom: '0',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 userSelect: 'none',
@@ -1117,7 +1117,7 @@ const AssetGroupHeader = ({
                         alignItems: 'center',
                         justifyContent: isFirst || isName ? 'flex-start' : 'center',
                         padding: '0 0.4rem',
-                        borderRight: isLast ? 'none' : '1px solid rgba(0,0,0,0.4)',
+                        borderRight: isLast ? 'none' : '1px solid rgba(0,0,0,0.6)',
                         overflow: 'hidden'
                     }}>
                         {isFirst && (
@@ -1174,7 +1174,7 @@ const AssetGroupGridWrapper = ({
     dragHandleProps?: any
 }) => {
     return (
-        <div style={{ marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '0' }}>
             {/* Inject drag handle into header */}
             {React.isValidElement(header)
                 ? React.cloneElement(header as React.ReactElement<any>, { dragHandleProps })
@@ -2162,13 +2162,14 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                 display: 'flex',
                                                 flexDirection: 'column',
                                                 padding: 0,
+                                                gap: 0,
                                                 overflow: 'hidden',
                                                 borderRadius: '0.8rem'
                                             }}>
                                                 {/* Table Header Always Show in List View */}
                                                 {true && (
                                                     <div className="asset-table-header" style={{
-                                                        borderBottom: '2px solid rgba(0,0,0,0.15)',
+                                                        borderBottom: 'none',
                                                         alignItems: 'center',
                                                         display: 'grid',
                                                         gridTemplateColumns: activeColumns.map(c => COL_WIDTHS[c]).join(' '),
