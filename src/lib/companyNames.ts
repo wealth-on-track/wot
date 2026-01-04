@@ -61,6 +61,11 @@ export const cleanAssetName = (name: string): string => {
 };
 
 export const getCompanyName = (symbol: string, type: string, fullName?: string | null): string => {
+    // Return "Cash" for cash assets
+    if (type === 'CASH' || symbol.toUpperCase().endsWith('-CASH')) {
+        return 'Cash';
+    }
+
     // 1. Prioritize mapped names
     const names: Record<string, string> = {
         'AAPL': 'Apple',

@@ -28,19 +28,31 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
     const upperQuery = query.toLocaleUpperCase('tr-TR');
     const currencies = ["USD", "EUR", "TRY", "GBP", "JPY", "AUD", "CAD", "CHF", "CNY"];
 
-    // Check if query is a currency code
-    if (currencies.includes(upperQuery)) {
-        const cashOption: SymbolOption = {
-            symbol: upperQuery,
-            fullName: `${upperQuery} - Cash`,
+    // Determine which currencies to suggest as CASH options
+    let targetCurrencies: string[] = [];
+    const exactMatch = currencies.find(c => c === upperQuery);
+    const specificCashMatch = currencies.find(c => upperQuery.includes(c) && (upperQuery.includes("CASH") || upperQuery.includes("NAKIT")));
+
+    if (exactMatch) {
+        targetCurrencies = [exactMatch];
+    } else if (specificCashMatch) {
+        targetCurrencies = [specificCashMatch];
+    } else if (upperQuery.includes("CASH") || upperQuery.includes("NAKIT")) {
+        targetCurrencies = currencies;
+    }
+
+    if (targetCurrencies.length > 0) {
+        const cashOptions: SymbolOption[] = targetCurrencies.map(curr => ({
+            symbol: curr,
+            fullName: `${curr} - Cash`,
             exchange: 'Forex',
             type: 'CASH', // Custom type
-            currency: upperQuery,
-            country: 'Global', // Or lookup based on currency
-            rawName: `${upperQuery} CASH`
-        };
+            currency: curr,
+            country: 'Global',
+            rawName: `${curr} CASH`
+        }));
         // Prepend to results
-        mappedResults.unshift(cashOption);
+        mappedResults.unshift(...cashOptions);
     }
 
     // GRAM GOLD / ALTIN Special Handling

@@ -42,6 +42,7 @@ interface DashboardProps {
     totalValueEUR: number;
     assets: AssetDisplay[];
     isBlurred: boolean;
+    showChangelog?: boolean; // New prop
 }
 
 // European number format removed (Imported)
@@ -1329,7 +1330,7 @@ function AssetGroupGrid({
 
 
 
-export default function Dashboard({ username, isOwner, totalValueEUR, assets, isBlurred }: DashboardProps) {
+export default function Dashboard({ username, isOwner, totalValueEUR, assets, isBlurred, showChangelog = false }: DashboardProps) {
     const router = useRouter();
     // Initialize items with default sort (Weight Descending)
     // Initialize items with default sort (Rank then Value)
@@ -1342,9 +1343,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
     const [timePeriod, setTimePeriod] = useState("ALL");
 
     // DEBUG: Deployment Check
-    useEffect(() => {
-        console.log("MPT Dashboard v0.1.3 - Deployment Forced (No Lint)");
-    }, []);
+
 
     const [isTimeSelectorHovered, setIsTimeSelectorHovered] = useState(false);
     const [isGroupingSelectorHovered, setIsGroupingSelectorHovered] = useState(false);
@@ -2111,157 +2110,153 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
 
                             {/* ASSETS BODY */}
                             <div style={{ minHeight: '400px' }}>
-                                {viewMode === "list" ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        {/* Table Header Always Show in List View */}
-                                        {true && (
-                                            <div className="asset-table-header glass-panel" style={{
-                                                borderBottom: '1px solid var(--glass-border)',
-                                                borderRadius: '0.5rem 0.5rem 0 0',
-                                                alignItems: 'center',
-                                                display: 'grid',
-                                                gridTemplateColumns: activeColumns.map(c => COL_WIDTHS[c]).join(' ')
-                                            }}>
-                                                <SortableContext items={activeColumns.map(c => `col:${c}`)} strategy={rectSortingStrategy}>
-                                                    {activeColumns.map(colId => {
-                                                        const colDef = ALL_COLUMNS.find(c => c.id === colId);
-                                                        return (
-                                                            <DraggableHeader key={colId} id={`col:${colId}`}>
-                                                                <span style={{ fontSize: '0.7rem', fontWeight: 700, opacity: 0.8, letterSpacing: '0.05em' }}>
-                                                                    {colId === 'PORTFOLIO_NAME' ? <Briefcase size={13} strokeWidth={2.5} /> : colDef?.label.toUpperCase()}
-                                                                </span>
-                                                            </DraggableHeader>
-                                                        );
-                                                    })}
-                                                </SortableContext>
-                                            </div>
-                                        )}
-
-                                        {groupingKey !== 'none' ? (
-                                            <SortableContext items={orderedGroups.filter(g => groupedAssets[g]).map(g => `group:${g}`)} strategy={verticalListSortingStrategy}>
-                                                {orderedGroups.filter(type => groupedAssets[type]).map(type => (
-                                                    <SortableGroup key={type} id={`group:${type}`}>
-                                                        <AssetGroup
-                                                            type={type}
-                                                            assets={groupedAssets[type]}
-                                                            totalEUR={groupTotals[type]}
-                                                            positionsViewCurrency={positionsViewCurrency}
-                                                            totalPortfolioValueEUR={totalValueEUR}
-                                                            isOwner={isOwner}
-                                                            onDelete={handleDelete}
-                                                            timeFactor={getTimeFactor()}
-                                                            columns={activeColumns}
-                                                            timePeriod={timePeriod}
-                                                        />
-                                                    </SortableGroup>
-                                                ))}
-                                            </SortableContext>
-                                        ) : (
-                                            <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-                                                {filteredAssets.map((asset, index) => (
-                                                    <SortableAssetRow key={asset.id} id={asset.id}>
-                                                        <AssetTableRow
-                                                            asset={asset}
-                                                            positionsViewCurrency={positionsViewCurrency}
-                                                            totalPortfolioValueEUR={totalValueEUR}
-                                                            isOwner={isOwner}
-                                                            onDelete={handleDelete}
-                                                            timeFactor={getTimeFactor()}
-                                                            rowIndex={index}
-                                                            columns={activeColumns}
-                                                            timePeriod={timePeriod}
-                                                        />
-                                                    </SortableAssetRow>
-                                                ))}
-                                            </SortableContext>
-                                        )}
-
-                                        {filteredAssets.length === 0 && (
-                                            <div style={{ padding: '4rem', textAlign: 'center', opacity: 0.3, fontSize: '0.9rem' }}>
-                                                No assets found for these filters.
-                                            </div>
-                                        )}
-                                    </div>
+                                {showChangelog ? (
+                                    <ChangelogView />
                                 ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                        {isGroupingEnabled ? (
-                                            <SortableContext items={orderedGroups.map(g => `group:${g}`)} strategy={verticalListSortingStrategy}>
-                                                {orderedGroups.map(type => {
-                                                    const groupAssets = groupedAssets[type];
-                                                    if (!groupAssets) return null;
-                                                    const groupTotal = groupTotals[type] || 0;
+                                    <>
+                                        {viewMode === "list" ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                {/* Table Header Always Show in List View */}
+                                                {true && (
+                                                    <div className="asset-table-header glass-panel" style={{
+                                                        borderBottom: '1px solid var(--glass-border)',
+                                                        borderRadius: '0.5rem 0.5rem 0 0',
+                                                        alignItems: 'center',
+                                                        display: 'grid',
+                                                        gridTemplateColumns: activeColumns.map(c => COL_WIDTHS[c]).join(' ')
+                                                    }}>
+                                                        <SortableContext items={activeColumns.map(c => `col:${c}`)} strategy={rectSortingStrategy}>
+                                                            {activeColumns.map(colId => {
+                                                                const colDef = ALL_COLUMNS.find(c => c.id === colId);
+                                                                return (
+                                                                    <DraggableHeader key={colId} id={`col:${colId}`}>
+                                                                        <span style={{ fontSize: '0.7rem', fontWeight: 700, opacity: 0.8, letterSpacing: '0.05em' }}>
+                                                                            {colId === 'PORTFOLIO_NAME' ? <Briefcase size={13} strokeWidth={2.5} /> : colDef?.label.toUpperCase()}
+                                                                        </span>
+                                                                    </DraggableHeader>
+                                                                );
+                                                            })}
+                                                        </SortableContext>
+                                                    </div>
+                                                )}
 
-                                                    return (
-                                                        <SortableGroup key={type} id={`group:${type}`}>
-                                                            <AssetGroupGrid
-                                                                type={type}
-                                                                assets={groupAssets}
-                                                                groupTotal={groupTotal}
-                                                                totalPortfolioValueEUR={totalValueEUR}
-                                                                positionsViewCurrency={positionsViewCurrency}
-                                                                viewMode={viewMode}
-                                                                gridColumns={gridColumns}
-                                                                isBlurred={isBlurred}
-                                                                isOwner={isOwner}
-                                                                onDelete={handleDelete}
-                                                                timeFactor={getTimeFactor()}
-                                                                timePeriod={timePeriod}
-                                                            // dragHandleProps are injected by SortableGroup but here we are inside it?
-                                                            // dragHandleProps are injected by SortableGroup but here we are inside it? 
-                                                            // Usually we need the wrapper. SortableGroup wraps children.
-                                                            // Let's assume SortableGroup handles the DND ref for the item, 
-                                                            // but we need a handle. 
-                                                            // Actually, let's keep it simple: AssetGroupGrid renders the header which triggers Toggle. 
-                                                            // The drag handle should be distinct if we want DND.
-                                                            // However, previous code injected dragHandleProps via AssetGroupGridWrapper.
-                                                            // We can pass an empty object or handle it if we have the props propogated.
-                                                            // For now, let's assume simple rendering.
-                                                            />
-                                                        </SortableGroup>
-                                                    );
-                                                })}
-                                            </SortableContext>
+                                                {groupingKey !== 'none' ? (
+                                                    <SortableContext items={orderedGroups.filter(g => groupedAssets[g]).map(g => `group:${g}`)} strategy={verticalListSortingStrategy}>
+                                                        {orderedGroups.filter(type => groupedAssets[type]).map(type => (
+                                                            <SortableGroup key={type} id={`group:${type}`}>
+                                                                <AssetGroup
+                                                                    type={type}
+                                                                    assets={groupedAssets[type]}
+                                                                    totalEUR={groupTotals[type]}
+                                                                    positionsViewCurrency={positionsViewCurrency}
+                                                                    totalPortfolioValueEUR={totalValueEUR}
+                                                                    isOwner={isOwner}
+                                                                    onDelete={handleDelete}
+                                                                    timeFactor={getTimeFactor()}
+                                                                    columns={activeColumns}
+                                                                    timePeriod={timePeriod}
+                                                                />
+                                                            </SortableGroup>
+                                                        ))}
+                                                    </SortableContext>
+                                                ) : (
+                                                    <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                                                        {filteredAssets.map((asset, index) => (
+                                                            <SortableAssetRow key={asset.id} id={asset.id}>
+                                                                <AssetTableRow
+                                                                    asset={asset}
+                                                                    positionsViewCurrency={positionsViewCurrency}
+                                                                    totalPortfolioValueEUR={totalValueEUR}
+                                                                    isOwner={isOwner}
+                                                                    onDelete={handleDelete}
+                                                                    timeFactor={getTimeFactor()}
+                                                                    rowIndex={index}
+                                                                    columns={activeColumns}
+                                                                    timePeriod={timePeriod}
+                                                                />
+                                                            </SortableAssetRow>
+                                                        ))}
+                                                    </SortableContext>
+                                                )}
+
+                                                {filteredAssets.length === 0 && (
+                                                    <div style={{ padding: '4rem', textAlign: 'center', opacity: 0.3, fontSize: '0.9rem' }}>
+                                                        No assets found for these filters.
+                                                    </div>
+                                                )}
+                                            </div>
                                         ) : (
-                                            <div style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                                                gap: '1rem',
-                                                transition: 'all 0.3s ease'
-                                            }}>
-                                                <SortableContext items={items.map(i => i.id)} strategy={rectSortingStrategy}>
-                                                    {filteredAssets.map((asset, index) => {
-                                                        return (
-                                                            <SortableAssetCard key={asset.id} id={asset.id}>
-                                                                {viewMode === 'detailed' ? (
-                                                                    <DetailedAssetCard
-                                                                        asset={asset}
-                                                                        positionsViewCurrency={positionsViewCurrency}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                                {isGroupingEnabled ? (
+                                                    <SortableContext items={orderedGroups.map(g => `group:${g}`)} strategy={verticalListSortingStrategy}>
+                                                        {orderedGroups.map(type => {
+                                                            const groupAssets = groupedAssets[type];
+                                                            if (!groupAssets) return null;
+                                                            const groupTotal = groupTotals[type] || 0;
+
+                                                            return (
+                                                                <SortableGroup key={type} id={`group:${type}`}>
+                                                                    <AssetGroupGrid
+                                                                        type={type}
+                                                                        assets={groupAssets}
+                                                                        groupTotal={groupTotal}
                                                                         totalPortfolioValueEUR={totalValueEUR}
+                                                                        positionsViewCurrency={positionsViewCurrency}
+                                                                        viewMode={viewMode}
+                                                                        gridColumns={gridColumns}
                                                                         isBlurred={isBlurred}
                                                                         isOwner={isOwner}
                                                                         onDelete={handleDelete}
                                                                         timeFactor={getTimeFactor()}
                                                                         timePeriod={timePeriod}
                                                                     />
-                                                                ) : (
-                                                                    <AssetCard
-                                                                        asset={asset}
-                                                                        positionsViewCurrency={positionsViewCurrency}
-                                                                        totalPortfolioValueEUR={totalValueEUR}
-                                                                        isBlurred={isBlurred}
-                                                                        isOwner={isOwner}
-                                                                        onDelete={handleDelete}
-                                                                        timeFactor={getTimeFactor()}
-                                                                        timePeriod={timePeriod}
-                                                                    />
-                                                                )}
-                                                            </SortableAssetCard>
-                                                        );
-                                                    })}
-                                                </SortableContext>
+                                                                </SortableGroup>
+                                                            );
+                                                        })}
+                                                    </SortableContext>
+                                                ) : (
+                                                    <div style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                                                        gap: '1rem',
+                                                        transition: 'all 0.3s ease'
+                                                    }}>
+                                                        <SortableContext items={items.map(i => i.id)} strategy={rectSortingStrategy}>
+                                                            {filteredAssets.map((asset, index) => {
+                                                                return (
+                                                                    <SortableAssetCard key={asset.id} id={asset.id}>
+                                                                        {viewMode === 'detailed' ? (
+                                                                            <DetailedAssetCard
+                                                                                asset={asset}
+                                                                                positionsViewCurrency={positionsViewCurrency}
+                                                                                totalPortfolioValueEUR={totalValueEUR}
+                                                                                isBlurred={isBlurred}
+                                                                                isOwner={isOwner}
+                                                                                onDelete={handleDelete}
+                                                                                timeFactor={getTimeFactor()}
+                                                                                timePeriod={timePeriod}
+                                                                            />
+                                                                        ) : (
+                                                                            <AssetCard
+                                                                                asset={asset}
+                                                                                positionsViewCurrency={positionsViewCurrency}
+                                                                                totalPortfolioValueEUR={totalValueEUR}
+                                                                                isBlurred={isBlurred}
+                                                                                isOwner={isOwner}
+                                                                                onDelete={handleDelete}
+                                                                                timeFactor={getTimeFactor()}
+                                                                                timePeriod={timePeriod}
+                                                                            />
+                                                                        )}
+                                                                    </SortableAssetCard>
+                                                                );
+                                                            })}
+                                                        </SortableContext>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
-                                    </div>
+                                    </>
                                 )}
                             </div>
                         </div>
@@ -2279,7 +2274,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                     </div>
                 </div>
 
-            </div >
+            </div>
 
             <DeleteConfirmationModal
                 isOpen={!!assetToDelete}
@@ -2288,5 +2283,64 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                 assetSymbol={assetToDelete?.symbol || 'Asset'}
             />
         </DndContext>
+    );
+}
+
+function ChangelogView() {
+    const [content, setContent] = useState('Loading changelog...');
+
+    useEffect(() => {
+        fetch('/CHANGELOG.md')
+            .then(res => res.text())
+            .then(text => setContent(text))
+            .catch(err => setContent('Failed to load changelog.'));
+    }, []);
+
+    return (
+        <div className="glass-panel" style={{
+            padding: '2rem',
+            minHeight: '400px',
+            animation: 'fadeIn 0.3s ease',
+            color: 'var(--text-primary)'
+        }}>
+            <div style={{
+                marginBottom: '1.5rem',
+                borderBottom: '1px solid var(--glass-border)',
+                paddingBottom: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
+            }}>
+                <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: 'var(--glass-shine)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </div>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0 }}>Changelog.txt</h2>
+            </div>
+
+            <div style={{
+                fontFamily: 'Menlo, Monaco, Consolas, "Courier New", monospace',
+                fontSize: '0.9rem',
+                lineHeight: '1.6',
+                whiteSpace: 'pre-wrap',
+                opacity: 0.9,
+                overflowX: 'auto'
+            }}>
+                {content}
+            </div>
+        </div>
     );
 }

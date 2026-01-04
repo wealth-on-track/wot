@@ -254,3 +254,24 @@ export async function getYahooQuote(symbol: string): Promise<YahooQuote | null> 
 
     return null;
 }
+
+/**
+ * Get Profile/Summary for a symbol (Country, Sector, Industry)
+ */
+export async function getYahooAssetProfile(symbol: string): Promise<{ country?: string, sector?: string, industry?: string } | null> {
+    try {
+        const result = await yahooFinance.quoteSummary(symbol, { modules: ['summaryProfile', 'assetProfile'] });
+        const summary = result.summaryProfile || result.assetProfile; // assetProfile for ETFs sometimes
+
+        if (summary) {
+            return {
+                country: summary.country,
+                sector: summary.sector,
+                industry: summary.industry
+            };
+        }
+    } catch (e) {
+        console.warn(`[YahooApi] Profile fetch failed for ${symbol}:`, e);
+    }
+    return null;
+}

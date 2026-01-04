@@ -17,6 +17,9 @@ export interface PriceResult {
     changePercent?: number;
     previousClose?: number;
     nextEarningsDate?: string;
+    country?: string;
+    sector?: string;
+    industry?: string;
 }
 
 export async function getAssetName(symbol: string, type: string, exchange?: string): Promise<string | null> {

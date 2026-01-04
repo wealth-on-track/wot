@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Save, TrendingUp, Bitcoin, Coins, Landmark, Building, Briefcase } from "lucide-react";
 import { addAsset } from "@/lib/actions";
 import { useRouter } from "next/navigation";
@@ -41,6 +41,18 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showOptional, setShowOptional] = useState(false);
+    const [totalValue, setTotalValue] = useState("");
+
+    // Auto-calculate quantity if totalValue and buyPrice are provided for funds
+    useEffect(() => {
+        if ((type === 'FUND' || type === 'ETF') && totalValue && buyPrice) {
+            const val = parseFloat(totalValue);
+            const price = parseFloat(buyPrice);
+            if (!isNaN(val) && !isNaN(price) && price > 0) {
+                setQuantity((val / price).toFixed(6));
+            }
+        }
+    }, [totalValue, buyPrice, type]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -189,16 +201,32 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
                         {/* Middle Row: Quantity & Cost */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Quantity *</label>
-                                <input
-                                    type="number" step="any" required
-                                    value={quantity} onChange={e => setQuantity(e.target.value)}
-                                    className="glass-input"
-                                    style={{ padding: '0.6rem', fontSize: '0.9rem', width: '100%' }}
-                                />
+                                {(type === 'FUND' || type === 'ETF') ? (
+                                    <>
+                                        <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Total Value ({currency}) *</label>
+                                        <input
+                                            type="number" step="any" required
+                                            value={totalValue} onChange={e => setTotalValue(e.target.value)}
+                                            placeholder="e.g. 50000"
+                                            className="glass-input"
+                                            style={{ padding: '0.6rem', fontSize: '0.9rem', width: '100%' }}
+                                        />
+                                        {quantity && <div style={{ fontSize: '0.65rem', opacity: 0.6, marginTop: '2px' }}>≈ {quantity} units</div>}
+                                    </>
+                                ) : (
+                                    <>
+                                        <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Quantity *</label>
+                                        <input
+                                            type="number" step="any" required
+                                            value={quantity} onChange={e => setQuantity(e.target.value)}
+                                            className="glass-input"
+                                            style={{ padding: '0.6rem', fontSize: '0.9rem', width: '100%' }}
+                                        />
+                                    </>
+                                )}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Avg. Cost *</label>
+                                <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>{(type === 'FUND' || type === 'ETF') ? 'Unit Price (Avg. Cost)' : 'Avg. Cost'} *</label>
                                 <div style={{ position: 'relative' }}>
                                     <input
                                         type="number" step="any" required

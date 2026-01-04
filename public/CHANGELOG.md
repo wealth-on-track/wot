@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.1.5 - 04/01/2026 11:00
+- Feature: Added **Total Value** input for pension funds (BES) and ETFs. You can now enter the total amount you have in your account, and the app will automatically calculate the quantity based on the unit price.
+
+
+## v1.1.4 - 03/01/2026 18:12
+- Improvement: Footer version is now clickable and opens a changelog viewer.
+- UI: Enhanced footer aesthetics with glassmorphism.
+
+## v1.1.3 - 03/01/2026 17:58
+- Documentation: Updated build time and versioning scheme.
+
 ## v1.0.4 - 03/01/2026 14:02
 - Fix: Resolved drag-and-drop reversion issue by optimistically updating asset ranks locally.
 - Fix: Implemented sturdy handling for Yahoo API 429 Rate Limit errors with database fallback.

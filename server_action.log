@@ -1,0 +1,41 @@
+2026-01-03T13:44:04.771Z: Action triggered. Items: 2
+2026-01-03T13:46:03.393Z: Action triggered. Items: 2
+2026-01-03T13:46:03.565Z: Reorder error: PrismaClientValidationError: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["prisma"].asset.update()` invocation in
+/Users/ardaak/Downloads/Projects/PT/.next/dev/server/chunks/ssr/[root-of-the-server]__cb69f329._.js:1527:152
+
+  1524 logToFile(`[Reorder] Processing ${validated.data.length} items for user ${user.username}`);
+  1525 for (const item of validated.data){
+  1526     logToFile(`[Reorder] Updating asset ${item.id} to rank ${item.rank}`);
+→ 1527     await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["prisma"].asset.update({
+             where: {
+               id: "cmjyaxmyp0003fu556e6i39y8"
+             },
+             data: {
+               rank: 0,
+               ~~~~
+           ?   id?: String | StringFieldUpdateOperationsInput,
+           ?   type?: String | StringFieldUpdateOperationsInput,
+           ?   symbol?: String | StringFieldUpdateOperationsInput,
+           ?   name?: String | NullableStringFieldUpdateOperationsInput | Null,
+           ?   quantity?: Float | FloatFieldUpdateOperationsInput,
+           ?   buyPrice?: Float | FloatFieldUpdateOperationsInput,
+           ?   currency?: String | StringFieldUpdateOperationsInput,
+           ?   exchange?: String | NullableStringFieldUpdateOperationsInput | Null,
+           ?   sector?: String | NullableStringFieldUpdateOperationsInput | Null,
+           ?   country?: String | NullableStringFieldUpdateOperationsInput | Null,
+           ?   platform?: String | NullableStringFieldUpdateOperationsInput | Null,
+           ?   isin?: String | NullableStringFieldUpdateOperationsInput | Null,
+           ?   createdAt?: DateTime | DateTimeFieldUpdateOperationsInput,
+           ?   updatedAt?: DateTime | DateTimeFieldUpdateOperationsInput,
+           ?   customGroup?: String | NullableStringFieldUpdateOperationsInput | Null,
+           ?   portfolio?: PortfolioUpdateOneRequiredWithoutAssetsNestedInput
+             }
+           })
+
+Unknown argument `rank`. Did you mean `name`? Available options are marked with ?.
+2026-01-03T13:50:28.360Z: Action triggered. Items: 2
+2026-01-03T13:55:58.419Z: Action triggered. Items: 2
+2026-01-03T14:03:57.782Z: Action triggered. Items: 2
+2026-01-03T14:11:33.516Z: Action triggered. Items: 2
+2026-01-03T14:11:40.534Z: Action triggered. Items: 2

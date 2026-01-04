@@ -76,15 +76,16 @@ export function InlineAssetSearch() {
         }
     }, [selectedSymbol]);
 
-    // Auto-calculate quantity for FUNDS
+    // Auto-calculate quantity for FUNDS & ETFs
     useEffect(() => {
-        if (selectedSymbol?.type === 'FUND' && totalValue && marketData?.price) {
+        if ((selectedSymbol?.type === 'FUND' || selectedSymbol?.type === 'ETF') && totalValue && buyPrice) {
             const val = parseFloat(totalValue);
-            if (!isNaN(val) && marketData.price > 0) {
-                setQuantity((val / marketData.price).toFixed(6));
+            const price = parseFloat(buyPrice);
+            if (!isNaN(val) && !isNaN(price) && price > 0) {
+                setQuantity((val / price).toFixed(6));
             }
         }
-    }, [totalValue, marketData, selectedSymbol]);
+    }, [totalValue, buyPrice, selectedSymbol]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -125,6 +126,19 @@ export function InlineAssetSearch() {
         formData.append('quantity', quantity);
         formData.append('buyPrice', buyPrice);
         if (customGroup) formData.append('customGroup', customGroup);
+
+        // Use Country/Sector from Market Data (Real Company Profile) if available
+        if (marketData?.country) {
+            formData.append('country', marketData.country);
+        } else if (selectedSymbol.country) {
+            formData.append('country', selectedSymbol.country);
+        }
+
+        if (marketData?.sector) {
+            formData.append('sector', marketData.sector);
+        } else if (marketData?.industry) {
+            formData.append('sector', marketData.industry); // Fallback to industry
+        }
 
         const result = await addAsset(undefined, formData);
         if (result === 'success') {
@@ -314,7 +328,7 @@ export function InlineAssetSearch() {
 
                     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
-                            {selectedSymbol.type === 'FUND' && marketData?.price ? (
+                            {(selectedSymbol.type === 'FUND' || selectedSymbol.type === 'ETF') ? (
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                                     <input
                                         type="number"
