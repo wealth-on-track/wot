@@ -318,9 +318,9 @@ function AssetTableRow({
     const isHighDensity = columnsCount >= 7;
     const isMediumDensity = columnsCount >= 5;
 
-    const fontSizeMain = isUltraHighDensity ? '0.7rem' : isHighDensity ? '0.82rem' : isMediumDensity ? '0.92rem' : '1rem';
-    const fontSizeSub = isUltraHighDensity ? '0.55rem' : isHighDensity ? '0.65rem' : isMediumDensity ? '0.7rem' : '0.8rem';
-    const cellPadding = isUltraHighDensity ? '0.05rem 0.1rem' : isHighDensity ? '0.1rem 0.2rem' : isMediumDensity ? '0.3rem 0.5rem' : '0.6rem 0.8rem';
+    const fontSizeMain = isUltraHighDensity ? '0.75rem' : isHighDensity ? '0.88rem' : isMediumDensity ? '0.98rem' : '1.1rem';
+    const fontSizeSub = isUltraHighDensity ? '0.6rem' : isHighDensity ? '0.68rem' : isMediumDensity ? '0.75rem' : '0.85rem';
+    const cellPadding = isUltraHighDensity ? '0rem 0.1rem' : isHighDensity ? '0.05rem 0.2rem' : isMediumDensity ? '0.2rem 0.4rem' : '0.4rem 0.6rem';
 
     const gridTemplate = columns.map(c => COL_WIDTHS[c]).join(' ');
 
@@ -475,7 +475,7 @@ function AssetTableRow({
                 cellContent = (
                     <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%' }}>
                         <span style={{ fontSize: fontSizeMain, fontWeight: 700, color: 'var(--text-primary)' }}>{nativeSymbol}{fmt(nativeTotalValue, 0, 0)}</span>
-                        {!isHighDensity && <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>{nativeSymbol}{fmt(nativeCostBasis, 0, 0)}</span>}
+                        <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>{nativeSymbol}{fmt(nativeCostBasis, 0, 0)}</span>
                     </div>
                 );
                 break;
@@ -562,7 +562,7 @@ function AssetTableRow({
             style={{
                 display: 'grid',
                 gridTemplateColumns: gridTemplate,
-                minHeight: isUltraHighDensity ? '1.8rem' : isHighDensity ? '2.2rem' : '3.5rem',
+                minHeight: isUltraHighDensity ? '1.6rem' : isHighDensity ? '1.9rem' : '3rem',
                 borderBottom: 'none',
                 position: 'relative',
                 background: justUpdated
@@ -1695,17 +1695,20 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                         {/* 1. Smart Filter Bar (Compacted & No Label) */}
                         <div className="glass-panel" style={{
                             borderRadius: '0.6rem',
-                            padding: '0.5rem',
+                            padding: '0.4rem',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '0.5rem',
-                            flexWrap: 'wrap'
+                            gap: '0.4rem',
+                            flexWrap: 'nowrap',
+                            zIndex: 50,
+                            position: 'relative',
+                            overflow: 'visible'
                         }}>
-                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', flex: 1 }}>
+                            <div style={{ display: 'flex', gap: '0.2rem', flexWrap: 'nowrap', alignItems: 'center', flex: 1, overflowX: 'auto', paddingBottom: '2px' }} className="no-scrollbar">
 
 
                                 {filterCategories.map(category => (
-                                    <div key={category.id} style={{ position: 'relative' }}>
+                                    <div key={category.id} style={{ position: 'relative', flexShrink: 0 }}>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setActiveFilterCategory(activeFilterCategory === category.id ? null : category.id); }}
                                             style={{
@@ -1713,20 +1716,21 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                 border: category.active ? '1px solid var(--accent)' : '1px solid var(--glass-border)',
                                                 borderRadius: '0.4rem',
                                                 color: category.active ? 'var(--accent)' : 'var(--text-secondary)',
-                                                padding: '0.3rem 0.6rem',
-                                                fontSize: '0.75rem',
+                                                padding: '0.25rem 0.5rem',
+                                                fontSize: '0.65rem',
                                                 fontWeight: 600,
                                                 cursor: 'pointer',
                                                 transition: 'all 0.2s',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: '0.3rem'
+                                                gap: '0.2rem',
+                                                whiteSpace: 'nowrap'
                                             }}
                                         >
                                             <span style={{ opacity: 0.7 }}>{category.icon}</span>
                                             <span>{category.label}</span>
-                                            {category.active && <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>({category.active})</span>}
-                                            <span style={{ fontSize: '0.6rem', opacity: 0.4 }}>▼</span>
+                                            {category.active && <span style={{ fontSize: '0.6rem', opacity: 0.7 }}>({category.active})</span>}
+                                            <span style={{ fontSize: '0.55rem', opacity: 0.4 }}>▼</span>
                                         </button>
 
                                         {/* Dropdown Menu */}
@@ -1760,7 +1764,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                             border: 'none',
                                                             borderRadius: '0.4rem',
                                                             color: category.active === item ? 'var(--text-active)' : 'var(--text-secondary)',
-                                                            fontSize: '0.8rem',
+                                                            fontSize: '0.75rem',
                                                             fontWeight: category.active === item ? 600 : 400,
                                                             cursor: 'pointer',
                                                             textAlign: 'left',
@@ -1787,18 +1791,21 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                         setCountryFilter(null);
                                         setSectorFilter(null);
                                         setPlatformFilter(null);
+                                        setCustomGroupFilter(null);
                                     }}
                                     style={{
                                         background: 'rgba(239, 68, 68, 0.1)',
                                         border: '1px solid rgba(239, 68, 68, 0.3)',
                                         borderRadius: '0.4rem',
                                         color: '#ef4444',
-                                        padding: '0.3rem 0.6rem',
-                                        fontSize: '0.7rem',
+                                        padding: '0.25rem 0.5rem',
+                                        fontSize: '0.65rem',
                                         fontWeight: 600,
                                         cursor: 'pointer',
                                         transition: 'all 0.2s',
-                                        marginLeft: 'auto'
+                                        marginLeft: 'auto',
+                                        whiteSpace: 'nowrap',
+                                        flexShrink: 0
                                     }}
                                 >
                                     Clear All

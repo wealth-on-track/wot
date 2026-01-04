@@ -1,5 +1,11 @@
 # Changelog
 
+## v136 - 04/01/2026 20:55
+- UI: **Total Cost Basis**. The "Value" column now displays the asset's total cost basis (Buy Price × Quantity) in its original currency, faded underneath the current market value.
+- UI: **Compact Rows**. Significantly reduced row height and vertical padding to fit more assets on a single screen.
+- UI: **Maximized Fonts**. Font sizes have been increased again to use all available space.
+- UI: **Strict Header Alignment**. Numeric headers (Price, Value, P&L) are now strictly right-aligned to match their data.
+
 ## v135 - 04/01/2026 20:38
 - UI: **Maximize Screen Real Estate**. Significantly increased font sizes and adjusted column proportions to fill the entire dashboard width, eliminating whitespace.
 - UI: **Strict Alignment**. Text columns (Name, Portfolio, Type) are now strictly Left Aligned, while Numeric columns (Price, Value, P&L) are strictly Right Aligned.
