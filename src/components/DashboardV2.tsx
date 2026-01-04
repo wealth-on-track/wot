@@ -113,18 +113,18 @@ interface ColumnConfig {
 }
 
 const ALL_COLUMNS: ColumnConfig[] = [
-    { id: 'TYPE', label: 'Type', isDefault: false },
+    { id: 'PORTFOLIO_NAME', label: 'Portfolio', isDefault: true },
     { id: 'NAME', label: 'Name', isDefault: true },
+    { id: 'PRICE', label: 'Price', isDefault: true },
+    { id: 'VALUE', label: 'Value', isDefault: true },
+    { id: 'PRICE_EUR', label: 'Price (€)', isDefault: true },
+    { id: 'VALUE_EUR', label: 'Value (€)', isDefault: true },
+    { id: 'PL', label: 'P&L', isDefault: true },
+    { id: 'TYPE', label: 'Type', isDefault: false },
     { id: 'TICKER', label: 'Ticker', isDefault: false },
     { id: 'EXCHANGE', label: 'Exchange', isDefault: false },
     { id: 'CURRENCY', label: 'Currency', isDefault: false },
-    { id: 'PRICE', label: 'Price (Org)', isDefault: true },
-    { id: 'PRICE_EUR', label: 'Price (€)', isDefault: false },
-    { id: 'VALUE', label: 'Value (Org)', isDefault: true },
-    { id: 'VALUE_EUR', label: 'Value (€)', isDefault: false },
-    { id: 'PL', label: 'P&L', isDefault: true },
     { id: 'EARNINGS', label: 'Next Earnings Date (NED)', headerLabel: 'NED', isDefault: false },
-    { id: 'PORTFOLIO_NAME', label: 'Portfolio', isDefault: false },
 ];
 
 const COL_WIDTHS: Record<ColumnId, string> = {
@@ -244,13 +244,21 @@ function AssetTableRow({
     const rate = positionsViewCurrency === 'ORG' ? 1 : getRate(asset.currency, displayCurrency);
     const currencySymbol = getCurrencySymbol(displayCurrency);
 
+    // P&L Currency (Default to EUR if in ORG mode, else follow selection)
+    const pnlDisplayCurrency = positionsViewCurrency === 'ORG' ? 'EUR' : positionsViewCurrency;
+    const pnlSym = getCurrencySymbol(pnlDisplayCurrency);
+
     const displayPrice = asset.currentPrice * rate;
     const displayAvgPrice = asset.buyPrice * rate;
     const displayTotalValue = (asset.currentPrice * asset.quantity) * rate;
     const displayCostBasis = (asset.buyPrice * asset.quantity) * rate;
 
-    // Total P&L
-    const totalProfitVal = displayTotalValue - displayCostBasis;
+    // P&L Values (Calculated in pnlDisplayCurrency)
+    const pnlRate = getRate(asset.currency, pnlDisplayCurrency);
+    const pnlTotalVal = (asset.currentPrice * asset.quantity) * pnlRate;
+    const pnlCostBasis = (asset.buyPrice * asset.quantity) * pnlRate;
+
+    const totalProfitVal = pnlTotalVal - pnlCostBasis;
     const totalProfitPct = asset.plPercentage;
 
     // P&L based on Time Factor or Real 1D Data
@@ -258,15 +266,11 @@ function AssetTableRow({
     let periodProfitPct = totalProfitPct * timeFactor;
 
     if (timePeriod === '1D') {
-        // Use Real 1D Data
+        // Use Real 1D Data (asset.dailyChange is in EUR)
         periodProfitPct = asset.dailyChangePercentage || 0;
 
-        // Convert dailyChange (EUR) to display currency
-        // dailyChange is in EUR. 
-        // We need rate from EUR to DisplayCurrency
-        // implementation of getRate(from, to). 
-        // If displayCurrency is 'ORG', it is asset.currency.
-        const conversionRate = getRate('EUR', displayCurrency);
+        // Convert dailyChange (EUR) to P&L Display Currency
+        const conversionRate = getRate('EUR', pnlDisplayCurrency);
         periodProfitVal = (asset.dailyChange || 0) * conversionRate;
     }
 
@@ -436,7 +440,7 @@ function AssetTableRow({
                 cellContent = (
                     <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%' }}>
                         <span style={{ fontSize: fontSizeMain, fontWeight: 500, opacity: 0.9 }}>{currencySymbol}{fmt(displayPrice)}</span>
-                        {!isHighDensity && !isEditing && <span style={{ fontSize: '0.65rem', opacity: 0.3 }}>{currencySymbol}{fmt(displayAvgPrice)}</span>}
+                        {!isEditing && <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>{currencySymbol}{fmt(displayAvgPrice)}</span>}
                         {isEditing && (
                             <input
                                 type="number"
@@ -462,7 +466,7 @@ function AssetTableRow({
                 cellContent = (
                     <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%' }}>
                         <span style={{ fontSize: fontSizeMain, fontWeight: 500, opacity: 0.9 }}>€{fmt(asset.currentPrice * getRate(asset.currency, 'EUR'))}</span>
-                        {!isHighDensity && <span style={{ fontSize: '0.65rem', opacity: 0.3 }}>€{fmt(asset.buyPrice * getRate(asset.currency, 'EUR'))}</span>}
+                        <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>€{fmt(asset.buyPrice * getRate(asset.currency, 'EUR'))}</span>
                     </div>
                 );
                 break;
@@ -509,11 +513,9 @@ function AssetTableRow({
                                 <span style={{ fontSize: fontSizeMain, fontWeight: 700, color: isPeriodProfit ? '#10b981' : '#ef4444' }}>
                                     {isPeriodProfit ? '▲' : '▼'}{fmt(periodProfitPct)}%
                                 </span>
-                                {!isHighDensity && (
-                                    <span style={{ fontSize: '0.6rem', fontWeight: 600, color: isPeriodProfit ? '#10b981' : '#ef4444', opacity: 0.8 }}>
-                                        {isPeriodProfit ? '+' : ''}{currencySymbol}{fmt(periodProfitVal, 0, 0)}
-                                    </span>
-                                )}
+                                <span style={{ fontSize: '0.6rem', fontWeight: 600, color: isPeriodProfit ? '#10b981' : '#ef4444', opacity: 0.8 }}>
+                                    {isPeriodProfit ? '+' : ''}{pnlSym}{fmt(periodProfitVal, 0, 0)}
+                                </span>
                             </div>
                         )}
                     </div>
@@ -1381,7 +1383,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
     const [items, setItems] = useState<AssetDisplay[]>(assets);
     const [orderedGroups, setOrderedGroups] = useState<string[]>([]);
     const [isGroupingEnabled, setIsGroupingEnabled] = useState(false);
-    const [viewMode, setViewMode] = useState<"list" | "grid" | "detailed">("list");
+    const viewMode = "list";
     const [gridColumns, setGridColumns] = useState<1 | 2>(2);
     const [timePeriod, setTimePeriod] = useState("ALL");
 
@@ -1444,20 +1446,8 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
         setItems(sorted);
     }, [assets]);
 
-    // Force List View on Mobile
-    useEffect(() => {
-        const handleResize = () => {
-            if (window.innerWidth < 768) {
-                setViewMode("list");
-            }
-        };
-
-        // Initial check
-        handleResize();
-
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    // Force List View on Mobile (Redundant as View Mode is hardcoded to List)
+    // useEffect removed
 
     const sensors = useSensors(
         useSensor(MouseSensor, {
@@ -1972,61 +1962,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                         })}
                                     </div>
 
-                                    {/* 2. View Mode Selector (Smart Pill) */}
-                                    <div
-                                        onMouseEnter={() => setIsViewSelectorHovered(true)}
-                                        onMouseLeave={() => setIsViewSelectorHovered(false)}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            background: 'var(--glass-shine)',
-                                            backdropFilter: 'blur(10px)',
-                                            borderRadius: '2rem',
-                                            padding: '0.3rem',
-                                            border: '1px solid var(--glass-border)',
-                                            boxShadow: isViewSelectorHovered ? '0 4px 20px rgba(0,0,0,0.1)' : 'none',
-                                            transition: 'all 0.3s ease',
-                                            height: '2.4rem'
-                                        }}
-                                    >
-                                        {[
-                                            { value: 'list', icon: List, label: 'List' },
-                                            { value: 'grid', icon: LayoutGrid, label: 'Grid' },
-                                            { value: 'detailed', icon: LayoutTemplate, label: 'Cards' }
-                                        ].map((item) => {
-                                            const isActive = viewMode === item.value;
-                                            const isVisible = isViewSelectorHovered || isActive;
-                                            const Icon = item.icon;
-
-                                            return (
-                                                <button
-                                                    key={item.value}
-                                                    onClick={() => setViewMode(item.value as any)}
-                                                    title={item.label}
-                                                    style={{
-                                                        background: isActive ? '#6366f1' : 'transparent',
-                                                        border: 'none',
-                                                        borderRadius: '1.5rem',
-                                                        color: isActive ? '#fff' : 'var(--text-secondary)',
-                                                        maxWidth: isVisible ? '100px' : '0px',
-                                                        padding: isVisible ? '0.3rem 0.8rem' : '0',
-                                                        margin: isVisible ? '0 2px' : '0',
-                                                        opacity: isVisible ? 1 : 0,
-                                                        overflow: 'hidden',
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        gap: '0.3rem'
-                                                    }}
-                                                >
-                                                    <Icon size={14} strokeWidth={isActive ? 2.5 : 2} />
-                                                    <span style={{ fontSize: '0.75rem', fontWeight: isActive ? 700 : 600 }}>{item.label}</span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
+                                    {/* 2. View Mode Selector Removed */}
 
                                     {/* 3. Adjust List Button (Only in List View) */}
                                     {viewMode === 'list' && (

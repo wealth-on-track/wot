@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.7 - 04/01/2026 20:12
+- UI: **List View Only**. The dashboard has been streamlined to exclusively use the List view. Grid and Card view options have been removed.
+- UI: **Optimized Default Columns**. The default column layout has been updated to: Portfolio -> Name -> Price -> Value -> Price (€) -> Value (€) -> P&L.
+- UI: **Enhanced Metric Visibility**. Restored the faded "Cost" display under Price columns and the "Amount" display under the P&L percentage for better data density.
+- Feature: **Smart P&L Currency**. The P&L column now automatically defaults to Euro (€) when "Original" currency mode is active, or follows the global currency selection otherwise.
+
 ## v131 - 04/01/2026 19:42
 - UI: **Removed Column Separators**. Completely removed the vertical lines (`border-right`) from the Asset Table (Headers, Groups, and Rows) based on user feedback. The table structure now relies purely on grid alignment.
 
