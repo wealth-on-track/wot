@@ -1,5 +1,10 @@
 # Changelog
 
+## v135 - 04/01/2026 20:38
+- UI: **Maximize Screen Real Estate**. Significantly increased font sizes and adjusted column proportions to fill the entire dashboard width, eliminating whitespace.
+- UI: **Strict Alignment**. Text columns (Name, Portfolio, Type) are now strictly Left Aligned, while Numeric columns (Price, Value, P&L) are strictly Right Aligned.
+- UI: **Enhanced Readability**. Larger numbers and text for better visibility on wide screens.
+
 ## v134 - 04/01/2026 20:25
 - UI: **Dynamic Currency Headers**. Removed "(Org)" labels. Headers like "PRICE (€)" or "P&L (€)" now automatically update to reflect the selected global currency (e.g., "PRICE ($)" or "P&L ($)" when viewing in USD).
 - Fix: **Native vs Global Columns**. "Price" and "Value" columns now strictly show the asset's original currency values, while the converted columns strictly follow the user's selected global currency.

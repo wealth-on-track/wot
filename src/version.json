@@ -1,6 +1,6 @@
 {
-    "version": "v134",
+    "version": "v135",
     "buildDate": "04/01/2026",
-    "buildTime": "20:25",
-    "description": "Dynamic headers and strict native/global currency columns."
+    "buildTime": "20:38",
+    "description": "Maximized layout, strict alignment, and larger fonts."
 }

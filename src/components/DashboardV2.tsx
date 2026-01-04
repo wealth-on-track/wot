@@ -128,18 +128,18 @@ const ALL_COLUMNS: ColumnConfig[] = [
 ];
 
 const COL_WIDTHS: Record<ColumnId, string> = {
-    TYPE: 'minmax(35px, 0.4fr)',
-    NAME: 'minmax(100px, 1.3fr)',
-    TICKER: 'minmax(40px, 0.4fr)',
-    EXCHANGE: 'minmax(50px, 0.5fr)',
-    CURRENCY: 'minmax(35px, 0.35fr)',
-    PRICE: 'minmax(60px, 0.75fr)',
-    PRICE_EUR: 'minmax(60px, 0.75fr)',
-    VALUE: 'minmax(70px, 0.85fr)',
-    VALUE_EUR: 'minmax(70px, 0.85fr)',
-    PL: 'minmax(65px, 0.9fr)',
-    EARNINGS: 'minmax(40px, 0.5fr)',
-    PORTFOLIO_NAME: 'minmax(55px, 0.7fr)'
+    TYPE: 'minmax(40px, 0.5fr)',
+    NAME: 'minmax(120px, 2fr)',
+    TICKER: 'minmax(50px, 0.6fr)',
+    EXCHANGE: 'minmax(60px, 0.7fr)',
+    CURRENCY: 'minmax(40px, 0.5fr)',
+    PRICE: 'minmax(80px, 1fr)',
+    PRICE_EUR: 'minmax(80px, 1fr)',
+    VALUE: 'minmax(90px, 1.1fr)',
+    VALUE_EUR: 'minmax(90px, 1.1fr)',
+    PL: 'minmax(80px, 1fr)',
+    EARNINGS: 'minmax(50px, 0.6fr)',
+    PORTFOLIO_NAME: 'minmax(70px, 0.8fr)'
 };
 
 const DraggableHeader = ({ id, children, onToggle, columnsCount = 4 }: { id: string, children: React.ReactNode, onToggle?: () => void, columnsCount?: number }) => {
@@ -318,8 +318,8 @@ function AssetTableRow({
     const isHighDensity = columnsCount >= 7;
     const isMediumDensity = columnsCount >= 5;
 
-    const fontSizeMain = isUltraHighDensity ? '0.58rem' : isHighDensity ? '0.65rem' : isMediumDensity ? '0.75rem' : '0.85rem';
-    const fontSizeSub = isUltraHighDensity ? '0.48rem' : isHighDensity ? '0.55rem' : isMediumDensity ? '0.62rem' : '0.7rem';
+    const fontSizeMain = isUltraHighDensity ? '0.7rem' : isHighDensity ? '0.82rem' : isMediumDensity ? '0.92rem' : '1rem';
+    const fontSizeSub = isUltraHighDensity ? '0.55rem' : isHighDensity ? '0.65rem' : isMediumDensity ? '0.7rem' : '0.8rem';
     const cellPadding = isUltraHighDensity ? '0.05rem 0.1rem' : isHighDensity ? '0.1rem 0.2rem' : isMediumDensity ? '0.3rem 0.5rem' : '0.6rem 0.8rem';
 
     const gridTemplate = columns.map(c => COL_WIDTHS[c]).join(' ');
@@ -2140,7 +2140,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                                             letterSpacing: '0.05em',
                                                                             whiteSpace: activeColumns.length >= 10 ? 'pre-wrap' : 'nowrap',
                                                                             display: 'block',
-                                                                            textAlign: colId === 'NAME' ? 'left' : 'center'
+                                                                            textAlign: ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL'].includes(colId) ? 'right' : 'left'
                                                                         }}>
                                                                             {colId === 'PORTFOLIO_NAME' ? <Briefcase size={activeColumns.length > 8 ? 11 : 13} strokeWidth={2.5} /> : label}
                                                                         </span>
