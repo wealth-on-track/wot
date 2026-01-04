@@ -1,6 +1,6 @@
 {
-    "version": "v136",
+    "version": "v138",
     "buildDate": "04/01/2026",
-    "buildTime": "20:55",
-    "description": "Total Cost Basis added to Value, compact rows, aligned headers."
+    "buildTime": "21:25",
+    "description": "Automated exchange rate updates (08:00/17:00 CET), linting fixes."
 }
