@@ -1,6 +1,6 @@
 {
-    "version": "v1.1.6",
+    "version": "v117",
     "buildDate": "04/01/2026",
-    "buildTime": "14:55",
-    "description": "Added Price (€) and Value (€) columns to the asset list view."
+    "buildTime": "15:02",
+    "description": "Updated versioning format and renamed columns to Price (Org. CCY) and Value (Org. CCY)."
 }

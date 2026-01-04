@@ -1,5 +1,9 @@
 # Changelog
 
+## v117 - 04/01/2026 15:02
+- UI: Renamed **Price** to **Price (Org. CCY)** and **Value** to **Value (Org. CCY)** in the asset list.
+- Versioning: Switched to a simplified versioning format (e.g., v117).
+
 ## v1.1.6 - 04/01/2026 14:55
 - Feature: Added **Price (€)** and **Value (€)** column options to the asset list. This allows users to track their asset costs and total values in Euro, regardless of the asset's original currency.
 
