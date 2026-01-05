@@ -40,13 +40,13 @@ async function searchDirect(query: string): Promise<YahooSymbol[]> {
 
         if (!response.ok) {
             console.error(`[YahooApi] Direct search failed: ${response.status}`);
-            trackApiRequest('YAHOO_DIRECT', false);
+            await trackApiRequest('YAHOO_DIRECT', false);
             return [];
         }
 
         const data = await response.json();
         const quotes = data.quotes || [];
-        trackApiRequest('YAHOO_DIRECT', true);
+        await trackApiRequest('YAHOO_DIRECT', true);
 
         return quotes.map((q: any) => ({
             symbol: q.symbol,
@@ -59,7 +59,7 @@ async function searchDirect(query: string): Promise<YahooSymbol[]> {
 
     } catch (e) {
         console.error('[YahooApi] Direct search error:', e);
-        trackApiRequest('YAHOO_DIRECT', false);
+        await trackApiRequest('YAHOO_DIRECT', false);
         return [];
     }
 }
@@ -79,7 +79,7 @@ export async function searchYahoo(query: string): Promise<YahooSymbol[]> {
     try {
         console.log(`[YahooApi] Searching with Library: ${query}`);
         const results = await yahooFinance.search(query);
-        trackApiRequest('YAHOO', true);
+        await trackApiRequest('YAHOO', true);
         const quotes = results.quotes.filter((q: any) => q.isYahooFinance);
 
         const mapped = quotes.map((q: any) => ({
@@ -95,7 +95,7 @@ export async function searchYahoo(query: string): Promise<YahooSymbol[]> {
         return mapped;
     } catch (error) {
         console.error('[YahooApi] Library search error, trying fallback:', error);
-        trackApiRequest('YAHOO', false);
+        await trackApiRequest('YAHOO', false);
     }
 
     // Fallback
@@ -201,7 +201,7 @@ export async function getYahooQuote(symbol: string, forceRefresh: boolean = fals
             const result = await yahooFinance.quote(symbol);
             if (!result || !result.symbol) throw new Error("No Result");
 
-            trackApiRequest('YAHOO', true);
+            await trackApiRequest('YAHOO', true);
             // ... Logic continues ...
 
             // --- CLOSING PRICE LOGIC ---
@@ -253,7 +253,7 @@ export async function getYahooQuote(symbol: string, forceRefresh: boolean = fals
 
     } catch (error: any) {
         console.warn(`[YahooApi] Primary quote failed for ${symbol}:`, error?.message || error);
-        trackApiRequest('YAHOO', false);
+        await trackApiRequest('YAHOO', false);
 
         // Use the detectCurrency defined at the top of the function
         const forcedCurrencyFallback = detectCurrency(symbol);

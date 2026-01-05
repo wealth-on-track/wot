@@ -133,11 +133,50 @@ export async function updateAllPrices() {
         }
     }
 
-    console.log(`[PriceServer] Update complete. Updated ${updatedCount}/${uniqueSymbols.length} symbols.`);
+    console.log(`[PriceServer] Update complete. Updated ${updatedCount}/${uniqueSearchSymbols.length} symbols.`);
+
+    // 4. Update Currency Rates (Hourly)
+    await updateCurrencyRates();
+
     return {
         success: true,
         updatedCount,
-        totalSymbols: uniqueSymbols.length,
+        totalSymbols: uniqueSearchSymbols.length,
         errors
     };
+}
+
+async function updateCurrencyRates() {
+    try {
+        console.log("[PriceServer] Updating Exchange Rates (EUR base)...");
+        const currencies = ['EURUSD=X', 'EURTRY=X', 'EURGBP=X'];
+        const results = await yahooFinance.quote(currencies, { validateResult: false });
+        const quotes = Array.isArray(results) ? results : [results];
+
+        for (const q of quotes) {
+            if (!q.regularMarketPrice || !q.symbol) continue;
+
+            let currencyCode = '';
+            if (q.symbol === 'EURUSD=X') currencyCode = 'USD';
+            if (q.symbol === 'EURTRY=X') currencyCode = 'TRY';
+            if (q.symbol === 'EURGBP=X') currencyCode = 'GBP';
+
+            if (currencyCode) {
+                await prisma.exchangeRate.upsert({
+                    where: { currency: currencyCode },
+                    create: { currency: currencyCode, rate: q.regularMarketPrice },
+                    update: { rate: q.regularMarketPrice }
+                });
+                // Also cache pure EUR (always 1)
+                await prisma.exchangeRate.upsert({
+                    where: { currency: 'EUR' },
+                    create: { currency: 'EUR', rate: 1 },
+                    update: { rate: 1 }
+                });
+            }
+        }
+        console.log("[PriceServer] Exchange Rates updated.");
+    } catch (e) {
+        console.error("[PriceServer] Failed to update currency rates:", e);
+    }
 }
