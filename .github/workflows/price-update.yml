@@ -1,0 +1,19 @@
+name: Hourly Price Update
+
+on:
+  schedule:
+    # Runs at minute 0 past every hour
+    - cron: '0 * * * *'
+  # Allow manual trigger from GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Price Update
+        run: |
+          echo "Triggering price update..."
+          # Replace with your actual production URL
+          # Use a secret if possible, but public endpoint is fine for now as per plan
+          curl -X GET "https://mpt1.vercel.app/api/cron/update-prices"

@@ -30,32 +30,26 @@ export function CurrencySelector() {
         <div ref={wrapperRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="currency-selector-btn"
+                className={`currency-selector-btn nav-control-box ${isOpen ? 'active' : ''}`}
                 style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.2rem',
-                    background: isOpen ? 'var(--bg-active)' : 'transparent',
-                    border: '1px solid',
-                    borderColor: isOpen ? 'var(--accent)' : 'transparent',
-                    borderRadius: '0.4rem',
+                    gap: '0.4rem',
+                    borderColor: isOpen ? 'var(--accent)' : 'var(--glass-border)',
+                    borderRadius: '0.5rem',
                     color: 'var(--text-primary)',
-                    padding: '0.25rem 0.4rem',
+                    padding: '0 0.75rem',
                     fontSize: '0.75rem',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
                     whiteSpace: 'nowrap',
-                    // justifyContent: 'space-between' REMOVED to keep it compact
+                    height: '2.4rem'
                 }}
             >
-                <span className="desktop-only">
-                    {currency === 'ORG' ? 'CCY' : `${currency} (${getCurrencySymbol(currency)})`}
+                <span className="desktop-only" style={{ marginRight: '0.1rem' }}>
+                    {currency === 'ORG' ? 'FX' : currency}
                 </span>
-                <span className="mobile-only" style={{ fontSize: '0.9rem', fontWeight: 800 }}>
-                    {currency === 'ORG' ? 'CCY' : `${currency} (${getCurrencySymbol(currency)})`}
-                </span>
-                <ChevronDown size={14} style={{ opacity: 0.7, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                <ChevronDown size={14} style={{ opacity: 0.4, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
             </button>
 
             {/* Dropdown Menu */}

@@ -30,7 +30,13 @@ export const getLogoUrl = (symbol: string, type: string, exchange?: string, coun
     }
 
     // Special Overrides for known missing logos
-    if (s.startsWith('SOH1') || s.startsWith('SOI.PA')) return 'https://assets.parqet.com/logos/symbol/SOI.PA?format=png'; // Soitec fallback
+    if (s.startsWith('SOH1') || s.startsWith('SOI.PA')) return 'https://assets.parqet.com/logos/symbol/SOI.PA?format=png';
+
+    // BES (Individual Pension System) Funds - Often lack individual logos, use provider/generic
+    if (s.startsWith('BES')) {
+        // Many BES assets in this context might be TEB Portfolio
+        return 'https://media.licdn.com/dms/image/v2/C4D0BAQG0YyP-lF0L7g/company-logo_200_200/company-logo_200_200/0/1630572851493/teb_portfy_y_yonetimi_a_logo?e=2147483647&v=beta&t=mS8P06pWn6lI-C-U89Xz8r-Yy7cO-n8v6Z-zI6h_0vE';
+    }
 
     // 4. STOCKS / ETFs / FUNDS: Parqet API with Exchange Suffix Mapping
     if (t === 'STOCK' || t === 'ETF' || t === 'FUND') {
@@ -38,19 +44,33 @@ export const getLogoUrl = (symbol: string, type: string, exchange?: string, coun
         const SUFFIX_MAP: Record<string, string> = {
             'IST': '.IS', 'BIST': '.IS', 'ISTANBUL': '.IS',
             'LSE': '.L', 'LONDON': '.L',
-            'PAR': '.PA', 'PARIS': '.PA', 'EPA': '.PA', // Added EPA
-            'FRA': '.DE', 'FRANKFURT': '.DE', 'XETRA': '.DE', 'GER': '.DE',
+            'PAR': '.PA', 'PARIS': '.PA', 'EPA': '.PA',
+            'FRA': '.DE', 'FRANKFURT': '.DE', 'XETRA': '.DE', 'GER': '.DE', 'EDG': '.DE',
             'AMS': '.AS', 'AMSTERDAM': '.AS',
-            'BRU': '.BR', 'BRUSSELS': '.BR', 'EBR': '.BR', // Belgium
-            'LIS': '.LS', 'LISBON': '.LS', // Portugal
-            'MAD': '.MC', 'MADRID': '.MC', 'BME': '.MC', // Spain
-            'MIL': '.MI', 'MILAN': '.MI', // Italy
+            'BRU': '.BR', 'BRUSSELS': '.BR', 'EBR': '.BR',
+            'LIS': '.LS', 'LISBON': '.LS',
+            'MAD': '.MC', 'MADRID': '.MC', 'BME': '.MC',
+            'MIL': '.MI', 'MILAN': '.MI',
+            'NASDAQ': '', 'NYSE': '', 'AMEX': '', 'US': '', // US often doesn't need suffix on Parqet
             'HKG': '.HK', 'HONG KONG': '.HK',
             'SHH': '.SS', 'SHANGHAI': '.SS',
             'SHE': '.SZ', 'SHENZHEN': '.SZ',
             'TSE': '.TO', 'TORONTO': '.TO', 'TOR': '.TO',
             'SWX': '.SW', 'ZURICH': '.SW', 'SIX': '.SW',
-            // Add more as needed
+            'OSL': '.OL', 'OSLO': '.OL',
+            'STO': '.ST', 'STOCKHOLM': '.ST',
+            'CPH': '.CO', 'COPENHAGEN': '.CO',
+            'HEL': '.HE', 'HELSINKI': '.HE',
+            'VIE': '.VI', 'VIENNA': '.VI',
+            'ATH': '.AT', 'ATHENS': '.AT',
+            'DUB': '.IR', 'DUBLIN': '.IR',
+            'JSE': '.JO', 'JOHANNESBURG': '.JO',
+            'ASX': '.AX', 'SYDNEY': '.AX',
+            'NSE': '.NS', 'BSE': '.BO', 'INDIA': '.NS',
+            'KLS': '.KL', 'MALAYSIA': '.KL',
+            'SGX': '.SI', 'SINGAPORE': '.SI',
+            'KRX': '.KS', 'KOREA': '.KS',
+            'TPE': '.TW', 'TAIWAN': '.TW',
         };
 
         if (exchange) {

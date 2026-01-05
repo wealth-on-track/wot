@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo, useId } from "react";
+import { createPortal } from "react-dom";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useRouter } from "next/navigation"; // Added router
 import { InlineAssetSearch } from "./InlineAssetSearch";
-import { deleteAsset, updateAsset, reorderAssets } from "@/lib/actions"; // Added updateAsset, reorderAssets
+import { deleteAsset, updateAsset, reorderAssets, refreshPortfolioPrices } from "@/lib/actions"; // Added updateAsset, reorderAssets
 import { UnifiedPortfolioSummary, AllocationCard } from "./PortfolioSidebarComponents";
 import {
     DndContext,
@@ -54,31 +55,60 @@ interface DashboardProps {
 // Systematic Logo Logic
 // Local getLogoUrl removed. Imported from @/lib/logos.
 
-const AssetLogo = ({ symbol, logoUrl, size = '3.5rem' }: { symbol: string, logoUrl?: string | null, size?: string }) => {
-    const [error, setError] = useState(false);
+const AssetLogo = ({ symbol, type, name, logoUrl: primaryUrl, size = '3.5rem' }: { symbol: string, type: string, name?: string, logoUrl?: string | null, size?: string }) => {
+    const [currentUrlIndex, setCurrentUrlIndex] = useState(0);
+    const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
 
-    // Reset error if logoUrl changes
-    useEffect(() => { setError(false); }, [logoUrl]);
+    const t = type.toUpperCase();
+    const cleanSymbol = symbol.split('.')[0].toUpperCase();
+
+    // Generate fallback list
+    const urls = useMemo(() => {
+        const list: string[] = [];
+        if (primaryUrl) list.push(primaryUrl);
+
+        // Fallback for Stocks/ETFs
+        if (t === 'STOCK' || t === 'ETF' || t === 'FUND') {
+            // TradingView Fallback
+            list.push(`https://s3-symbol-logo.tradingview.com/${cleanSymbol}--big.svg`);
+        }
+
+        return list.filter(u => u && u.trim() !== '' && !failedUrls.has(u));
+    }, [primaryUrl, cleanSymbol, t, failedUrls]);
+
+    const currentUrl = urls[currentUrlIndex];
+
+    // Reset error if primaryUrl or symbol changes
+    useEffect(() => {
+        setCurrentUrlIndex(0);
+        setFailedUrls(new Set());
+    }, [primaryUrl, symbol]);
 
     const logoStyle: React.CSSProperties = {
         width: size,
         height: size,
         borderRadius: '50%',
-        objectFit: 'contain', // Changed to contain to avoid cropping text-based logos
+        objectFit: 'contain',
         background: 'var(--glass-shine)',
         border: '1px solid var(--glass-border)',
         overflow: 'hidden',
-        flexShrink: 0 // Prevent shrinking in flex containers
+        flexShrink: 0
     };
 
-    // Only show image if logoUrl is a valid non-empty string
-    if (logoUrl && logoUrl.trim() !== '' && !error) {
+    const handleError = () => {
+        if (currentUrl) {
+            setFailedUrls(prev => new Set(prev).add(currentUrl));
+            setCurrentUrlIndex(prev => prev + 1);
+        }
+    };
+
+    if (currentUrl) {
         return (
             <div style={logoStyle}>
                 <img
-                    src={logoUrl}
+                    src={currentUrl}
                     alt={symbol}
-                    onError={() => setError(true)}
+                    onError={handleError}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
             </div>
@@ -86,40 +116,57 @@ const AssetLogo = ({ symbol, logoUrl, size = '3.5rem' }: { symbol: string, logoU
     }
 
     // Extract first meaningful letter for placeholder
-    // Remove common prefixes like "BES-" to get the actual asset name
-    const getPlaceholderLetter = (sym: string): string => {
-        let cleanSymbol = sym;
+    const getPlaceholderLetter = (): string => {
+        let text = name || symbol;
 
         // Remove common prefixes
         const prefixes = ['BES-', 'BES_'];
         for (const prefix of prefixes) {
-            if (cleanSymbol.startsWith(prefix)) {
-                cleanSymbol = cleanSymbol.substring(prefix.length);
+            if (text.startsWith(prefix)) {
+                text = text.substring(prefix.length);
                 break;
             }
         }
 
-        // Return first letter, uppercase
-        return cleanSymbol.charAt(0).toUpperCase();
+        // Trim and take first char
+        return text.trim().charAt(0).toUpperCase();
     };
 
     return (
         <div style={{
             ...logoStyle,
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(236, 72, 153, 0.4))',
+            background: 'linear-gradient(135deg, #6366f1, #a855f7)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: size === '1.2rem' ? '0.55rem' : size === '1.4rem' ? '0.65rem' : size === '2rem' ? '0.9rem' : '1.2rem',
+            fontSize: size === '1.2rem' ? '0.6rem' : size === '1.4rem' ? '0.7rem' : size === '2rem' ? '1rem' : '1.5rem',
             fontWeight: 800,
             color: '#fff',
             textTransform: 'uppercase',
-            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+            textShadow: '0 1px 2px rgba(0,0,0,0.2)'
         }}>
-            {getPlaceholderLetter(symbol)}
+            {getPlaceholderLetter()}
         </div>
     );
 }
+
+const MarketStatusDot = ({ state }: { state?: string }) => {
+    if (!state) return null;
+    const isRegular = state.toUpperCase() === 'REGULAR';
+    return (
+        <div
+            title={state}
+            style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: isRegular ? '#10b981' : '#ef4444',
+                boxShadow: `0 0 4px ${isRegular ? '#10b981' : '#ef4444'}80`,
+                flexShrink: 0
+            }}
+        />
+    );
+};
 
 import { AssetDisplay } from "@/lib/types";
 import { SortableAssetRow, SortableGroup, SortableAssetCard } from "./SortableWrappers";
@@ -357,7 +404,8 @@ function AssetTableRow({
             case 'NAME':
                 cellContent = (
                     <div className="col-name" style={{ display: 'flex', alignItems: 'center', gap: isHighDensity ? '0.3rem' : '0.8rem', minWidth: 0, width: '100%' }}>
-                        <AssetLogo symbol={asset.symbol} logoUrl={logoUrl} size={isUltraHighDensity ? "1.2rem" : isHighDensity ? "1.4rem" : "2rem"} />
+                        <MarketStatusDot state={asset.marketState} />
+                        <AssetLogo symbol={asset.symbol} type={asset.type} name={companyName} logoUrl={logoUrl} size={isUltraHighDensity ? "1.2rem" : isHighDensity ? "1.4rem" : "2rem"} />
                         <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, gap: '0', flex: 1 }}>
                             <>
                                 <span style={{
@@ -502,14 +550,17 @@ function AssetTableRow({
                 minHeight: isUltraHighDensity ? '1.6rem' : isHighDensity ? '1.9rem' : '3rem',
                 borderBottom: 'none',
                 position: 'relative',
-                background: isHovered
+                cursor: isGlobalEditMode ? 'pointer' : 'default', // Cursor change
+                opacity: isGlobalEditMode && isHovered ? 1 : 1, // Reset opacity
+                background: isGlobalEditMode && isHovered ? 'rgba(99, 102, 241, 0.1)' : (isHovered // Highlight background
                     ? 'rgba(0,0,0,0.02)'
                     : (rowIndex !== undefined && rowIndex % 2 === 1)
                         ? 'rgba(0,0,0,0.01)'
-                        : 'transparent',
-                overflow: 'hidden',
-                cursor: isGlobalEditMode ? 'pointer' : 'default', // Cursor change
-                opacity: isGlobalEditMode && isHovered ? 0.7 : 1, // Opacity feedback
+                        : 'transparent'),
+                border: isGlobalEditMode && isHovered ? '1px solid var(--accent)' : '1px solid transparent', // Add border highlight
+                borderRadius: '6px', // Rounded for highlight
+                zIndex: isGlobalEditMode && isHovered ? 10 : 1,
+                transform: isGlobalEditMode && isHovered ? 'scale(1.01)' : 'scale(1)', // Subtle pop
                 transition: 'all 0.2s'
             }}
         >
@@ -554,6 +605,7 @@ function AssetCard({ asset, positionsViewCurrency, totalPortfolioValueEUR, isBlu
     isGlobalEditMode?: boolean,
     onAssetClick?: (asset: AssetDisplay) => void
 }) {
+    const [isHovered, setIsHovered] = useState(false);
     // Currency Conversion Logic
     // Base is EUR (asset.totalValueEUR) or Native (for Original)
 
@@ -605,6 +657,8 @@ function AssetCard({ asset, positionsViewCurrency, totalPortfolioValueEUR, isBlu
         <div
             className="glass-panel"
             onClick={() => isGlobalEditMode && onAssetClick?.(asset)}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
             style={{
                 padding: '0', // Full bleed internal padding handled by sections
                 borderRadius: '0.6rem',
@@ -618,15 +672,20 @@ function AssetCard({ asset, positionsViewCurrency, totalPortfolioValueEUR, isBlu
                 filter: isBlurred ? 'blur(8px)' : 'none',
                 overflow: 'hidden',
                 height: '100%',
-                boxShadow: isGlobalEditMode ? '0 0 15px rgba(245, 158, 11, 0.2)' : 'none',
-                cursor: isGlobalEditMode ? 'pointer' : 'default'
+                boxShadow: isGlobalEditMode ? (isHovered ? '0 0 20px rgba(99, 102, 241, 0.4)' : '0 0 15px rgba(99, 102, 241, 0.1)') : 'none',
+                cursor: isGlobalEditMode ? 'pointer' : 'default',
+                transform: isGlobalEditMode && isHovered ? 'scale(1.02)' : 'scale(1)',
+                borderColor: isGlobalEditMode ? (isHovered ? 'var(--accent)' : 'var(--glass-border)') : (ASSET_COLORS[asset.type] || ASSET_COLORS['DEFAULT']) + '60',
             }}
         >
             {/* SECTION 1: HEADER (Logo + Name/Settings) */}
             <div style={{ display: 'flex', padding: '0.6rem', borderBottom: '1px solid var(--glass-border)', height: '5.5rem', position: 'relative' }}>
+                <div style={{ position: 'absolute', top: '0.5rem', left: '0.5rem', zIndex: 1 }}>
+                    <MarketStatusDot state={asset.marketState} />
+                </div>
                 {/* Left: Logo */}
                 <div style={{ marginRight: '1rem' }}>
-                    <AssetLogo symbol={asset.symbol} logoUrl={logoUrl} />
+                    <AssetLogo symbol={asset.symbol} type={asset.type} name={companyName} logoUrl={logoUrl} />
                 </div>
 
                 {/* Right: Info */}
@@ -1416,6 +1475,21 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
     const activeFiltersCount = [typeFilter, exchangeFilter, currencyFilter, countryFilter, sectorFilter, platformFilter].filter(Boolean).length;
 
 
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            const res = await refreshPortfolioPrices();
+            if (res.error) {
+                alert(res.error);
+            }
+        } finally {
+            setIsRefreshing(false);
+            router.refresh();
+        }
+    };
+
     // Use a unique ID for DndContext to prevent hydration mismatches with server rendering
     const dndContextId = useId();
 
@@ -1506,8 +1580,8 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                 <span style={{ fontSize: '0.55rem', opacity: 0.4 }}>▼</span>
                                             </button>
 
-                                            {/* Dropdown Menu (Fixed Position) */}
-                                            {activeFilterCategory === category.id && category.items.length > 0 && (
+                                            {/* Dropdown Menu (Fixed Position via Portal) */}
+                                            {activeFilterCategory === category.id && category.items.length > 0 && createPortal(
                                                 <div
                                                     className="filter-dropdown"
                                                     onClick={(e) => e.stopPropagation()}
@@ -1552,7 +1626,8 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                             {item}
                                                         </button>
                                                     ))}
-                                                </div>
+                                                </div>,
+                                                document.body
                                             )}
                                         </div>
                                     ))}
@@ -1686,6 +1761,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                             ))}
                                         </select>
                                     </div>
+
                                 </div>
 
                                 {/* RIGHT: View Mode & Columns - Desktop Only */}
@@ -1754,48 +1830,9 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
 
                                     {/* 2. View Mode Selector Removed */}
 
-                                    {/* Edit Mode Toggle */}
-                                    <div style={{ position: 'relative', marginRight: '0.5rem' }}>
-                                        <div style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            background: 'var(--glass-shine)',
-                                            backdropFilter: 'blur(10px)',
-                                            borderRadius: '2rem',
-                                            padding: '0.3rem',
-                                            border: '1px solid var(--glass-border)',
-                                            height: '2.4rem',
-                                            transition: 'all 0.3s ease'
-                                        }}>
-                                            <button
-                                                onClick={() => setIsGlobalEditMode(!isGlobalEditMode)}
-                                                style={{
-                                                    background: isGlobalEditMode ? '#f59e0b' : 'transparent',
-                                                    border: 'none',
-                                                    borderRadius: '1.5rem',
-                                                    color: isGlobalEditMode ? '#fff' : 'var(--text-secondary)',
-                                                    padding: '0.3rem',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: 700,
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '0.3rem',
-                                                    transition: 'all 0.2s',
-                                                    width: '2.4rem',
-                                                    height: '100%'
-                                                }}
-                                                title="Toggle Edit Mode"
-                                            >
-                                                <Settings size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-
                                     {/* 3. Adjust List Button (Only in List View) */}
                                     {viewMode === 'list' && (
-                                        <div ref={adjustListRef} style={{ position: 'relative' }}>
+                                        <div ref={adjustListRef} style={{ position: 'relative', marginRight: '0.8rem' }}>
                                             <div style={{
                                                 display: 'flex',
                                                 alignItems: 'center',
@@ -1913,6 +1950,66 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                             )}
                                         </div>
                                     )}
+
+                                    {/* Edit Mode Toggle */}
+                                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            background: 'var(--glass-shine)',
+                                            backdropFilter: 'blur(10px)',
+                                            borderRadius: '2rem',
+                                            padding: '0.3rem',
+                                            border: '1px solid var(--glass-border)',
+                                            height: '2.4rem',
+                                            transition: 'all 0.3s ease'
+                                        }}>
+                                            <button
+                                                onClick={() => setIsGlobalEditMode(!isGlobalEditMode)}
+                                                style={{
+                                                    background: isGlobalEditMode ? '#f59e0b' : '#6366f1', // Yellow if Active, Blue if Default
+                                                    border: 'none',
+                                                    borderRadius: '1.5rem',
+                                                    color: '#fff',
+                                                    padding: '0.3rem',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 700,
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '0.3rem',
+                                                    transition: 'all 0.2s',
+                                                    width: '2.4rem',
+                                                    height: '100%'
+                                                }}
+                                                title="Toggle Edit Mode"
+                                            >
+                                                <Settings size={16} />
+                                            </button>
+                                        </div>
+                                        {isGlobalEditMode && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                bottom: '100%', // Moved from top: 100% to bottom: 100%
+                                                right: 0,
+                                                marginBottom: '0.4rem', // Changed from marginTop to marginBottom
+                                                fontSize: '0.6rem',
+                                                fontWeight: 600,
+                                                color: 'var(--text-secondary)',
+                                                animation: 'fadeIn 0.3s ease',
+                                                whiteSpace: 'nowrap',
+                                                background: 'var(--bg-secondary)',
+                                                padding: '0.2rem 0.5rem',
+                                                borderRadius: '0.4rem',
+                                                border: '1px solid var(--glass-border)',
+                                                zIndex: 10,
+                                                boxShadow: '0 4px 10px rgba(0,0,0,0.1)' // Added shadow for better visibility
+                                            }}>
+                                                Now, you can edit your assets
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 

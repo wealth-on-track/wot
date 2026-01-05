@@ -146,6 +146,28 @@ body.light .glass-input:focus {
   transform: scale(0.98);
 }
 
+.glass-button-secondary {
+  background: transparent !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-secondary) !important;
+  transition: all 0.2s ease !important;
+}
+
+.glass-button-secondary:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-primary) !important;
+}
+
+.nav-control-box {
+  background: rgba(128, 128, 128, 0.08) !important;
+  border: 1px solid var(--glass-border) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.nav-control-box:hover {
+  background: rgba(128, 128, 128, 0.15) !important;
+}
+
 .gradient-text {
   background: var(--accent-gradient);
   -webkit-background-clip: text;

@@ -15,14 +15,39 @@ import { getAssetName } from "@/services/marketData";
 
 
 const RegisterSchema = z.object({
-    username: z.string().min(3, "Username must be at least 3 characters").regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, underscores, and dashes"),
+    username: z.string().min(3).regex(/^[a-zA-Z0-9_-]+$/).optional(),
     email: z.string().email("Invalid email address"),
     password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-export async function register(prevState: string | undefined, formData: FormData) {
-    const needsPortfolio = true; // Always create portfolio for new users
+async function generateUniqueUsername(email: string): Promise<string> {
+    // 1. Get prefix from email (e.g., "john.doe" from "john.doe@gmail.com")
+    let baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_-]/g, '_');
 
+    // 2. Ensure min length
+    if (baseUsername.length < 3) baseUsername += "_user";
+
+    // 3. Check for duplicates and append random number if needed
+    let username = baseUsername;
+    let isUnique = false;
+    let attempts = 0;
+
+    while (!isUnique && attempts < 10) {
+        const existing = await prisma.user.findUnique({ where: { username } });
+        if (!existing) {
+            isUnique = true;
+        } else {
+            // Append a small random suffix
+            const suffix = Math.floor(Math.random() * 900) + 100;
+            username = `${baseUsername}${suffix}`;
+            attempts++;
+        }
+    }
+
+    return username;
+}
+
+export async function register(prevState: string | undefined, formData: FormData) {
     const rawData = Object.fromEntries(formData.entries());
     const validatedFields = RegisterSchema.safeParse(rawData);
 
@@ -30,22 +55,21 @@ export async function register(prevState: string | undefined, formData: FormData
         return "Invalid fields. Please check your input.";
     }
 
-    const { email, password, username } = validatedFields.data;
+    const { email, password } = validatedFields.data;
 
     try {
-        const existingUser = await prisma.user.findFirst({
-            where: {
-                OR: [{ email }, { username }],
-            },
+        const existingUser = await prisma.user.findUnique({
+            where: { email },
         });
 
         if (existingUser) {
-            return "User already exists (email or username taken).";
+            return "User already exists.";
         }
 
+        const username = await generateUniqueUsername(email);
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const user = await prisma.user.create({
+        await prisma.user.create({
             data: {
                 username,
                 email,
@@ -58,18 +82,21 @@ export async function register(prevState: string | undefined, formData: FormData
             },
         });
 
-        // Attempt to sign in immediately?
-        // Usually we redirect to login or sign them in.
-        // For simplicity, let's redirect to login with a success message or handle it client side.
-        // But `signIn` can be called server side.
+        // AUTO-LOGIN AFTER SUCCESSFUL REGISTRATION
+        await signIn("credentials", {
+            email,
+            password,
+            redirectTo: `/${username}`,
+        });
 
-        // However, signIn with "credentials" on server side is tricky without direct calling.
-        // We will just return "success" and let client redirect.
         return "success";
 
     } catch (error) {
+        if (error instanceof AuthError) {
+            return "Failed to sign in after registration.";
+        }
         console.error("Registration error:", error);
-        return "Something went wrong.";
+        throw error;
     }
 }
 
@@ -79,12 +106,22 @@ export async function authenticate(
 ) {
     try {
         const email = formData.get("email") as string;
+        const password = formData.get("password") as string;
+
         const user = await prisma.user.findUnique({
             where: { email },
-            select: { username: true }
         });
 
-        const redirectTo = user ? `/${user.username}` : "/";
+        if (!user) {
+            return "user_not_found";
+        }
+
+        const passwordsMatch = await bcrypt.compare(password, user.password);
+        if (!passwordsMatch) {
+            return "Invalid credentials.";
+        }
+
+        const redirectTo = `/${user.username}`;
 
         await signIn("credentials", {
             ...Object.fromEntries(formData),
@@ -321,5 +358,28 @@ export async function reorderAssets(items: { id: string; rank: number }[]) {
         console.error("Reorder error:", error);
 
         return { error: `Failed to reorder: ${error instanceof Error ? error.message : String(error)}` };
+    }
+}
+
+export async function refreshPortfolioPrices() {
+    const session = await auth();
+    if (!session?.user?.id) return { error: "Not authenticated" };
+
+    try {
+        const userWithAssets = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            include: { assets: true }
+        });
+
+        if (!userWithAssets) return { error: "User not found" };
+
+        const { getPortfolioMetrics } = await import('@/lib/portfolio');
+        await getPortfolioMetrics(userWithAssets.assets, undefined, true);
+
+        revalidatePath(`/${userWithAssets.username}`);
+        return { success: true };
+    } catch (error) {
+        console.error("Refresh prices error:", error);
+        return { error: "Failed to refresh prices" };
     }
 }

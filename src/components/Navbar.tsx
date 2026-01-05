@@ -73,36 +73,38 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                                     My Portfolio
                                 </Link>
                             )}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                 <ThemeToggle />
                                 <CurrencySelector />
                                 <form action={handleSignOut} style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
                                     <button
                                         type="submit"
+                                        className="group nav-control-box"
                                         style={{
-                                            background: 'transparent',
-                                            border: '1px solid transparent',
                                             cursor: 'pointer',
-                                            padding: '0.25rem 0.4rem',
-                                            borderRadius: '0.4rem',
+                                            padding: '0 0.75rem',
+                                            borderRadius: '0.5rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.75rem',
+                                            height: '2.4rem',
+                                        }}
+                                    >
+                                        <div style={{
                                             display: 'flex',
                                             flexDirection: 'column',
-                                            alignItems: 'flex-end',
-                                            gap: '1px',
-                                            textAlign: 'right',
-                                            transition: 'background 0.2s'
-                                        }}
-                                        className="group"
-                                    >
-                                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                                            <LogOut size={16} className="mobile-only" style={{ color: 'var(--text-secondary)' }} />
-                                            <span className="desktop-only" style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)', transition: 'color 0.2s' }}>Sign Out</span>
+                                            alignItems: 'flex-start',
+                                            gap: '0',
+                                            textAlign: 'left'
+                                        }} className="desktop-only">
+                                            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>Sign Out</span>
+                                            {session?.user?.email && (
+                                                <span style={{ fontSize: '0.6rem', opacity: 0.6, color: 'var(--text-secondary)', fontWeight: 500 }}>
+                                                    {session.user.email}
+                                                </span>
+                                            )}
                                         </div>
-                                        {username && (
-                                            <div className="desktop-only" style={{ fontSize: '0.65rem', opacity: 0.6, color: 'var(--text-primary)', fontWeight: 500, lineHeight: 1.2 }}>
-                                                @{username}
-                                            </div>
-                                        )}
+                                        <LogOut size={16} style={{ color: 'var(--text-secondary)' }} />
                                     </button>
                                 </form>
                             </div>

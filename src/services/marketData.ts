@@ -20,6 +20,31 @@ export interface PriceResult {
     country?: string;
     sector?: string;
     industry?: string;
+    marketState?: string;
+}
+
+/**
+ * Shared logic to translate raw symbols to searchable tickers (e.g., ASML -> ASML.AS)
+ */
+export function getSearchSymbol(symbol: string, type: string): string {
+    const s = symbol.toUpperCase();
+    const t = type.toUpperCase();
+
+    // 1. Known BIST Stocks
+    const bistStocks = ['TAVHL', 'THYAO', 'GARAN', 'AKBNK', 'EREGL', 'KCHOL', 'SAHOL', 'SISE', 'BIMAS', 'ASELS'];
+    if (t === 'STOCK' && bistStocks.includes(s)) return `${s}.IS`;
+
+    // 2. Specific Global Mappings
+    if (s === 'ASML') return 'ASML.AS'; // Primary Euronext listing
+    if (s === 'RABO') return 'RABO.AS';
+
+    // 3. Commodities
+    if (s === 'XAU') return 'GC=F';
+    if (s === 'GAUTRY') return 'GC=F'; // Use Gold Futures directly to avoid XAUTRY=X 404
+    if (s === 'XAGTRY') return 'SI=F'; // Use Silver Futures to avoid XAGTRY=X 404
+
+    // 4. Default
+    return s;
 }
 
 export async function getAssetName(symbol: string, type: string, exchange?: string): Promise<string | null> {
@@ -32,12 +57,7 @@ export async function getAssetName(symbol: string, type: string, exchange?: stri
             if (tefasData) return tefasData.title;
         }
 
-        let searchSymbol = symbol;
-
-        // Handle BIST stocks suffix for search as well
-        if (type === 'STOCK' && (symbol === 'TAVHL' || symbol === 'THYAO' || symbol === 'GARAN' || symbol === 'AKBNK')) {
-            searchSymbol = `${symbol}.IS`;
-        }
+        const searchSymbol = getSearchSymbol(symbol, type);
 
         // Handle Crypto Pairs (e.g. BTC-EUR -> search "BTC-EUR" or just "BTC")
         // If symbol has hyphen, let's try searching it directly first.
@@ -72,14 +92,44 @@ export async function getAssetName(symbol: string, type: string, exchange?: stri
     return null;
 }
 
-export async function getMarketPrice(symbol: string, type: string, exchange?: string): Promise<PriceResult | null> {
+function estimateMarketState(exchange?: string): string {
+    if (!exchange) return 'CLOSED';
+
+    const now = new Date();
+    const utcHours = now.getUTCHours();
+    const utcMinutes = now.getUTCMinutes();
+    const totalMinutes = utcHours * 60 + utcMinutes;
+
+    // US Markets (NYSE, NASDAQ): ~14:30 - 21:00 UTC
+    if (['NASDAQ', 'NYSE', 'US', 'NMS', 'NGM'].includes(exchange)) {
+        if (totalMinutes >= 870 && totalMinutes < 1260) return 'REGULAR';
+        return 'CLOSED';
+    }
+
+    // European Markets (AMS, PAR, BRU, MIL, MAD, LSE): ~08:00 - 16:30 UTC
+    if (['AMS', 'PAR', 'BRU', 'MIL', 'MC', 'LSE', 'AS', 'PA'].includes(exchange)) {
+        if (totalMinutes >= 480 && totalMinutes < 990) return 'REGULAR';
+        return 'CLOSED';
+    }
+
+    // Istanbul (BIST) & TEFAS Funds: ~07:00 - 15:00 UTC (10:00 - 18:00 TRT)
+    if (['IST', 'BIST', 'IS', 'TEFAS'].includes(exchange)) {
+        if (totalMinutes >= 420 && totalMinutes < 900) return 'REGULAR';
+        return 'CLOSED';
+    }
+
+    return 'CLOSED';
+}
+
+export async function getMarketPrice(symbol: string, type: string, exchange?: string, forceRefresh: boolean = false): Promise<PriceResult | undefined> {
 
     // CASH assets always have a price of 1.0 (relative to themselves)
     // The valuation logic converts this 1.0 * quantity (which is the amount) to the target currency.
     if (type === 'CASH') {
         return {
             price: 1.0,
-            timestamp: new Date().toLocaleString('tr-TR')
+            timestamp: new Date().toLocaleString('tr-TR'),
+            marketState: 'REGULAR' // Cash is always open
         };
     }
 
@@ -91,87 +141,44 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
             return {
                 price: tefasData.price,
                 timestamp: tefasData.lastUpdated || new Date().toLocaleString('tr-TR'),
-                currency: 'TRY'
+                currency: 'TRY',
+                marketState: estimateMarketState('TEFAS') // Use shared logic
             };
         }
     }
 
     // Try Yahoo Finance API
     try {
-        // Handle BIST stocks suffix
-        let searchSymbol = symbol;
-        if (type === 'STOCK' && (symbol === 'TAVHL' || symbol === 'THYAO' || symbol === 'GARAN' || symbol === 'AKBNK')) {
-            searchSymbol = `${symbol}.IS`;
-        } else if (type === 'STOCK' && symbol === 'ASML') {
-            searchSymbol = 'ASML.AS'; // Favor Euronext Amsterdam for ASML (Primary Listing)
-        } else if (symbol === 'XAU') {
-            searchSymbol = 'GC=F'; // Gold Futures (working ticker)
-        } else if (symbol === 'GAUTRY') {
-            searchSymbol = 'XAUTRY=X'; // Ounce Gold in TRY
-        } else if (symbol === 'XAGTRY') {
-            searchSymbol = 'XAGTRY=X'; // Ounce Silver in TRY
-        } else if (symbol === 'RABO') {
-            searchSymbol = 'RABO.AS';
-        } else if (type === 'STOCK' && !symbol.includes('.')) {
-            // Check if it's a known BIST stock or trust Yahoo to find it? 
-            // Better to try direct symbol first.
-            // Yahoo usually needs suffix for non-US. 
-        }
+        const searchSymbol = getSearchSymbol(symbol, type);
+        const fallbackState = estimateMarketState(exchange);
 
-        const quote = await getYahooQuote(searchSymbol);
-
-        // Special handling for GAUTRY fallback
-        if (symbol === 'GAUTRY' && (!quote || !quote.regularMarketPrice)) {
-            // Fallback: Calculate via XAUUSD * USDTRY / 31.10
+        // Special handling for GAUTRY/XAGTRY: Always use derived calculation to avoid 404s/Errors
+        if (symbol === 'GAUTRY' || symbol === 'XAGTRY') {
             try {
-                // Try XAUUSD first, then GC=F (Gold Futures)
-                const [xau, gcf, usdtry] = await Promise.all([
-                    getYahooQuote('XAUUSD=X'),
-                    getYahooQuote('GC=F'), // Fallback for gold price
+                const isGold = symbol === 'GAUTRY';
+                const [commodity, usdtry] = await Promise.all([
+                    getYahooQuote(isGold ? 'GC=F' : 'SI=F'),
                     getYahooQuote('USDTRY=X')
                 ]);
 
-                const goldPrice = xau?.regularMarketPrice || gcf?.regularMarketPrice;
+                const commodityPrice = commodity?.regularMarketPrice;
                 const parity = usdtry?.regularMarketPrice;
 
-                if (goldPrice && parity) {
-                    const gramPrice = (goldPrice * parity) / 31.1034768;
+                if (commodityPrice && parity) {
+                    const gramPrice = (commodityPrice * parity) / 31.1034768;
                     return {
                         price: gramPrice,
                         timestamp: new Date().toLocaleString('tr-TR'),
-                        currency: 'TRY'
+                        currency: 'TRY',
+                        marketState: commodity?.marketState || 'REGULAR' // Inherit or default to Open
                     };
                 }
             } catch (err) {
-                console.error("Failed to calculate derived gold price", err);
+                console.error(`Failed to calculate derived ${symbol} price`, err);
             }
         }
 
-        // Special handling for XAGTRY (Silver) fallback
-        if (symbol === 'XAGTRY' && (!quote || !quote.regularMarketPrice)) {
-            // Fallback: Calculate via XAGUSD * USDTRY / 31.10
-            try {
-                const [xag, sif, usdtry] = await Promise.all([
-                    getYahooQuote('XAGUSD=X'),
-                    getYahooQuote('SI=F'), // Silver Futures
-                    getYahooQuote('USDTRY=X')
-                ]);
-
-                const silverPrice = xag?.regularMarketPrice || sif?.regularMarketPrice;
-                const parity = usdtry?.regularMarketPrice;
-
-                if (silverPrice && parity) {
-                    const gramPrice = (silverPrice * parity) / 31.1034768;
-                    return {
-                        price: gramPrice,
-                        timestamp: new Date().toLocaleString('tr-TR'),
-                        currency: 'TRY'
-                    };
-                }
-            } catch (err) {
-                console.error("Failed to calculate derived silver price", err);
-            }
-        }
+        const quote = await getYahooQuote(searchSymbol, forceRefresh);
 
         if (quote && quote.regularMarketPrice) {
             let price = quote.regularMarketPrice;
@@ -253,9 +260,8 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                 change24h: change24h,
                 changePercent: previousClose ? (change24h / previousClose) * 100 : 0,
                 nextEarningsDate: quote.earningsTimestamp ? new Date(quote.earningsTimestamp * 1000).toLocaleDateString('tr-TR') : undefined,
-                country: profileData?.country,
-                sector: profileData?.sector,
-                industry: profileData?.industry
+                industry: profileData?.industry,
+                marketState: quote.marketState || fallbackState
             };
         }
     } catch (error) {

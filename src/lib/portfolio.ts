@@ -4,9 +4,29 @@ import { cleanAssetName } from "@/lib/companyNames";
 
 import { AssetDisplay } from "@/lib/types";
 
+function estimateFallbackState(exchange?: string): string {
+    if (!exchange) return 'CLOSED';
+
+    // Always Open Assets
+    if (['CRYPTO', 'FOREX', 'COMMODITY', 'CCC'].includes(exchange)) return 'REGULAR';
+
+    const totalMinutes = new Date().getUTCHours() * 60 + new Date().getUTCMinutes();
+
+    // US Markets (NYSE, NASDAQ): ~14:30 - 21:00 UTC
+    if (['NASDAQ', 'NYSE', 'US', 'NMS', 'NGM'].includes(exchange)) return (totalMinutes >= 870 && totalMinutes < 1260) ? 'REGULAR' : 'CLOSED';
+
+    // European Markets (AMS, PAR, BRU, MIL, MAD, LSE): ~08:00 - 16:30 UTC
+    if (['AMS', 'PAR', 'BRU', 'MIL', 'MC', 'LSE', 'AS', 'PA'].includes(exchange)) return (totalMinutes >= 480 && totalMinutes < 990) ? 'REGULAR' : 'CLOSED';
+
+    // Istanbul (BIST) & TEFAS Funds: ~07:00 - 15:00 UTC (10:00 - 18:00 TRT)
+    if (['IST', 'BIST', 'IS', 'TEFAS'].includes(exchange)) return (totalMinutes >= 420 && totalMinutes < 900) ? 'REGULAR' : 'CLOSED';
+
+    return 'CLOSED';
+}
+
 // ... imports
 
-export async function getPortfolioMetrics(assets: any[], customRates?: Record<string, number>): Promise<{ totalValueEUR: number, assetsWithValues: AssetDisplay[] }> {
+export async function getPortfolioMetrics(assets: any[], customRates?: Record<string, number>, forceRefresh: boolean = false): Promise<{ totalValueEUR: number, assetsWithValues: AssetDisplay[] }> {
     // Process Assets: Fetch current prices and calculate values
     const assetsWithValues = await Promise.all(assets.map(async (asset) => {
         // ... (lines 10-58 remain same logic, just ensure indentation)
@@ -36,7 +56,7 @@ export async function getPortfolioMetrics(assets: any[], customRates?: Record<st
         }
 
         // 1. Get current market price
-        const priceData = await getMarketPrice(asset.symbol, asset.type);
+        const priceData = await getMarketPrice(asset.symbol, asset.type, asset.exchange, forceRefresh);
         const currentPrice = priceData ? priceData.price : asset.buyPrice;
 
         // 1b. Check & Fix Currency Mismatch
@@ -89,11 +109,12 @@ export async function getPortfolioMetrics(assets: any[], customRates?: Record<st
             assetClass: asset.assetClass || undefined,
             assetSubClass: asset.assetSubClass || undefined,
             market: asset.market || undefined,
+            marketState: priceData?.marketState || estimateFallbackState(asset.exchange),
         };
     }));
 
     const totalPortfolioValueEUR = assetsWithValues.reduce((sum: number, asset) => {
-        console.log(`[MetricDebug] ${asset.symbol}: ${asset.totalValueEUR} EUR (Cum: ${sum + asset.totalValueEUR})`);
+        // console.log(`[MetricDebug] ${asset.symbol}: ${asset.totalValueEUR} EUR (Cum: ${sum + asset.totalValueEUR})`);
         return sum + asset.totalValueEUR;
     }, 0);
 

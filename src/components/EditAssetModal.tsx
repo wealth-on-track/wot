@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AssetDisplay } from '@/lib/types';
-import { X, Save, Trash2, Calendar } from 'lucide-react';
+import { X, Save, Trash2 } from 'lucide-react';
 import { updateAsset, deleteAsset } from '@/lib/actions';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
@@ -26,7 +26,8 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
         currency: asset.currency,
         country: asset.country || '',
         sector: asset.sector || '',
-        nextEarningsDate: asset.nextEarningsDate ? new Date(asset.nextEarningsDate).toISOString().split('T')[0] : ''
+        platform: asset.platform || '',
+        customGroup: asset.customGroup || ''
     });
 
     // Reset form when asset changes
@@ -41,7 +42,8 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
             currency: asset.currency,
             country: asset.country || '',
             sector: asset.sector || '',
-            nextEarningsDate: asset.nextEarningsDate ? new Date(asset.nextEarningsDate).toISOString().split('T')[0] : ''
+            platform: asset.platform || '',
+            customGroup: asset.customGroup || ''
         });
     }, [asset]);
 
@@ -65,8 +67,8 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
                 currency: formData.currency,
                 country: formData.country,
                 sector: formData.sector,
-                nextEarningsDate: formData.nextEarningsDate ? new Date(formData.nextEarningsDate) : null,
-                customGroup: asset.customGroup || undefined
+                platform: formData.platform,
+                customGroup: formData.customGroup || undefined
             });
 
             if (res.error) {
@@ -104,6 +106,31 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
     // Use Portal to render at root level to avoid z-index/transform issues
     if (!isOpen) return null;
 
+    const labelStyle = {
+        fontSize: '0.65rem',
+        fontWeight: 600,
+        color: '#94a3b8', // Slate-400 for better readability
+        marginBottom: '0.15rem',
+        display: 'block',
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.02em'
+    };
+
+    const inputStyle = {
+        width: '100%',
+        background: '#1e293b', // Slate-800 - Solid dark background for contrast
+        border: '1px solid #334155', // Slate-700
+        borderRadius: '6px',
+        padding: '0.35rem 0.6rem', // Tighter padding
+        fontSize: '0.8rem',
+        fontWeight: 500,
+        color: '#f1f5f9', // Slate-100 - High contrast text
+        outline: 'none',
+        transition: 'all 0.2s',
+        fontFamily: 'inherit',
+        height: '2rem' // Fixed compact height
+    };
+
     return createPortal(
         <div style={{
             position: 'fixed',
@@ -119,270 +146,289 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
                 style={{
                     position: 'absolute',
                     inset: 0,
-                    background: 'rgba(0, 0, 0, 0.6)',
+                    background: 'rgba(5, 7, 20, 0.7)', // Darker backdrop
                     backdropFilter: 'blur(8px)',
                     WebkitBackdropFilter: 'blur(8px)',
-                    animation: 'fadeIn 0.3s ease'
+                    animation: 'fadeIn 0.2s ease'
                 }}
                 onClick={onClose}
                 aria-hidden="true"
             />
 
             {/* 2. Modern Notification Card centered */}
-            <div className="glass-panel" style={{
+            <div style={{
                 position: 'relative',
                 width: '100%',
-                maxWidth: '500px',
-                borderRadius: '16px',
+                maxWidth: '600px', // More compact width
+                background: '#0f172a', // Slate-950 - Deep rich dark background
+                borderRadius: '12px',
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
                 maxHeight: '85vh',
                 animation: 'zoomIn 0.2s ease',
-                border: '1px solid var(--glass-border)',
+                border: '1px solid #1e293b', // Slate-800
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
             }}>
 
-                {/* Header */}
+                {/* Header (Title + Actions) */}
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '1.25rem 1.5rem',
-                    borderBottom: '1px solid var(--glass-border)',
-                    background: 'rgba(255, 255, 255, 0.02)'
+                    padding: '0.8rem 1.2rem',
+                    borderBottom: '1px solid #1e293b',
+                    background: '#131c31'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', overflow: 'hidden' }}>
                         <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '12px',
-                            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(236, 72, 153, 0.2))',
+                            width: '32px',
+                            height: '32px',
+                            minWidth: '32px',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
                             color: '#fff',
-                            fontWeight: 'bold',
-                            fontSize: '1.125rem',
-                            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
+                            fontWeight: '700',
+                            fontSize: '0.9rem',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                         }}>
                             {formData.symbol.charAt(0)}
                         </div>
+                        <div style={{ minWidth: 0 }}>
+                            <h2 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#f8fafc', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                Edit {formData.name || formData.symbol}
+                            </h2>
+                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>{formData.symbol}</div>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                        {/* Save Button */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                            <button
+                                onClick={handleSave}
+                                disabled={isLoading}
+                                style={{
+                                    background: '#3b82f6', // Blue-500
+                                    border: '1px solid #2563eb',
+                                    color: '#fff',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 2px 5px rgba(59, 130, 246, 0.4)'
+                                }}
+                                title="Save"
+                            >
+                                {isLoading ? (
+                                    <div style={{ width: '14px', height: '14px', border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                ) : (
+                                    <Save size={18} />
+                                )}
+                            </button>
+                            <span style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 500, letterSpacing: '0.02em' }}>Save</span>
+                        </div>
+
+                        {/* Delete Button */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                            <button
+                                onClick={handleDelete}
+                                disabled={isLoading}
+                                style={{
+                                    background: '#ef4444', // Red-500 Solid
+                                    border: '1px solid #dc2626',
+                                    color: '#fff',
+                                    width: '32px', // Square button
+                                    height: '32px',
+                                    borderRadius: '8px', // Slightly more rounded
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 2px 5px rgba(239, 68, 68, 0.3)'
+                                }}
+                                title="Delete Asset"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                            <span style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 500, letterSpacing: '0.02em' }}>Delete</span>
+                        </div>
+
+                        {/* Cancel Button */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                            <button
+                                onClick={onClose}
+                                style={{
+                                    background: '#334155', // Slate-700
+                                    border: '1px solid #1e293b',
+                                    color: '#fff',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
+                                }}
+                                title="Cancel"
+                            >
+                                <X size={18} />
+                            </button>
+                            <span style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 500, letterSpacing: '0.02em' }}>Cancel</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Body - Compact 3-Column Grid */}
+                <div className="custom-scrollbar" style={{ padding: '1.2rem', overflowY: 'auto', flex: 1 }}>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.8rem 1rem' }}>
+
+                        {/* Row 1: Primary Identity */}
+                        <div style={{ gridColumn: 'span 1' }}>
+                            <label style={labelStyle}>Ticker</label>
+                            <input
+                                name="symbol"
+                                value={formData.symbol}
+                                onChange={handleChange}
+                                style={inputStyle}
+                                placeholder="AAPL"
+                            />
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                            <label style={labelStyle}>Asset Name</label>
+                            <input
+                                name="name"
+                                value={formData.name}
+                                onChange={handleChange}
+                                style={inputStyle}
+                                placeholder="Apple Inc."
+                            />
+                        </div>
+
+                        {/* Row 2: Classification */}
                         <div>
-                            <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>{formData.name}</h2>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.125rem' }}>
-                                <span style={{
-                                    fontSize: '0.75rem',
-                                    fontWeight: 600,
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    padding: '0.125rem 0.375rem',
-                                    borderRadius: '4px',
-                                    color: 'var(--text-secondary)'
-                                }}>{formData.symbol}</span>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{formData.exchange}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Body - Scrollable */}
-                <div className="custom-scrollbar" style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
-                        {/* Section 1: Main Details */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            <h3 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Asset Details</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>Symbol</label>
-                                    <input
-                                        name="symbol"
-                                        value={formData.symbol}
-                                        onChange={handleChange}
-                                        className="glass-input"
-                                    />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>Name</label>
-                                    <input
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={handleChange}
-                                        className="glass-input"
-                                    />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>Type</label>
-                                    <select
-                                        name="type"
-                                        value={formData.type}
-                                        onChange={handleChange}
-                                        className="glass-input"
-                                        style={{ appearance: 'none' }}
-                                    >
-                                        {["STOCK", "CRYPTO", "GOLD", "BOND", "FUND", "CASH", "COMMODITY"].map(t => (
-                                            <option key={t} value={t} style={{ color: '#000' }}>{t}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>Currency</label>
-                                    <select
-                                        name="currency"
-                                        value={formData.currency}
-                                        onChange={handleChange}
-                                        className="glass-input"
-                                        style={{ appearance: 'none' }}
-                                    >
-                                        {["USD", "EUR", "TRY"].map(c => (
-                                            <option key={c} value={c} style={{ color: '#000' }}>{c}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Section 2: Financials */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--glass-border)' }}>
-                            <h3 style={{ fontSize: '0.75rem', fontWeight: 600, color: '#34d399', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Position Data</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>Quantity</label>
-                                    <input
-                                        name="quantity"
-                                        type="number"
-                                        step="any"
-                                        value={formData.quantity}
-                                        onChange={handleChange}
-                                        className="glass-input"
-                                        style={{ fontFamily: 'monospace' }}
-                                    />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>Avg Cost</label>
-                                    <input
-                                        name="buyPrice"
-                                        type="number"
-                                        step="any"
-                                        value={formData.buyPrice}
-                                        onChange={handleChange}
-                                        className="glass-input"
-                                        style={{ fontFamily: 'monospace' }}
-                                    />
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', marginLeft: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                    <Calendar size={12} style={{ opacity: 0.7 }} /> Next Earnings (Optional)
-                                </label>
-                                <input
-                                    name="nextEarningsDate"
-                                    type="date"
-                                    value={formData.nextEarningsDate}
+                            <label style={labelStyle}>Type</label>
+                            <div style={{ position: 'relative' }}>
+                                <select
+                                    name="type"
+                                    value={formData.type}
                                     onChange={handleChange}
-                                    className="glass-input"
-                                />
+                                    style={{ ...inputStyle, appearance: 'none', cursor: 'pointer' }}
+                                >
+                                    {["STOCK", "CRYPTO", "GOLD", "BOND", "FUND", "CASH", "COMMODITY"].map(t => (
+                                        <option key={t} value={t} style={{ color: '#000' }}>{t}</option>
+                                    ))}
+                                </select>
+                                <div style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#94a3b8', fontSize: '0.6rem' }}>▼</div>
+                            </div>
+                        </div>
+                        <div>
+                            <label style={labelStyle}>Exchange</label>
+                            <input
+                                name="exchange"
+                                value={formData.exchange}
+                                onChange={handleChange}
+                                style={inputStyle}
+                                placeholder="NASDAQ"
+                            />
+                        </div>
+                        <div>
+                            <label style={labelStyle}>Currency</label>
+                            <div style={{ position: 'relative' }}>
+                                <select
+                                    name="currency"
+                                    value={formData.currency}
+                                    onChange={handleChange}
+                                    style={{ ...inputStyle, appearance: 'none', cursor: 'pointer' }}
+                                >
+                                    {["USD", "EUR", "TRY"].map(c => (
+                                        <option key={c} value={c} style={{ color: '#000' }}>{c}</option>
+                                    ))}
+                                </select>
+                                <div style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#94a3b8', fontSize: '0.6rem' }}>▼</div>
                             </div>
                         </div>
 
-                        {/* Section 3: Metadata */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--glass-border)' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>Sector</label>
-                                    <input
-                                        name="sector"
-                                        value={formData.sector}
-                                        onChange={handleChange}
-                                        placeholder="Tech, Finance..."
-                                        className="glass-input"
-                                    />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-secondary)', marginLeft: '0.25rem' }}>Country</label>
-                                    <input
-                                        name="country"
-                                        value={formData.country}
-                                        onChange={handleChange}
-                                        placeholder="US, DE..."
-                                        className="glass-input"
-                                    />
-                                </div>
-                            </div>
+                        {/* Row 3: Financials */}
+                        <div>
+                            <label style={labelStyle}>Quantity</label>
+                            <input
+                                name="quantity"
+                                type="number"
+                                step="any"
+                                value={formData.quantity}
+                                onChange={handleChange}
+                                style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em' }}
+                            />
+                        </div>
+                        <div>
+                            <label style={labelStyle}>Avg Cost</label>
+                            <input
+                                name="buyPrice"
+                                type="number"
+                                step="any"
+                                value={formData.buyPrice}
+                                onChange={handleChange}
+                                style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em' }}
+                            />
+                        </div>
+                        <div>
+                            {/* Empty or calculated total could go here, or we can use it for Portfolio/Group */}
+                            <label style={labelStyle}>Portfolio</label>
+                            <input
+                                name="customGroup"
+                                value={formData.customGroup}
+                                onChange={handleChange}
+                                style={inputStyle}
+                                placeholder="Main Portfolio"
+                            />
+                        </div>
+
+                        {/* Row 4: Metadata */}
+                        <div>
+                            <label style={labelStyle}>Country</label>
+                            <input
+                                name="country"
+                                value={formData.country}
+                                onChange={handleChange}
+                                style={inputStyle}
+                                placeholder="US"
+                            />
+                        </div>
+                        <div>
+                            <label style={labelStyle}>Sector</label>
+                            <input
+                                name="sector"
+                                value={formData.sector}
+                                onChange={handleChange}
+                                style={inputStyle}
+                                placeholder="Technology"
+                            />
+                        </div>
+                        <div>
+                            <label style={labelStyle}>Platform</label>
+                            <input
+                                name="platform"
+                                value={formData.platform}
+                                onChange={handleChange}
+                                style={inputStyle}
+                                placeholder="Interactive Brokers"
+                            />
                         </div>
 
                     </div>
-                </div>
 
-                {/* Footer Buttons */}
-                <div style={{
-                    padding: '1rem 1.5rem',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    borderTop: '1px solid var(--glass-border)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                }}>
-                    <button
-                        onClick={handleDelete}
-                        disabled={isLoading}
-                        style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: 'var(--danger)',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.375rem',
-                            cursor: 'pointer',
-                            padding: '0.375rem 0.5rem',
-                            borderRadius: '4px',
-                            transition: 'background 0.2s'
-                        }}
-                    >
-                        <Trash2 size={14} />
-                        Delete
-                    </button>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <button
-                            onClick={onClose}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: 'var(--text-muted)',
-                                fontSize: '0.875rem',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                padding: '0.5rem 1rem',
-                                borderRadius: '6px',
-                                transition: 'color 0.2s'
-                            }}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={isLoading}
-                            className="glass-button"
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.5rem 1.25rem',
-                                fontSize: '0.875rem'
-                            }}
-                        >
-                            {isLoading ? 'Saving...' : (
-                                <>
-                                    <Save size={16} />
-                                    Save Changes
-                                </>
-                            )}
-                        </button>
-                    </div>
                 </div>
 
             </div>

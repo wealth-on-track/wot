@@ -58,10 +58,11 @@ model Asset {
 
 
 model PriceCache {
-  symbol    String   @id
-  price     Float
-  currency  String
-  updatedAt DateTime @updatedAt
+  symbol      String   @id
+  price       Float
+  currency    String
+  marketState String?
+  updatedAt   DateTime @updatedAt
 }
 
 model ExchangeRate {

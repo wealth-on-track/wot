@@ -23,4 +23,5 @@ export interface AssetDisplay {
     assetSubClass?: string | null;
     market?: string | null;
     nextEarningsDate?: Date | null;
+    marketState?: string;
 }
