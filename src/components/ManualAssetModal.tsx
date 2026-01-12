@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Save, TrendingUp, Bitcoin, Coins, Landmark, Building, Briefcase } from "lucide-react";
-import { addAsset } from "@/lib/actions";
+import { X, Save, TrendingUp, Bitcoin, Coins, Landmark, Building, Briefcase, Search, Loader2 } from "lucide-react";
+import { addAsset, searchAssets, getAssetMetadata, getAutocompleteSuggestions } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { ASSET_COLORS } from "@/lib/constants";
+import { AutocompleteInput } from "./AutocompleteInput";
 
 interface ManualAssetModalProps {
     onClose: () => void;
@@ -22,8 +23,14 @@ const ASSET_TYPES = [
 
 export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetModalProps) {
     const router = useRouter();
-    const [step, setStep] = useState<1 | 2>(1);
+    // Step 0: Search (Optional but recommended), Step 1: Type Select (Fallback), Step 2: Form
+    const [step, setStep] = useState<0 | 1 | 2>(0);
     const [type, setType] = useState<string>("STOCK");
+
+    // Search State
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
 
     // Form Data
     const [symbol, setSymbol] = useState(initialSymbol);
@@ -31,21 +38,48 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
     const [buyPrice, setBuyPrice] = useState("");
     const [currency, setCurrency] = useState("USD");
 
-    // Optional
+    // Metadata (Auto-filled)
     const [exchange, setExchange] = useState("");
-    const [country, setCountry] = useState("");
     const [sector, setSector] = useState("");
+    const [country, setCountry] = useState("");
+    const [name, setName] = useState("");
+
+    // Optional
     const [platform, setPlatform] = useState("");
-    const [isin, setIsin] = useState(""); // For ETFs/Funds
     const [customGroup, setCustomGroup] = useState(""); // Portfolio Name
 
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showOptional, setShowOptional] = useState(false);
-    const [totalValue, setTotalValue] = useState("");
+    const [suggestions, setSuggestions] = useState<{ portfolios: string[], platforms: string[] }>({ portfolios: [], platforms: [] });
 
-    // Auto-calculate quantity if totalValue and buyPrice are provided for funds
+    // Fetch autocomplete suggestions on mount
     useEffect(() => {
-        if ((type === 'FUND' || type === 'ETF') && totalValue && buyPrice) {
+        const fetchSuggestions = async () => {
+            const data = await getAutocompleteSuggestions();
+            setSuggestions(data);
+        };
+        fetchSuggestions();
+    }, []);
+    const [totalValue, setTotalValue] = useState(""); // Only for BES (retirement funds)
+
+    // Auto-search effect
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (searchQuery.length >= 2) {
+                setIsSearching(true);
+                const results = await searchAssets(searchQuery);
+                setSearchResults(results);
+                setIsSearching(false);
+            } else {
+                setSearchResults([]);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Auto-calculate quantity if totalValue and buyPrice are provided for BES only
+    useEffect(() => {
+        if (type === 'BES' && totalValue && buyPrice) {
             const val = parseFloat(totalValue);
             const price = parseFloat(buyPrice);
             if (!isNaN(val) && !isNaN(price) && price > 0) {
@@ -53,6 +87,35 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
             }
         }
     }, [totalValue, buyPrice, type]);
+
+    const handleSelectAsset = async (asset: any) => {
+        setIsSearching(true);
+        // Fetch full metadata
+        const metadata = await getAssetMetadata(asset.symbol);
+
+        setSymbol(asset.symbol);
+        setName(metadata?.name || asset.shortname || asset.longname || "");
+        setExchange(metadata?.exchange || asset.exchange || "");
+        setCurrency(metadata?.currency || "USD"); // Default to USD if unknown
+        setSector(metadata?.sector || "");
+        setCountry(metadata?.country || "");
+
+        // Auto-set type based on search result type
+        // quoteType: EQUITY, CRYPTOCURRENCY, ETF, MUTUALFUND
+        let detectedType = 'STOCK';
+        if (asset.quoteType === 'CRYPTOCURRENCY') detectedType = 'CRYPTO';
+        else if (asset.quoteType === 'ETF') detectedType = 'FUND';
+        else if (asset.quoteType === 'MUTUALFUND') detectedType = 'FUND';
+
+        setType(detectedType);
+
+        if (metadata?.currentPrice) {
+            setBuyPrice(metadata.currentPrice.toString());
+        }
+
+        setIsSearching(false);
+        setStep(2);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -65,13 +128,13 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
         formData.append('buyPrice', buyPrice);
         formData.append('currency', currency);
 
+        // Add metadata
         if (exchange) formData.append('exchange', exchange);
-        if (country) formData.append('country', country); // Note: Backend needs to support this
         if (sector) formData.append('sector', sector);
-        if (isin && type === 'FUND') formData.append('isin', isin); // Append ISIN if it exists and type is FUND
+        if (country) formData.append('country', country);
+        if (platform) formData.append('platform', platform);
+
         if (customGroup) formData.append('customGroup', customGroup);
-        // Platform is currently not in backend schema in evidence, but user requested it.  
-        // We will send it, but if backend ignores it, that's fine for now (MVP).
 
         const res = await addAsset(undefined, formData);
 
@@ -88,8 +151,8 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
         <div style={{
             position: 'fixed',
             top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.8)',
-            backdropFilter: 'blur(8px)',
+            background: 'rgba(15, 23, 42, 0.8)',
+            backdropFilter: 'blur(12px)',
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
@@ -98,30 +161,100 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
         }} onClick={onClose}>
             <div
                 onClick={e => e.stopPropagation()}
-                className="glass-panel"
+                className="neo-card"
                 style={{
                     width: '100%',
-                    maxWidth: '500px',
-                    borderRadius: '1rem',
-                    padding: '1.5rem',
+                    maxWidth: step === 2 ? '900px' : '540px',
+                    borderRadius: 'var(--radius-lg)',
+                    padding: step === 2 ? '1.75rem' : '2rem',
                     position: 'relative',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    background: '#13131a'
+                    background: 'var(--bg-primary)',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    transition: 'all 0.3s ease'
                 }}
             >
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-                        {step === 1 ? 'Select Asset Type' : 'Add Details'}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                        {step === 0 ? 'Search Asset' : step === 1 ? 'Select Category' : 'Configure Asset'}
                     </h2>
-                    <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>
+                    <button onClick={onClose} style={{ background: 'var(--bg-secondary)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.4rem', borderRadius: '50%', display: 'flex', transition: 'all 0.2s' }}>
                         <X size={20} />
                     </button>
                 </div>
 
-                {step === 1 ? (
+                {step === 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        <div style={{ position: 'relative' }}>
+                            <Search size={20} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                            <input
+                                autoFocus
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                placeholder="Search by name or ticker (e.g. AAPL, Apple)"
+                                style={{
+                                    width: '100%',
+                                    padding: '1rem 1rem 1rem 3rem',
+                                    background: 'var(--bg-secondary)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: 'var(--radius-md)',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '1rem',
+                                    outline: 'none'
+                                }}
+                            />
+                            {isSearching && <Loader2 className="animate-spin" size={20} style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--accent)' }} />}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
+                            {searchResults.map((result) => (
+                                <button
+                                    key={result.symbol}
+                                    onClick={() => handleSelectAsset(result)}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        padding: '1rem',
+                                        background: 'var(--bg-secondary)',
+                                        border: '1px solid transparent',
+                                        borderRadius: 'var(--radius-md)',
+                                        cursor: 'pointer',
+                                        textAlign: 'left'
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+                                    onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}
+                                >
+                                    <div>
+                                        <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{result.symbol}</div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{result.shortname || result.longname}</div>
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 600, background: 'var(--surface)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'var(--text-muted)' }}>
+                                        {result.exchange}
+                                    </div>
+                                </button>
+                            ))}
+                            {searchQuery.length > 2 && searchResults.length === 0 && !isSearching && (
+                                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1rem' }}>No results found</div>
+                            )}
+                        </div>
+
+                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', textAlign: 'center' }}>
+                            <button
+                                onClick={() => setStep(1)}
+                                style={{
+                                    background: 'transparent', border: 'none', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer'
+                                }}
+                            >
+                                Skip Search & Enter Manually
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {step === 1 && (
                     /* STEP 1: TYPE SELECTION */
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
                         {ASSET_TYPES.map((t) => (
                             <button
                                 key={t.id}
@@ -129,264 +262,391 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
                                 style={{
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '0.75rem',
-                                    padding: '1.5rem 1rem',
-                                    background: 'rgba(255,255,255,0.03)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: '0.75rem',
+                                    alignItems: 'flex-start',
+                                    gap: '1rem',
+                                    padding: '1.5rem',
+                                    background: 'var(--bg-secondary)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: 'var(--radius-md)',
                                     cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    color: '#fff'
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    color: 'var(--text-primary)',
+                                    textAlign: 'left'
                                 }}
                                 onMouseEnter={e => {
-                                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                                    e.currentTarget.style.borderColor = t.color;
-                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.borderColor = 'var(--accent)';
+                                    e.currentTarget.style.transform = 'translateY(-4px)';
+                                    e.currentTarget.style.boxShadow = 'var(--shadow-md)';
                                 }}
                                 onMouseLeave={e => {
-                                    e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                                    e.currentTarget.style.borderColor = 'var(--border)';
                                     e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = 'none';
                                 }}
                             >
-                                <div style={{ color: t.color }}>{t.icon}</div>
-                                <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{t.label}</span>
+                                <div style={{
+                                    color: '#fff',
+                                    background: t.color,
+                                    padding: '0.75rem',
+                                    borderRadius: '12px',
+                                    display: 'flex',
+                                    boxShadow: `0 4px 12px ${t.color}40`
+                                }}>{t.icon}</div>
+                                <span style={{ fontSize: '1rem', fontWeight: 800 }}>{t.label}</span>
                             </button>
                         ))}
                     </div>
-                ) : (
-                    /* STEP 2: FORM */
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                )}
 
-                        {/* Type Indicator */}
+                {step === 2 && (
+                    /* STEP 2: FORM - REDESIGNED 3-COLUMN LAYOUT */
+                    <>
+                    {console.log('🔥 MODAL VERSION: 3-COLUMN REDESIGN v2.0 - JAN 9 2026')}
+                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+                        {/* Type Indicator - Compact */}
                         <div style={{
                             display: 'flex', alignItems: 'center', gap: '0.5rem',
-                            background: `rgba(${parseInt(ASSET_COLORS[type].slice(1, 3), 16)}, ${parseInt(ASSET_COLORS[type].slice(3, 5), 16)}, ${parseInt(ASSET_COLORS[type].slice(5, 7), 16)}, 0.1)`,
-                            padding: '0.5rem 0.75rem', borderRadius: '0.5rem',
-                            border: `1px solid ${ASSET_COLORS[type]}40`,
-                            marginBottom: '0.5rem'
+                            background: 'var(--bg-secondary)',
+                            padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-md)',
+                            border: `1px solid var(--border)`,
                         }}>
-                            {ASSET_TYPES.find(t => t.id === type)?.icon}
-                            <span style={{ fontWeight: 600, color: ASSET_COLORS[type] }}>{ASSET_TYPES.find(t => t.id === type)?.label}</span>
-                            <button type="button" onClick={() => setStep(1)} style={{ marginLeft: 'auto', fontSize: '0.8rem', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', textDecoration: 'underline' }}>Change</button>
+                            <div style={{ color: ASSET_COLORS[type], display: 'flex', transform: 'scale(0.8)' }}>{ASSET_TYPES.find(t => t.id === type)?.icon}</div>
+                            <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{ASSET_TYPES.find(t => t.id === type)?.label}</span>
+                            <button type="button" onClick={() => setStep(1)} style={{ marginLeft: 'auto', fontSize: '0.7rem', background: 'transparent', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 600 }}>Change</button>
                         </div>
 
-                        {/* Top Row: Symbol & Currency */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Symbol / Name *</label>
-                                <input
-                                    required
-                                    value={symbol} onChange={e => setSymbol(e.target.value)}
-                                    placeholder="e.g. AAPL, My Bond"
-                                    className="glass-input"
-                                    style={{ padding: '0.6rem', fontSize: '0.9rem', width: '100%' }}
+                        {/* 3-Column Layout */}
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: '1.2fr 1px 1fr 1px 1fr',
+                            gap: '1rem',
+                            alignItems: 'start'
+                        }}>
+
+                            {/* LEFT COLUMN: Required User Input */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                                <div style={{
+                                    fontSize: '0.65rem',
+                                    fontWeight: 900,
+                                    color: 'var(--accent)',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.1em',
+                                    marginBottom: '-0.25rem'
+                                }}>
+                                    Required
+                                </div>
+
+                                {/* Symbol */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Symbol</label>
+                                    <input
+                                        required
+                                        value={symbol}
+                                        onChange={e => setSymbol(e.target.value)}
+                                        placeholder="AAPL"
+                                        style={{
+                                            padding: '0.625rem 0.75rem',
+                                            background: 'var(--bg-secondary)',
+                                            border: '2px solid var(--accent)',
+                                            borderRadius: 'var(--radius-md)',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '0.9rem',
+                                            fontWeight: 600,
+                                            outline: 'none'
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Quantity or Total Investment (BES only) */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                                        {type === 'BES' ? `Total (${currency})` : 'Quantity'}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        required
+                                        value={type === 'BES' ? totalValue : quantity}
+                                        onChange={e => type === 'BES' ? setTotalValue(e.target.value) : setQuantity(e.target.value)}
+                                        placeholder={type === 'BES' ? '1000' : '100'}
+                                        style={{
+                                            padding: '0.625rem 0.75rem',
+                                            background: 'var(--bg-secondary)',
+                                            border: '2px solid var(--accent)',
+                                            borderRadius: 'var(--radius-md)',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '0.9rem',
+                                            fontWeight: 600,
+                                            outline: 'none'
+                                        }}
+                                    />
+                                    {type === 'BES' && quantity && (
+                                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                                            ≈ {parseFloat(quantity).toLocaleString()} units
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Buy Price */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Cost/Unit</label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        required
+                                        value={buyPrice}
+                                        onChange={e => setBuyPrice(e.target.value)}
+                                        placeholder="150.00"
+                                        style={{
+                                            padding: '0.625rem 0.75rem',
+                                            background: 'var(--bg-secondary)',
+                                            border: '2px solid var(--accent)',
+                                            borderRadius: 'var(--radius-md)',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '0.9rem',
+                                            fontWeight: 600,
+                                            outline: 'none'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* SEPARATOR 1 */}
+                            <div style={{ width: '1px', background: 'var(--border)', height: '100%', opacity: 0.3 }} />
+
+                            {/* MIDDLE COLUMN: Auto-filled but Editable */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                                <div style={{
+                                    fontSize: '0.65rem',
+                                    fontWeight: 900,
+                                    color: 'var(--text-muted)',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.1em',
+                                    marginBottom: '-0.25rem'
+                                }}>
+                                    Auto-filled
+                                </div>
+
+                                {/* Name */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Name</label>
+                                    <input
+                                        value={name}
+                                        onChange={e => setName(e.target.value)}
+                                        placeholder="Auto-detected"
+                                        style={{
+                                            padding: '0.625rem 0.75rem',
+                                            background: 'var(--surface)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 'var(--radius-md)',
+                                            color: 'var(--text-secondary)',
+                                            fontSize: '0.85rem',
+                                            outline: 'none'
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Currency */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Currency</label>
+                                    <select
+                                        value={currency}
+                                        onChange={e => setCurrency(e.target.value)}
+                                        style={{
+                                            padding: '0.625rem 0.75rem',
+                                            background: 'var(--surface)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 'var(--radius-md)',
+                                            color: 'var(--text-secondary)',
+                                            fontSize: '0.85rem',
+                                            outline: 'none',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        <option value="USD">USD ($)</option>
+                                        <option value="EUR">EUR (€)</option>
+                                        <option value="TRY">TRY (₺)</option>
+                                    </select>
+                                </div>
+
+                                {/* Exchange */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Exchange</label>
+                                    <input
+                                        value={exchange}
+                                        onChange={e => setExchange(e.target.value)}
+                                        placeholder="NASDAQ"
+                                        style={{
+                                            padding: '0.625rem 0.75rem',
+                                            background: 'var(--surface)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 'var(--radius-md)',
+                                            color: 'var(--text-secondary)',
+                                            fontSize: '0.85rem',
+                                            outline: 'none'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* SEPARATOR 2 */}
+                            <div style={{ width: '1px', background: 'var(--border)', height: '100%', opacity: 0.3 }} />
+
+                            {/* RIGHT COLUMN: Optional Metadata */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                                <div style={{
+                                    fontSize: '0.65rem',
+                                    fontWeight: 900,
+                                    color: 'var(--text-muted)',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.1em',
+                                    marginBottom: '-0.25rem',
+                                    opacity: 0.7
+                                }}>
+                                    Optional
+                                </div>
+
+                                {/* Country */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', opacity: 0.8 }}>Country</label>
+                                    <input
+                                        value={country}
+                                        onChange={e => setCountry(e.target.value)}
+                                        placeholder="USA"
+                                        size={Math.max(country?.length || 3, 8)}
+                                        style={{
+                                            padding: '0.5rem 0.6rem',
+                                            background: 'var(--surface)',
+                                            border: '1px solid transparent',
+                                            borderRadius: 'var(--radius-md)',
+                                            color: 'var(--text-muted)',
+                                            fontSize: '0.8rem',
+                                            outline: 'none',
+                                            opacity: 0.7,
+                                            maxWidth: '100%'
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Sector */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', opacity: 0.8 }}>Sector</label>
+                                    <input
+                                        value={sector}
+                                        onChange={e => setSector(e.target.value)}
+                                        placeholder="Technology"
+                                        size={Math.max(sector?.length || 10, 12)}
+                                        style={{
+                                            padding: '0.5rem 0.6rem',
+                                            background: 'var(--surface)',
+                                            border: '1px solid transparent',
+                                            borderRadius: 'var(--radius-md)',
+                                            color: 'var(--text-muted)',
+                                            fontSize: '0.8rem',
+                                            outline: 'none',
+                                            opacity: 0.7,
+                                            maxWidth: '100%'
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Platform */}
+                                <AutocompleteInput
+                                    value={platform}
+                                    onChange={setPlatform}
+                                    suggestions={suggestions.platforms}
+                                    placeholder="Broker"
+                                    label="Platform"
+                                    labelStyle={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', opacity: 0.8 }}
+                                    style={{
+                                        padding: '0.5rem 0.6rem',
+                                        background: 'var(--surface)',
+                                        border: '1px solid transparent',
+                                        borderRadius: 'var(--radius-md)',
+                                        color: 'var(--text-muted)',
+                                        fontSize: '0.8rem',
+                                        outline: 'none',
+                                        opacity: 0.7,
+                                        maxWidth: '100%'
+                                    }}
                                 />
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Currency</label>
-                                <select
-                                    value={currency} onChange={e => setCurrency(e.target.value)}
-                                    className="glass-input"
-                                    style={{ padding: '0.6rem', fontSize: '0.9rem', width: '100%' }}
-                                >
-                                    <option value="USD">USD</option>
-                                    <option value="EUR">EUR</option>
-                                    <option value="TRY">TRY</option>
-                                </select>
-                            </div>
                         </div>
 
-                        {/* Middle Row: Quantity & Cost */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                {(type === 'FUND' || type === 'ETF') ? (
-                                    <>
-                                        <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Total Value ({currency}) *</label>
-                                        <input
-                                            type="number" step="any" required
-                                            value={totalValue} onChange={e => setTotalValue(e.target.value)}
-                                            placeholder="e.g. 50000"
-                                            className="glass-input"
-                                            style={{ padding: '0.6rem', fontSize: '0.9rem', width: '100%' }}
-                                        />
-                                        {quantity && <div style={{ fontSize: '0.65rem', opacity: 0.6, marginTop: '2px' }}>≈ {quantity} units</div>}
-                                    </>
-                                ) : (
-                                    <>
-                                        <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Quantity *</label>
-                                        <input
-                                            type="number" step="any" required
-                                            value={quantity} onChange={e => setQuantity(e.target.value)}
-                                            className="glass-input"
-                                            style={{ padding: '0.6rem', fontSize: '0.9rem', width: '100%' }}
-                                        />
-                                    </>
-                                )}
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>{(type === 'FUND' || type === 'ETF') ? 'Unit Price (Avg. Cost)' : 'Avg. Cost'} *</label>
-                                <div style={{ position: 'relative' }}>
-                                    <input
-                                        type="number" step="any" required
-                                        value={buyPrice} onChange={e => setBuyPrice(e.target.value)}
-                                        className="glass-input"
-                                        style={{ padding: '0.6rem', fontSize: '0.9rem', width: '100%', paddingRight: '2.5rem' }}
-                                    />
-                                    <span style={{
-                                        position: 'absolute',
-                                        right: '0.8rem',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        fontSize: '0.75rem',
-                                        opacity: 0.6,
-                                        pointerEvents: 'none'
-                                    }}>
-                                        {currency}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Portfolio Name - Always Visible (Moved out of Advanced) */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                            <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Portfolio Name</label>
-                            <input
-                                value={customGroup} onChange={e => setCustomGroup(e.target.value)}
-                                placeholder="(Optional) Add asset to your specific portfolio"
-                                className="glass-input"
-                                style={{ padding: '0.6rem', fontSize: '0.9rem', width: '100%', opacity: 0.7 }}
-                                list="portfolio-options"
+                        {/* Portfolio Assignment - Below 3 columns */}
+                        <div style={{
+                            paddingTop: '0.5rem',
+                            borderTop: '1px solid var(--border)'
+                        }}>
+                            <AutocompleteInput
+                                value={customGroup}
+                                onChange={setCustomGroup}
+                                suggestions={suggestions.portfolios}
+                                placeholder="e.g. Retirement, Growth"
+                                label="Portfolio (Optional)"
+                                labelStyle={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', display: 'block' }}
+                                style={{
+                                    padding: '0.625rem 0.75rem',
+                                    background: 'var(--surface)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: 'var(--radius-md)',
+                                    color: 'var(--text-secondary)',
+                                    fontSize: '0.85rem',
+                                    outline: 'none'
+                                }}
                             />
-                            <datalist id="portfolio-options">
-                                <option value="Long Term" />
-                                <option value="Short Term" />
-                                <option value="Retirement" />
-                                <option value="Crypto HODL" />
-                            </datalist>
                         </div>
 
-                        {/* Optional Toggle */}
-                        <div style={{ marginTop: '0.5rem' }}>
+                        {/* Save Button - Compact */}
+                        <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem' }}>
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                style={{
+                                    flex: 1,
+                                    padding: '0.875rem',
+                                    background: 'var(--accent)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: 'var(--radius-md)',
+                                    fontWeight: 800,
+                                    fontSize: '0.9rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '0.5rem',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                                onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+                            >
+                                <Save size={18} />
+                                {isSubmitting ? 'Saving...' : 'Save'}
+                            </button>
                             <button
                                 type="button"
-                                onClick={() => setShowOptional(!showOptional)}
-                                style={{ background: 'transparent', border: 'none', color: '#6366f1', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                                onClick={() => setStep(0)}
+                                style={{
+                                    background: 'transparent',
+                                    border: '1px solid var(--border)',
+                                    color: 'var(--text-muted)',
+                                    cursor: 'pointer',
+                                    fontSize: '0.8rem',
+                                    padding: '0.875rem 1.25rem',
+                                    borderRadius: 'var(--radius-md)',
+                                    fontWeight: 600
+                                }}
                             >
-                                {showOptional ? 'Hide' : 'Show'} Advanced Details {showOptional ? '▲' : '▼'}
+                                Back
                             </button>
                         </div>
-
-                        {/* Optional Fields */}
-                        {showOptional && (
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '0.5rem' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                    <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Exchange</label>
-                                    <input
-                                        value={exchange} onChange={e => setExchange(e.target.value)}
-                                        placeholder="e.g. NASDAQ"
-                                        className="glass-input"
-                                        style={{ padding: '0.5rem', fontSize: '0.85rem' }}
-                                        list="exchange-options"
-                                    />
-                                    <datalist id="exchange-options">
-                                        <option value="NASDAQ" />
-                                        <option value="NYSE" />
-                                        <option value="LSE" />
-                                        <option value="Binance" />
-                                        <option value="Coinbase" />
-                                        <option value="XETRA" />
-                                    </datalist>
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                    <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Sector</label>
-                                    <input
-                                        value={sector} onChange={e => setSector(e.target.value)}
-                                        placeholder="e.g. Tech"
-                                        className="glass-input"
-                                        style={{ padding: '0.5rem', fontSize: '0.85rem' }}
-                                        list="sector-options"
-                                    />
-                                    <datalist id="sector-options">
-                                        <option value="Technology" />
-                                        <option value="Finance" />
-                                        <option value="Healthcare" />
-                                        <option value="Energy" />
-                                        <option value="Consumer Discretionary" />
-                                        <option value="Real Estate" />
-                                    </datalist>
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                    <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Country</label>
-                                    <input
-                                        value={country} onChange={e => setCountry(e.target.value)}
-                                        placeholder="e.g. USA"
-                                        className="glass-input"
-                                        style={{ padding: '0.5rem', fontSize: '0.85rem' }}
-                                        list="country-options"
-                                    />
-                                    <datalist id="country-options">
-                                        <option value="USA" />
-                                        <option value="Germany" />
-                                        <option value="UK" />
-                                        <option value="France" />
-                                        <option value="Japan" />
-                                        <option value="Canada" />
-                                    </datalist>
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                    <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>Platform</label>
-                                    <input
-                                        value={platform} onChange={e => setPlatform(e.target.value)}
-                                        placeholder="e.g. Robinhood"
-                                        className="glass-input"
-                                        style={{ padding: '0.5rem', fontSize: '0.85rem' }}
-                                        list="platform-options"
-                                    />
-                                    <datalist id="platform-options">
-                                        <option value="Robinhood" />
-                                        <option value="Interactive Brokers" />
-                                        <option value="Etoro" />
-                                        <option value="Fidelity" />
-                                        <option value="Coinbase" />
-                                        <option value="Binance" />
-                                        <option value="Trade Republic" />
-                                    </datalist>
-                                </div>
-                                {type === 'FUND' && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', gridColumn: 'span 2' }}>
-                                        <label style={{ fontSize: '0.8rem', opacity: 0.7 }}>ISIN / Ticker</label>
-                                        <input
-                                            value={isin} onChange={e => setIsin(e.target.value)}
-                                            placeholder="e.g. US0378331005"
-                                            className="glass-input"
-                                            style={{ padding: '0.5rem', fontSize: '0.85rem' }}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="glass-button"
-                            style={{
-                                marginTop: '1rem',
-                                padding: '0.8rem',
-                                fontSize: '1rem',
-                                fontWeight: 600,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
-                            }}
-                        >
-                            <Save size={18} />
-                            {isSubmitting ? 'Saving...' : 'Add Asset'}
-                        </button>
-
                     </form>
+                    </>
                 )}
             </div>
         </div>
     );
 }
+

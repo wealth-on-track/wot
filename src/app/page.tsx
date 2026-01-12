@@ -21,11 +21,11 @@ export default async function Home() {
 
   // Common Layout Wrapper
   return (
-    <div className="container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: '2rem' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: '2rem', paddingTop: '5.5rem' }}>
       <CurrencyProvider>
         {/* Navbar removed as per request */}
 
-        <div style={{
+        <div className="container" style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',

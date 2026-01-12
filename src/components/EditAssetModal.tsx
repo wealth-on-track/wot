@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { AssetDisplay } from '@/lib/types';
-import { X, Save, Trash2 } from 'lucide-react';
+import { X, Save, Trash2, ChevronDown, Lock } from 'lucide-react';
 import { updateAsset, deleteAsset } from '@/lib/actions';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
+import { formatNumber, parseFormattedNumber, formatInputNumber, isValidNumberInput } from '@/lib/numberFormat';
 
 interface EditAssetModalProps {
     asset: AssetDisplay;
@@ -19,8 +20,8 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
     const [formData, setFormData] = useState({
         name: asset.name || '',
         symbol: asset.symbol,
-        quantity: asset.quantity,
-        buyPrice: asset.buyPrice,
+        quantity: formatNumber(asset.quantity, 0, 6),  // Formatted string
+        buyPrice: formatNumber(asset.buyPrice, 2, 6),  // Formatted string
         type: asset.type,
         exchange: asset.exchange || '',
         currency: asset.currency,
@@ -32,13 +33,19 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
 
     // Reset form when asset changes
     useEffect(() => {
+        // SYSTEMATIC FIX: Crypto assets should always have "Crypto" exchange
+        let exchange = asset.exchange || '';
+        if (asset.type === 'CRYPTO' && exchange !== 'Crypto') {
+            exchange = 'Crypto';
+        }
+
         setFormData({
             name: asset.name || '',
             symbol: asset.symbol,
-            quantity: asset.quantity,
-            buyPrice: asset.buyPrice,
+            quantity: formatNumber(asset.quantity, 0, 6),  // Formatted string
+            buyPrice: formatNumber(asset.buyPrice, 2, 6),  // Formatted string
             type: asset.type,
-            exchange: asset.exchange || '',
+            exchange: exchange,
             currency: asset.currency,
             country: asset.country || '',
             sector: asset.sector || '',
@@ -51,7 +58,14 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+
+        // For numeric fields, apply formatting
+        if (name === 'quantity' || name === 'buyPrice') {
+            if (!isValidNumberInput(value)) return;
+            setFormData(prev => ({ ...prev, [name]: formatInputNumber(value) }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     const handleSave = async () => {
@@ -59,12 +73,12 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
         try {
             const res = await updateAsset(asset.id, {
                 name: formData.name,
-                symbol: formData.symbol,
-                quantity: Number(formData.quantity),
-                buyPrice: Number(formData.buyPrice),
-                type: formData.type,
+                // symbol cannot be changed
+                quantity: parseFormattedNumber(formData.quantity),
+                buyPrice: parseFormattedNumber(formData.buyPrice),
+                type: formData.type as "CASH" | "CRYPTO" | "STOCK" | "FUND" | "GOLD" | "BOND" | "COMMODITY",
                 exchange: formData.exchange,
-                currency: formData.currency,
+                currency: formData.currency as "USD" | "EUR" | "TRY",
                 country: formData.country,
                 sector: formData.sector,
                 platform: formData.platform,
@@ -107,204 +121,166 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
     if (!isOpen) return null;
 
     const labelStyle = {
-        fontSize: '0.65rem',
-        fontWeight: 600,
-        color: '#94a3b8', // Slate-400 for better readability
-        marginBottom: '0.15rem',
+        fontSize: '0.75rem',
+        fontWeight: 800,
+        color: 'var(--text-muted)',
+        marginBottom: '0.4rem',
         display: 'block',
         textTransform: 'uppercase' as const,
-        letterSpacing: '0.02em'
+        letterSpacing: '0.05em'
     };
 
     const inputStyle = {
         width: '100%',
-        background: '#1e293b', // Slate-800 - Solid dark background for contrast
-        border: '1px solid #334155', // Slate-700
-        borderRadius: '6px',
-        padding: '0.35rem 0.6rem', // Tighter padding
-        fontSize: '0.8rem',
-        fontWeight: 500,
-        color: '#f1f5f9', // Slate-100 - High contrast text
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-md)',
+        padding: '0.75rem 1rem',
+        fontSize: '0.95rem',
+        fontWeight: 600,
+        color: 'var(--text-primary)',
         outline: 'none',
         transition: 'all 0.2s',
         fontFamily: 'inherit',
-        height: '2rem' // Fixed compact height
     };
 
     return createPortal(
         <div style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem'
+            position: 'fixed', inset: 0, zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem'
         }}>
-            {/* 1. Dynamic Blur Backdrop */}
+            {/* Backdrop */}
             <div
                 style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'rgba(5, 7, 20, 0.7)', // Darker backdrop
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    animation: 'fadeIn 0.2s ease'
+                    position: 'absolute', inset: 0, background: 'rgba(0, 0, 0, 0.4)',
+                    backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                    animation: 'fadeIn 0.3s ease'
                 }}
                 onClick={onClose}
                 aria-hidden="true"
             />
 
-            {/* 2. Modern Notification Card centered */}
-            <div style={{
-                position: 'relative',
-                width: '100%',
-                maxWidth: '600px', // More compact width
-                background: '#0f172a', // Slate-950 - Deep rich dark background
-                borderRadius: '12px',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column',
-                maxHeight: '85vh',
-                animation: 'zoomIn 0.2s ease',
-                border: '1px solid #1e293b', // Slate-800
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+            {/* Modal Card */}
+            <div className="neo-card" style={{
+                position: 'relative', width: '100%', maxWidth: '640px',
+                background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)',
+                overflow: 'hidden', display: 'flex', flexDirection: 'column',
+                maxHeight: '90vh', animation: 'zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)'
             }}>
 
-                {/* Header (Title + Actions) */}
+                {/* Header */}
                 <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.8rem 1.2rem',
-                    borderBottom: '1px solid #1e293b',
-                    background: '#131c31'
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '1.5rem 2rem', borderBottom: '1px solid var(--border)',
+                    background: 'var(--bg-secondary)'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', overflow: 'hidden' }}>
-                        <div style={{
-                            width: '32px',
-                            height: '32px',
-                            minWidth: '32px',
-                            borderRadius: '8px',
-                            background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#fff',
-                            fontWeight: '700',
-                            fontSize: '0.9rem',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                        }}>
-                            {formData.symbol.charAt(0)}
-                        </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', overflow: 'hidden' }}>
+                        {(() => {
+                            const cleanSymbol = formData.symbol.split('.')[0].toUpperCase();
+                            const placeholderText = (cleanSymbol.length >= 2 && cleanSymbol.length <= 4) ? cleanSymbol : cleanSymbol.charAt(0);
+                            const fontSize = placeholderText.length > 1 ? '0.85rem' : '1.2rem';
+                            return (
+                                <div style={{
+                                    width: '42px', height: '42px', minWidth: '42px', borderRadius: '12px',
+                                    background: 'var(--accent)', display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', color: '#fff', fontWeight: '900',
+                                    fontSize: fontSize, boxShadow: '0 4px 12px var(--accent-glow)',
+                                    letterSpacing: placeholderText.length > 1 ? '-0.02em' : '0'
+                                }}>
+                                    {placeholderText}
+                                </div>
+                            );
+                        })()}
                         <div style={{ minWidth: 0 }}>
-                            <h2 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#f8fafc', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2, margin: 0, letterSpacing: '-0.02em' }}>
                                 Edit {formData.name || formData.symbol}
                             </h2>
-                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>{formData.symbol}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>{formData.symbol}</div>
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-                        {/* Save Button */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                        {/* Save */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                             <button
                                 onClick={handleSave}
                                 disabled={isLoading}
                                 style={{
-                                    background: '#3b82f6', // Blue-500
-                                    border: '1px solid #2563eb',
-                                    color: '#fff',
-                                    width: '32px',
-                                    height: '32px',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'all 0.2s',
-                                    boxShadow: '0 2px 5px rgba(59, 130, 246, 0.4)'
+                                    background: 'var(--accent)', color: '#fff', border: 'none',
+                                    width: '36px', height: '36px', borderRadius: '10px',
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', transition: 'all 0.2s',
+                                    boxShadow: 'var(--shadow-sm)'
                                 }}
-                                title="Save"
                             >
-                                {isLoading ? (
-                                    <div style={{ width: '14px', height: '14px', border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                                ) : (
-                                    <Save size={18} />
-                                )}
+                                {isLoading ? <div className="spinner" /> : <Save size={20} />}
                             </button>
-                            <span style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 500, letterSpacing: '0.02em' }}>Save</span>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800 }}>Save</span>
                         </div>
 
-                        {/* Delete Button */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                        {/* Delete */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                             <button
                                 onClick={handleDelete}
                                 disabled={isLoading}
                                 style={{
-                                    background: '#ef4444', // Red-500 Solid
-                                    border: '1px solid #dc2626',
-                                    color: '#fff',
-                                    width: '32px', // Square button
-                                    height: '32px',
-                                    borderRadius: '8px', // Slightly more rounded
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'all 0.2s',
-                                    boxShadow: '0 2px 5px rgba(239, 68, 68, 0.3)'
+                                    background: 'var(--danger-bg)', border: '1px solid var(--danger)40',
+                                    color: 'var(--danger)', width: '36px', height: '36px',
+                                    borderRadius: '10px', cursor: 'pointer', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
                                 }}
-                                title="Delete Asset"
                             >
-                                <Trash2 size={16} />
+                                <Trash2 size={18} />
                             </button>
-                            <span style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 500, letterSpacing: '0.02em' }}>Delete</span>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800 }}>Delete</span>
                         </div>
 
-                        {/* Cancel Button */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                        {/* Cancel */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                             <button
                                 onClick={onClose}
                                 style={{
-                                    background: '#334155', // Slate-700
-                                    border: '1px solid #1e293b',
-                                    color: '#fff',
-                                    width: '32px',
-                                    height: '32px',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'all 0.2s',
-                                    boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
+                                    background: 'var(--surface)', border: '1px solid var(--border)',
+                                    color: 'var(--text-primary)', width: '36px', height: '36px',
+                                    borderRadius: '10px', cursor: 'pointer', display: 'flex',
+                                    alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
                                 }}
-                                title="Cancel"
                             >
-                                <X size={18} />
+                                <X size={20} />
                             </button>
-                            <span style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 500, letterSpacing: '0.02em' }}>Cancel</span>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800 }}>Close</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Body - Compact 3-Column Grid */}
-                <div className="custom-scrollbar" style={{ padding: '1.2rem', overflowY: 'auto', flex: 1 }}>
+                {/* Body */}
+                <div className="custom-scrollbar" style={{ padding: '2rem', overflowY: 'auto', flex: 1 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.8rem 1rem' }}>
-
-                        {/* Row 1: Primary Identity */}
+                        {/* Ticker */}
                         <div style={{ gridColumn: 'span 1' }}>
-                            <label style={labelStyle}>Ticker</label>
-                            <input
-                                name="symbol"
-                                value={formData.symbol}
-                                onChange={handleChange}
-                                style={inputStyle}
-                                placeholder="AAPL"
-                            />
+                            <label style={labelStyle}>Symbol</label>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    name="symbol"
+                                    value={formData.symbol}
+                                    disabled
+                                    style={{
+                                        ...inputStyle,
+                                        opacity: 0.6,
+                                        cursor: 'not-allowed',
+                                        background: 'var(--surface)',
+                                        fontFamily: 'monospace'
+                                    }}
+                                />
+                                <div style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}>
+                                    <Lock size={14} color="var(--text-muted)" />
+                                </div>
+                            </div>
                         </div>
+
+                        {/* Name */}
                         <div style={{ gridColumn: 'span 2' }}>
                             <label style={labelStyle}>Asset Name</label>
                             <input
@@ -316,7 +292,7 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
                             />
                         </div>
 
-                        {/* Row 2: Classification */}
+                        {/* Type */}
                         <div>
                             <label style={labelStyle}>Type</label>
                             <div style={{ position: 'relative' }}>
@@ -330,9 +306,13 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
                                         <option key={t} value={t} style={{ color: '#000' }}>{t}</option>
                                     ))}
                                 </select>
-                                <div style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#94a3b8', fontSize: '0.6rem' }}>▼</div>
+                                <div style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }}>
+                                    <ChevronDown size={16} />
+                                </div>
                             </div>
                         </div>
+
+                        {/* Exchange */}
                         <div>
                             <label style={labelStyle}>Exchange</label>
                             <input
@@ -343,6 +323,8 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
                                 placeholder="NASDAQ"
                             />
                         </div>
+
+                        {/* Currency */}
                         <div>
                             <label style={labelStyle}>Currency</label>
                             <div style={{ position: 'relative' }}>
@@ -356,36 +338,41 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
                                         <option key={c} value={c} style={{ color: '#000' }}>{c}</option>
                                     ))}
                                 </select>
-                                <div style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#94a3b8', fontSize: '0.6rem' }}>▼</div>
+                                <div style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }}>
+                                    <ChevronDown size={16} />
+                                </div>
                             </div>
                         </div>
 
-                        {/* Row 3: Financials */}
+                        {/* Quantity */}
                         <div>
                             <label style={labelStyle}>Quantity</label>
                             <input
                                 name="quantity"
-                                type="number"
-                                step="any"
+                                type="text"
                                 value={formData.quantity}
                                 onChange={handleChange}
-                                style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em' }}
+                                placeholder="0"
+                                style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }}
                             />
                         </div>
+
+                        {/* Avg Cost */}
                         <div>
                             <label style={labelStyle}>Avg Cost</label>
                             <input
                                 name="buyPrice"
-                                type="number"
-                                step="any"
+                                type="text"
                                 value={formData.buyPrice}
                                 onChange={handleChange}
-                                style={{ ...inputStyle, fontFamily: 'monospace', letterSpacing: '0.05em' }}
+                                placeholder="0,00"
+                                style={{ ...inputStyle, fontVariantNumeric: 'tabular-nums' }}
                             />
                         </div>
+
+                        {/* Portfolio */}
                         <div>
-                            {/* Empty or calculated total could go here, or we can use it for Portfolio/Group */}
-                            <label style={labelStyle}>Portfolio</label>
+                            <label style={labelStyle}>Portfolio / Group</label>
                             <input
                                 name="customGroup"
                                 value={formData.customGroup}
@@ -395,7 +382,7 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
                             />
                         </div>
 
-                        {/* Row 4: Metadata */}
+                        {/* Country */}
                         <div>
                             <label style={labelStyle}>Country</label>
                             <input
@@ -406,6 +393,8 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
                                 placeholder="US"
                             />
                         </div>
+
+                        {/* Sector */}
                         <div>
                             <label style={labelStyle}>Sector</label>
                             <input
@@ -416,6 +405,8 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
                                 placeholder="Technology"
                             />
                         </div>
+
+                        {/* Platform */}
                         <div>
                             <label style={labelStyle}>Platform</label>
                             <input
@@ -423,14 +414,11 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
                                 value={formData.platform}
                                 onChange={handleChange}
                                 style={inputStyle}
-                                placeholder="Interactive Brokers"
+                                placeholder="IBKR"
                             />
                         </div>
-
                     </div>
-
                 </div>
-
             </div>
         </div>,
         document.body

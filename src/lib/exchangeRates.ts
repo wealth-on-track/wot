@@ -5,7 +5,15 @@ export interface RatesMap {
 }
 
 export async function getExchangeRates(): Promise<RatesMap> {
-    const requiredCurrencies = ['USD', 'TRY']; // Minimal set we care about ensuring logic for
+    // 0. Detect Required Currencies dynamically from Assets
+    const activeAssets = await prisma.asset.findMany({
+        where: { quantity: { gt: 0 } },
+        select: { currency: true },
+        distinct: ['currency']
+    });
+
+    const activeCurrencies = activeAssets.map(a => a.currency).filter(c => c !== 'EUR');
+    const requiredCurrencies = Array.from(new Set([...activeCurrencies, 'USD', 'TRY'])); // Ensure USD/TRY always present
     // EUR is base 1 always.
 
     // 1. Check DB
@@ -19,58 +27,37 @@ export async function getExchangeRates(): Promise<RatesMap> {
         rates[r.currency] = r.rate;
     });
 
-    // Helper to determine if rates are stale based on CET schedule (08:00 and 17:00)
+    // Helper to determine if rates are stale (Hourly update requested)
+    // Rule: Update if the last update belongs to a previous hour (i.e., we are in a new hour).
+    // RULE 2: Quiet Hours (00:00 - 08:00 CET). Do not update during night.
     const isStale = (lastUpdateUTC: Date) => {
-        try {
-            const timeZone = 'Europe/Berlin';
-            // Create "Zonal" dates (Wall clock time in Berlin)
-            // Note: toLocaleString returns a string we immediately parse back to a Date.
-            // This Date object will have the "Wall Clock" time of Berlin but in the local system's timezone context/UTC components.
-            // effectively allowing us to use .getHours() to see the Berlin hour.
-            const nowZ = new Date(new Date().toLocaleString('en-US', { timeZone }));
-            const lastZ = new Date(lastUpdateUTC.toLocaleString('en-US', { timeZone }));
+        const now = new Date();
+        const currentHour = now.getHours();
 
-            // Define Checkpoints in Wall Clock Time
-            const cp17 = new Date(nowZ);
-            cp17.setHours(17, 0, 0, 0); // Today 17:00
+        // Quiet Hours Check
+        if (currentHour >= 0 && currentHour < 8) return false;
 
-            const cp8 = new Date(nowZ);
-            cp8.setHours(8, 0, 0, 0);   // Today 08:00
+        const currentHourFloor = new Date(now);
+        currentHourFloor.setMinutes(0, 0, 0); // Reset to XX:00:00.000
 
-            const cpY17 = new Date(nowZ);
-            cpY17.setDate(cpY17.getDate() - 1);
-            cpY17.setHours(17, 0, 0, 0); // Yesterday 17:00
-
-            // Logic:
-            // If now is past 17:00, we need data from after 17:00 today.
-            if (nowZ >= cp17) return lastZ < cp17;
-
-            // If now is past 08:00 (but before 17:00), we need data from after 08:00 today.
-            if (nowZ >= cp8) return lastZ < cp8;
-
-            // If now is before 08:00, we need data from after yesterday 17:00.
-            return lastZ < cpY17;
-        } catch (e) {
-            console.warn("Timezone check failed, falling back to 12h expiry", e);
-            // Fallback for environments without ICU: 12 hour expiry
-            const hoursSince = (Date.now() - lastUpdateUTC.getTime()) / (1000 * 60 * 60);
-            return hoursSince > 12;
-        }
+        // If last update was BEFORE the start of this hour, it's stale.
+        return lastUpdateUTC.getTime() < currentHourFloor.getTime();
     }
 
     // Check freshness
     if (storedRates.length === 0) {
         needsUpdate = true;
     } else {
-        // Check if any required currency is missing or stale
+        // Check if any REQUIRED currency is missing or stale
         for (const cur of requiredCurrencies) {
             const r = storedRates.find(x => x.currency === cur);
             if (!r) {
+                console.log(`Missing rate for active currency: ${cur}, triggering update.`);
                 needsUpdate = true;
                 break;
             }
             if (isStale(r.updatedAt)) {
-                console.log(`Exchange Rates (${cur}) stale based on 08:00/17:00 CET schedule. Last update: ${r.updatedAt.toLocaleString()}`);
+                // console.log(`Exchange Rates (${cur}) stale.`);
                 needsUpdate = true;
                 break;
             }
@@ -79,14 +66,25 @@ export async function getExchangeRates(): Promise<RatesMap> {
 
     if (needsUpdate) {
         try {
-            console.log("Fetching new exchange rates from Frankfurter...");
-            // Fetch all rates (default)
-            const res = await fetch('https://api.frankfurter.app/latest?from=EUR');
-            if (!res.ok) throw new Error("Failed to fetch rates");
-            const data = await res.json();
+            console.log(`Fetching new exchange rates from Yahoo Finance for: ${requiredCurrencies.join(', ')}`);
 
-            // data.rates is { USD: 1.05, TRY: 35.2, ... }
-            const newRates = data.rates;
+            // Construct Yahoo Symbols
+            // EURUSD=X -> Price of 1 EUR in USD
+            const yahooSymbols = requiredCurrencies.map(c => `EUR${c}=X`);
+
+            const { getYahooQuotes } = await import('@/services/yahooApi');
+            const quotes = await getYahooQuotes(yahooSymbols);
+
+            const newRates: Record<string, number> = {};
+
+            // Map Yahoo Results
+            for (const cur of requiredCurrencies) {
+                const sym = `EUR${cur}=X`;
+                const quote = quotes[sym];
+                if (quote && quote.regularMarketPrice) {
+                    newRates[cur] = quote.regularMarketPrice;
+                }
+            }
 
             // Update DB in parallel for speed
             await Promise.all(Object.entries(newRates).map(async ([currency, rate]) => {
@@ -100,9 +98,9 @@ export async function getExchangeRates(): Promise<RatesMap> {
                 }
             }));
 
-            console.log("Exchange rates updated successfully.");
+            console.log("Exchange rates updated successfully from Yahoo.");
         } catch (e) {
-            console.error("Error updating rates:", e);
+            console.error("Error updating rates from Yahoo:", e);
             // Fallback to existing rates or hardcoded defaults if DB empty
             if (Object.keys(rates).length <= 1) {
                 // Emergency fallbacks

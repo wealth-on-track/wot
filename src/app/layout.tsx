@@ -3,12 +3,13 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { CurrencyProvider } from "@/context/CurrencyContext";
+import { LanguageProvider } from "@/context/LanguageContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Modern Portfolio Tracker",
-  description: "Track your global investments in style.",
+  title: "WOT - Wealth on Track!",
+  description: "Your wealth, finally on track.",
 };
 
 export default function RootLayout({
@@ -37,11 +38,11 @@ export default function RootLayout({
           }}
         />
         <ThemeProvider>
-          <CurrencyProvider>
-            <main className="container" style={{ paddingTop: '6rem' }}>
+          <LanguageProvider>
+            <CurrencyProvider>
               {children}
-            </main>
-          </CurrencyProvider>
+            </CurrencyProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

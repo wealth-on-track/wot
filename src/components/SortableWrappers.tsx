@@ -17,9 +17,9 @@ export function SortableAssetRow({ id, children, disabled }: { id: string, child
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.3 : 1,
-        opacity: isDragging ? 0.3 : 1,
         cursor: disabled ? 'default' : 'grab',
-        zIndex: isDragging ? 1000 : 1
+        zIndex: isDragging ? 1000 : 1,
+        position: 'relative' as const
     };
 
     if (disabled) {
@@ -86,9 +86,8 @@ export function SortableAssetCard({ id, children, disabled }: { id: string, chil
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : 1,
-        opacity: isDragging ? 0.5 : 1,
         cursor: disabled ? 'default' : 'grab',
-        position: 'relative' as 'relative',
+        position: 'relative' as const,
         zIndex: isDragging ? 10 : 1
     };
 

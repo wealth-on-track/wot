@@ -1,36 +1,163 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 💼 Wealth On Track (WOT) - Portfolio Tracker
 
-## Getting Started
+**BETA V1** - Modern portfolio tracking application built with Next.js 16, Prisma, and TypeScript.
 
-First, run the development server:
+## ✨ Features
+
+### Core Functionality
+- 📊 **Multi-Currency Portfolio Management** - Track assets in EUR, USD, TRY, and more
+- 🔄 **Real-Time Price Updates** - Automatic price fetching from Yahoo Finance, TEFAS, and other sources
+- 📈 **Performance Analytics** - Historical performance tracking with currency normalization
+- 🏆 **Top Performers Widget** - See your best performing assets at a glance
+- 🎯 **Goal Tracking** - Set and monitor financial goals
+- 📱 **Responsive Design** - Works seamlessly on desktop and mobile
+
+### Asset Support
+- 🇹🇷 **BIST** - Turkish stocks (Borsa Istanbul)
+- 🏦 **TEFAS** - Turkish mutual funds
+- 🇺🇸 **US Markets** - Stocks, ETFs, mutual funds
+- 🇪🇺 **EU Markets** - European stocks and funds
+- ₿ **Crypto** - Bitcoin, Ethereum, and major cryptocurrencies
+- 🥇 **Commodities** - Gold, silver, oil, etc.
+- 💱 **FX** - Foreign exchange pairs
+- 💵 **Cash** - Multi-currency cash holdings
+
+### Advanced Features
+- 🔐 **Secure Authentication** - Email/password and Google OAuth
+- 🌍 **Multi-Language** - English and Turkish support
+- 🌓 **Dark/Light Mode** - Automatic theme switching
+- 📊 **Advanced Filtering** - Filter by type, exchange, currency, sector, and more
+- 🎨 **Custom Grouping** - Organize assets your way
+- 📉 **Historical Charts** - Visualize portfolio performance over time
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 18+ 
+- PostgreSQL database
+- npm or yarn
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone <your-repo-url>
+cd portfolio-tracker
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your configuration
+
+# Set up database
+npx prisma generate
+npx prisma migrate dev
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit `http://localhost:3000` to see the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📦 Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Framework**: Next.js 16 (App Router, Server Actions)
+- **Language**: TypeScript
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: NextAuth.js
+- **Styling**: CSS Variables (Custom Design System)
+- **Charts**: Recharts
+- **API Integration**: Yahoo Finance, TEFAS, Alpha Vantage, Finnhub
 
-## Learn More
+## 🏗️ Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+portfolio-tracker/
+├── src/
+│   ├── app/              # Next.js app router pages
+│   ├── components/       # React components
+│   ├── lib/              # Utility functions and helpers
+│   ├── services/         # API services (Yahoo, TEFAS, etc.)
+│   └── styles/           # Global styles
+├── prisma/
+│   └── schema.prisma     # Database schema
+├── public/               # Static assets
+└── scripts/              # Utility scripts
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🔧 Configuration
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Environment Variables
 
-## Deploy on Vercel
+See `.env.production.example` for all available environment variables.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Required:
+- `DATABASE_URL` - PostgreSQL connection string
+- `AUTH_SECRET` - Authentication secret key
+- `NEXT_PUBLIC_APP_URL` - Your application URL
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Optional:
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - For Google OAuth
+- `ALPHA_VANTAGE_API_KEY` - For additional market data
+- `FINNHUB_API_KEY` - For stock data fallback
+
+## 📖 Documentation
+
+- [Deployment Guide](./DEPLOYMENT.md) - Comprehensive production deployment instructions
+- [API Documentation](./docs/API.md) - API endpoints and usage (if applicable)
+- [Contributing Guide](./CONTRIBUTING.md) - How to contribute (if applicable)
+
+## 🛡️ Security
+
+- ✅ Security headers configured (HSTS, CSP, X-Frame-Options)
+- ✅ Error boundaries for graceful error handling
+- ✅ Rate limiting ready (see middleware example)
+- ✅ Environment variables for sensitive data
+- ✅ SQL injection protection via Prisma
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+```bash
+vercel --prod
+```
+
+### Docker
+```bash
+docker build -t portfolio-tracker .
+docker run -p 3000:3000 portfolio-tracker
+```
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
+
+## 📊 Performance
+
+- Lighthouse Score: 90+ (aim)
+- First Contentful Paint: < 1.5s
+- Time to Interactive: < 3.5s
+- Cumulative Layout Shift: < 0.1
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📝 License
+
+[Your License Here]
+
+## 🙏 Acknowledgments
+
+- Yahoo Finance for market data
+- TEFAS for Turkish fund data
+- Next.js team for the amazing framework
+- Prisma team for the excellent ORM
+
+## 📧 Support
+
+For support, email [your-email] or open an issue on GitHub.
+
+---
+
+**Made with ❤️ by [Your Name]**

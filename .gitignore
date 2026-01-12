@@ -46,3 +46,24 @@ next-env.d.ts
 prisma/*.db
 prisma/dev.db
 .env*.local
+
+# archived debug scripts
+/archive_debug_scripts
+
+# Production
+.env.production
+*.log
+logs/
+.cache/
+
+# Backups
+backups/
+*.backup
+*.bak
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

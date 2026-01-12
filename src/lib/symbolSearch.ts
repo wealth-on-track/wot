@@ -1,11 +1,16 @@
+import { AssetCategory, LegacyAssetType } from './assetCategories';
+
 export interface SymbolOption {
     symbol: string;
     fullName: string;
     exchange: string;
-    type: 'STOCK' | 'CRYPTO' | 'GOLD' | 'BOND' | 'FUND' | 'ETF' | 'CASH' | 'COMMODITY';
+    category?: AssetCategory;  // New 8-category system
+    type: LegacyAssetType;     // Legacy field for backward compatibility
     currency: string;
     country?: string;
+    sector?: string;
     rawName?: string;
+    source?: 'TEFAS' | 'YAHOO' | 'MANUAL';
 }
 
 export function getCountryFlag(countryCode?: string): string {
@@ -56,7 +61,8 @@ export function getExchangeName(exchange?: string): string {
         'PAR': 'Paris',
         'SWX': 'Switzerland',
         'TOR': 'Toronto',
-        'CCc': 'Crypto',
+        'CCC': 'Crypto',  // Yahoo returns CCC for crypto
+        'CCc': 'Crypto',  // Legacy fallback
     };
     return map[e] || exchange;
 }

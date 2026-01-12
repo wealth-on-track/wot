@@ -1,4 +1,5 @@
 import { apiCache } from '@/lib/cache';
+import { trackApiRequest } from '@/services/telemetry';
 
 const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || 'demo';
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
@@ -106,27 +107,30 @@ export async function getCompanyProfile(symbol: string): Promise<FinnhubProfile 
 
     if (cached) return cached;
 
+
+    const startTime = Date.now();
     try {
         const response = await fetch(
             `${FINNHUB_BASE_URL}/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${FINNHUB_API_KEY}`
         );
 
         if (!response.ok) {
-            // 403 is expected - profile2 is premium tier only
             if (response.status !== 403) {
                 console.warn('Finnhub profile error:', response.status);
             }
+            await trackApiRequest('FINNHUB', false, { endpoint: 'profile2', params: symbol, statusCode: response.status, duration: Date.now() - startTime, error: `HTTP ${response.status}` });
             return null;
         }
 
         const profile = await response.json();
 
-        // Cache for 24 hours (profile data doesn't change often)
         apiCache.set(cacheKey, profile, 1440);
+        await trackApiRequest('FINNHUB', true, { endpoint: 'profile2', params: symbol, duration: Date.now() - startTime, statusCode: 200 });
 
         return profile;
     } catch (error) {
         console.error('Error fetching company profile:', error);
+        await trackApiRequest('FINNHUB', false, { endpoint: 'profile2', params: symbol, duration: Date.now() - startTime, error: String(error) });
         return null;
     }
 }

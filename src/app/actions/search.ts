@@ -4,25 +4,49 @@ import { searchYahoo } from "@/services/yahooApi";
 import { getTefasFundInfo } from "@/services/tefasApi";
 import { SymbolOption, getCountryFromExchange, getExchangeName } from "@/lib/symbolSearch";
 import { cleanAssetName } from "@/lib/companyNames";
+import { trackActivity } from "@/services/telemetry";
+import { auth } from "@/auth";
+import { getAssetCategory, categoryToLegacyType } from "@/lib/assetCategories";
 
 export async function searchSymbolsAction(query: string): Promise<SymbolOption[]> {
     if (!query || query.length < 2) return [];
+
+    const startTime = Date.now();
+    const session = await auth();
 
     const results = await searchYahoo(query);
 
     // Map first to easily check types
     const mappedResults: SymbolOption[] = results
-        .filter(item => !isCurrencyPair(item.symbol)) // Filter out FOREX pairs
-        .map(item => ({
-            symbol: item.symbol,
-            fullName: cleanAssetName(item.shortname || item.longname || item.symbol),
-            exchange: getExchangeName(item.exchange),
-            type: mapYahooType(item.quoteType),
-            currency: getCurrencyFromExchange(item.exchange),
-            country: getCountryFromExchange(item.exchange),
-            // Keep raw name for filtering
-            rawName: (item.shortname || item.longname || item.symbol).toUpperCase()
-        }));
+        // NOTE: We NO LONGER filter out currency pairs - FX is now a valid category!
+        .map(item => {
+            const assetType = mapYahooType(item.quoteType);
+            const exchangeCountry = getCountryFromExchange(item.exchange);
+            let exchange = getExchangeName(item.exchange);
+
+            // Determine category based on type + exchange
+            const category = getAssetCategory(assetType, exchange, item.symbol);
+
+            // SYSTEMATIC FIX: Crypto assets always have "Crypto" exchange
+            if (category === 'CRYPTO') {
+                exchange = 'Crypto';
+            }
+
+            return {
+                symbol: item.symbol,
+                fullName: cleanAssetName(item.shortname || item.longname || item.symbol),
+                exchange,
+                category,  // NEW: 8-category system
+                type: assetType,
+                currency: getCurrencyFromExchange(item.exchange, item.symbol, assetType),
+                // Rule 1: Use API data if available, otherwise enrich
+                country: exchangeCountry || getCountryFromType(assetType, item.symbol),
+                sector: getSectorFromType(assetType),
+                source: 'YAHOO' as const,
+                // Keep raw name for filtering
+                rawName: (item.shortname || item.longname || item.symbol).toUpperCase()
+            };
+        });
 
     // Inject CASH option if query matches a supported currency
     const upperQuery = query.toLocaleUpperCase('tr-TR');
@@ -42,13 +66,17 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
     }
 
     if (targetCurrencies.length > 0) {
+        const cashType = 'CASH' as const;
         const cashOptions: SymbolOption[] = targetCurrencies.map(curr => ({
             symbol: curr,
             fullName: `${curr} - Cash`,
             exchange: 'Forex',
-            type: 'CASH', // Custom type
+            category: 'CASH',  // NEW: 8-category system
+            type: cashType,
             currency: curr,
-            country: 'Global',
+            country: getCountryFromType(cashType, curr),
+            sector: getSectorFromType(cashType),
+            source: 'MANUAL' as const,
             rawName: `${curr} CASH`
         }));
         // Prepend to results
@@ -60,13 +88,18 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
     // Check if query is in keyword OR keyword starts with query (partial match)
     if (gramKeywords.some(k => upperQuery.includes(k) || k.startsWith(upperQuery))) {
         // Add Gram Gold option
+        // GAUTRY = Gram Gold in TRY (Turkish Lira per gram)
+        const goldType = 'GOLD' as const;
         mappedResults.unshift({
             symbol: 'GAUTRY',
             fullName: 'GR Altın',
-            exchange: 'Forex',
-            type: 'GOLD',
-            currency: 'TRY',
-            country: 'Turkey',
+            exchange: 'Commodity',  // Default exchange for commodities
+            category: 'COMMODITIES',
+            type: goldType,
+            currency: 'TRY',  // Priced in Turkish Lira
+            country: 'Global',  // All commodities are Global
+            sector: 'Commodity',
+            source: 'MANUAL' as const,
             rawName: 'GR ALTIN'
         });
     }
@@ -74,15 +107,47 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
     // SILVER / GÜMÜŞ Special Handling
     const silverKeywords = ["GUMUS", "GÜMÜŞ", "SILVER", "XAG", "XAGTRY"];
     if (silverKeywords.some(k => upperQuery.includes(k) || k.startsWith(upperQuery))) {
+        const silverType = 'COMMODITY' as const;
         mappedResults.unshift({
             symbol: 'XAGTRY',
             fullName: 'GR Gümüş',
-            exchange: 'Forex',
-            type: 'COMMODITY',
-            currency: 'TRY',
-            country: 'Turkey',
+            exchange: 'Commodity',  // Default exchange for commodities
+            category: 'COMMODITIES',
+            type: silverType,
+            currency: 'TRY',  // Priced in Turkish Lira
+            country: 'Global',  // All commodities are Global
+            sector: 'Commodity',
+            source: 'MANUAL' as const,
             rawName: 'GR GUMUS'
         });
+    }
+
+    // FX / Currency Pair Special Handling
+    // Check if query looks like a currency pair (EURUSD, EUR USD, EUR/USD)
+    const fxKeywords = ["EUR", "USD", "TRY", "GBP", "JPY", "CHF", "CAD", "AUD"];
+    const queryNormalized = upperQuery.replace(/[\/\s-]/g, ''); // Remove separators
+
+    // Check if query matches currency pair patterns
+    for (const curr1 of fxKeywords) {
+        for (const curr2 of fxKeywords) {
+            if (curr1 !== curr2 && queryNormalized.includes(curr1 + curr2)) {
+                // Add FX pair option
+                const pairSymbol = `${curr1}${curr2}=X`;
+                const fxType = 'CURRENCY' as const;
+                mappedResults.unshift({
+                    symbol: pairSymbol,
+                    fullName: `${curr1}/${curr2}`,
+                    exchange: 'Forex',
+                    category: 'FX',  // NEW: FX category
+                    type: fxType,
+                    currency: curr1,  // Base currency
+                    country: 'Global',
+                    sector: 'Currency',
+                    source: 'MANUAL' as const,
+                    rawName: `${curr1}${curr2}`
+                });
+            }
+        }
     }
 
     // Check for TEFAS Fund (if query is 3 letters)
@@ -94,13 +159,17 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
         try {
             const tefasFund = await getTefasFundInfo(upperQuery);
             if (tefasFund) {
+                const fundType = 'FUND' as const;
                 mappedResults.unshift({
                     symbol: tefasFund.code,
                     fullName: tefasFund.title,
                     exchange: 'TEFAS',
-                    type: 'FUND',
+                    category: 'TEFAS',  // NEW: 8-category system
+                    type: fundType,
                     currency: 'TRY',
-                    country: 'Turkey',
+                    country: 'Turkey',  // Rule 2b: TEFAS is always Turkey
+                    sector: getSectorFromType(fundType),
+                    source: 'TEFAS' as const,
                     rawName: tefasFund.title.toUpperCase()
                 });
             }
@@ -119,8 +188,8 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
         (r.symbol.toUpperCase().startsWith(queryUpper) || (r.rawName || '').startsWith(queryUpper))
     );
 
-    if (hasStrongEquityMatch) {
-        return mappedResults.filter(r => {
+    const finalResults = hasStrongEquityMatch
+        ? mappedResults.filter(r => {
             // Always keep stocks and special types
             if (r.type === 'STOCK' || r.type === 'GOLD' || r.type === 'COMMODITY' || r.type === 'CASH' || r.exchange === 'TEFAS') return true;
 
@@ -131,10 +200,23 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
 
             // Otherwise exclude
             return false;
-        }).map(({ rawName, ...rest }) => rest);
-    }
+        }).map(({ rawName, ...rest }) => rest)
+        : mappedResults.map(({ rawName, ...rest }) => rest);
 
-    return mappedResults.map(({ rawName, ...rest }) => rest);
+    // Track search activity
+    const duration = Date.now() - startTime;
+    await trackActivity('SEARCH', 'QUERY', {
+        userId: session?.user?.id,
+        username: session?.user?.name || undefined,
+        details: {
+            query,
+            resultsCount: finalResults.length,
+            sources: Array.from(new Set(mappedResults.map(r => r.source).filter(Boolean)))
+        },
+        duration
+    });
+
+    return finalResults;
 }
 
 /**
@@ -165,11 +247,20 @@ function isCurrencyPair(symbol: string): boolean {
 }
 
 /**
- * Determine currency based on exchange
+ * Determine currency based on exchange, symbol, and type
  * BIST (Borsa Istanbul) stocks are in TRY
+ * Crypto pairs extract quote currency from symbol
  * Most others default to USD
  */
-function getCurrencyFromExchange(exchange?: string): string {
+function getCurrencyFromExchange(exchange?: string, symbol?: string, type?: string): string {
+    // CRYPTO: Extract quote currency from symbol (BTC-EUR -> EUR, XRP-GBP -> GBP)
+    if (type === 'CRYPTO' && symbol && symbol.includes('-')) {
+        const parts = symbol.split('-');
+        if (parts.length === 2) {
+            return parts[1]; // Quote currency (USD, EUR, GBP, etc.)
+        }
+    }
+
     if (!exchange) return 'USD';
 
     const ex = exchange.toUpperCase();
@@ -197,4 +288,59 @@ function mapYahooType(type?: string): 'STOCK' | 'CRYPTO' | 'GOLD' | 'BOND' | 'FU
     if (t === 'FUTURE') return 'GOLD'; // Close enough for XAU
     if (t === 'EQUITY') return 'STOCK';
     return 'STOCK';
+}
+
+/**
+ * Enrichment Layer: Fill missing metadata based on asset type
+ * RULE: Only enrich if API returns blank/null/undefined
+ * This is the ONLY place where type-based rules are applied
+ */
+function getSectorFromType(type: 'STOCK' | 'CRYPTO' | 'GOLD' | 'BOND' | 'FUND' | 'ETF' | 'CASH' | 'COMMODITY'): string {
+    switch (type) {
+        case 'CASH':
+            return 'Cash';              // Rule 2a
+        case 'CRYPTO':
+            return 'Crypto';            // Rule 2c
+        case 'GOLD':
+        case 'COMMODITY':
+            return 'Commodity';         // Rule 2d
+        case 'FUND':
+            return 'Fund';              // Rule 2b (TEFAS handled separately)
+        case 'ETF':
+            return 'ETF';
+        case 'BOND':
+            return 'Bond';
+        case 'STOCK':
+        default:
+            return 'UNKNOWN';           // No enrichment for stocks
+    }
+}
+
+/**
+ * Enrichment Layer: Fill missing country based on asset type
+ * RULE: Only enrich if API/exchange lookup returns undefined
+ */
+function getCountryFromType(type: 'STOCK' | 'CRYPTO' | 'GOLD' | 'BOND' | 'FUND' | 'ETF' | 'CASH' | 'COMMODITY', symbol?: string): string {
+    switch (type) {
+        case 'CASH':
+            // Rule 2a: Cash country based on currency code
+            if (symbol === 'EUR') return 'Europe';
+            if (symbol === 'USD') return 'USA';
+            if (symbol === 'TRY') return 'Turkey';
+            if (symbol === 'GBP') return 'United Kingdom';
+            return 'Global';
+        case 'CRYPTO':
+            return 'Global';            // Rule 2c
+        case 'GOLD':
+        case 'COMMODITY':
+            // ALL COMMODITIES are Global (including GAUTRY, XAGTRY)
+            // Even Turkish gram gold/silver are Global because they track global metal prices
+            return 'Global';
+        case 'STOCK':
+        case 'ETF':
+        case 'BOND':
+        case 'FUND':
+        default:
+            return 'UNKNOWN';           // No enrichment
+    }
 }

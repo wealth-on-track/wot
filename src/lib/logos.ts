@@ -1,6 +1,16 @@
-export const getLogoUrl = (symbol: string, type: string, exchange?: string, country?: string) => {
+// Simple synchronous function - just returns URL string
+// Tracking is done at the point of actual usage
+export const getLogoUrl = (symbol: string, type: string, exchange?: string, country?: string): string | null => {
     let s = symbol.toUpperCase();
     const t = type.toUpperCase();
+    const ex = exchange?.toUpperCase();
+
+    // 0. TEFAS FUNDS: Use first letter placeholder (avoid wrong company logos)
+    // TEFAS funds are mutual funds in Turkey, they should NOT get corporate logos
+    if (ex === 'TEFAS' || (t === 'FUND' && ex === 'TEFAS')) {
+        // Return null to use the default letter-based placeholder
+        return null;
+    }
 
     // 1. CRYPTO: Use CoinCap (Symbol-based)
     if (t === 'CRYPTO') {
@@ -10,21 +20,35 @@ export const getLogoUrl = (symbol: string, type: string, exchange?: string, coun
         return `https://assets.coincap.io/assets/icons/${cleanSymbol}@2x.png`;
     }
 
-    // 2. CASH / CURRENCIES: Use FlagCDN
+    // 2. CASH / CURRENCIES: Use LOCAL Public Icons (100% Reliability)
     if (t === 'CASH' || t === 'CURRENCY') {
         const currencyMap: Record<string, string> = {
-            'USD': 'us', 'EUR': 'eu', 'TRY': 'tr', 'GBP': 'gb',
-            'JPY': 'jp', 'CNY': 'cn', 'CHF': 'ch', 'CAD': 'ca',
-            'AUD': 'au', 'NZD': 'nz', 'INR': 'in', 'BRL': 'br'
+            'USD': '/icons/currency/usd.svg',
+            'EUR': '/icons/currency/eur.svg',
+            'TRY': '/icons/currency/try.svg',
+            'GBP': '/icons/currency/gbp.svg',
+            'JPY': '/icons/currency/generic.svg', // Fallbacks until specific SVG added
+            'CNY': '/icons/currency/generic.svg',
+            'CHF': '/icons/currency/generic.svg',
+            'CAD': '/icons/currency/usd.svg', // Re-use USD for dollar sign
+            'AUD': '/icons/currency/usd.svg',
+            'NZD': '/icons/currency/usd.svg',
+            'INR': '/icons/currency/generic.svg',
+            'BRL': '/icons/currency/usd.svg',
+            'RUB': '/icons/currency/generic.svg',
+            'MXN': '/icons/currency/usd.svg',
+            'SEK': '/icons/currency/generic.svg',
         };
-        const code = currencyMap[s] || 'un';
-        return `https://flagcdn.com/w80/${code}.png`;
+
+        return currencyMap[s] || '/icons/currency/generic.svg';
     }
+
+
 
     // 3. COMMODITIES: Static High-Quality Icons
     if (t === 'GOLD' || t === 'COMMODITY') {
         // Updated to a cleaner, professional gold icon (Bars/Ingots)
-        if (s === 'XAU' || s === 'GAUTRY' || s.includes('GOLD')) return 'https://cdn-icons-png.flaticon.com/512/9334/9334575.png';
+        if (s === 'XAU' || s === 'GAUTRY' || s.includes('GOLD')) return 'https://img.icons8.com/color/96/gold-bars.png';
         if (s === 'XAG' || s === 'XAGTRY' || s.includes('SILVER')) return 'https://cdn-icons-png.flaticon.com/512/2908/2908842.png'; // Silver Bar
         if (s.includes('OIL') || s === 'BRENT' || s === 'WTI') return 'https://cdn-icons-png.flaticon.com/512/2908/2908848.png'; // Oil Drop
     }
@@ -38,80 +62,75 @@ export const getLogoUrl = (symbol: string, type: string, exchange?: string, coun
         return 'https://media.licdn.com/dms/image/v2/C4D0BAQG0YyP-lF0L7g/company-logo_200_200/company-logo_200_200/0/1630572851493/teb_portfy_y_yonetimi_a_logo?e=2147483647&v=beta&t=mS8P06pWn6lI-C-U89Xz8r-Yy7cO-n8v6Z-zI6h_0vE';
     }
 
-    // 4. STOCKS / ETFs / FUNDS: Parqet API with Exchange Suffix Mapping
+    // 4. STOCKS / ETFs / FUNDS: Use Logo.dev API (ticker-based, works great!)
     if (t === 'STOCK' || t === 'ETF' || t === 'FUND') {
-        // Exchange -> Suffix Map
-        const SUFFIX_MAP: Record<string, string> = {
-            'IST': '.IS', 'BIST': '.IS', 'ISTANBUL': '.IS',
-            'LSE': '.L', 'LONDON': '.L',
-            'PAR': '.PA', 'PARIS': '.PA', 'EPA': '.PA',
-            'FRA': '.DE', 'FRANKFURT': '.DE', 'XETRA': '.DE', 'GER': '.DE', 'EDG': '.DE',
-            'AMS': '.AS', 'AMSTERDAM': '.AS',
-            'BRU': '.BR', 'BRUSSELS': '.BR', 'EBR': '.BR',
-            'LIS': '.LS', 'LISBON': '.LS',
-            'MAD': '.MC', 'MADRID': '.MC', 'BME': '.MC',
-            'MIL': '.MI', 'MILAN': '.MI',
-            'NASDAQ': '', 'NYSE': '', 'AMEX': '', 'US': '', // US often doesn't need suffix on Parqet
-            'HKG': '.HK', 'HONG KONG': '.HK',
-            'SHH': '.SS', 'SHANGHAI': '.SS',
-            'SHE': '.SZ', 'SHENZHEN': '.SZ',
-            'TSE': '.TO', 'TORONTO': '.TO', 'TOR': '.TO',
-            'SWX': '.SW', 'ZURICH': '.SW', 'SIX': '.SW',
-            'OSL': '.OL', 'OSLO': '.OL',
-            'STO': '.ST', 'STOCKHOLM': '.ST',
-            'CPH': '.CO', 'COPENHAGEN': '.CO',
-            'HEL': '.HE', 'HELSINKI': '.HE',
-            'VIE': '.VI', 'VIENNA': '.VI',
-            'ATH': '.AT', 'ATHENS': '.AT',
-            'DUB': '.IR', 'DUBLIN': '.IR',
-            'JSE': '.JO', 'JOHANNESBURG': '.JO',
-            'ASX': '.AX', 'SYDNEY': '.AX',
-            'NSE': '.NS', 'BSE': '.BO', 'INDIA': '.NS',
-            'KLS': '.KL', 'MALAYSIA': '.KL',
-            'SGX': '.SI', 'SINGAPORE': '.SI',
-            'KRX': '.KS', 'KOREA': '.KS',
-            'TPE': '.TW', 'TAIWAN': '.TW',
-        };
+        const cleanSymbol = symbol.split('.')[0].toUpperCase();
 
-        if (exchange) {
-            const exUpper = exchange.toUpperCase();
-            // Find a matching suffix key
-            const matchedKey = Object.keys(SUFFIX_MAP).find(k => exUpper.includes(k));
-
-            if (matchedKey) {
-                const suffix = SUFFIX_MAP[matchedKey];
-                // Check if the symbol already ends with the suffix to avoid double suffixing
-                // Also handle case where symbol has a different suffix (potentially) - tough without strip, 
-                // but usually the issue is SOH1.F becoming SOH1.F.DE. 
-                // Let's check if it ends with .[something] and that something is not our target suffix? 
-                // Creating a cleaner symbol:
-
-                // If it already ends with our target suffix, do nothing.
-                if (!s.endsWith(suffix)) {
-                    // If it ends with a different suffix (e.g. .F), we might want to replace it IF we are sure.
-                    // But for now, just appending blindly was the issue. 
-                    // Example: SOH1.F + .DE -> SOH1.F.DE (Bad)
-                    // If we detect a "dot" suffix already, we should probably strip it if we are re-suffixing?
-                    // Or maybe the symbol SOH1.F IS the Frankfurt symbol?
-                    // Parqet expects "Symbol.Suffix".
-                    // If we have SOH1.F and we want .DE.
-                    // SOH1.F isn't valid for Parqet normally if they want .DE.
-                    // Try: SOH1.DE.
-
-                    const dotIndex = s.lastIndexOf('.');
-                    if (dotIndex !== -1) {
-                        // It has a dot.
-                        // Assume we replace the suffix?
-                        s = s.substring(0, dotIndex) + suffix;
-                    } else {
-                        s += suffix;
-                    }
-                }
-            }
+        // For Turkish BIST stocks (.IS), use GitHub CDN
+        if (symbol.includes('.IS')) {
+            return `https://cdn.jsdelivr.net/gh/ahmeterenodaci/Istanbul-Stock-Exchange--BIST--including-symbols-and-logos/logos/${cleanSymbol}.png`;
         }
 
-        return `https://assets.parqet.com/logos/symbol/${s}?format=png`;
+        // For BES funds, return null (will use placeholder)
+        if (['BES', 'HISA'].some(prefix => symbol.startsWith(prefix))) {
+            return null;
+        }
+
+        // Logo.dev provides high-quality logos for stocks using ticker symbols
+        const apiKey = process.env.NEXT_PUBLIC_LOGODEV_API_KEY || 'pk_OYRe85gjScGyAdhJcb1Jag';
+        return `https://img.logo.dev/ticker/${cleanSymbol}?token=${apiKey}`;
     }
 
     return null;
+};
+
+// Helper to determine which provider a logo URL belongs to
+export const getLogoProvider = (logoUrl: string | null): string | null => {
+    if (!logoUrl) return null;
+
+    if (logoUrl.includes('coincap.io')) return 'COINCAP';
+    if (logoUrl.includes('flagcdn.com')) return 'FLAGCDN';
+    if (logoUrl.includes('icons8.com')) return 'ICONS8';
+    if (logoUrl.includes('flaticon.com')) return 'FLATICON';
+    if (logoUrl.includes('jsdelivr.net')) return 'GITHUB_CDN';
+    if (logoUrl.includes('logo.dev')) return 'LOGODEV';
+    if (logoUrl.includes('parqet.com')) return 'PARQET';
+    if (logoUrl.includes('linkedin.com')) return 'LINKEDIN';
+
+    return 'UNKNOWN';
+};
+
+// Get logo with tracking
+export const getLogoUrlWithTracking = async (
+    symbol: string,
+    type: string,
+    exchange?: string,
+    country?: string,
+    userId?: string,
+    username?: string
+): Promise<string | null> => {
+    const logoUrl = getLogoUrl(symbol, type, exchange, country);
+
+    // Track logo URL generation
+    if (logoUrl) {
+        const provider = getLogoProvider(logoUrl);
+
+        // Import dynamically to avoid circular dependencies
+        const { trackActivity } = await import('@/services/telemetry');
+
+        await trackActivity('SYSTEM', 'VIEW', {
+            userId,
+            username,
+            targetType: 'Logo',
+            details: {
+                symbol,
+                type,
+                exchange,
+                provider,
+                url: logoUrl
+            }
+        });
+    }
+
+    return logoUrl;
 };

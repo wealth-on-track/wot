@@ -16,6 +16,7 @@ model User {
   password  String
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  preferences Json?
   portfolio Portfolio?
 }
 
@@ -26,42 +27,94 @@ model Portfolio {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   assets    Asset[]
+  goals     Goal[]
   user      User     @relation(fields: [userId], references: [id])
+  snapshots PortfolioSnapshot[]
+}
+
+model PortfolioSnapshot {
+  id          String   @id @default(cuid())
+  portfolioId String
+  date        DateTime // Normalized to midnight
+  totalValue  Float    // Total value in EUR
+  createdAt   DateTime @default(now())
+
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, date])
+}
+
+model Goal {
+  id            String    @id @default(cuid())
+  portfolioId   String
+  name          String
+  type          String?   @default("USER")
+  targetAmount  Float
+  currentAmount Float     @default(0)
+  currency      String    @default("EUR")
+  deadline      DateTime?
+  isCompleted   Boolean   @default(false)
+  icon          String?   @default("target")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  portfolio     Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+}
+
+enum AssetCategory {
+  BIST
+  TEFAS
+  US_MARKETS
+  EU_MARKETS
+  CRYPTO
+  COMMODITIES
+  FX
+  CASH
+  BENCHMARK
 }
 
 model Asset {
-  id          String    @id @default(cuid())
-  portfolioId String
-  type        String
-  symbol      String
-  name        String?
-  quantity    Float
-  buyPrice    Float
-  currency    String
-  exchange    String?
-  sector      String?
-  country     String?
-  platform    String?
-  isin        String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  customGroup   String?
-  rank          Int?      @default(0)
-  location      String?   // NL, TR
-  ownerCode     String?   // EAK, TAK, AAK
-  assetClass    String?   // Cash, Equity, Crypto...
-  assetSubClass String?   // Equity, Bond...
-  market        String?   // NASDAQ, BIST... 
-  nextEarningsDate DateTime? // Manually or automatically set next earnings date
-  portfolio     Portfolio @relation(fields: [portfolioId], references: [id])
+  id           String        @id @default(cuid())
+  portfolioId  String
+  category     AssetCategory @default(US_MARKETS)  // New 8-category system
+  type         String                              // Legacy field for backward compatibility
+  symbol       String
+  name         String?       // User's custom name (editable)
+  originalName String?       // Original name from search API (immutable)
+  quantity     Float
+  buyPrice     Float
+  currency     String
+  exchange     String
+  sector       String
+  country      String
+  platform     String?
+  logoUrl      String?
+  sortOrder    Int?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  customGroup  String?
+  portfolio    Portfolio     @relation(fields: [portfolioId], references: [id])
 }
 
+model BenchmarkCache {
+  id        String   @id @default(cuid())
+  symbol    String
+  period    String   // 1D, 1W, 1M, YTD, 1Y, ALL
+  data      Json     // Stored as JSON blob for performance
+  updatedAt DateTime @updatedAt
+
+  @@unique([symbol, period])
+}
 
 model PriceCache {
   symbol      String   @id
-  price       Float
+  previousClose Float
   currency    String
-  marketState String?
+  sector      String?
+  country     String?
+  tradeTime   DateTime?  // Actual time of the trade/quote
+  source      String?    // YAHOO, TEFAS, etc.
+  lastRequestedBy String? // Username of requester
+  
   updatedAt   DateTime @updatedAt
 }
 
@@ -80,4 +133,54 @@ model ApiUsage {
   lastUpdated  DateTime @updatedAt
   
   @@unique([provider, dateKey])
+}
+
+model ApiRequestLog {
+  id          String   @id @default(cuid())
+  provider    String   // YAHOO, TEFAS, etc.
+  endpoint    String   // quote, chart, search
+  params      String   // Target symbol(s)
+  status      String   // SUCCESS, ERROR
+  statusCode  Int?     // HTTP Status
+  duration    Int?     // ms
+  error       String?  // Error message
+  userId      String?  // Initiating user (optional)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([provider, status])
+}
+
+model AssetPriceHistory {
+  id        String   @id @default(cuid())
+  symbol    String
+  price     Float
+  currency  String
+  date      DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([symbol, date])
+  @@index([symbol, date])
+}
+
+model SystemActivityLog {
+  id            String   @id @default(cuid())
+  activityType  String   // AUTH, ASSET, SEARCH, PORTFOLIO, NAVIGATION, SYSTEM
+  action        String   // LOGIN, LOGOUT, CREATE, UPDATE, DELETE, VIEW, QUERY, etc.
+  userId        String?  // User who performed the action (null for system events)
+  username      String?  // Denormalized for easy display
+  targetType    String?  // Asset, Goal, User, Portfolio, etc.
+  targetId      String?  // ID of the affected entity
+  details       Json?    // Additional context (search query, changes made, etc.)
+  ipAddress     String?  // User IP
+  userAgent     String?  // Browser/client info
+  duration      Int?     // ms (for operations that have duration)
+  status        String   @default("SUCCESS") // SUCCESS, ERROR, PENDING
+  errorMessage  String?  // Error details if status=ERROR
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([activityType, action])
+  @@index([username, createdAt])
 }

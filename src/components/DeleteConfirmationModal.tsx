@@ -36,30 +36,32 @@ export function DeleteConfirmationModal({ isOpen, onClose, onConfirm, assetSymbo
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '1rem',
+                padding: '1.5rem',
                 opacity: isOpen ? 1 : 0,
                 pointerEvents: isOpen ? 'auto' : 'none',
                 transition: 'opacity 0.3s ease',
-                backdropFilter: 'blur(5px)',
-                background: 'rgba(0,0,0,0.4)', // Dimmed background
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                background: 'rgba(0,0,0,0.4)',
             }}
             onClick={onClose}
         >
             <div
+                className="neo-card"
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                    background: 'var(--bg-secondary, #111)', // Fallback to dark if var not set
-                    border: '1px solid var(--glass-border, rgba(255,255,255,0.1))',
-                    borderRadius: '1rem',
-                    padding: '1.5rem',
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-lg)',
+                    padding: '2rem',
                     maxWidth: '400px',
                     width: '100%',
-                    boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                    boxShadow: 'var(--shadow-lg)',
                     transform: isOpen ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(10px)',
-                    transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)', // Bouncy effect
+                    transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '1rem',
+                    gap: '1.5rem',
                     position: 'relative'
                 }}
             >
@@ -72,53 +74,56 @@ export function DeleteConfirmationModal({ isOpen, onClose, onConfirm, assetSymbo
                         right: '1rem',
                         background: 'transparent',
                         border: 'none',
-                        color: 'var(--text-secondary, #888)',
+                        color: 'var(--text-muted)',
                         cursor: 'pointer',
-                        padding: '0.2rem',
+                        padding: '0.5rem',
+                        borderRadius: '50%',
+                        transition: 'all 0.2s'
                     }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--border)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                     <X size={20} />
                 </button>
 
                 {/* Icon & Title */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '0.75rem' }}>
                     <div style={{
-                        width: '3.5rem',
-                        height: '3.5rem',
+                        width: '4rem',
+                        height: '4rem',
                         borderRadius: '50%',
-                        background: 'rgba(239, 68, 68, 0.1)',
+                        background: 'var(--danger-bg)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: '#ef4444',
-                        marginBottom: '0.5rem'
+                        color: 'var(--danger)',
+                        marginBottom: '0.5rem',
+                        boxShadow: '0 4px 12px var(--danger)20'
                     }}>
-                        <AlertTriangle size={32} strokeWidth={1.5} />
+                        <AlertTriangle size={36} strokeWidth={1.5} />
                     </div>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary, #fff)' }}>Delete Asset?</h2>
-                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary, #aaa)', lineHeight: 1.5, maxWidth: '90%' }}>
-                        Are you sure you want to remove <span style={{ fontWeight: 700, color: 'var(--text-primary, #fff)' }}>{assetSymbol}</span> from your portfolio? This action cannot be undone.
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>Delete Asset?</h2>
+                    <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0, fontWeight: 600 }}>
+                        Are you sure you want to remove <span style={{ color: 'var(--text-primary)', fontWeight: 800 }}>{assetSymbol}</span>? This action cannot be undone.
                     </p>
                 </div>
 
                 {/* Actions */}
-                <div style={{ display: 'flex', gap: '0.8rem', marginTop: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '1rem' }}>
                     <button
                         onClick={onClose}
                         style={{
                             flex: 1,
-                            padding: '0.75rem',
-                            borderRadius: '0.5rem',
-                            border: '1px solid var(--glass-border, rgba(255,255,255,0.1))',
-                            background: 'transparent',
-                            color: 'var(--text-primary, #fff)',
-                            fontSize: '0.9rem',
-                            fontWeight: 600,
+                            padding: '0.875rem',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface)',
+                            color: 'var(--text-primary)',
+                            fontSize: '0.95rem',
+                            fontWeight: 800,
                             cursor: 'pointer',
                             transition: 'all 0.2s',
                         }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
                         Cancel
                     </button>
@@ -126,25 +131,23 @@ export function DeleteConfirmationModal({ isOpen, onClose, onConfirm, assetSymbo
                         onClick={onConfirm}
                         style={{
                             flex: 1,
-                            padding: '0.75rem',
-                            borderRadius: '0.5rem',
+                            padding: '0.875rem',
+                            borderRadius: 'var(--radius-md)',
                             border: 'none',
-                            background: '#ef4444',
+                            background: 'var(--danger)',
                             color: '#fff',
-                            fontSize: '0.9rem',
-                            fontWeight: 600,
+                            fontSize: '0.95rem',
+                            fontWeight: 800,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '0.5rem',
-                            boxShadow: '0 4px 15px rgba(239, 68, 68, 0.3)',
+                            gap: '0.6rem',
+                            boxShadow: '0 4px 12px var(--danger)40',
                             transition: 'all 0.2s',
                         }}
-                        onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                        onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                     >
-                        <Trash2 size={16} /> Delete
+                        <Trash2 size={18} /> Delete
                     </button>
                 </div>
             </div>

@@ -1,21 +1,30 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useState, useEffect, useRef, useMemo, useId } from "react";
 import { createPortal } from "react-dom";
 import { useCurrency } from "@/context/CurrencyContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { useRouter } from "next/navigation"; // Added router
+import { BENCHMARK_ASSETS } from "@/lib/benchmarkApi";
 import { InlineAssetSearch } from "./InlineAssetSearch";
-import { deleteAsset, updateAsset, reorderAssets, refreshPortfolioPrices } from "@/lib/actions"; // Added updateAsset, reorderAssets
-import { UnifiedPortfolioSummary, AllocationCard } from "./PortfolioSidebarComponents";
+import { deleteAsset, updateAsset, refreshPortfolioPrices, reorderAssets, trackLogoRequest, updateUserPreferences } from "@/lib/actions";
+import { AllocationCard, GoalsCard, TopPerformersCard } from "./PortfolioSidebarComponents";
+import { EmptyPlaceholder } from "./EmptyPlaceholder";
+import { Inbox } from "lucide-react";
 import {
     DndContext,
     closestCenter,
     KeyboardSensor,
     MouseSensor, // Switched to Mouse
-    TouchSensor, // Switched to Touch
+    TouchSensor, // Switched    TouchSensor,
     useSensor,
     useSensors,
-    DragEndEvent
+    DragEndEvent,
+    DragOverlay,
+    DragStartEvent,
+    useDroppable
 } from '@dnd-kit/core';
 import {
     arrayMove,
@@ -29,8 +38,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { ASSET_COLORS } from "@/lib/constants";
 import { getLogoUrl } from "@/lib/logos";
-const TIME_PERIODS = ["1D", "1W", "1M", "YTD", "1Y", "ALL"];
-import { Bitcoin, Wallet, TrendingUp, PieChart, Gem, Coins, Layers, LayoutGrid, List, Save, X, Trash2, Settings, LayoutTemplate, Grid, Check, ChevronDown, ChevronRight, GripVertical, SlidersHorizontal, Briefcase, Banknote } from "lucide-react";
+const TIME_PERIODS = ["ALL"];
+import { Bitcoin, Wallet, TrendingUp, PieChart, Gem, Coins, Layers, LayoutGrid, List, Save, X, Trash2, Settings, LayoutTemplate, Grid, Check, ChevronDown, ChevronRight, ChevronLeft, GripVertical, SlidersHorizontal, Briefcase, Banknote, MoreVertical, MoreHorizontal, Plus } from "lucide-react";
 import { DetailedAssetCard } from "./DetailedAssetCard";
 import { getCompanyName } from "@/lib/companyNames";
 import { formatEUR, formatNumber } from "@/lib/formatters";
@@ -38,14 +47,117 @@ import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { RATES, getRate, getCurrencySymbol } from "@/lib/currency";
 import { EditAssetModal } from "./EditAssetModal";
 
+// Column Item UI (Presentational)
+const ColumnItem = React.forwardRef(({ label, type, style, listeners, attributes, isOverlay }: { label: string, type: 'active' | 'passive', style?: React.CSSProperties, listeners?: any, attributes?: any, isOverlay?: boolean }, ref: React.Ref<HTMLDivElement>) => {
+    return (
+        <div ref={ref} style={{
+            background: type === 'active' ? 'var(--surface)' : 'rgba(255,255,255,0.03)',
+            border: type === 'active' ? '1px solid var(--border)' : '1px dashed var(--border)',
+            borderRadius: 'var(--radius-md)',
+            padding: '0.75rem 1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: isOverlay ? 'grabbing' : 'grab',
+            marginBottom: '0.5rem',
+            boxShadow: isOverlay ? '0 8px 16px rgba(0,0,0,0.4)' : 'none',
+            scale: isOverlay ? '1.02' : '1',
+            ...style
+        }} {...attributes} {...listeners}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                <GripVertical size={16} style={{ color: type === 'active' ? 'var(--text-secondary)' : 'var(--text-muted)' }} />
+                <span style={{ fontSize: '0.9rem', fontWeight: type === 'active' ? 600 : 500, color: type === 'active' ? 'var(--text-primary)' : 'var(--text-muted)' }}>{label}</span>
+            </div>
+            {type === 'active' && (
+                <div style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: 'var(--accent)',
+                }} />
+            )}
+        </div>
+    );
+});
+ColumnItem.displayName = "ColumnItem";
+
+// Sortable Wrapper
+const SortableColumnItem = ({ id, label, type }: { id: string, label: string, type: 'active' | 'passive' }) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.3 : 1, // Dim the source item while dragging
+    };
+
+    return (
+        <ColumnItem
+            ref={setNodeRef}
+            style={style}
+            listeners={listeners}
+            attributes={attributes}
+            label={label}
+            type={type}
+        />
+    );
+};
+
+const DroppableArea = ({ id, children, style }: { id: string, children: React.ReactNode, style?: React.CSSProperties }) => {
+    const { setNodeRef } = useDroppable({ id });
+    return (
+        <div ref={setNodeRef} style={style}>
+            {children}
+        </div>
+    );
+};
+
+const PORTFOLIO_COLORS = [
+    { bg: 'rgba(59, 130, 246, 0.1)', text: '#1d4ed8', border: 'rgba(59, 130, 246, 0.2)' }, // Blue
+    { bg: 'rgba(16, 185, 129, 0.1)', text: '#047857', border: 'rgba(16, 185, 129, 0.2)' }, // Emerald
+    { bg: 'rgba(245, 158, 11, 0.1)', text: '#b45309', border: 'rgba(245, 158, 11, 0.2)' }, // Amber
+    { bg: 'rgba(139, 92, 246, 0.1)', text: '#7c3aed', border: 'rgba(139, 92, 246, 0.2)' }, // Purple
+    { bg: 'rgba(244, 63, 94, 0.1)', text: '#be123c', border: 'rgba(244, 63, 94, 0.2)' },  // Rose
+    { bg: 'rgba(6, 182, 212, 0.1)', text: '#0e7490', border: 'rgba(6, 182, 212, 0.2)' }, // Cyan
+];
+
+function getPortfolioStyle(name: string) {
+    if (!name || name === '-') return { bg: 'var(--bg-secondary)', text: 'var(--text-muted)', border: 'transparent' };
+    let hash = 0;
+    const cleanName = name.toUpperCase();
+    for (let i = 0; i < cleanName.length; i++) {
+        hash = cleanName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colors = [
+        { bg: 'rgba(59, 130, 246, 0.08)', text: '#1d4ed8', border: 'rgba(59, 130, 246, 0.12)' }, // Blue
+        { bg: 'rgba(16, 185, 129, 0.08)', text: '#047857', border: 'rgba(16, 185, 129, 0.12)' }, // Emerald
+        { bg: 'rgba(245, 158, 11, 0.08)', text: '#b45309', border: 'rgba(245, 158, 11, 0.12)' }, // Amber
+        { bg: 'rgba(139, 92, 246, 0.08)', text: '#7c3aed', border: 'rgba(139, 92, 246, 0.12)' }, // Purple
+        { bg: 'rgba(244, 63, 94, 0.08)', text: '#be123c', border: 'rgba(244, 63, 94, 0.12)' },  // Rose
+        { bg: 'rgba(6, 182, 212, 0.08)', text: '#0e7490', border: 'rgba(6, 182, 212, 0.12)' }, // Cyan
+    ];
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+}
+
 interface DashboardProps {
     username: string;
     isOwner: boolean;
     totalValueEUR: number;
     assets: AssetDisplay[];
+    goals?: any[]; // Passed from page
     isBlurred: boolean;
     showChangelog?: boolean;
     exchangeRates?: Record<string, number>;
+    positionsViewCurrency?: string; // Currency for displaying positions
+    preferences?: any;
 }
 
 // European number format removed (Imported)
@@ -55,34 +167,112 @@ interface DashboardProps {
 // Systematic Logo Logic
 // Local getLogoUrl removed. Imported from @/lib/logos.
 
-const AssetLogo = ({ symbol, type, name, logoUrl: primaryUrl, size = '3.5rem' }: { symbol: string, type: string, name?: string, logoUrl?: string | null, size?: string }) => {
-    const [currentUrlIndex, setCurrentUrlIndex] = useState(0);
-    const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
+// Helper to determine provider from URL for telemetry
+const getProviderFromUrl = (url: string): string | null => {
+    if (url.includes('logo.dev')) return 'LOGODEV';
+    if (url.includes('ahmeterenodaci') || url.includes('Istanbul-Stock-Exchange')) return 'BIST_CDN';
+    if (url.includes('flagcdn.com')) return 'FLAGCDN';
+    if (url.includes('coincap.io')) return 'COINCAP';
+    return null; // Don't track other sources
+};
+
+const AssetLogo = ({ symbol, type, name, exchange, logoUrl: primaryUrl, size = '3.5rem' }: { symbol: string, type: string, name?: string, exchange?: string, logoUrl?: string | null, size?: string }) => {
+    // State to track the currently valid image URL. null means show placeholder.
+    const [validUrl, setValidUrl] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
 
     const t = type.toUpperCase();
     const cleanSymbol = symbol.split('.')[0].toUpperCase();
 
-    // Generate fallback list
-    const urls = useMemo(() => {
+    // Construct the list of potential URLs
+    const potentialUrls = useMemo(() => {
         const list: string[] = [];
-        if (primaryUrl) list.push(primaryUrl);
+        if (primaryUrl && primaryUrl.trim() !== '') list.push(primaryUrl);
 
-        // Fallback for Stocks/ETFs
-        if (t === 'STOCK' || t === 'ETF' || t === 'FUND') {
-            // TradingView Fallback
-            list.push(`https://s3-symbol-logo.tradingview.com/${cleanSymbol}--big.svg`);
+        // Fallback for Stocks/ETFs - Only exclude if strictly safer
+        if ((t === 'STOCK' || t === 'ETF' || t === 'FUND')) {
+            // Only add TradingView if not BIST/BES to avoid noise, OR if it's a major known stock
+            if (!symbol.includes('.IS') && !['BES', 'HISA'].some(prefix => symbol.startsWith(prefix))) {
+                list.push(`https://s3-symbol-logo.tradingview.com/${cleanSymbol}--big.svg`);
+            }
         }
 
-        return list.filter(u => u && u.trim() !== '' && !failedUrls.has(u));
-    }, [primaryUrl, cleanSymbol, t, failedUrls]);
+        if (t === 'CRYPTO') {
+            list.push(`https://assets.coincap.io/assets/icons/${cleanSymbol.toLowerCase()}@2x.png`);
+        }
 
-    const currentUrl = urls[currentUrlIndex];
+        // BACKUP: CASH/CURRENCY Fallback to FlagCDN if Icons8 fails
+        if (t === 'CASH' || t === 'CURRENCY') {
+            const currencyFlagMap: Record<string, string> = {
+                'USD': 'us', 'EUR': 'eu', 'TRY': 'tr', 'GBP': 'gb',
+                'JPY': 'jp', 'CNY': 'cn', 'CHF': 'ch', 'CAD': 'ca',
+                'AUD': 'au', 'NZD': 'nz', 'INR': 'in', 'BRL': 'br',
+                'RUB': 'ru', 'MXN': 'mx', 'SEK': 'se'
+            };
+            const code = currencyFlagMap[symbol.toUpperCase()];
+            if (code) {
+                list.push(`https://flagcdn.com/w80/${code}.png`);
+            }
+        }
 
-    // Reset error if primaryUrl or symbol changes
+        // Add a generic fallback service if needed, e.g. clearbit
+        // list.push(`https://logo.clearbit.com/${cleanSymbol}.com`); 
+
+        return list;
+    }, [primaryUrl, cleanSymbol, t, symbol]);
+
+    // PRELOAD LOGIC: Try to load images one by one until one success or all fail
     useEffect(() => {
-        setCurrentUrlIndex(0);
-        setFailedUrls(new Set());
-    }, [primaryUrl, symbol]);
+        let isMounted = true;
+        setLoading(true);
+
+        const tryLoadImages = async () => {
+            for (const url of potentialUrls) {
+                if (!isMounted) return;
+                try {
+                    await new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.src = url;
+                        img.onload = resolve;
+                        img.onerror = reject;
+                    });
+
+                    // If we get here, image loaded successfully
+                    if (isMounted) {
+                        // Track successful logo load
+                        const provider = getProviderFromUrl(url);
+                        if (provider) {
+                            // Success tracking enabled for Admin Activity Log
+                            // trackLogoRequest(provider, true, symbol, type, exchange).catch(() => { /* ignore */ });
+                        }
+
+                        setValidUrl(url);
+                        setLoading(false);
+                        return; // Found a valid one, stop searching
+                    }
+                } catch (e) {
+                    // Logo failed to load, try next URL
+                    // Note: We don't track errors here to avoid spam, only track when logo is generated
+                    continue;
+                }
+            }
+
+            // If loop finishes without return, all failed
+            if (isMounted) {
+                setValidUrl(null); // Force placeholder
+                setLoading(false);
+            }
+        };
+
+        if (potentialUrls.length > 0) {
+            tryLoadImages();
+        } else {
+            setValidUrl(null);
+            setLoading(false);
+        }
+
+        return () => { isMounted = false; };
+    }, [potentialUrls]);
 
     const logoStyle: React.CSSProperties = {
         width: size,
@@ -95,63 +285,131 @@ const AssetLogo = ({ symbol, type, name, logoUrl: primaryUrl, size = '3.5rem' }:
         flexShrink: 0
     };
 
-    const handleError = () => {
-        if (currentUrl) {
-            setFailedUrls(prev => new Set(prev).add(currentUrl));
-            setCurrentUrlIndex(prev => prev + 1);
+    // Extract text for placeholder - show full ticker if 3-4 chars, else first letter
+    const getPlaceholderText = (): string => {
+        // PRIORITY: If the ticker is exactly 3 letters (e.g. TI2, NNF), use it directly.
+        // This overrides the Name-based logic for TEFAS/Fund assets.
+        const cleanSym = symbol.split('.')[0].trim().toUpperCase();
+        if (cleanSym.length === 3) {
+            return cleanSym;
         }
-    };
 
-    if (currentUrl) {
-        return (
-            <div style={logoStyle}>
-                <img
-                    src={currentUrl}
-                    alt={symbol}
-                    onError={handleError}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-            </div>
-        )
-    }
-
-    // Extract first meaningful letter for placeholder
-    const getPlaceholderLetter = (): string => {
+        // Fallback: Use Name (if available) or Symbol
         let text = name || symbol;
+        if (!name && symbol.includes('-')) text = symbol.split('-')[1];
 
-        // Remove common prefixes
-        const prefixes = ['BES-', 'BES_'];
+        const prefixes = ['BES-', 'BES_', 'TURKEY ', 'HISA-'];
         for (const prefix of prefixes) {
-            if (text.startsWith(prefix)) {
+            if (text.toUpperCase().startsWith(prefix)) {
                 text = text.substring(prefix.length);
                 break;
             }
         }
 
-        // Trim and take first char
-        return text.trim().charAt(0).toUpperCase();
+        const trimmedText = text.trim().toUpperCase();
+
+
+
+        // For longer symbols, show just the first character
+        return trimmedText.charAt(0);
+    };
+
+    const getPlaceholderColor = () => {
+        const colors = [
+            'linear-gradient(135deg, #6366f1, #a855f7)',
+            'linear-gradient(135deg, #3b82f6, #06b6d4)',
+            'linear-gradient(135deg, #10b981, #3b82f6)',
+            'linear-gradient(135deg, #f59e0b, #ef4444)',
+            'linear-gradient(135deg, #ec4899, #8b5cf6)',
+            'linear-gradient(135deg, #84cc16, #10b981)',
+        ];
+        let hash = 0;
+        for (let i = 0; i < symbol.length; i++) {
+            hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return colors[Math.abs(hash) % colors.length];
+    };
+
+    // RENDER
+    if (validUrl) {
+        return (
+            <div style={logoStyle}>
+                <img
+                    src={validUrl}
+                    alt={symbol}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+            </div>
+        );
+    }
+
+    // Default to placeholder if loading or no valid url found
+    const placeholderText = getPlaceholderText();
+    const isMultiChar = placeholderText.length > 1;
+
+    // Adjust font size based on whether it's a single char or multi-char
+    const getFontSize = () => {
+        if (size === '1.2rem') return isMultiChar ? '0.45rem' : '0.6rem';
+        if (size === '1.4rem') return isMultiChar ? '0.5rem' : '0.7rem';
+        if (size === '2rem') return isMultiChar ? '0.75rem' : '1rem';
+        if (size === '2.8rem') return isMultiChar ? '0.85rem' : '1.2rem';
+        if (size === '3.5rem') return isMultiChar ? '1.1rem' : '1.5rem';
+        if (size === '4.5rem') return isMultiChar ? '1.5rem' : '2rem';
+        return isMultiChar ? '1rem' : '1.2rem';
     };
 
     return (
         <div style={{
             ...logoStyle,
-            background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+            background: getPlaceholderColor(),
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: size === '1.2rem' ? '0.6rem' : size === '1.4rem' ? '0.7rem' : size === '2rem' ? '1rem' : '1.5rem',
+            fontSize: getFontSize(),
             fontWeight: 800,
             color: '#fff',
             textTransform: 'uppercase',
-            textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+            textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+            boxShadow: 'inset 0 0 10px rgba(0,0,0,0.1)',
+            letterSpacing: isMultiChar ? '-0.02em' : '0'
         }}>
-            {getPlaceholderLetter()}
+            {loading ? (
+                <div style={{ // Tiny spinner or just the letter
+                    width: '50%', height: '50%',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: '#fff',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                }} />
+            ) : (
+                placeholderText
+            )}
+            <style jsx>{`
+                @keyframes spin { to { transform: rotate(360deg); } }
+            `}</style>
         </div>
     );
-}
+};
 
-const MarketStatusDot = ({ state }: { state?: string }) => {
+const MarketStatusDot = ({ state, type }: { state?: string, type?: string }) => {
     if (!state) return null;
+
+    if (type === 'CASH') {
+        return (
+            <div
+                title="Cash / Liquid"
+                style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--text-muted)',
+                    opacity: 0.6,
+                    flexShrink: 0
+                }}
+            />
+        );
+    }
+
     const isRegular = state.toUpperCase() === 'REGULAR';
     return (
         <div
@@ -160,8 +418,8 @@ const MarketStatusDot = ({ state }: { state?: string }) => {
                 width: '6px',
                 height: '6px',
                 borderRadius: '50%',
-                backgroundColor: isRegular ? '#10b981' : '#ef4444',
-                boxShadow: `0 0 4px ${isRegular ? '#10b981' : '#ef4444'}80`,
+                backgroundColor: isRegular ? '#22c55e' : '#ef4444',
+                boxShadow: `0 0 6px ${isRegular ? '#22c55e' : '#ef4444'}60`,
                 flexShrink: 0
             }}
         />
@@ -170,7 +428,9 @@ const MarketStatusDot = ({ state }: { state?: string }) => {
 
 import { AssetDisplay } from "@/lib/types";
 import { SortableAssetRow, SortableGroup, SortableAssetCard } from "./SortableWrappers";
+import { PortfolioPerformanceChart } from "./PortfolioPerformanceChart";
 
+// Column Configurations
 // Column Configurations
 type ColumnId = 'TYPE' | 'NAME' | 'TICKER' | 'EXCHANGE' | 'CURRENCY' | 'PRICE' | 'PRICE_EUR' | 'VALUE' | 'VALUE_EUR' | 'PL' | 'EARNINGS' | 'PORTFOLIO_NAME' | 'OWNER' | 'LOCATION' | 'PLATFORM' | 'ASSET_CLASS' | 'MARKET' | 'COUNTRY';
 
@@ -186,21 +446,19 @@ const ALL_COLUMNS: ColumnConfig[] = [
     { id: 'PORTFOLIO_NAME', label: 'Portfolio', isDefault: true },
     { id: 'NAME', label: 'Name', isDefault: true },
     { id: 'PRICE', label: 'Price', isDefault: true },
-    { id: 'VALUE', label: 'Value', isDefault: true },
-    { id: 'PRICE_EUR', label: 'Price (€)', isDefault: false },
-    { id: 'VALUE_EUR', label: 'Value (€)', isDefault: false },
+    { id: 'VALUE', label: 'Total Value', isDefault: true },
+    { id: 'VALUE_EUR', label: 'Total Value (€)', isDefault: true },
     { id: 'PL', label: 'P&L (€)', isDefault: true },
 ];
 
 const COL_WIDTHS: Record<ColumnId, string> = {
-    PORTFOLIO_NAME: 'minmax(80px, 0.8fr)',
-    NAME: 'minmax(120px, 2fr)',
-    PRICE: 'minmax(70px, 0.9fr)',
-    VALUE: 'minmax(80px, 1fr)',
-    PRICE_EUR: 'minmax(70px, 0.9fr)',
-    VALUE_EUR: 'minmax(80px, 1fr)',
-    PL: 'minmax(70px, 0.9fr)',
-    // Keep others for safe fallback if needed, or remove if unused in render
+    PORTFOLIO_NAME: 'minmax(65px, 0.6fr)',
+    NAME: 'minmax(140px, 2fr)',
+    PRICE: 'minmax(90px, 1fr)',
+    VALUE: 'minmax(120px, 1.2fr)',
+    PRICE_EUR: 'minmax(90px, 1fr)',
+    VALUE_EUR: 'minmax(160px, 1.3fr)',
+    PL: 'minmax(110px, 1.2fr)',
     LOCATION: '0px',
     OWNER: '0px',
     PLATFORM: '0px',
@@ -214,7 +472,13 @@ const COL_WIDTHS: Record<ColumnId, string> = {
     EARNINGS: '0px'
 };
 
-// Global Edit/Click Handler Context or Props could be processed here, but we pass them down.
+// ... (DraggableHeader remains similar, maybe adjusted for padding) ...
+
+
+
+// ...
+
+
 
 const DraggableHeader = ({ id, children, onToggle, columnsCount = 4 }: { id: string, children: React.ReactNode, onToggle?: () => void, columnsCount?: number }) => {
     const {
@@ -252,7 +516,7 @@ const DraggableHeader = ({ id, children, onToggle, columnsCount = 4 }: { id: str
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'flex-start',
+                justifyContent: ['col:PRICE', 'col:PRICE_EUR', 'col:VALUE', 'col:VALUE_EUR', 'col:PL'].includes(id) ? 'flex-end' : 'flex-start',
                 gap: 0,
                 height: '100%',
                 paddingLeft: isUltraHighDensity ? '0.05rem' : '0.2rem',
@@ -315,55 +579,69 @@ function AssetTableRow({
     const router = useRouter();
     const [isHovered, setIsHovered] = useState(false);
 
-    // Calculate Conversion Rate
     // Native (Original) Values for PRICE / VALUE columns
-    const nativePrice = asset.currentPrice;
-    const nativeTotalValue = asset.currentPrice * asset.quantity;
+    const nativePrice = asset.previousClose;
+    const nativeTotalValue = asset.previousClose * asset.quantity;
     const nativeCostBasis = asset.buyPrice * asset.quantity;
     const nativeSymbol = getCurrencySymbol(asset.currency);
 
     // Global (Converted) Values for PRICE_EUR / VALUE_EUR / PL columns
-    // If View is ORG -> Global is EUR. If View is Specific (USD/TRY) -> Global is that specific currency.
     const globalCurrency = positionsViewCurrency === 'ORG' ? 'EUR' : positionsViewCurrency;
     const globalRate = getRate(asset.currency, globalCurrency, exchangeRates);
     const globalSymbol = getCurrencySymbol(globalCurrency);
 
-    const globalPrice = asset.currentPrice * globalRate;
-    const globalAvgPrice = asset.buyPrice * globalRate;
-    const globalTotalValue = nativeTotalValue * globalRate;
-    const globalCostBasis = nativeCostBasis * globalRate;
+    const globalPrice = globalCurrency === 'EUR' && asset.totalValueEUR > 0
+        ? (asset.totalValueEUR / asset.quantity)
+        : asset.previousClose * globalRate;
 
-    // P&L uses Global Values
+    const globalTotalValue = globalCurrency === 'EUR' && asset.totalValueEUR > 0
+        ? asset.totalValueEUR
+        : nativeTotalValue * globalRate;
+
+    // derived cost basis: Value / (1 + PL%)
+    const globalCostBasis = globalCurrency === 'EUR' && asset.totalValueEUR > 0
+        ? asset.totalValueEUR / (1 + (asset.plPercentage / 100))
+        : nativeCostBasis * globalRate;
+
+    const globalAvgPrice = globalCostBasis / asset.quantity;
+
     const totalProfitVal = globalTotalValue - globalCostBasis;
     const totalProfitPct = asset.plPercentage;
 
-    // P&L based on Time Factor or Real 1D Data
-    let periodProfitVal = totalProfitVal * timeFactor;
-    let periodProfitPct = totalProfitPct * timeFactor;
+    let periodProfitVal = totalProfitVal;
+    let periodProfitPct = totalProfitPct;
 
-    if (timePeriod === '1D') {
-        // Use Real 1D Data (asset.dailyChange is in EUR)
-        periodProfitPct = asset.dailyChangePercentage || 0;
-
-        // Convert dailyChange (EUR) to Global Display Currency
-        // We know dailyChange is EUR, so we need EUR -> Global Rate
-        const eurToGlobalRate = getRate('EUR', globalCurrency, exchangeRates);
-        periodProfitVal = (asset.dailyChange || 0) * eurToGlobalRate;
-    }
+    // Simplified: Always use total profit
+    // Removed 1D/1W/1M/YTD/1Y logic blocks
+    // periodProfitVal matches totalProfitVal by default initialization
 
     const isPeriodProfit = periodProfitVal >= 0;
 
-    const fmt = (val: number, min = 2, max = 2) =>
-        new Intl.NumberFormat('de-DE', { minimumFractionDigits: min, maximumFractionDigits: max }).format(val || 0);
+    const fmt = (val: number, min = 2, max = 2) => {
+        let finalMin = min;
+        let finalMax = max;
 
+        // SMART FORMATTING STRATEGY
+        // If value >= 100, decimals are usually noise. Hide them unless explicitly requested otherwise.
+        // We only apply this auto-hide if the caller asked for the default 2 decimals.
+        // If caller specifically asked for 0 or 4, we respect that.
+        if (Math.abs(val) >= 100 && min === 2 && max === 2) {
+            finalMin = 0;
+            finalMax = 0;
+        }
+
+        return new Intl.NumberFormat('de-DE', { minimumFractionDigits: finalMin, maximumFractionDigits: finalMax }).format(val || 0);
+    };
 
     const handleDelete = (e: React.MouseEvent) => {
         e.stopPropagation();
         onDelete(asset.id);
     };
 
-    const logoUrl = getLogoUrl(asset.symbol, asset.type, asset.exchange);
+    // Use logoUrl from database if available, otherwise generate it
+    const logoUrl = (asset as any).logoUrl || getLogoUrl(asset.symbol, asset.type, asset.exchange, asset.country);
     const companyName = getCompanyName(asset.symbol, asset.type, asset.name);
+    const originalName = (asset as any).originalName;
 
     // Dynamic Layout Logic
     const columnsCount = columns.length;
@@ -373,20 +651,20 @@ function AssetTableRow({
 
     const fontSizeMain = isUltraHighDensity ? '0.75rem' : isHighDensity ? '0.88rem' : isMediumDensity ? '0.98rem' : '1.1rem';
     const fontSizeSub = isUltraHighDensity ? '0.6rem' : isHighDensity ? '0.68rem' : isMediumDensity ? '0.75rem' : '0.85rem';
-    const cellPadding = isUltraHighDensity ? '0rem 0.1rem' : isHighDensity ? '0.05rem 0.2rem' : isMediumDensity ? '0.2rem 0.4rem' : '0.4rem 0.6rem';
 
-    const gridTemplate = columns.map(c => COL_WIDTHS[c]).join(' ');
+    // Premium Row Height & Padding
 
-    const commonCellStyles: React.CSSProperties = {
+    const cellPadding = '1rem 0.5rem 0.5rem 0.5rem';
+    const gridTemplate = columns.map(c => COL_WIDTHS[c]).join(' ') + ' 40px';
+
+    const commonCellStyles = {
         padding: cellPadding,
-        borderRight: 'none',
-        borderBottom: 'none',
         display: 'flex',
-        alignItems: 'center',
-        overflow: 'hidden',
+        alignItems: 'flex-start',
+        height: '100%',
         minWidth: 0,
-        position: 'relative',
-        gap: '0'
+        overflow: 'hidden',
+        whiteSpace: 'nowrap'
     };
 
     const renderCell = (colId: ColumnId) => {
@@ -394,204 +672,314 @@ function AssetTableRow({
 
         let cellContent = null;
         switch (colId) {
-            case 'TYPE':
-                cellContent = (
-                    <div className="col-type" style={{ fontSize: fontSizeSub, opacity: 0.6, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {asset.type}
-                    </div>
-                );
+            // SPARK case removed
+            case 'PL':
+                // For CASH, show "-" since there's no P&L
+                if (asset.type === 'CASH') {
+                    cellContent = (
+                        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'flex-start', alignItems: 'flex-end', width: '100%', gap: '4px' }}>
+                            <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-muted)', lineHeight: '1.2' }}>-</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>-</span>
+                        </div>
+                    );
+                } else {
+                    cellContent = (
+                        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'flex-start', alignItems: 'flex-end', width: '100%', position: 'relative', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', gap: '4px' }}>
+                            <span style={{
+                                fontSize: '1rem',
+                                fontWeight: 700,
+                                color: isPeriodProfit ? 'var(--success)' : 'var(--danger)',
+                                whiteSpace: 'nowrap',
+                                display: 'inline-block',
+                                lineHeight: '1.2'
+                            }}>
+                                {isPeriodProfit ? '▲' : '▼'} {Math.round(Math.abs(periodProfitPct))}%
+                            </span>
+                            <span style={{
+                                fontSize: '0.75rem',
+                                fontWeight: 500,
+                                color: 'var(--text-muted)',
+                                fontVariantNumeric: 'tabular-nums',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                {isPeriodProfit ? '+' : ''}{globalSymbol}{fmt(periodProfitVal, 0, 0)}
+                            </span>
+                        </div>
+                    );
+                }
                 break;
             case 'NAME':
                 cellContent = (
-                    <div className="col-name" style={{ display: 'flex', alignItems: 'center', gap: isHighDensity ? '0.3rem' : '0.8rem', minWidth: 0, width: '100%' }}>
-                        <MarketStatusDot state={asset.marketState} />
-                        <AssetLogo symbol={asset.symbol} type={asset.type} name={companyName} logoUrl={logoUrl} size={isUltraHighDensity ? "1.2rem" : isHighDensity ? "1.4rem" : "2rem"} />
-                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, gap: '0', flex: 1 }}>
+                    <div className="col-name" style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', minWidth: 0, width: '100%' }}>
+                        <AssetLogo symbol={asset.symbol} type={asset.type} exchange={asset.exchange} name={companyName} logoUrl={logoUrl} size="2.8rem" />
+                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, gap: '4px', flex: 1 }}>
                             <>
-                                <span style={{
-                                    fontSize: fontSizeMain,
-                                    fontWeight: 600,
-                                    color: 'var(--text-primary)',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    lineHeight: 1.1
-                                }}>
+                                <span
+                                    title={originalName || companyName}
+                                    style={{
+                                        fontSize: '1rem',
+                                        fontWeight: 700,
+                                        color: 'var(--text-primary)',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        lineHeight: '1.2',
+                                        cursor: 'default'
+                                    }}>
                                     {companyName}
                                 </span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', overflow: 'hidden' }}>
-                                    <span style={{ fontSize: fontSizeSub, opacity: 0.4, fontWeight: 500, whiteSpace: 'nowrap' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>
                                         {asset.symbol}
                                     </span>
-                                    {!isUltraHighDensity && (
-                                        <span style={{
-                                            fontSize: '0.65rem',
-                                            opacity: 0.8,
-                                            fontWeight: 600,
-                                            color: 'var(--accent)',
-                                            background: 'rgba(99, 102, 241, 0.1)',
-                                            padding: '0 3px',
-                                            borderRadius: '3px'
-                                        }}>
-                                            x{asset.quantity >= 1000
+                                    <span style={{
+                                        fontSize: '0.7rem',
+                                        fontWeight: 600,
+                                        color: 'var(--accent)',
+                                        background: 'var(--accent-glow)', // New var
+                                        padding: '2px 6px',
+                                        borderRadius: '6px'
+                                    }}>
+                                        {asset.quantity >= 1000000
+                                            ? (asset.quantity / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'
+                                            : asset.quantity >= 1000
                                                 ? (asset.quantity / 1000).toFixed(1).replace(/\.0$/, '') + 'K'
-                                                : asset.quantity.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                                        </span>
-                                    )}
+                                                : asset.quantity.toLocaleString('en-US', { maximumFractionDigits: 1 })}
+                                    </span>
                                 </div>
                             </>
                         </div>
                     </div>
                 );
                 break;
-            case 'TICKER':
-                cellContent = <div style={{ fontSize: fontSizeMain, fontWeight: 600 }}>{asset.symbol}</div>;
-                break;
-            case 'EXCHANGE':
-                cellContent = <div style={{ fontSize: fontSizeSub, opacity: 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{asset.exchange || '-'}</div>;
-                break;
-            case 'CURRENCY':
-                cellContent = <div style={{ fontSize: fontSizeSub, opacity: 0.6 }}>{asset.currency || '-'}</div>;
-                break;
             case 'PRICE':
-                cellContent = (
-                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%' }}>
-                        <span style={{ fontSize: fontSizeMain, fontWeight: 500, opacity: 0.9 }}>{nativeSymbol}{fmt(nativePrice)}</span>
-                        <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>{nativeSymbol}{fmt(asset.buyPrice)}</span>
-                    </div>
-                );
+                {
+                    const dateStr = asset.updatedAt
+                        ? new Date(asset.updatedAt).toLocaleString('tr-TR', {
+                            year: 'numeric', month: '2-digit', day: '2-digit',
+                            hour: '2-digit', minute: '2-digit'
+                        })
+                        : null;
+
+                    if (asset.type === 'CASH') {
+                        // CASH always shows "-" for price
+                        cellContent = (
+                            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%', alignItems: 'flex-end', justifyContent: 'flex-start', height: '100%', gap: '4px' }}>
+                                <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-muted)', lineHeight: '1.2' }}>-</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>-</span>
+                            </div>
+                        );
+                    } else {
+                        // Show in native currency
+                        cellContent = (
+                            <div suppressHydrationWarning title={dateStr ? `Closing Price: ${dateStr}` : 'No market data available'} style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%', fontVariantNumeric: 'tabular-nums', cursor: 'help', alignItems: 'flex-end', justifyContent: 'flex-start', height: '100%', gap: '4px' }}>
+                                <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: '1.2' }}>{nativeSymbol}{fmt(nativePrice)}</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{nativeSymbol}{fmt(asset.buyPrice)}</span>
+                            </div>
+                        );
+                    }
+                }
                 break;
+
             case 'PRICE_EUR':
-                cellContent = (
-                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%' }}>
-                        <span style={{ fontSize: fontSizeMain, fontWeight: 500, opacity: 0.9 }}>{globalSymbol}{fmt(globalPrice)}</span>
-                        <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>{globalSymbol}{fmt(globalAvgPrice)}</span>
-                    </div>
-                );
+                {
+                    const dateStr = asset.updatedAt
+                        ? new Date(asset.updatedAt).toLocaleString('tr-TR', {
+                            year: 'numeric', month: '2-digit', day: '2-digit',
+                            hour: '2-digit', minute: '2-digit'
+                        })
+                        : null;
+
+                    // ALWAYS show converted price in global currency
+                    if (asset.type === 'CASH') {
+                        // CASH always shows "-" for price
+                        cellContent = (
+                            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%', alignItems: 'flex-end', justifyContent: 'flex-start', height: '100%', gap: '4px' }}>
+                                <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-muted)', lineHeight: '1.2' }}>-</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>-</span>
+                            </div>
+                        );
+                    } else {
+                        cellContent = (
+                            <div suppressHydrationWarning title={dateStr ? `Closing Price: ${dateStr}` : 'No market data available'} style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%', fontVariantNumeric: 'tabular-nums', cursor: 'help', alignItems: 'flex-end', justifyContent: 'flex-start', height: '100%', gap: '4px' }}>
+                                <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: '1.2' }}>{globalSymbol}{fmt(globalPrice)}</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{globalSymbol}{fmt(globalAvgPrice)}</span>
+                            </div>
+                        );
+                    }
+                }
                 break;
             case 'VALUE':
-                cellContent = (
-                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%' }}>
-                        <span style={{ fontSize: fontSizeMain, fontWeight: 700, color: 'var(--text-primary)' }}>{nativeSymbol}{fmt(nativeTotalValue, 0, 0)}</span>
-                        <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>{nativeSymbol}{fmt(nativeCostBasis, 0, 0)}</span>
-                    </div>
-                );
-                break;
-            case 'VALUE_EUR':
-                {
+                // SYSTEMATIC FIX: Only show value if asset currency differs from global currency
+                // If same currency, it will be shown in VALUE_EUR column to avoid duplication
+                if (asset.currency === globalCurrency) {
+                    // Same currency - show in VALUE_EUR column only
                     cellContent = (
-                        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%' }}>
-                            <span style={{ fontSize: fontSizeMain, fontWeight: 700, color: 'var(--text-primary)' }}>{globalSymbol}{fmt(globalTotalValue, 0, 0)}</span>
-                            <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>{globalSymbol}{fmt(globalCostBasis, 0, 0)}</span>
+                        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%', fontVariantNumeric: 'tabular-nums', alignItems: 'flex-end', justifyContent: 'flex-start', height: '100%', gap: '4px' }}>
+                            <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-muted)', lineHeight: '1.2', opacity: 0.4 }}>-</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', opacity: 0.4 }}>-</span>
+                        </div>
+                    );
+                } else if (asset.type === 'CASH') {
+                    // Different currency CASH - show in native currency
+                    cellContent = (
+                        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%', fontVariantNumeric: 'tabular-nums', alignItems: 'flex-end', justifyContent: 'flex-start', height: '100%', gap: '4px' }}>
+                            <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: '1.2' }}>{nativeSymbol}{fmt(asset.quantity, 0, 0)}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{nativeSymbol}{fmt(asset.quantity, 0, 0)}</span>
+                        </div>
+                    );
+                } else {
+                    // Different currency asset - show in native currency
+                    cellContent = (
+                        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%', fontVariantNumeric: 'tabular-nums', alignItems: 'flex-end', justifyContent: 'flex-start', height: '100%', gap: '4px' }}>
+                            <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: '1.2' }}>{nativeSymbol}{fmt(nativeTotalValue, 0, 0)}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{nativeSymbol}{fmt(nativeCostBasis, 0, 0)}</span>
                         </div>
                     );
                 }
                 break;
-            case 'PL':
-                cellContent = (
-                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', width: '100%', position: 'relative' }}>
-                        <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'flex-end'
-                        }}>
-                            <span style={{ fontSize: fontSizeMain, fontWeight: 700, color: isPeriodProfit ? '#10b981' : '#ef4444' }}>
-                                {isPeriodProfit ? '▲' : '▼'}{Math.round(Math.abs(periodProfitPct))}%
-                            </span>
-                            <span style={{ fontSize: '0.6rem', fontWeight: 600, color: isPeriodProfit ? '#10b981' : '#ef4444', opacity: 0.8 }}>
-                                {isPeriodProfit ? '+' : ''}{globalSymbol}{fmt(periodProfitVal, 0, 0)}
-                            </span>
+
+            case 'VALUE_EUR':
+                // ALWAYS show EUR values regardless of toggle
+                if (asset.type === 'CASH') {
+                    const displayCashAmount = asset.quantity * globalRate;
+                    // For CASH held in EUR, globalRate is 1 (if target EUR), so it works.
+                    // Ideally check target currency, but globalRate is to globalCurrency (EUR).
+
+                    cellContent = (
+                        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%', fontVariantNumeric: 'tabular-nums', alignItems: 'flex-end', justifyContent: 'flex-start', height: '100%', gap: '4px' }}>
+                            <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: '1.2' }}>{globalSymbol}{fmt(displayCashAmount, 0, 0)}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{globalSymbol}{fmt(displayCashAmount, 0, 0)}</span>
                         </div>
-                    </div>
-                );
+                    );
+                } else {
+                    cellContent = (
+                        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%', fontVariantNumeric: 'tabular-nums', alignItems: 'flex-end', justifyContent: 'flex-start', height: '100%', gap: '4px' }}>
+                            <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: '1.2' }}>{globalSymbol}{fmt(globalTotalValue, 0, 0)}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{globalSymbol}{fmt(globalCostBasis, 0, 0)}</span>
+                        </div>
+                    );
+                }
                 break;
+            // 1D_CHANGE case removed
+
             case 'EARNINGS':
                 cellContent = <div style={{ fontSize: fontSizeSub, opacity: 0.4, textAlign: 'right', width: '100%' }}>-</div>;
                 break;
             case 'PORTFOLIO_NAME':
-                cellContent = (
-                    <span style={{
-                        fontSize: fontSizeMain,
-                        color: 'var(--text-secondary)',
-                        background: 'rgba(0,0,0,0.05)',
-                        padding: '1px 3px',
-                        borderRadius: '2px',
-                        border: '1px solid rgba(0,0,0,0.1)',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        fontWeight: 600
-                    }}>
-                        {asset.customGroup || asset.ownerCode || '-'}
-                    </span>
-                );
+                {
+                    const name = (asset.customGroup || '-').toUpperCase();
+                    const colors = getPortfolioStyle(name);
+
+                    cellContent = (
+                        <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0 0.8rem',
+                            height: '22px',
+                            borderRadius: '9999px',
+                            fontSize: '10px',
+                            fontWeight: 800,
+                            letterSpacing: '0.02em',
+                            background: colors.bg,
+                            color: colors.text,
+                            border: `1px solid ${colors.border}`,
+                            whiteSpace: 'nowrap',
+                            textTransform: 'uppercase',
+                            fontFamily: 'var(--font-mono)'
+                        }}>
+                            {name}
+                        </span>
+                    );
+                }
                 break;
         }
 
-        return (
-            <div key={colId} style={{
-                ...commonCellStyles,
-                justifyContent: isNumeric ? 'flex-end' : 'flex-start',
-            }}>
-                {cellContent}
-            </div>
-        );
-    }
+        return cellContent;
+    };
 
     return (
         <div
             className="asset-table-grid row-container"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            onClick={() => isGlobalEditMode && onAssetClick?.(asset)} // Handle click in global edit mode
+            onClick={() => isGlobalEditMode && onAssetClick?.(asset)}
             style={{
                 display: 'grid',
                 gridTemplateColumns: gridTemplate,
-                minHeight: isUltraHighDensity ? '1.6rem' : isHighDensity ? '1.9rem' : '3rem',
+                minHeight: isUltraHighDensity ? '3rem' : isHighDensity ? '4rem' : '4.8rem',
                 borderBottom: 'none',
+                padding: '0',
+                margin: '0',
                 position: 'relative',
-                cursor: isGlobalEditMode ? 'pointer' : 'default', // Cursor change
-                opacity: isGlobalEditMode && isHovered ? 1 : 1, // Reset opacity
-                background: isGlobalEditMode && isHovered ? 'rgba(99, 102, 241, 0.1)' : (isHovered // Highlight background
-                    ? 'rgba(0,0,0,0.02)'
-                    : (rowIndex !== undefined && rowIndex % 2 === 1)
-                        ? 'rgba(0,0,0,0.01)'
-                        : 'transparent'),
-                border: isGlobalEditMode && isHovered ? '1px solid var(--accent)' : '1px solid transparent', // Add border highlight
-                borderRadius: '6px', // Rounded for highlight
-                zIndex: isGlobalEditMode && isHovered ? 10 : 1,
-                transform: isGlobalEditMode && isHovered ? 'scale(1.01)' : 'scale(1)', // Subtle pop
-                transition: 'all 0.2s'
+                cursor: isGlobalEditMode ? 'pointer' : 'default',
+                background: isHovered ? 'rgba(99, 102, 241, 0.08)' : 'transparent', // Unified Row Hover
+                borderRadius: '12px', // Modern Card Look
+                transition: 'all 0.2s ease',
+                width: '100%',
+                // alignItems: 'center' removed to allow top-align
+                gap: '0'
             }}
         >
-            {columns.map(colId => {
-                const isNumeric = ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL', 'EARNINGS'].includes(colId);
-                return (
-                    <div key={colId} style={{
-                        ...commonCellStyles,
-                        justifyContent: isNumeric ? 'flex-end' : 'flex-start',
-                    }}>
-                        {/* Shifting Content Wrapper - Removed Shift Logic for Edit Button */}
-                        <div style={{
-                            width: '100%',
-                            height: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
+            {
+                columns.map(colId => {
+                    const isNumeric = ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL', 'EARNINGS'].includes(colId);
+                    const cellContent = renderCell(colId);
+
+                    return (
+                        <div key={colId} style={{
+                            ...commonCellStyles,
+                            padding: cellPadding,
                             justifyContent: isNumeric ? 'flex-end' : 'flex-start',
-                            flexShrink: 0
+                            alignItems: colId === 'PORTFOLIO_NAME' ? 'center' : 'flex-start',
+                            background: 'transparent', // Handled by row
+                            // transition removed from cell
                         }}>
-                            {/* Extract content from renderCell if it returns a wrapper, or use directly if it returns content */}
-                            {renderCell(colId)}
+                            {cellContent}
                         </div>
-                    </div>
-                );
-            })}
-        </div>
+                    );
+                })
+            }
+
+            {/* Actions Column (Sticky - Seamless) */}
+            <div style={{
+                ...commonCellStyles,
+                justifyContent: 'center',
+                position: 'sticky',
+                right: 0,
+                background: 'transparent',
+                zIndex: 5,
+                width: '40px',
+                padding: 0,
+                alignItems: 'center' // Center vertically
+            }}>
+                <button
+                    onClick={(e) => { e.stopPropagation(); onAssetClick?.(asset); }}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        padding: '6px',
+                        cursor: 'pointer',
+                        color: isHovered ? 'var(--text-primary)' : 'var(--text-muted)',
+                        opacity: isHovered ? 1 : 0,
+                        transition: 'opacity 0.2s',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}
+                    title="Edit Asset"
+                >
+                    <MoreVertical size={20} />
+                </button>
+            </div>
+        </div >
     );
 }
 
 // Reusable Asset Card Component
-function AssetCard({ asset, positionsViewCurrency, totalPortfolioValueEUR, isBlurred, isOwner, onDelete, timeFactor, timePeriod, rank, exchangeRates, isGlobalEditMode, onAssetClick }: {
+function AssetCard({ asset, positionsViewCurrency, totalPortfolioValueEUR, isBlurred, isOwner, onDelete, timeFactor, timePeriod, exchangeRates, isGlobalEditMode, onAssetClick }: {
     asset: AssetDisplay,
     positionsViewCurrency: string,
     totalPortfolioValueEUR: number,
@@ -600,200 +988,119 @@ function AssetCard({ asset, positionsViewCurrency, totalPortfolioValueEUR, isBlu
     onDelete: (id: string) => void,
     timeFactor: number,
     timePeriod: string,
-    rank?: number,
     exchangeRates?: Record<string, number>,
     isGlobalEditMode?: boolean,
     onAssetClick?: (asset: AssetDisplay) => void
 }) {
     const [isHovered, setIsHovered] = useState(false);
-    // Currency Conversion Logic
-    // Base is EUR (asset.totalValueEUR) or Native (for Original)
 
     let displayCurrency = positionsViewCurrency === 'ORG' ? asset.currency : positionsViewCurrency;
     const currencySymbol = getCurrencySymbol(displayCurrency);
 
-    // Calculate Values in Display Currency
     let totalVal = 0;
     let totalCost = 0;
     let unitPrice = 0;
     let unitCost = 0;
 
     if (positionsViewCurrency === 'ORG') {
-        totalVal = asset.currentPrice * asset.quantity;
+        totalVal = asset.previousClose * asset.quantity;
         totalCost = asset.buyPrice * asset.quantity;
-        unitPrice = asset.currentPrice;
+        unitPrice = asset.previousClose;
         unitCost = asset.buyPrice;
     } else {
         const targetRate = getRate('EUR', displayCurrency, exchangeRates);
         totalVal = asset.totalValueEUR * targetRate;
         const costEUR = asset.totalValueEUR / (1 + asset.plPercentage / 100);
         totalCost = costEUR * targetRate;
-
-        // Unit values in target currency
         unitPrice = (asset.totalValueEUR / asset.quantity) * targetRate;
         unitCost = (costEUR / asset.quantity) * targetRate;
     }
 
     const profit = totalVal - totalCost;
     const profitPct = asset.plPercentage;
-
-    // Weight Calculation
     const weight = totalPortfolioValueEUR > 0 ? (asset.totalValueEUR / totalPortfolioValueEUR) * 100 : 0;
 
-    let periodProfitVal = profit * timeFactor;
-    let periodProfitPctVal = profitPct * timeFactor;
+    let periodProfitVal = profit;
+    let periodProfitPctVal = profitPct;
 
-    if (timePeriod === '1D') {
-        periodProfitPctVal = asset.dailyChangePercentage || 0;
-        const conversionRate = getRate('EUR', displayCurrency, exchangeRates);
-        periodProfitVal = (asset.dailyChange || 0) * conversionRate;
-    }
+    // Simplified: Always use total profit
+    // Removed 1D/1W/1M/YTD/1Y logic blocks
 
-    const logoUrl = getLogoUrl(asset.symbol, asset.type, asset.exchange, asset.country);
+    const isPositive = periodProfitVal >= 0;
+    // Use logoUrl from database if available, otherwise generate it
+    const logoUrl = (asset as any).logoUrl || getLogoUrl(asset.symbol, asset.type, asset.exchange, asset.country);
     const companyName = getCompanyName(asset.symbol, asset.type, asset.name);
+    const originalName = (asset as any).originalName;
     const fmt = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     return (
         <div
-            className="glass-panel"
+            className="neo-card"
             onClick={() => isGlobalEditMode && onAssetClick?.(asset)}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             style={{
-                padding: '0', // Full bleed internal padding handled by sections
-                borderRadius: '0.6rem',
+                padding: '1rem',
                 display: 'flex',
                 flexDirection: 'column',
-                position: 'relative',
+                gap: '1rem',
                 transition: 'all 0.3s ease',
-                border: `1px solid ${ASSET_COLORS[asset.type] || ASSET_COLORS['DEFAULT']}`,
-                // Highlight if Editing (Amber)
-                borderColor: isGlobalEditMode ? '#f59e0b' : (ASSET_COLORS[asset.type] || ASSET_COLORS['DEFAULT']) + '60',
                 filter: isBlurred ? 'blur(8px)' : 'none',
-                overflow: 'hidden',
                 height: '100%',
-                boxShadow: isGlobalEditMode ? (isHovered ? '0 0 20px rgba(99, 102, 241, 0.4)' : '0 0 15px rgba(99, 102, 241, 0.1)') : 'none',
                 cursor: isGlobalEditMode ? 'pointer' : 'default',
-                transform: isGlobalEditMode && isHovered ? 'scale(1.02)' : 'scale(1)',
-                borderColor: isGlobalEditMode ? (isHovered ? 'var(--accent)' : 'var(--glass-border)') : (ASSET_COLORS[asset.type] || ASSET_COLORS['DEFAULT']) + '60',
+                transform: isGlobalEditMode && isHovered ? 'translateY(-4px)' : 'none',
+                border: isGlobalEditMode ? (isHovered ? '2px solid var(--accent)' : '2px solid transparent') : '1px solid var(--border)',
+                boxShadow: isHovered ? 'var(--shadow-md)' : 'var(--shadow-sm)'
             }}
         >
-            {/* SECTION 1: HEADER (Logo + Name/Settings) */}
-            <div style={{ display: 'flex', padding: '0.6rem', borderBottom: '1px solid var(--glass-border)', height: '5.5rem', position: 'relative' }}>
-                <div style={{ position: 'absolute', top: '0.5rem', left: '0.5rem', zIndex: 1 }}>
-                    <MarketStatusDot state={asset.marketState} />
-                </div>
-                {/* Left: Logo */}
-                <div style={{ marginRight: '1rem' }}>
-                    <AssetLogo symbol={asset.symbol} type={asset.type} name={companyName} logoUrl={logoUrl} />
+            {/* Header: Logo & Identity */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <AssetLogo symbol={asset.symbol} type={asset.type} exchange={asset.exchange} name={companyName} logoUrl={logoUrl} size="2.5rem" />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '0.1rem' }}>
+                        {companyName}
+                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>{asset.symbol}</span>
+                    </div>
                 </div>
 
-                {/* Right: Info */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        {/* Fixed Height Title Container for Alignment */}
-                        <div style={{ fontSize: '1rem', fontWeight: 800, lineHeight: 1.2, color: 'var(--text-primary)', minHeight: '2.4em', display: 'flex', alignItems: 'center' }}>
-                            {companyName}
-                        </div>
-                    </div>
-                    {/* Subtitle / Asset Info */}
-                    <div style={{ fontSize: '0.75rem', fontWeight: 600, marginTop: '0.2rem', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '0.3rem', whiteSpace: 'nowrap' }}>
-                        {asset.type === 'CASH' ? (
-                            <>
-                                <span style={{ color: 'var(--text-secondary)' }}>Cash</span>
-                                <span style={{ opacity: 0.3 }}>|</span>
-                                <span style={{ opacity: 0.6 }}>{asset.quantity.toLocaleString('de-DE')} {asset.symbol}</span>
-                            </>
-                        ) : (
-                            <>
-                                <span style={{ color: 'var(--text-secondary)' }}>{asset.symbol}</span>
-                                <span style={{ opacity: 0.3 }}>|</span>
-                                <span style={{ opacity: 0.6 }}>{asset.quantity.toLocaleString('de-DE')} {asset.quantity === 1 ? 'Share' : 'Shares'}</span>
-                            </>
-                        )}
-                    </div>
+            </div>
+
+            {/* Financials Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <div style={{ background: 'var(--bg-secondary)', padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Value</p>
+                    <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>{currencySymbol}{fmt(totalVal)}</p>
+                </div>
+                <div style={{ background: 'var(--bg-secondary)', padding: '0.6rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Portfolio</p>
+                    <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)' }}>{fmt(weight)}%</p>
                 </div>
             </div>
 
-            {/* SECTION 2: BODY (FINANCIALS) */}
-            <div style={{ padding: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-
-                {/* NORMAL VIEW MODE */}
-                <>
-                    {/* Row 1: Price & Cost */}
-                    <div style={{
-                        background: 'var(--glass-bg)',
-                        borderRadius: '0.4rem',
-                        padding: '0.4rem 0.5rem',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-end',
-                        margin: '0 -0.2rem'
-                    }}>
-                        <div>
-                            <div style={{ fontSize: '0.6rem', opacity: 0.5, marginBottom: '0.1rem' }}>Cost</div>
-                            <div style={{ fontWeight: 700, opacity: 0.9, whiteSpace: 'nowrap' }}>
-                                {currencySymbol} {asset.type === 'CASH' ? fmt(totalCost) : fmt(unitCost)}
-                            </div>
-                        </div>
-                        <div style={{ textAlign: 'center', opacity: 0.1, fontSize: '0.7rem' }}>|</div>
-                        <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '0.6rem', opacity: 0.5, marginBottom: '0.1rem' }}>Price</div>
-                            <div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
-                                {currencySymbol} {asset.type === 'CASH' ? fmt(totalVal) : fmt(unitPrice)}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Sub-Section B: Total Data */}
-                    <div style={{
-                        background: 'var(--glass-bg)',
-                        borderRadius: '0.4rem',
-                        padding: '0.4rem 0.5rem',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-end',
-                        margin: '0 -0.2rem'
-                    }}>
-                        <div>
-                            <div style={{ fontSize: '0.6rem', opacity: 0.5, marginBottom: '0.1rem' }}>Total Cost</div>
-                            <div style={{ fontSize: '0.9rem', fontWeight: 800, opacity: 0.9, whiteSpace: 'nowrap' }}>{currencySymbol} {fmt(totalCost)}</div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '0.6rem', opacity: 0.5, marginBottom: '0.1rem' }}>Total Value</div>
-                            <div style={{ fontSize: '0.9rem', fontWeight: 800, whiteSpace: 'nowrap' }}>{currencySymbol} {fmt(totalVal)}</div>
-                        </div>
-                    </div>
-
-                    {/* Sub-Section C: Footer (Weight | P/L) */}
-                    <div style={{
-                        background: periodProfitVal >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                        borderRadius: '0.4rem',
-                        padding: '0.4rem 0.6rem',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        border: periodProfitVal >= 0 ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(239, 68, 68, 0.2)',
-                        marginTop: 'auto'
-                    }}>
-                        {/* Weight Column */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                            <div style={{ fontSize: '0.6rem', opacity: 0.6, fontWeight: 600 }}>Weight</div>
-                            <div style={{ fontSize: '0.95rem', fontWeight: 800, opacity: 0.9 }}>{fmt(weight)}%</div>
-                        </div>
-
-                        {/* Profit Column (Stacked) */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: periodProfitVal >= 0 ? '#10b981' : '#ef4444' }}>
-                                <span style={{ fontSize: '0.7rem', marginRight: '0.1rem' }}>{periodProfitVal >= 0 ? '▲' : '▼'}</span>
-                                {Math.round(Math.abs(periodProfitPctVal))}%
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: periodProfitVal >= 0 ? '#10b981' : '#ef4444', fontWeight: 600, opacity: 0.9 }}>
-                                {periodProfitVal >= 0 ? '+' : ''}{currencySymbol} {fmt(Math.abs(periodProfitVal))}
-                            </div>
-                        </div>
-                    </div>
-                </>
+            {/* Performance Footer */}
+            <div style={{
+                marginTop: 'auto',
+                background: isPositive ? 'var(--success-bg)' : 'var(--danger-bg)',
+                padding: '0.75rem',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                border: `1px solid ${isPositive ? 'var(--success-border)' : 'var(--danger-border)'}`
+            }}>
+                <div>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 800, color: isPositive ? 'var(--success)' : 'var(--danger)', textTransform: 'uppercase', opacity: 0.8 }}>Performance</p>
+                    <p style={{ fontSize: '1rem', fontWeight: 800, color: isPositive ? 'var(--success)' : 'var(--danger)' }}>
+                        {isPositive ? '+' : ''}{currencySymbol}{fmt(Math.abs(periodProfitVal))}
+                    </p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                    <p style={{ fontSize: '1.1rem', fontWeight: 900, color: isPositive ? 'var(--success)' : 'var(--danger)' }}>
+                        {isPositive ? '▲' : '▼'}{Math.abs(periodProfitPctVal).toFixed(1)}%
+                    </p>
+                </div>
             </div>
         </div>
     );
@@ -842,6 +1149,8 @@ const AssetGroupHeader = ({
         return <Layers size={16} />;
     };
 
+    const cellPadding = '0 0.5rem';
+
     return (
         <div
             {...dragHandleProps}
@@ -855,20 +1164,19 @@ const AssetGroupHeader = ({
                 gridTemplateColumns: gridTemplate || '1fr',
                 alignItems: 'center',
                 padding: '0',
-                background: 'linear-gradient(90deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.15))',
+                background: 'var(--bg-secondary)',
                 borderRadius: '0',
-                borderBottom: 'none',
+                borderBottom: '1px solid var(--border)',
                 marginBottom: '0',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 userSelect: 'none',
-                minHeight: '2.8rem'
+                minHeight: '3.2rem'
             }}
         >
             {/* Left Side: Group Info */}
             {columns?.map((colId, idx) => {
                 const isFirst = idx === 0;
                 const isName = colId === 'NAME';
-                const isLast = idx === columns.length - 1;
 
                 return (
                     <div key={colId} style={{
@@ -876,42 +1184,43 @@ const AssetGroupHeader = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: isFirst || isName ? 'flex-start' : 'center',
-                        padding: '0 0.4rem',
-                        borderRight: 'none',
+                        padding: cellPadding,
                         overflow: 'hidden'
                     }}>
                         {isFirst && (
                             <div style={{
-                                color: isExpanded ? 'var(--text-primary)' : 'var(--text-muted)',
+                                color: isExpanded ? 'var(--accent)' : 'var(--text-muted)',
                                 transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
-                                transition: 'transform 0.3s ease'
+                                transition: 'transform 0.3s ease',
+                                paddingLeft: '0.4rem'
                             }}>
                                 <ChevronDown size={14} />
                             </div>
                         )}
                         {isName && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: isFirst ? '0.4rem' : '0' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: isFirst ? '0.4rem' : '0' }}>
                                 <div style={{
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    width: '1.4rem', height: '1.4rem',
-                                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                                    borderRadius: '50%',
-                                    color: '#fff'
+                                    width: '1.6rem', height: '1.6rem',
+                                    background: 'var(--accent)',
+                                    borderRadius: '8px',
+                                    color: '#fff',
+                                    boxShadow: '0 4px 6px rgba(79, 70, 229, 0.2)'
                                 }}>
                                     {getGroupIcon(type)}
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-                                    <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>{type}</span>
-                                    <span style={{ fontSize: '0.6rem', opacity: 0.6 }}>{count} Assets</span>
+                                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>{type}</span>
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>{count} Assets</span>
                                 </div>
                             </div>
                         )}
                         {idx === columns.length - 1 && (
-                            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                <div style={{ fontSize: '0.65rem', fontWeight: 700, background: '#6366f1', color: '#fff', padding: '0.1rem 0.4rem', borderRadius: '1rem' }}>
+                            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem', paddingRight: '1rem' }}>
+                                <div style={{ fontSize: '0.7rem', fontWeight: 900, background: 'var(--surface)', color: 'var(--accent)', padding: '0.2rem 0.5rem', borderRadius: '6px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
                                     {percentage.toFixed(0)}%
                                 </div>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>{currencySymbol}{fmt(totalEUR * rate)}</span>
+                                <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>{currencySymbol}{fmt(totalEUR * rate)}</span>
                             </div>
                         )}
                     </div>
@@ -1009,7 +1318,7 @@ function AssetGroup({
                 overflow: 'hidden',
                 transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                 paddingLeft: '0', // No Indent
-                gap: '0' // No Gap for continuous dividers
+                gap: '8px' // Increased row gap
             }}>
                 <SortableContext items={(assets || []).map(a => a.id)} strategy={verticalListSortingStrategy}>
                     {(assets || []).map(asset => (
@@ -1023,6 +1332,7 @@ function AssetGroup({
                                 timeFactor={timeFactor}
                                 columns={columns}
                                 timePeriod={timePeriod}
+                                exchangeRates={exchangeRates}
                                 isGlobalEditMode={isGlobalEditMode}
                                 onAssetClick={onAssetClick}
                             />
@@ -1147,7 +1457,12 @@ function AssetGroupGrid({
 
 
 
-export default function Dashboard({ username, isOwner, totalValueEUR, assets, isBlurred, showChangelog = false, exchangeRates }: DashboardProps) {
+export default function Dashboard({ username, isOwner, totalValueEUR, assets, goals, isBlurred, showChangelog = false, exchangeRates, positionsViewCurrency: positionsViewCurrencyProp, preferences }: DashboardProps) {
+    const { t } = useLanguage();
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+    }, []);
     const router = useRouter();
     // Initialize items with default sort (Weight Descending)
     // Initialize items with default sort (Rank then Value)
@@ -1157,6 +1472,18 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
     const [isGroupingEnabled, setIsGroupingEnabled] = useState(false);
     const viewMode = "list";
     const [gridColumns, setGridColumns] = useState<1 | 2>(2);
+
+    const translatedColumns = useMemo(() => {
+        return ALL_COLUMNS.map(col => {
+            let label = col.label;
+            if (col.id === 'NAME') label = t('name_col');
+            else if (col.id === 'PRICE') label = t('price_col');
+            else if (col.id === 'VALUE') label = t('value_col');
+            else if (col.id === 'PL') label = t('pl_col');
+            else if (col.id === 'PORTFOLIO_NAME') label = t('portfolio_cat');
+            return { ...col, label };
+        });
+    }, [t]);
     const [timePeriod, setTimePeriod] = useState("ALL");
 
     // Global Edit Mode State
@@ -1166,62 +1493,72 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
     // DEBUG: Deployment Check
     const [isTimeSelectorHovered, setIsTimeSelectorHovered] = useState(false);
     const [isGroupingSelectorHovered, setIsGroupingSelectorHovered] = useState(false);
-    const [isViewSelectorHovered, setIsViewSelectorHovered] = useState(false);
+    const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
+    const [periodDropdownPos, setPeriodDropdownPos] = useState({ top: 0, left: 0 });
 
     // Delete Confirmation State
     const [assetToDelete, setAssetToDelete] = useState<AssetDisplay | null>(null);
 
     // Column State
-    // Fix: Initialize with default columns to match Server Side Rendering
+    // Fix: Initialize with preferences if available, else Defaults
     const [activeColumns, setActiveColumns] = useState<ColumnId[]>(
-        ALL_COLUMNS.filter(c => c.isDefault).map(c => c.id)
+        (preferences?.columns && Array.isArray(preferences.columns))
+            ? preferences.columns
+            : translatedColumns.filter(c => c.isDefault).map(c => c.id)
     );
     const [isAdjustListOpen, setIsAdjustListOpen] = useState(false);
+    const [filterPage, setFilterPage] = useState(0); // 0 = Default, 1 = Scrolled Right
+    const [searchQuery, setSearchQuery] = useState("");
 
     // Persist Columns & Load from LocalStorage on Mount
     useEffect(() => {
-        // Load from LocalStorage
-        const saved = localStorage.getItem('user_columns');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed)) {
-                    // Filter out any columns that no longer exist in ALL_COLUMNS
-                    const validColumns = parsed.filter((id: string) => ALL_COLUMNS.some(c => c.id === id));
-                    if (validColumns.length > 0) {
-                        setActiveColumns(validColumns);
+        // Load from LocalStorage ONLY if no preferences from DB
+        if (!preferences?.columns) {
+            const saved = localStorage.getItem('user_columns');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed)) {
+                        const validColumns = parsed.filter((id: string) => translatedColumns.some(c => c.id === id));
+                        if (validColumns.length > 0) {
+                            setActiveColumns(validColumns);
+                        }
                     }
+                } catch (e) {
+                    console.error("Failed to parse user columns", e);
                 }
-            } catch (e) {
-                console.error("Failed to parse user columns", e);
             }
         }
-    }, []);
+    }, [preferences?.columns]);
 
     useEffect(() => {
-        // Save to LocalStorage
+        // Save to LocalStorage AND Database
         if (activeColumns.length > 0) {
             localStorage.setItem('user_columns', JSON.stringify(activeColumns));
+
+            // Debounce DB update to avoid spamming on rapid changes (if needed, but for now direct call on settling state is fine)
+            // Using a timeout to debounce effectively
+            const timer = setTimeout(() => {
+                updateUserPreferences({ columns: activeColumns }).catch(e => console.error("Failed to save preferences", e));
+            }, 1000);
+            return () => clearTimeout(timer);
         }
     }, [activeColumns]);
 
     const { currency: globalCurrency } = useCurrency();
-    const positionsViewCurrency = globalCurrency;
+    const positionsViewCurrency = positionsViewCurrencyProp || globalCurrency;
 
     // Update items when assets prop changes (initial load or refetch)
     useEffect(() => {
-        // Ensure we preserve order if rank is present, otherwise value sort
-        const sorted = [...assets].sort((a, b) => {
-            if ((a.rank ?? 0) !== (b.rank ?? 0)) {
-                return (a.rank ?? 0) - (b.rank ?? 0);
-            }
-            return b.totalValueEUR - a.totalValueEUR;
-        });
-        setItems(sorted);
+        // Assets are already sorted by sortOrder in the server query
+        // Don't re-sort here to preserve user's custom order
+        setItems(assets);
     }, [assets]);
 
     // Force List View on Mobile (Redundant as View Mode is hardcoded to List)
     // useEffect removed
+
+    const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
     const sensors = useSensors(
         useSensor(MouseSensor, {
@@ -1250,6 +1587,14 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
     const [platformFilter, setPlatformFilter] = useState<string | null>(null);
     const [customGroupFilter, setCustomGroupFilter] = useState<string | null>(null);
 
+    // Filter UI States
+
+    const [isCustomizeModalOpen, setIsCustomizeModalOpen] = useState(false);
+    const [filterOrder, setFilterOrder] = useState(['customGroup', 'type', 'exchange', 'currency', 'country', 'sector', 'platform']);
+    const [selectedBenchmarks, setSelectedBenchmarks] = useState<string[]>(['NDX', 'SPX', 'BTC']);
+    const [isPortfolioVisible, setIsPortfolioVisible] = useState(true);
+    const [isCompareOpen, setIsCompareOpen] = useState(false);
+
     // Filter assets
     const filteredAssets = useMemo(() => {
         return items.filter(asset => {
@@ -1274,11 +1619,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
         // If `sortConfig` is meant to be a state, it should be declared.
         // For now, I'll use a placeholder sort that keeps the order from `filteredAssets`.
         return [...filteredAssets].sort((a, b) => {
-            // Primary Sort: Rank (Ascending)
-            if ((a.rank ?? 0) !== (b.rank ?? 0)) {
-                return (a.rank ?? 0) - (b.rank ?? 0);
-            }
-            // Secondary Sort: Value (Descending)
+            // Sort by Value (Descending) - rank field removed
             return b.totalValueEUR - a.totalValueEUR;
         });
     }, [filteredAssets]); // Add sortConfig to dependencies if it becomes a state
@@ -1350,31 +1691,29 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                 return;
             }
 
-            const oldIndex = items.findIndex((item) => item.id === active.id);
-            const newIndex = items.findIndex((item) => item.id === over.id);
+            // Asset reordering: Save new positions to database
+            const activeAssetId = active.id.toString();
+            const overAssetId = over.id.toString();
+
+            // Find the assets in the current list (use items state, not props)
+            const oldIndex = items.findIndex(a => a.id === activeAssetId);
+            const newIndex = items.findIndex(a => a.id === overAssetId);
 
             if (oldIndex !== -1 && newIndex !== -1) {
-                const movedItems = arrayMove(items, oldIndex, newIndex);
+                // Reorder the assets array
+                const reorderedAssets = arrayMove(items, oldIndex, newIndex);
 
-                // OPTIMISTIC UPDATE: Update the rank property immediately so sortedAssets doesn't revert order
-                const newItems = movedItems.map((item, index) => ({
-                    ...item,
-                    rank: index
-                }));
+                // Update local state immediately for smooth UX
+                setItems(reorderedAssets);
 
-                setItems(newItems);
+                // Extract the new order of IDs
+                const newOrder = reorderedAssets.map(a => a.id);
 
-                // Update Server
-                const updates = newItems.map((item, index) => ({
-                    id: item.id,
-                    rank: index
-                }));
-                reorderAssets(updates).then(res => {
-                    console.log("[Reorder] Response:", res);
-                    if (res && res.error) {
-                        console.error("[Reorder] Error from server:", res.error);
-                        alert(`Order save failed: ${res.error}. Please refresh.`);
-                    }
+                // Save to database in background (no page refresh)
+                reorderAssets(newOrder).catch(err => {
+                    console.error('Failed to save asset order:', err);
+                    // Revert on error
+                    setItems(items);
                 });
             }
         }
@@ -1436,16 +1775,37 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
     const platforms = Array.from(new Set(availableAssets.map(a => a.platform).filter(Boolean))) as string[];
     const customGroups = Array.from(new Set(availableAssets.map(a => a.customGroup || 'Main Portfolio'))) as string[];
 
-    // Filter categories
-    const filterCategories = [
-        { id: 'customGroup', label: 'Portfolio', items: customGroups, active: customGroupFilter, setter: setCustomGroupFilter, icon: '📁' },
-        { id: 'type', label: 'Type', items: types, active: typeFilter, setter: setTypeFilter, icon: '🏷️' },
-        { id: 'exchange', label: 'Exchange', items: exchanges, active: exchangeFilter, setter: setExchangeFilter, icon: '📍' },
-        { id: 'currency', label: 'Currency', items: currencies, active: currencyFilter, setter: setCurrencyFilter, icon: '💱' },
-        { id: 'country', label: 'Country', items: countries, active: countryFilter, setter: setCountryFilter, icon: '🌍' },
-        { id: 'sector', label: 'Sector', items: sectors, active: sectorFilter, setter: setSectorFilter, icon: '🏢' },
-        { id: 'platform', label: 'Platform', items: platforms, active: platformFilter, setter: setPlatformFilter, icon: '🏦' },
+    // List of all possible filter categories
+    const allCategories = [
+        { id: 'customGroup', label: t('portfolio_cat'), items: customGroups, active: customGroupFilter, setter: setCustomGroupFilter, icon: '📁' },
+        { id: 'type', label: t('type_cat'), items: types, active: typeFilter, setter: setTypeFilter, icon: '🏷️' },
+        { id: 'exchange', label: t('exchange_cat'), items: exchanges, active: exchangeFilter, setter: setExchangeFilter, icon: '📍' },
+        { id: 'currency', label: t('currency_cat'), items: currencies, active: currencyFilter, setter: setCurrencyFilter, icon: '💱' },
+        { id: 'country', label: t('country_cat'), items: countries, active: countryFilter, setter: setCountryFilter, icon: '🌍' },
+        { id: 'sector', label: t('sector_cat'), items: sectors, active: sectorFilter, setter: setSectorFilter, icon: '🏢' },
+        { id: 'platform', label: t('platform_cat'), items: platforms, active: platformFilter, setter: setPlatformFilter, icon: '🏦' },
     ];
+
+    // Sorted filter categories based on user customization
+    const filterCategories = useMemo(() => {
+        return filterOrder
+            .map(id => allCategories.find(c => c.id === id))
+            .filter(Boolean) as typeof allCategories;
+    }, [filterOrder, customGroupFilter, typeFilter, exchangeFilter, currencyFilter, countryFilter, sectorFilter, platformFilter, customGroups, types, exchanges, currencies, countries, sectors, platforms]);
+
+    // Filtered Total Calculation
+    const filteredTotalValueEUR = useMemo(() => {
+        return availableAssets.reduce((sum, asset) => sum + asset.totalValueEUR, 0);
+    }, [availableAssets]);
+
+    const displayCurrencyForTotal = positionsViewCurrency === 'ORG' ? 'EUR' : positionsViewCurrency;
+    const conversionRateForTotal = (displayCurrencyForTotal === 'EUR') ? 1 : (exchangeRates?.[displayCurrencyForTotal] || 1);
+    const filteredTotalConverted = filteredTotalValueEUR * conversionRateForTotal;
+    const filteredTotalPercentage = totalValueEUR > 0 ? (filteredTotalValueEUR / totalValueEUR) * 100 : 0;
+
+    const fmtMinimal = (val: number) =>
+        new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(val || 0);
+
 
     // Close Adjust List on outside click
     // State for dropdown positioning
@@ -1464,18 +1824,26 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
             }
         };
 
-        if (isAdjustListOpen || activeFilterCategory) {
+        if (isAdjustListOpen || activeFilterCategory || isPeriodDropdownOpen) {
             document.addEventListener('mousedown', handleClickOutside);
         }
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isAdjustListOpen, activeFilterCategory]);
+    }, [isAdjustListOpen, activeFilterCategory, isPeriodDropdownOpen]);
 
-    const activeFiltersCount = [typeFilter, exchangeFilter, currencyFilter, countryFilter, sectorFilter, platformFilter].filter(Boolean).length;
+    const activeFiltersCount = [typeFilter, exchangeFilter, currencyFilter, countryFilter, sectorFilter, platformFilter, customGroupFilter].filter(Boolean).length;
 
 
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isBlurredState, setIsBlurredState] = useState(isBlurred);
+
+    // Benchmark & Chart Controls (Lifted State)
+
+
+    const toggleBenchmark = (id: string) => {
+        setSelectedBenchmarks(prev => prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]);
+    };
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
@@ -1504,19 +1872,32 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                 <div className="dashboard-layout-container">
 
                     {/* LEFT COLUMN: Main Content (Filters + Assets) - Flex Grow */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: 0 }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: 0 }}>
+
+                        {/* Portfolio Performance Chart */}
+                        <PortfolioPerformanceChart
+                            username={username}
+                            totalValueEUR={totalValueEUR}
+                            selectedBenchmarks={selectedBenchmarks}
+                            isPortfolioVisible={isPortfolioVisible}
+                            onToggleBenchmark={toggleBenchmark}
+                            onTogglePortfolio={() => setIsPortfolioVisible(!isPortfolioVisible)}
+                            onPeriodChange={(period) => {
+                                // Sync with dashboard time period if needed
+                                console.log('Period changed to:', period);
+                            }}
+                        />
+
 
                         {/* 1. Smart Filter Bar (Maximized Space + Bottom Clear) */}
-                        <div className="glass-panel" style={{
-                            borderRadius: '0.8rem',
+                        <div className="neo-card" style={{
                             padding: '0.6rem 0.8rem',
                             display: 'flex',
-                            flexDirection: 'column', // Stack filters and clear button vertically
-                            gap: '0.5rem',
-                            zIndex: 50,
+                            flexDirection: 'column',
+                            gap: '0.6rem',
+                            zIndex: 60,
                             position: 'relative',
                             width: '100%',
-                            fontFamily: 'inherit'
                         }}>
                             <style jsx>{`
                                 .no-scrollbar::-webkit-scrollbar {
@@ -1525,118 +1906,218 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                             `}</style>
 
                             {/* ROW 1: Filters (Full Width, Single Line) */}
-                            <div className="no-scrollbar" style={{
+                            <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '0.3rem', // Tight gap to fit more
-                                overflowX: 'auto',  // Allow scroll if absolutely necessary but aim for fit
-                                overflowY: 'hidden',
+                                gap: '0.3rem',
                                 width: '100%',
-                                whiteSpace: 'nowrap',
-                                scrollbarWidth: 'none',
-                                msOverflowStyle: 'none',
-                                justifyContent: 'space-between' // Distribute evenly or justify-start? Start is safer for variable widths.
                             }}>
-                                <div style={{ display: 'flex', gap: '0.3rem', width: '100%' }}>
-                                    {filterCategories.map(category => (
-                                        <div key={category.id} style={{ position: 'relative', flex: '1 1 auto', minWidth: 0 }}>
-                                            <button
-                                                className="filter-btn"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (activeFilterCategory === category.id) {
-                                                        setActiveFilterCategory(null);
-                                                    } else {
-                                                        const rect = e.currentTarget.getBoundingClientRect();
-                                                        setDropdownPos({ top: rect.bottom + 5, left: rect.left });
-                                                        setActiveFilterCategory(category.id);
-                                                    }
-                                                }}
-                                                style={{
-                                                    background: category.active ? 'var(--bg-active)' : 'rgba(255,255,255,0.03)',
-                                                    border: category.active ? '1px solid var(--accent)' : '1px solid var(--glass-border)',
-                                                    borderRadius: '0.4rem',
-                                                    color: category.active ? 'var(--accent)' : 'var(--text-primary)',
-                                                    padding: '0.35rem 0.2rem', // Minimal horizontal padding
-                                                    width: '100%', // Force button to fill its flex slot
-                                                    fontSize: '0.7rem', // Smaller font
-                                                    fontWeight: 500,
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center', // Center content
-                                                    gap: '0.2rem',
-                                                    whiteSpace: 'nowrap',
-                                                    fontFamily: 'inherit',
-                                                    overflow: 'hidden', // Clip text if too long
-                                                    textOverflow: 'ellipsis'
-                                                }}
-                                                title={category.label}
-                                            >
-                                                <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>{category.icon}</span>
-                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{category.label}</span>
-                                                {category.active && <span style={{ fontSize: '0.6rem', opacity: 0.8, background: 'rgba(0,0,0,0.1)', padding: '0 3px', borderRadius: '3px', marginLeft: '2px' }}>✓</span>}
-                                                <span style={{ fontSize: '0.55rem', opacity: 0.4 }}>▼</span>
-                                            </button>
+                                <div style={{ display: 'flex', gap: '0.3rem', flex: 1, minWidth: 0, alignItems: 'center' }}>
 
-                                            {/* Dropdown Menu (Fixed Position via Portal) */}
-                                            {activeFilterCategory === category.id && category.items.length > 0 && createPortal(
-                                                <div
-                                                    className="filter-dropdown"
-                                                    onClick={(e) => e.stopPropagation()}
+                                    {/* Left Arrow (Only on Page 1) */}
+                                    {filterPage === 1 && (
+                                        <button
+                                            onClick={() => setFilterPage(0)}
+                                            style={{
+                                                height: '2.4rem',
+                                                width: '2.4rem',
+                                                padding: 0,
+                                                background: 'var(--bg-secondary)',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '50%', // Circle
+                                                color: 'var(--text-primary)',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'all 0.2s',
+                                                flexShrink: 0
+                                            }}
+                                            className="hover:bg-gray-100 dark:hover:bg-gray-800"
+                                        >
+                                            <ChevronLeft size={16} />
+                                        </button>
+                                    )}
+
+                                    {/* Filters: Animated Sliding Effect */}
+                                    {filterCategories.map((category, index) => {
+                                        // Logic for visibility
+                                        // Indices 0,1: Show on Page 0 only
+                                        // Indices 2,3,4: Always Show (Anchors)
+                                        // Indices 5,6: Show on Page 1 only
+                                        const isVisible = (index < 2 && filterPage === 0) || (index >= 2 && index <= 4) || (index > 4 && filterPage === 1);
+
+                                        return (
+                                            <div key={category.id} style={{
+                                                position: 'relative',
+                                                flex: isVisible ? '1 1 auto' : '0 0 0',
+                                                minWidth: 0,
+                                                maxWidth: isVisible ? '160px' : '0px',
+                                                opacity: isVisible ? 1 : 0,
+                                                transform: `scale(${isVisible ? 1 : 0.9})`,
+                                                overflow: 'hidden',
+                                                transition: 'all 1.5s cubic-bezier(0.25, 1, 0.5, 1)', // Slower, smoother ease-out
+                                                marginLeft: isVisible ? '0' : '-0.3rem', // Counteract parent gap when hidden (approx)
+                                                pointerEvents: isVisible ? 'auto' : 'none',
+                                                visibility: isVisible ? 'visible' : 'hidden' // Ensure it's hidden from screen readers/tab when closed
+                                            }}>
+                                                <button
+                                                    className="filter-btn"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (activeFilterCategory === category.id) {
+                                                            setActiveFilterCategory(null);
+                                                        } else {
+                                                            const rect = e.currentTarget.getBoundingClientRect();
+                                                            setDropdownPos({ top: rect.bottom + 5, left: rect.left });
+                                                            setActiveFilterCategory(category.id);
+                                                        }
+                                                    }}
                                                     style={{
-                                                        position: 'fixed',
-                                                        top: dropdownPos.top,
-                                                        left: dropdownPos.left,
-                                                        background: 'var(--bg-secondary)',
-                                                        border: '1px solid var(--glass-border)',
-                                                        borderRadius: '0.5rem',
-                                                        padding: '0.4rem',
-                                                        minWidth: '160px',
-                                                        maxHeight: '250px',
-                                                        overflowY: 'auto',
-                                                        zIndex: 9999,
-                                                        boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-                                                    }}>
-                                                    {category.items.map(item => (
-                                                        <button
-                                                            key={item}
-                                                            onClick={() => {
-                                                                category.setter(category.active === item ? null : item);
-                                                                setActiveFilterCategory(null);
-                                                            }}
-                                                            style={{
-                                                                width: '100%',
-                                                                padding: '0.5rem 0.6rem',
-                                                                background: category.active === item ? 'var(--bg-active)' : 'transparent',
-                                                                border: 'none',
-                                                                borderRadius: '0.4rem',
-                                                                color: category.active === item ? 'var(--text-active)' : 'var(--text-secondary)',
-                                                                fontSize: '0.8rem',
-                                                                fontWeight: category.active === item ? 600 : 400,
-                                                                cursor: 'pointer',
-                                                                textAlign: 'left',
-                                                                transition: 'all 0.2s',
-                                                                display: 'block',
-                                                                marginBottom: '0.1rem',
-                                                                fontFamily: 'inherit'
-                                                            }}
-                                                        >
-                                                            {item}
-                                                        </button>
-                                                    ))}
-                                                </div>,
-                                                document.body
+                                                        background: category.active ? '#4F46E5' : 'var(--bg-secondary)',
+                                                        border: 'none',
+                                                        borderRadius: 'var(--radius-md)',
+                                                        color: category.active ? '#fff' : 'var(--text-secondary)',
+                                                        boxShadow: category.active ? 'inset 0 2px 4px rgba(0,0,0,0.2)' : 'none',
+                                                        padding: '0 0.7rem',
+                                                        height: '2.4rem',
+                                                        width: '100%', // Takes full width of container
+                                                        minWidth: 'max-content', // Prevent text squashing during transition
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 600,
+                                                        cursor: 'pointer',
+                                                        transition: 'background 0.2s',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '0.5rem',
+                                                        whiteSpace: 'nowrap',
+                                                        fontFamily: 'inherit'
+                                                    }}
+                                                    title={category.label}
+                                                    tabIndex={isVisible ? 0 : -1}
+                                                >
+                                                    <span style={{ fontSize: '0.8rem', opacity: 0.7, flexShrink: 0 }}>{category.icon}</span>
+                                                    <span style={{
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        maxWidth: '110px'
+                                                    }}>{category.active ? category.active : category.label}</span>
+                                                    <ChevronDown size={10} style={{ opacity: 0.5, flexShrink: 0 }} />
+                                                </button>
+
+                                                {/* Dropdown Menu (Fixed Position via Portal) */}
+                                                {activeFilterCategory === category.id && category.items.length > 0 && createPortal(
+                                                    <div
+                                                        className="filter-dropdown"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        style={{
+                                                            position: 'fixed',
+                                                            top: dropdownPos.top,
+                                                            left: dropdownPos.left,
+                                                            background: 'var(--surface)',
+                                                            border: '1px solid var(--border)',
+                                                            borderRadius: '1rem',
+                                                            padding: '0.5rem',
+                                                            minWidth: '200px',
+                                                            maxHeight: '350px',
+                                                            overflowY: 'auto',
+                                                            zIndex: 9999,
+                                                            boxShadow: 'var(--shadow-md)'
+                                                        }}>
+                                                        {category.items.map(item => (
+                                                            <button
+                                                                key={item}
+                                                                onClick={() => {
+                                                                    category.setter(category.active === item ? null : item);
+                                                                    setActiveFilterCategory(null);
+                                                                }}
+                                                                className="dropdown-item"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    padding: '0.7rem 1rem',
+                                                                    background: category.active === item ? 'var(--bg-secondary)' : 'transparent',
+                                                                    border: 'none',
+                                                                    borderRadius: '0.4rem',
+                                                                    color: category.active === item ? 'var(--accent)' : 'var(--text-secondary)',
+                                                                    fontSize: '0.85rem',
+                                                                    fontWeight: category.active === item ? 700 : 500,
+                                                                    cursor: 'pointer',
+                                                                    textAlign: 'left',
+                                                                    transition: 'all 0.2s',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'space-between',
+                                                                    marginBottom: '0.1rem',
+                                                                }}
+                                                            >
+                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item}</span>
+                                                                {category.active === item ? <Check size={14} /> : <span style={{ opacity: 0.2 }}>➜</span>}
+                                                            </button>
+                                                        ))}
+                                                    </div>,
+                                                    document.body
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+
+                                    <div style={{ width: '1px', height: '1.4rem', background: 'var(--border)', margin: '0 0.4rem', alignSelf: 'center' }}></div>
+
+                                    {/* Right Arrow (Only on Page 0) - Replaces 'More Filters' */}
+                                    {filterPage === 0 && (
+                                        <button
+                                            onClick={() => setFilterPage(1)}
+                                            style={{
+                                                height: '2.4rem',
+                                                width: '2.4rem', // Square/Circle
+                                                padding: 0,
+                                                background: 'var(--bg-secondary)',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: '50%', // Circle
+                                                color: 'var(--text-primary)',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'all 0.2s',
+                                                flexShrink: 0
+                                            }}
+                                            className="hover:bg-gray-100 dark:hover:bg-gray-800"
+                                            title="More Filters"
+                                        >
+                                            <ChevronRight size={16} />
+                                            {/* Optional Badge if hidden filters are active */}
+                                            {filterCategories.slice(5).filter(c => c.active).length > 0 && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: -2,
+                                                    right: -2,
+                                                    width: '8px',
+                                                    height: '8px',
+                                                    borderRadius: '50%',
+                                                    background: 'var(--accent)',
+                                                    border: '1px solid var(--surface)'
+                                                }} />
                                             )}
-                                        </div>
-                                    ))}
+                                        </button>
+                                    )}
+
                                 </div>
                             </div>
 
-                            {/* ROW 2: Clear All Button (Left Aligned) */}
+                            {/* ROW 2: Filter Summary (Dynamic & Minimal) */}
                             {activeFiltersCount > 0 && (
-                                <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-start' }}>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '0.6rem 0.4rem 0.2rem 0.4rem',
+                                    marginTop: '0.4rem',
+                                    borderTop: '1px solid var(--border-muted)',
+                                    animation: 'fadeIn 0.3s ease-out'
+                                }}>
+                                    {/* Left: Clear Action */}
                                     <button
                                         onClick={() => {
                                             setTypeFilter(null);
@@ -1647,372 +2128,95 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                             setPlatformFilter(null);
                                             setCustomGroupFilter(null);
                                         }}
+                                        className="group"
                                         style={{
                                             background: 'transparent',
                                             border: 'none',
-                                            color: '#ef4444',
-                                            padding: '0',
-                                            fontSize: '0.7rem',
+                                            color: 'var(--text-muted)',
+                                            padding: '0.25rem 0.5rem',
+                                            fontSize: '0.75rem',
                                             fontWeight: 600,
                                             cursor: 'pointer',
                                             transition: 'all 0.2s',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '0.2rem',
-                                            fontFamily: 'inherit',
-                                            opacity: 0.8
+                                            gap: '0.4rem',
+                                            borderRadius: 'var(--radius-sm)',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'var(--bg-secondary)';
+                                            e.currentTarget.style.color = 'var(--text-primary)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'transparent';
+                                            e.currentTarget.style.color = 'var(--text-muted)';
                                         }}
                                     >
-                                        <span style={{ fontSize: '0.8rem' }}>✕</span>
-                                        <span style={{ textDecoration: 'underline' }}>Clear All Filters</span>
+                                        <X size={14} />
+                                        <span style={{ letterSpacing: '0.02em' }}>{t('clear_filters')}</span>
                                     </button>
+
+                                    {/* Right: Info Group */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.75rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{t('assets')}:</span>
+                                            <span style={{
+                                                background: 'transparent',
+                                                padding: '0',
+                                                borderRadius: '0',
+                                                fontWeight: 800,
+                                                color: 'var(--text-primary)',
+                                                fontVariantNumeric: 'tabular-nums'
+                                            }}>
+                                                {availableAssets.length}
+                                            </span>
+                                        </div>
+
+                                        <div style={{ width: '1px', height: '0.8rem', background: 'var(--border-muted)' }}></div>
+
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{t('total')}:</span>
+                                            <span style={{
+                                                fontWeight: 800,
+                                                color: 'var(--accent)',
+                                                fontVariantNumeric: 'tabular-nums'
+                                            }}>
+                                                {getCurrencySymbol(displayCurrencyForTotal)}{fmtMinimal(filteredTotalConverted)}
+                                            </span>
+                                            <span style={{
+                                                fontSize: '0.75rem',
+                                                fontWeight: 800,
+                                                color: '#10b981',
+                                                background: 'transparent',
+                                                padding: '0',
+                                                borderRadius: '0',
+                                                border: '1px solid rgba(16, 185, 129, 0.12)',
+                                                fontVariantNumeric: 'tabular-nums'
+                                            }}>
+                                                {filteredTotalPercentage.toFixed(0)}%
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
+
+
+
+
                         </div>
 
 
-                        {/* 2. Positions Section */}
-                        <div className="glass-panel positions-card" style={{ borderRadius: '0.75rem', padding: '1rem' }}>
-                            {/* Header with Title and FX Toggles (Left) vs Time/View (Right) */}
-                            <div className="positions-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        {/* 3. Positions List Box */}
 
-                                {/* LEFT: Time + FX Toggles */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-
-                                    {/* 1. Time Period Selector */}
-                                    {/* DESKTOP: Buttons (Modern Hover-Expand) */}
-                                    <div
-                                        className="desktop-only"
-                                        onMouseEnter={() => setIsTimeSelectorHovered(true)}
-                                        onMouseLeave={() => setIsTimeSelectorHovered(false)}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            background: 'var(--glass-shine)',
-                                            backdropFilter: 'blur(10px)',
-                                            borderRadius: '2rem',
-                                            padding: '0.3rem',
-                                            border: '1px solid var(--glass-border)',
-                                            boxShadow: isTimeSelectorHovered ? '0 4px 20px rgba(0,0,0,0.1)' : 'none',
-                                            transition: 'all 0.3s ease',
-                                            height: '2.4rem' // Fixed height for smoothness
-                                        }}
-                                    >
-                                        {TIME_PERIODS.map(period => {
-                                            const isActive = timePeriod === period;
-                                            const isVisible = isTimeSelectorHovered || isActive;
-
-                                            return (
-                                                <button
-                                                    key={period}
-                                                    onClick={() => setTimePeriod(period)}
-                                                    style={{
-                                                        background: isActive ? '#6366f1' : 'transparent',
-                                                        border: 'none',
-                                                        borderRadius: '1.5rem',
-                                                        color: isActive ? '#fff' : 'var(--text-secondary)',
-                                                        // Animation props
-                                                        maxWidth: isVisible ? '100px' : '0px',
-                                                        padding: isVisible ? '0.3rem 0.8rem' : '0',
-                                                        margin: isVisible ? '0 2px' : '0',
-                                                        opacity: isVisible ? 1 : 0,
-                                                        overflow: 'hidden',
-
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: isActive ? 700 : 600,
-                                                        cursor: 'pointer',
-                                                        whiteSpace: 'nowrap',
-                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}
-                                                >
-                                                    {period}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
-                                    {/* MOBILE: Dropdown */}
-                                    <div className="mobile-only">
-                                        <select
-                                            value={timePeriod}
-                                            onChange={(e) => setTimePeriod(e.target.value)}
-                                            style={{
-                                                background: 'var(--glass-bg)',
-                                                color: 'var(--text-primary)',
-                                                border: '1px solid var(--glass-border)',
-                                                borderRadius: '0.5rem',
-                                                padding: '0.3rem 2rem 0.3rem 0.8rem',
-                                                fontSize: '0.8rem',
-                                                fontWeight: 700,
-                                                outline: 'none',
-                                                appearance: 'none',
-                                                backgroundImage: `url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23a1a1aa%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")`,
-                                                backgroundRepeat: 'no-repeat',
-                                                backgroundPosition: 'right 0.6rem center',
-                                                backgroundSize: '0.6em auto',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            {TIME_PERIODS.map(period => (
-                                                <option key={period} value={period} style={{ color: '#000' }}>{period}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                </div>
-
-                                {/* RIGHT: View Mode & Columns - Desktop Only */}
-                                <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-
-                                    {/* 1. Grouping Selector (Smart Pill) */}
-                                    <div
-                                        onMouseEnter={() => setIsGroupingSelectorHovered(true)}
-                                        onMouseLeave={() => setIsGroupingSelectorHovered(false)}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            background: 'var(--glass-shine)',
-                                            backdropFilter: 'blur(10px)',
-                                            borderRadius: '2rem',
-                                            padding: '0.3rem',
-                                            border: '1px solid var(--glass-border)',
-                                            boxShadow: isGroupingSelectorHovered ? '0 4px 20px rgba(0,0,0,0.1)' : 'none',
-                                            transition: 'all 0.3s ease',
-                                            height: '2.4rem'
-                                        }}
-                                    >
-                                        {[
-                                            { value: 'none', label: 'Ungrouped' },
-                                            { value: 'customGroup', label: 'Portfolio' },
-                                            { value: 'type', label: 'Type' },
-                                            { value: 'country', label: 'Country' }
-                                        ].map(item => {
-                                            const isActive = groupingKey === item.value;
-                                            const isVisible = isGroupingSelectorHovered || isActive;
-
-                                            if (!isVisible && !isActive) return null; // Logic handled by CSS generally but for pure JS render
-
-                                            return (
-                                                <button
-                                                    key={item.label}
-                                                    onClick={() => {
-                                                        setOrderedGroups([]); // Reset order to prevent stale keys causing NaN
-                                                        setGroupingKey(item.value);
-                                                    }}
-                                                    style={{
-                                                        background: isActive ? '#6366f1' : 'transparent',
-                                                        border: 'none',
-                                                        borderRadius: '1.5rem',
-                                                        color: isActive ? '#fff' : 'var(--text-secondary)',
-                                                        maxWidth: isVisible ? '100px' : '0px',
-                                                        padding: isVisible ? '0.3rem 0.8rem' : '0',
-                                                        margin: isVisible ? '0 2px' : '0',
-                                                        opacity: isVisible ? 1 : 0,
-                                                        overflow: 'hidden',
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: isActive ? 700 : 600,
-                                                        cursor: 'pointer',
-                                                        whiteSpace: 'nowrap',
-                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                        display: isVisible ? 'flex' : 'none',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}
-                                                >
-                                                    {item.label}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
-                                    {/* 2. View Mode Selector Removed */}
-
-                                    {/* 3. Adjust List Button (Only in List View) */}
-                                    {viewMode === 'list' && (
-                                        <div ref={adjustListRef} style={{ position: 'relative', marginRight: '0.8rem' }}>
-                                            <div style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                background: 'var(--glass-shine)',
-                                                backdropFilter: 'blur(10px)',
-                                                borderRadius: '2rem',
-                                                padding: '0.3rem',
-                                                border: '1px solid var(--glass-border)',
-                                                height: '2.4rem',
-                                                transition: 'all 0.3s ease'
-                                            }}>
-                                                <button
-                                                    onClick={() => setIsAdjustListOpen(!isAdjustListOpen)}
-                                                    style={{
-                                                        background: '#6366f1',
-                                                        border: 'none',
-                                                        borderRadius: '1.5rem',
-                                                        color: '#fff',
-                                                        padding: '0.3rem 0.8rem',
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: 700,
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        gap: '0.3rem',
-                                                        transition: 'all 0.2s',
-                                                    }}
-                                                    title="Adjust List Columns"
-                                                >
-                                                    <SlidersHorizontal size={14} strokeWidth={2.5} />
-                                                    {isAdjustListOpen && <span>Adjust</span>}
-                                                </button>
-                                            </div>
-
-                                            {isAdjustListOpen && (
-                                                <div style={{
-                                                    position: 'absolute',
-                                                    top: '100%',
-                                                    right: 0,
-                                                    marginTop: '0.5rem',
-                                                    background: 'var(--bg-secondary)',
-                                                    border: '1px solid var(--glass-border)',
-                                                    borderRadius: '0.8rem',
-                                                    padding: '0.8rem',
-                                                    width: '260px',
-                                                    zIndex: 1000,
-                                                    boxShadow: '0 10px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1)',
-                                                    backdropFilter: 'blur(20px)',
-                                                }}>
-                                                    <div style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.8rem', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                        <span>Table Columns</span>
-                                                        <button
-                                                            onClick={() => setActiveColumns(['PORTFOLIO_NAME', 'NAME', 'PRICE', 'VALUE', 'PL'])}
-                                                            style={{
-                                                                fontSize: '0.65rem',
-                                                                opacity: 0.7,
-                                                                fontWeight: 600,
-                                                                background: 'rgba(255,255,255,0.1)',
-                                                                border: 'none',
-                                                                borderRadius: '0.3rem',
-                                                                padding: '0.2rem 0.5rem',
-                                                                cursor: 'pointer',
-                                                                color: 'var(--text-primary)'
-                                                            }}
-                                                        >
-                                                            Default
-                                                        </button>
-                                                    </div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                                        {ALL_COLUMNS.map(col => {
-                                                            const isVisible = activeColumns.includes(col.id);
-                                                            return (
-                                                                <div key={col.id}
-                                                                    onClick={() => {
-                                                                        if (isVisible) {
-                                                                            if (activeColumns.length > 1) { // Prevent hiding all
-                                                                                setActiveColumns(activeColumns.filter(id => id !== col.id));
-                                                                            }
-                                                                        } else {
-                                                                            setActiveColumns([...activeColumns, col.id]);
-                                                                        }
-                                                                    }}
-                                                                    style={{
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'space-between',
-                                                                        padding: '0.5rem',
-                                                                        borderRadius: '0.4rem',
-                                                                        background: isVisible ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                                                                        cursor: 'pointer',
-                                                                        transition: 'all 0.2s',
-                                                                        border: isVisible ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent'
-                                                                    }}
-                                                                >
-                                                                    <span style={{ fontSize: '0.8rem', color: isVisible ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: isVisible ? 600 : 400 }}>{col.label}</span>
-                                                                    <div style={{
-                                                                        width: '14px', height: '14px',
-                                                                        borderRadius: '3px',
-                                                                        border: isVisible ? 'none' : '2px solid var(--text-secondary)',
-                                                                        background: isVisible ? '#6366f1' : 'transparent',
-                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                        opacity: isVisible ? 1 : 0.5
-                                                                    }}>
-                                                                        {isVisible && <Check size={10} color="#fff" strokeWidth={4} />}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                    <div style={{ marginTop: '0.8rem', paddingTop: '0.6rem', borderTop: '1px solid var(--glass-border)', fontSize: '0.7rem', opacity: 0.5, textAlign: 'center' }}>
-                                                        Drag column headers in the table to reorder.
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Edit Mode Toggle */}
-                                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                        <div style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            background: 'var(--glass-shine)',
-                                            backdropFilter: 'blur(10px)',
-                                            borderRadius: '2rem',
-                                            padding: '0.3rem',
-                                            border: '1px solid var(--glass-border)',
-                                            height: '2.4rem',
-                                            transition: 'all 0.3s ease'
-                                        }}>
-                                            <button
-                                                onClick={() => setIsGlobalEditMode(!isGlobalEditMode)}
-                                                style={{
-                                                    background: isGlobalEditMode ? '#f59e0b' : '#6366f1', // Yellow if Active, Blue if Default
-                                                    border: 'none',
-                                                    borderRadius: '1.5rem',
-                                                    color: '#fff',
-                                                    padding: '0.3rem',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: 700,
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '0.3rem',
-                                                    transition: 'all 0.2s',
-                                                    width: '2.4rem',
-                                                    height: '100%'
-                                                }}
-                                                title="Toggle Edit Mode"
-                                            >
-                                                <Settings size={16} />
-                                            </button>
-                                        </div>
-                                        {isGlobalEditMode && (
-                                            <div style={{
-                                                position: 'absolute',
-                                                bottom: '100%', // Moved from top: 100% to bottom: 100%
-                                                right: 0,
-                                                marginBottom: '0.4rem', // Changed from marginTop to marginBottom
-                                                fontSize: '0.6rem',
-                                                fontWeight: 600,
-                                                color: 'var(--text-secondary)',
-                                                animation: 'fadeIn 0.3s ease',
-                                                whiteSpace: 'nowrap',
-                                                background: 'var(--bg-secondary)',
-                                                padding: '0.2rem 0.5rem',
-                                                borderRadius: '0.4rem',
-                                                border: '1px solid var(--glass-border)',
-                                                zIndex: 10,
-                                                boxShadow: '0 4px 10px rgba(0,0,0,0.1)' // Added shadow for better visibility
-                                            }}>
-                                                Now, you can edit your assets
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
+                        <div className="neo-card" style={{
+                            padding: '0',
+                            overflow: 'hidden',
+                            border: '1px solid var(--border)',
+                            boxShadow: 'var(--shadow-md)',
+                            background: 'var(--surface)',
+                            borderRadius: 'var(--radius-lg)',
+                            marginTop: '0.5rem'
+                        }}>
                             {/* ASSETS BODY */}
                             <div style={{ minHeight: '400px' }}>
                                 {showChangelog ? (
@@ -2020,24 +2224,32 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                 ) : (
                                     <>
                                         {viewMode === "list" ? (
-                                            <div className="glass-panel" style={{
+                                            <div style={{
                                                 display: 'flex',
                                                 flexDirection: 'column',
-                                                padding: 0,
-                                                gap: 0,
-                                                overflowX: 'auto',
-                                                overflowY: 'hidden',
-                                                borderRadius: '0.8rem'
+                                                width: '100%',
+                                                background: 'var(--surface)',
+                                                borderRadius: 'var(--radius-lg)',
+                                                border: '1px solid var(--border)',
+                                                boxShadow: 'var(--shadow-sm)',
+                                                overflow: 'hidden'
                                             }}>
                                                 {/* Table Header Always Show in List View */}
                                                 {true && (
                                                     <div className="asset-table-header" style={{
-                                                        borderBottom: 'none',
                                                         alignItems: 'center',
                                                         display: 'grid',
-                                                        gridTemplateColumns: activeColumns.map(c => COL_WIDTHS[c]).join(' '),
+                                                        gridTemplateColumns: activeColumns.map(c => COL_WIDTHS[c]).join(' ') + ' 40px',
                                                         gap: 0,
-                                                        background: 'var(--glass-shine)'
+                                                        position: 'relative',
+                                                        zIndex: 40,
+                                                        paddingTop: '0.75rem',
+                                                        paddingBottom: '0.75rem',
+                                                        borderBottom: '1px solid var(--border)',
+                                                        background: 'var(--bg-secondary)',
+                                                        color: 'var(--text-primary)',
+                                                        fontWeight: 700,
+                                                        transition: 'background 0.3s'
                                                     }}>
                                                         <SortableContext items={activeColumns.map(c => `col:${c}`)} strategy={rectSortingStrategy}>
                                                             {activeColumns.map(colId => {
@@ -2067,49 +2279,272 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                                     headerContent = (
                                                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
                                                                             <span>PRICE</span>
-                                                                            <span style={{ fontSize: '0.55rem', opacity: 0.5, fontWeight: 500 }}>COST</span>
-                                                                        </div>
-                                                                    );
-                                                                } else if (colId === 'VALUE') {
-                                                                    headerContent = (
-                                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
-                                                                            <span>VALUE</span>
-                                                                            <span style={{ fontSize: '0.55rem', opacity: 0.5, fontWeight: 500 }}>TOTAL COST</span>
+                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>COST</span>
                                                                         </div>
                                                                     );
                                                                 } else if (colId === 'PRICE_EUR') {
                                                                     headerContent = (
                                                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
                                                                             <span>PRICE ({globalSym})</span>
-                                                                            <span style={{ fontSize: '0.55rem', opacity: 0.5, fontWeight: 500 }}>COST ({globalSym})</span>
+                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>COST ({globalSym})</span>
+                                                                        </div>
+                                                                    );
+                                                                } else if (colId === 'VALUE') {
+                                                                    headerContent = (
+                                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+                                                                            <span>Total Value</span>
+                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>Total Cost</span>
                                                                         </div>
                                                                     );
                                                                 } else if (colId === 'VALUE_EUR') {
                                                                     headerContent = (
                                                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
-                                                                            <span>VALUE ({globalSym})</span>
-                                                                            <span style={{ fontSize: '0.55rem', opacity: 0.5, fontWeight: 500 }}>TOTAL COST</span>
+                                                                            <span>Total Value ({globalSym})</span>
+                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>Total Cost ({globalSym})</span>
                                                                         </div>
                                                                     );
                                                                 }
 
+
                                                                 return (
                                                                     <DraggableHeader key={colId} id={`col:${colId}`} columnsCount={activeColumns.length}>
-                                                                        <span style={{
-                                                                            fontSize: activeColumns.length > 8 ? '0.62rem' : '0.7rem',
-                                                                            fontWeight: 700,
-                                                                            opacity: 0.8,
-                                                                            letterSpacing: '0.05em',
-                                                                            whiteSpace: activeColumns.length >= 10 ? 'pre-wrap' : 'nowrap',
-                                                                            display: 'block',
-                                                                            textAlign: ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL'].includes(colId) ? 'right' : 'left'
+                                                                        <div style={{
+                                                                            display: 'flex',
+                                                                            flexDirection: 'column',
+                                                                            alignItems: ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL', 'EARNINGS'].includes(colId) ? 'flex-end' : 'flex-start',
+                                                                            justifyContent: 'center',
+                                                                            height: '100%',
+                                                                            width: '100%',
+                                                                            paddingTop: '0.6rem',
+                                                                            paddingBottom: '0.6rem',
+                                                                            paddingLeft: '0.5rem',
+                                                                            paddingRight: ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL', 'EARNINGS'].includes(colId) ? '0.5rem' : '0.5rem',
+                                                                            opacity: 0.9
                                                                         }}>
-                                                                            {colId === 'PORTFOLIO_NAME' ? <Briefcase size={activeColumns.length > 8 ? 11 : 13} strokeWidth={2.5} /> : headerContent}
-                                                                        </span>
+                                                                            {colId === 'PORTFOLIO_NAME' ? (
+                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
+                                                                                    <Briefcase size={14} strokeWidth={2.5} style={{ opacity: 0.8 }} />
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div style={{
+                                                                                    fontSize: '0.75rem', // Increased size for readability
+                                                                                    fontWeight: 700,
+                                                                                    color: 'var(--text-secondary)', // Brighter text
+                                                                                    letterSpacing: '0.02em',
+                                                                                    textTransform: 'uppercase',
+                                                                                    lineHeight: 1.3,
+                                                                                    width: '100%',
+                                                                                    textAlign: ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL', 'EARNINGS'].includes(colId) ? 'right' : 'left',
+                                                                                    display: 'flex',
+                                                                                    flexDirection: 'column',
+                                                                                    alignItems: ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL', 'EARNINGS'].includes(colId) ? 'flex-end' : 'flex-start',
+                                                                                }}>
+                                                                                    {headerContent}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
                                                                     </DraggableHeader>
                                                                 );
                                                             })}
                                                         </SortableContext>
+
+                                                        <div style={{
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            position: 'sticky',
+                                                            right: 0,
+                                                            background: 'var(--bg-secondary)', // Matches header
+                                                            zIndex: 20,
+                                                            width: '40px',
+                                                            padding: 0
+                                                        }}>
+                                                            <button
+                                                                onClick={() => setIsAdjustListOpen(true)}
+                                                                style={{
+                                                                    background: 'transparent',
+                                                                    border: 'none',
+                                                                    cursor: 'pointer',
+                                                                    color: 'var(--text-muted)',
+                                                                    padding: '6px',
+                                                                    transition: 'all 0.2s',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    opacity: 0.8,
+                                                                    borderRadius: '4px'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.color = 'var(--text-primary)';
+                                                                    e.currentTarget.style.background = 'rgba(0,0,0,0.05)';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.color = 'var(--text-muted)';
+                                                                    e.currentTarget.style.background = 'transparent';
+                                                                }}
+                                                                title="Adjust Columns"
+                                                            >
+                                                                <Settings size={18} />
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Column Adjustment Modal */}
+                                                        {isAdjustListOpen && createPortal(
+                                                            <div style={{
+                                                                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                                                                background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+                                                                zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+                                                            }} onClick={() => setIsAdjustListOpen(false)}>
+                                                                <div style={{
+                                                                    background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
+                                                                    width: '100%', maxWidth: '400px', boxShadow: 'var(--shadow-lg)', padding: '1.5rem', maxHeight: '85vh', display: 'flex', flexDirection: 'column'
+                                                                }} onClick={e => e.stopPropagation()}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexShrink: 0 }}>
+                                                                        <div>
+                                                                            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em' }}>{t('table_columns')}</h3>
+                                                                            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Drag items to show/hide columns.</p>
+                                                                        </div>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                            <button
+                                                                                onClick={() => setActiveColumns(translatedColumns.filter(c => c.isDefault).map(c => c.id))}
+                                                                                style={{
+                                                                                    background: 'var(--bg-secondary)', border: 'none', color: 'var(--text-muted)',
+                                                                                    padding: '0 0.8rem', height: '30px', borderRadius: '15px', cursor: 'pointer',
+                                                                                    fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', transition: 'all 0.2s'
+                                                                                }}
+                                                                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; }}
+                                                                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-secondary)'; }}
+                                                                            >
+                                                                                Reset
+                                                                            </button>
+                                                                            <button onClick={() => setIsAdjustListOpen(false)} style={{ background: 'var(--bg-secondary)', border: 'none', color: 'var(--text-primary)', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', paddingRight: '0.5rem' }}>
+                                                                        <DndContext
+                                                                            collisionDetection={closestCenter}
+                                                                            sensors={sensors}
+                                                                            onDragStart={(event) => setActiveDragId(event.active.id as string)}
+                                                                            onDragCancel={() => setActiveDragId(null)}
+                                                                            onDragEnd={(event) => {
+                                                                                const { active, over } = event;
+                                                                                setActiveDragId(null);
+
+                                                                                if (over) {
+                                                                                    const activeId = active.id as ColumnId;
+                                                                                    const overId = over.id as string;
+                                                                                    const isActiveInActive = activeColumns.includes(activeId);
+
+                                                                                    // Check if dropped into Hidden Container directly
+                                                                                    if (overId === 'hidden-columns-container' && isActiveInActive) {
+                                                                                        if (activeColumns.length > 1) {
+                                                                                            setActiveColumns(activeColumns.filter(c => c !== activeId));
+                                                                                        }
+                                                                                        return;
+                                                                                    }
+
+                                                                                    const isOverInActive = activeColumns.includes(overId as ColumnId);
+
+                                                                                    if (isActiveInActive && isOverInActive) {
+                                                                                        // Active -> Active: Reorder
+                                                                                        setActiveColumns((items) => {
+                                                                                            const oldIndex = items.indexOf(activeId);
+                                                                                            const newIndex = items.indexOf(overId as ColumnId);
+                                                                                            return arrayMove(items, oldIndex, newIndex);
+                                                                                        });
+                                                                                    } else if (!isActiveInActive && isOverInActive) {
+                                                                                        // Hidden -> Active: Insert
+                                                                                        const overIndex = activeColumns.indexOf(overId as ColumnId);
+                                                                                        const newActive = [...activeColumns];
+                                                                                        if (overIndex !== -1) newActive.splice(overIndex, 0, activeId);
+                                                                                        else newActive.push(activeId);
+                                                                                        setActiveColumns(newActive);
+                                                                                    } else if (isActiveInActive && !isOverInActive) {
+                                                                                        // Active -> Hidden: Remove (when dropped on an item in hidden list)
+                                                                                        if (activeColumns.length > 1) {
+                                                                                            setActiveColumns(activeColumns.filter(c => c !== activeId));
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            {/* Active Columns */}
+                                                                            <div>
+                                                                                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Active Columns</div>
+                                                                                <SortableContext items={activeColumns} strategy={verticalListSortingStrategy}>
+                                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minHeight: '50px' }}>
+                                                                                        {activeColumns.map((colId) => {
+                                                                                            const colDef = translatedColumns.find(c => c.id === colId);
+                                                                                            return (
+                                                                                                <SortableColumnItem
+                                                                                                    key={colId}
+                                                                                                    id={colId}
+                                                                                                    label={colDef?.label || colId}
+                                                                                                    type="active"
+                                                                                                />
+                                                                                            );
+                                                                                        })}
+                                                                                    </div>
+                                                                                </SortableContext>
+                                                                            </div>
+
+                                                                            {/* Available Columns */}
+                                                                            <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                                                                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Hidden Columns</div>
+                                                                                <DroppableArea id="hidden-columns-container" style={{
+                                                                                    display: 'flex', flexDirection: 'column', gap: '0.5rem',
+                                                                                    minHeight: '100px', flex: 1,
+                                                                                    background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', padding: '0.5rem',
+                                                                                    border: activeDragId && activeColumns.includes(activeDragId as any) ? '1px dashed var(--accent)' : '1px dashed transparent',
+                                                                                    transition: 'border-color 0.2s'
+                                                                                }}>
+                                                                                    <SortableContext items={translatedColumns.filter(c => !activeColumns.includes(c.id)).map(c => c.id)} strategy={verticalListSortingStrategy}>
+                                                                                        {translatedColumns.filter(c => !activeColumns.includes(c.id)).length === 0 ? (
+                                                                                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                                                                                                Drag columns here to hide
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            translatedColumns.filter(c => !activeColumns.includes(c.id)).map(col => (
+                                                                                                <SortableColumnItem
+                                                                                                    key={col.id}
+                                                                                                    id={col.id}
+                                                                                                    label={col.label}
+                                                                                                    type="passive"
+                                                                                                />
+                                                                                            ))
+                                                                                        )}
+                                                                                    </SortableContext>
+                                                                                </DroppableArea>
+                                                                            </div>
+
+                                                                            <DragOverlay>
+                                                                                {activeDragId ? (() => {
+                                                                                    const col = translatedColumns.find(c => c.id === activeDragId);
+                                                                                    if (!col) return null;
+                                                                                    const isActive = activeColumns.includes(activeDragId as any);
+                                                                                    return (
+                                                                                        <ColumnItem
+                                                                                            label={col.label}
+                                                                                            type={isActive ? 'active' : 'passive'}
+                                                                                            isOverlay={true}
+                                                                                        />
+                                                                                    );
+                                                                                })() : null}
+                                                                            </DragOverlay>
+                                                                        </DndContext>
+                                                                    </div>
+
+                                                                    <button
+                                                                        onClick={() => setIsAdjustListOpen(false)}
+                                                                        style={{
+                                                                            width: '100%', marginTop: '1rem', padding: '0.8rem', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px var(--accent-glow)', flexShrink: 0
+                                                                        }}
+                                                                    >
+                                                                        Done
+                                                                    </button>
+                                                                </div>
+                                                            </div>,
+                                                            document.body
+                                                        )}
                                                     </div>
                                                 )}
 
@@ -2159,9 +2594,12 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                                                 )}
 
                                                 {filteredAssets.length === 0 && (
-                                                    <div style={{ padding: '4rem', textAlign: 'center', opacity: 0.3, fontSize: '0.9rem' }}>
-                                                        No assets found for these filters.
-                                                    </div>
+                                                    <EmptyPlaceholder
+                                                        title="No Assets Found"
+                                                        description="We couldn't find any assets matching your current filters. Try generating a new asset or adjusting your search."
+                                                        icon={Inbox}
+                                                        height="300px"
+                                                    />
                                                 )}
                                             </div>
                                         ) : (
@@ -2252,15 +2690,44 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                     <div className="dashboard-sidebar">
                         {assets.length > 0 && (
                             <>
-                                <UnifiedPortfolioSummary totalValueEUR={totalValueEUR} isBlurred={isBlurred} />
-                                <AllocationCard assets={assets} totalValueEUR={totalValueEUR} isBlurred={isBlurred} />
+                                <AllocationCard
+                                    assets={assets}
+                                    totalValueEUR={totalValueEUR}
+                                    isBlurred={isBlurredState}
+                                    exchangeRates={exchangeRates}
+                                    activeFilters={{
+                                        Type: typeFilter,
+                                        Exchange: exchangeFilter,
+                                        Currency: currencyFilter,
+                                        Country: countryFilter,
+                                        Sector: sectorFilter,
+                                        Platform: platformFilter,
+                                        Portfolio: customGroupFilter
+                                    }}
+                                    onFilterSelect={(view, value) => {
+                                        switch (view) {
+                                            case 'Type': setTypeFilter(prev => prev === value ? null : value); break;
+                                            case 'Exchange': setExchangeFilter(prev => prev === value ? null : value); break;
+                                            case 'Currency': setCurrencyFilter(prev => prev === value ? null : value); break;
+                                            case 'Country': setCountryFilter(prev => prev === value ? null : value); break;
+                                            case 'Sector': setSectorFilter(prev => prev === value ? null : value); break;
+                                            case 'Platform': setPlatformFilter(prev => prev === value ? null : value); break;
+                                            case 'Portfolio': setCustomGroupFilter(prev => prev === value ? null : value); break;
+                                        }
+                                    }}
+                                />
+
+
+                                {goals && goals.length > 0 && (
+                                    <GoalsCard goals={goals || []} isOwner={isOwner} exchangeRates={exchangeRates} totalValueEUR={totalValueEUR} />
+                                )}
+                                <TopPerformersCard assets={assets} baseCurrency={globalCurrency} />
                             </>
                         )}
-
                     </div>
-                </div>
+                </div >
 
-            </div>
+            </div >
 
             <DeleteConfirmationModal
                 isOpen={!!assetToDelete}
@@ -2269,16 +2736,147 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, is
                 assetSymbol={assetToDelete?.symbol || 'Asset'}
             />
 
-            {editingAsset && (
-                <EditAssetModal
-                    asset={editingAsset}
-                    isOpen={!!editingAsset}
-                    onClose={() => setEditingAsset(null)}
-                />
-            )}
-        </DndContext>
+            {
+                editingAsset && (
+                    <EditAssetModal
+                        asset={editingAsset}
+                        isOpen={!!editingAsset}
+                        onClose={() => setEditingAsset(null)}
+                    />
+                )
+            }
+
+            {/* Filter Customize Modal */}
+            {
+                isCustomizeModalOpen && createPortal(
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0,0,0,0.6)',
+                        backdropFilter: 'blur(8px)',
+                        zIndex: 10001,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '1rem'
+                    }} onClick={() => setIsCustomizeModalOpen(false)}>
+                        <div style={{
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border)',
+                            borderRadius: 'var(--radius-lg)',
+                            width: '100%',
+                            maxWidth: '400px',
+                            boxShadow: 'var(--shadow-lg)',
+                            padding: '1.5rem'
+                        }} onClick={e => e.stopPropagation()}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em' }}>{t('customize_filters')}</h3>
+                                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Drag to reorder. Top 5 will be visible in the main bar.</p>
+                                </div>
+                                <button
+                                    onClick={() => setIsCustomizeModalOpen(false)}
+                                    style={{ background: 'var(--bg-secondary)', border: 'none', color: 'var(--text-primary)', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            <DndContext
+                                collisionDetection={closestCenter}
+                                onDragEnd={(event) => {
+                                    const { active, over } = event;
+                                    if (over && active.id !== over.id) {
+                                        setFilterOrder((items) => {
+                                            const oldIndex = items.indexOf(active.id as string);
+                                            const newIndex = items.indexOf(over.id as string);
+                                            return arrayMove(items, oldIndex, newIndex);
+                                        });
+                                    }
+                                }}
+                            >
+                                <SortableContext items={filterOrder} strategy={verticalListSortingStrategy}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {filterOrder.map((id, index) => {
+                                            const cat = allCategories.find(c => c.id === id);
+                                            if (!cat) return null;
+                                            return (
+                                                <SortableFilterItem key={id} id={id} label={cat.label} icon={cat.icon} isPinned={index < 5} />
+                                            );
+                                        })}
+                                    </div>
+                                </SortableContext>
+                            </DndContext>
+
+                            <button
+                                onClick={() => setIsCustomizeModalOpen(false)}
+                                style={{
+                                    width: '100%',
+                                    marginTop: '1.5rem',
+                                    padding: '0.8rem',
+                                    background: 'var(--accent)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: 'var(--radius-md)',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 12px var(--accent-glow)'
+                                }}
+                            >
+                                Save Settings
+                            </button>
+                        </div>
+                    </div>,
+                    document.body
+                )
+            }
+        </DndContext >
     );
 }
+
+// Sortable Item Component for Filters
+const SortableFilterItem = ({ id, label, icon, isPinned }: { id: string, label: string, icon: string, isPinned: boolean }) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        background: isDragging ? 'var(--bg-secondary)' : 'var(--surface)',
+        border: `1px solid ${isPinned ? 'rgba(99, 102, 241, 0.2)' : 'var(--border)'}`,
+        borderRadius: 'var(--radius-md)',
+        padding: '0.75rem 1rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        cursor: 'grab',
+        opacity: isDragging ? 0.6 : 1,
+        zIndex: isDragging ? 20000 : 1,
+        boxShadow: isDragging ? 'var(--shadow-md)' : 'none'
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <span style={{ fontSize: '1.2rem' }}>{icon}</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{label}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                {isPinned && <div title="Visible in main bar" style={{ background: 'var(--accent)', width: '6px', height: '6px', borderRadius: '50%' }} />}
+                <GripVertical size={16} style={{ color: 'var(--text-muted)' }} />
+            </div>
+        </div>
+    );
+};
 
 function ChangelogView() {
     const [content, setContent] = useState('Loading changelog...');
@@ -2291,47 +2889,55 @@ function ChangelogView() {
     }, []);
 
     return (
-        <div className="glass-panel" style={{
+        <div className="neo-card" style={{
             padding: '2rem',
+            background: 'var(--surface)',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border)',
             minHeight: '400px',
             animation: 'fadeIn 0.3s ease',
-            color: 'var(--text-primary)'
+            color: 'var(--text-primary)',
+            boxShadow: 'var(--shadow-md)'
         }}>
             <div style={{
-                marginBottom: '1.5rem',
-                borderBottom: '1px solid var(--glass-border)',
-                paddingBottom: '1rem',
+                marginBottom: '2rem',
+                borderBottom: '1px solid var(--border)',
+                paddingBottom: '1.25rem',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.75rem'
+                gap: '1rem'
             }}>
                 <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    background: 'var(--glass-shine)',
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    color: 'var(--accent)'
                 }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
+                    <Briefcase size={22} />
                 </div>
-                <h2 style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0 }}>Changelog.txt</h2>
+                <div>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>Changelog.txt</h2>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, fontWeight: 600 }}>System Updates & Version History</p>
+                </div>
             </div>
 
             <div style={{
-                fontFamily: 'Menlo, Monaco, Consolas, "Courier New", monospace',
+                fontFamily: 'var(--font-mono)',
                 fontSize: '0.9rem',
-                lineHeight: '1.6',
+                lineHeight: '1.7',
                 whiteSpace: 'pre-wrap',
-                opacity: 0.9,
-                overflowX: 'auto'
+                padding: '1.5rem',
+                background: 'var(--bg-secondary)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border)',
+                maxHeight: '600px',
+                overflowY: 'auto',
+                color: 'var(--text-secondary)'
             }}>
                 {content}
             </div>

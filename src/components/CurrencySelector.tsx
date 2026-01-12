@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useCurrency } from '@/context/CurrencyContext';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Coins } from 'lucide-react';
 
 import { getCurrencySymbol } from '@/lib/currency';
 
@@ -30,49 +30,32 @@ export function CurrencySelector() {
         <div ref={wrapperRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`currency-selector-btn nav-control-box ${isOpen ? 'active' : ''}`}
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    borderColor: isOpen ? 'var(--accent)' : 'var(--glass-border)',
-                    borderRadius: '0.5rem',
-                    color: 'var(--text-primary)',
-                    padding: '0 0.75rem',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    height: '2.4rem'
-                }}
+                className="navbar-btn"
+                title={`Currency: ${currency === 'ORG' ? 'Original' : currency}`}
             >
-                <span className="desktop-only" style={{ marginRight: '0.1rem' }}>
-                    {currency === 'ORG' ? 'FX' : currency}
-                </span>
-                <ChevronDown size={14} style={{ opacity: 0.4, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                <Coins size={18} />
             </button>
 
             {/* Dropdown Menu */}
             {isOpen && (
-                <div className="glass-panel" style={{
+                <div style={{
                     position: 'absolute',
                     top: '110%',
                     right: 0,
-                    minWidth: '100px',
-                    width: 'max-content',
-                    padding: '0.2rem',
-                    borderRadius: '0.5rem',
+                    minWidth: '130px',
+                    padding: '0.4rem',
+                    borderRadius: 'var(--radius-md)',
                     zIndex: 100,
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.1rem',
-                    background: 'var(--bg-secondary)', // More solid background for readability
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.3)'
+                    gap: '0.2rem',
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border)',
+                    boxShadow: 'var(--shadow-lg)'
                 }}>
                     {currencies.map(curr => {
-                        let label = '';
-                        if (curr === 'ORG') label = 'Original';
-                        else label = `${curr} (${getCurrencySymbol(curr)})`;
+                        const isActive = currency === curr;
+                        let label = curr === 'ORG' ? 'Original' : `${curr} (${getCurrencySymbol(curr)})`;
 
                         return (
                             <button
@@ -82,25 +65,26 @@ export function CurrencySelector() {
                                     setIsOpen(false);
                                 }}
                                 style={{
-                                    background: currency === curr ? 'var(--bg-active)' : 'transparent',
+                                    background: isActive ? 'var(--bg-secondary)' : 'transparent',
                                     border: 'none',
-                                    borderRadius: '0.3rem',
-                                    color: currency === curr ? 'var(--text-active)' : 'var(--text-secondary)',
-                                    padding: '0.3rem 0.6rem',
-                                    fontSize: '0.75rem',
-                                    fontWeight: currency === curr ? 700 : 500,
+                                    borderRadius: '6px',
+                                    color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                                    padding: '0.5rem 0.75rem',
+                                    fontSize: '0.8rem',
+                                    fontWeight: isActive ? 800 : 500,
                                     cursor: 'pointer',
                                     textAlign: 'left',
                                     width: '100%',
-                                    transition: 'all 0.1s',
+                                    transition: 'all 0.2s',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'space-between',
-                                    gap: '0.5rem'
                                 }}
+                                onMouseEnter={(e) => !isActive && (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                                onMouseLeave={(e) => !isActive && (e.currentTarget.style.background = 'transparent')}
                             >
                                 {label}
-                                {currency === curr && <span style={{ color: 'var(--accent)', fontSize: '0.7rem' }}>●</span>}
+                                {isActive && <div style={{ width: '6px', height: '6px', background: 'var(--accent)', borderRadius: '50%' }} />}
                             </button>
                         );
                     })}

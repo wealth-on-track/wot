@@ -1,4 +1,5 @@
 import { apiCache } from '@/lib/cache';
+import { trackApiRequest } from '@/services/telemetry';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const ALPHA_VANTAGE_BASE_URL = 'https://www.alphavantage.co/query';
@@ -29,24 +30,28 @@ export async function getCompanyOverview(symbol: string): Promise<{ country?: st
         return cached;
     }
 
+
+    const startTime = Date.now();
     try {
         const url = `${ALPHA_VANTAGE_BASE_URL}?function=OVERVIEW&symbol=${encodeURIComponent(symbol)}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-
         const response = await fetch(url);
 
         if (!response.ok) {
             console.error('[AlphaVantage] API error:', response.status);
+            await trackApiRequest('ALPHA', false, { endpoint: 'OVERVIEW', params: symbol, statusCode: response.status, duration: Date.now() - startTime, error: `HTTP ${response.status}` });
             return null;
         }
 
         const data = await response.json();
 
-        // Check if we got valid data (Alpha Vantage returns empty object or error message for invalid symbols)
+        // Check if we got valid data
         if (!data || !data.Symbol || data.Note || data['Error Message']) {
             if (data.Note) {
                 console.warn('[AlphaVantage] Rate limit reached:', data.Note);
+                await trackApiRequest('ALPHA', false, { endpoint: 'OVERVIEW', params: symbol, duration: Date.now() - startTime, error: 'Rate Limit', statusCode: 429 });
+            } else {
+                await trackApiRequest('ALPHA', false, { endpoint: 'OVERVIEW', params: symbol, duration: Date.now() - startTime, error: 'Invalid Data/Not Found', statusCode: 200 });
             }
-            // Cache null for 1 hour to avoid repeated failed requests
             apiCache.set(cacheKey, null, 60);
             return null;
         }
@@ -57,14 +62,14 @@ export async function getCompanyOverview(symbol: string): Promise<{ country?: st
             industry: data.Industry
         };
 
-        // Cache for 24 hours
         apiCache.set(cacheKey, profile, 1440);
+        await trackApiRequest('ALPHA', true, { endpoint: 'OVERVIEW', params: symbol, duration: Date.now() - startTime, statusCode: 200 });
 
         return profile;
     } catch (error) {
         console.error('[AlphaVantage] Error fetching company overview:', error);
-        // Cache null for 1 hour to avoid repeated failed requests
         apiCache.set(cacheKey, null, 60);
+        await trackApiRequest('ALPHA', false, { endpoint: 'OVERVIEW', params: symbol, duration: Date.now() - startTime, error: String(error) });
         return null;
     }
 }

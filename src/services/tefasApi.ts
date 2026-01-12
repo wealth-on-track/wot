@@ -1,5 +1,6 @@
 
 import { TefasClient } from "@firstthumb/tefas-api";
+import { trackApiRequest } from "./telemetry";
 
 export interface TefasFund {
     code: string;
@@ -11,14 +12,22 @@ export interface TefasFund {
 const client = new TefasClient();
 
 export async function getTefasFundInfo(code: string): Promise<TefasFund | null> {
-    try {
-        const cleanCode = code.toUpperCase().trim();
+    const startTime = Date.now();
+    const cleanCode = code.toUpperCase().trim();
 
+    try {
         // 1. Search to verify existence and get Title
         const searchRes = await client.searchFund(cleanCode);
         const match = searchRes.results?.find(r => r.fundCode === cleanCode);
 
-        if (!match) return null;
+        if (!match) {
+            await trackApiRequest('TEFAS', false, {
+                endpoint: 'fund_info',
+                params: cleanCode,
+                error: 'Fund not found'
+            });
+            return null;
+        }
 
         // 2. Try to get Price
         let price = 0;
@@ -51,7 +60,19 @@ export async function getTefasFundInfo(code: string): Promise<TefasFund | null> 
 
         } catch (e) {
             console.warn("TEFAS Price fetch failed:", e);
+            await trackApiRequest('TEFAS', false, {
+                endpoint: 'fund_price',
+                params: cleanCode,
+                error: String(e)
+            });
         }
+
+        const duration = Date.now() - startTime;
+        await trackApiRequest('TEFAS', true, {
+            endpoint: 'fund_info',
+            params: cleanCode,
+            duration
+        });
 
         return {
             code: cleanCode,
@@ -62,7 +83,62 @@ export async function getTefasFundInfo(code: string): Promise<TefasFund | null> 
 
     } catch (error) {
         console.error("Error fetching TEFAS data:", error);
+        const duration = Date.now() - startTime;
+        await trackApiRequest('TEFAS', false, {
+            endpoint: 'fund_info',
+            params: cleanCode,
+            error: String(error),
+            duration
+        });
         return null;
     }
 }
 
+
+export interface TefasHistoryItem {
+    date: Date;
+    price: number;
+}
+
+export async function getTefasHistory(code: string, startDate: Date): Promise<TefasHistoryItem[]> {
+    const startTime = Date.now();
+    const cleanCode = code.toUpperCase().trim();
+
+    try {
+        const endDateStr = new Date().toISOString().split('T')[0];
+        const startDateStr = startDate.toISOString().split('T')[0];
+
+        // Fetch history
+        const fundData = await client.getFund(startDateStr, endDateStr, cleanCode);
+
+        if (!fundData || !fundData.results || fundData.results.length === 0) {
+            return [];
+        }
+
+        const history: TefasHistoryItem[] = fundData.results
+            .map(item => ({
+                date: new Date(item.date),
+                price: item.price ?? 0 // Default to 0 if null
+            }))
+            .filter(item => item.price > 0) // Filter out 0/null prices
+            .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+        const duration = Date.now() - startTime;
+        await trackApiRequest('TEFAS', true, {
+            endpoint: 'history',
+            params: `${cleanCode} (${startDateStr})`,
+            duration
+        });
+
+        return history;
+
+    } catch (error) {
+        console.error(`Error fetching TEFAS history for ${cleanCode}:`, error);
+        await trackApiRequest('TEFAS', false, {
+            endpoint: 'history',
+            params: cleanCode,
+            error: String(error)
+        });
+        return [];
+    }
+}
