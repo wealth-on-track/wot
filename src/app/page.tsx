@@ -43,6 +43,28 @@ export default async function Home() {
             </p>
           </div>
 
+          {/* Demo Button */}
+          <Link
+            href="/demo"
+            className="glass-button"
+            style={{
+              padding: '1rem 2rem',
+              fontSize: '1.1rem',
+              fontWeight: 600,
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s ease',
+              background: 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
+              color: 'white',
+              border: 'none',
+              boxShadow: '0 4px 12px var(--accent-glow)'
+            }}
+          >
+            🎨 View Demo Portfolio
+          </Link>
+
           {/* Login Form Card */}
           <LoginForm />
 
