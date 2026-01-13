@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useTheme } from "@/context/ThemeContext";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { handleSignOut } from "@/lib/authActions";
 
 interface MobileHeaderProps {
@@ -197,6 +199,9 @@ export function MobileHeader({ username, isOwner }: MobileHeaderProps) {
                     )}
                 </div>
 
+                {/* Language Toggle */}
+                <LanguageToggle />
+
                 {/* Theme Toggle */}
                 <button
                     onClick={toggleTheme}
@@ -217,8 +222,8 @@ export function MobileHeader({ username, isOwner }: MobileHeaderProps) {
                     {theme === 'dark' ? '🌙' : '☀️'}
                 </button>
 
-                {/* Sign Out (if owner) */}
-                {isOwner && (
+                {/* Sign Out (if owner) OR Login/Get Started (if guest) */}
+                {isOwner ? (
                     <button
                         onClick={() => handleSignOut()}
                         style={{
@@ -234,6 +239,34 @@ export function MobileHeader({ username, isOwner }: MobileHeaderProps) {
                     >
                         Exit
                     </button>
+                ) : (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <Link href="/login" style={{
+                            textDecoration: 'none',
+                            background: 'transparent',
+                            border: '1px solid var(--border)',
+                            borderRadius: '8px',
+                            padding: '0.5rem 0.75rem',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            color: 'var(--text-primary)',
+                        }}>
+                            Login
+                        </Link>
+                        <Link href="/login" style={{
+                            textDecoration: 'none',
+                            background: 'var(--accent)',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '0.5rem 0.75rem',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            color: '#fff',
+                            boxShadow: '0 2px 8px var(--accent-glow)'
+                        }}>
+                            Start
+                        </Link>
+                    </div>
                 )}
             </div>
         </header>
