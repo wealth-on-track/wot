@@ -210,7 +210,7 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                                 <Link href="/login" style={{ opacity: 0.8, fontSize: '0.8rem', color: 'var(--text-primary)' }}>
                                     Login
                                 </Link>
-                                <Link href="/register" className="glass-button" style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem' }}>
+                                <Link href="/login" className="glass-button" style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem' }}>
                                     Get Started
                                 </Link>
                             </div>
