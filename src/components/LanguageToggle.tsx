@@ -14,29 +14,9 @@ export function LanguageToggle() {
     return (
         <button
             onClick={toggleLanguage}
-            className="navbar-action-btn"
-            style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                padding: '0.6rem',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                position: 'relative'
-            }}
-            onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--bg-secondary)';
-                e.currentTarget.style.color = 'var(--text-primary)';
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.color = 'var(--text-secondary)';
-            }}
+            className="navbar-btn"
             title={language === 'ENG' ? 'Dil Değiştir (TR)' : 'Switch Language (ENG)'}
+            style={{ position: 'relative' }} // Needed for absolute badge
         >
             <Languages size={20} />
             <span style={{

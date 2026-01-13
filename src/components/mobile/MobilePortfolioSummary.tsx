@@ -3,24 +3,25 @@
 import { useState } from "react";
 import { useCurrency } from "@/context/CurrencyContext";
 import { ASSET_COLORS } from "@/lib/constants";
+import { Eye, EyeOff } from "lucide-react";
+import type { AssetDisplay } from "@/lib/types";
 
 interface MobilePortfolioSummaryProps {
     totalValueEUR: number;
-    assets: {
-        symbol: string;
-        totalValueEUR: number;
-        type: string;
-        sector?: string;
-    }[];
+    assets: AssetDisplay[];
+    isPrivacyMode: boolean;
+    onTogglePrivacy: () => void;
 }
 
-type AllocationView = "Type" | "Sector";
 type Period = "1D" | "1W" | "1M" | "YTD" | "1Y" | "ALL";
 
-export function MobilePortfolioSummary({ totalValueEUR, assets }: MobilePortfolioSummaryProps) {
+export function MobilePortfolioSummary({
+    totalValueEUR,
+    assets,
+    isPrivacyMode,
+    onTogglePrivacy
+}: MobilePortfolioSummaryProps) {
     const { currency } = useCurrency();
-    const [allocationView, setAllocationView] = useState<AllocationView>("Type");
-    const [isExpanded, setIsExpanded] = useState(true);
     const [selectedPeriod, setSelectedPeriod] = useState<Period>("1D");
 
     const rates: Record<string, number> = { EUR: 1, USD: 1.05, TRY: 38.5 };
@@ -47,284 +48,299 @@ export function MobilePortfolioSummary({ totalValueEUR, assets }: MobilePortfoli
     const periodReturnEUR = totalValueEUR * periodFactors[selectedPeriod];
     const periodReturnPct = (periodReturnEUR / totalValueEUR) * 100;
 
-    // Calculate allocation data
+    return (
+        <div className="neo-card" style={{
+            padding: '1rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '1rem'
+        }}>
+            {/* Left: Total Value + Change */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.1rem' }}>
+                    <div style={{
+                        fontSize: '1.75rem',
+                        fontWeight: 900,
+                        color: 'var(--text-primary)',
+                        letterSpacing: '-0.03em',
+                        lineHeight: 1,
+                        fontVariantNumeric: 'tabular-nums'
+                    }}>
+                        {isPrivacyMode
+                            ? '****'
+                            : `${convert(totalValueEUR).toLocaleString('de-DE', { maximumFractionDigits: 0 })}${sym}`
+                        }
+                    </div>
+                    {/* Privacy Toggle */}
+                    <button
+                        onClick={onTogglePrivacy}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            padding: '0.2rem',
+                            cursor: 'pointer',
+                            color: 'var(--text-muted)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        {isPrivacyMode ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                </div>
+
+                {/* Portfolio Total Change */}
+                <div style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem'
+                }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Total</span>
+                    <span style={{ color: totalReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                        {totalReturnPct >= 0 ? '+' : ''}{totalReturnPct.toFixed(1)}%
+                    </span>
+                    <span style={{
+                        opacity: 0.8,
+                        color: totalReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)'
+                    }}>
+                        {isPrivacyMode
+                            ? '****'
+                            : `${totalReturnEUR >= 0 ? '+' : ''}${sym}${convert(totalReturnEUR).toLocaleString('de-DE', { maximumFractionDigits: 0 })}`
+                        }
+                    </span>
+                </div>
+            </div>
+
+            {/* Right: Period Selector + Return */}
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                gap: '0.4rem'
+            }}>
+                {/* Period Selector */}
+                <div style={{
+                    background: 'var(--bg-secondary)',
+                    borderRadius: '8px',
+                    padding: '0.2rem',
+                    display: 'flex',
+                    gap: '0.1rem',
+                    border: '1px solid var(--border)'
+                }}>
+                    {(["1D", "1W", "1M", "YTD", "ALL"] as Period[]).map(period => (
+                        <button
+                            key={period}
+                            onClick={() => setSelectedPeriod(period)}
+                            style={{
+                                background: selectedPeriod === period ? 'var(--accent)' : 'transparent',
+                                color: selectedPeriod === period ? '#fff' : 'var(--text-muted)',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '0.25rem 0.4rem',
+                                fontSize: '0.65rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                                letterSpacing: '0.02em'
+                            }}
+                        >
+                            {period}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Period Return */}
+                <div style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    textAlign: 'right',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem'
+                }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>
+                        {selectedPeriod === '1D' ? 'Today' : selectedPeriod === '1W' ? '1W' : selectedPeriod === '1M' ? '1M' : selectedPeriod === 'YTD' ? 'YTD' : 'All'}
+                    </span>
+                    <span style={{ color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                        {periodReturnPct >= 0 ? '+' : ''}{periodReturnPct.toFixed(1)}%
+                    </span>
+                    <span style={{
+                        opacity: 0.8,
+                        color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)'
+                    }}>
+                        {isPrivacyMode
+                            ? '****'
+                            : `${periodReturnEUR >= 0 ? '+' : ''}${sym}${convert(periodReturnEUR).toLocaleString('de-DE', { maximumFractionDigits: 0 })}`
+                        }
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+// --- New Allocations Component ---
+
+type AllocationView = "Portfolio" | "Type" | "Sector" | "Exchange";
+
+interface MobileHomeAllocationsProps {
+    assets: AssetDisplay[];
+    totalValueEUR: number;
+    isPrivacyMode: boolean;
+}
+
+export function MobileHomeAllocations({ assets, totalValueEUR, isPrivacyMode }: MobileHomeAllocationsProps) {
+    const { currency } = useCurrency();
+    const [view, setView] = useState<AllocationView>("Type");
+
+    const rates: Record<string, number> = { EUR: 1, USD: 1.05, TRY: 38.5 };
+    const symbols: Record<string, string> = { EUR: "€", USD: "$", TRY: "₺" };
+
+    const convert = (amount: number) => {
+        if (currency === 'ORG') return amount;
+        return amount * (rates[currency] || 1);
+    };
+    const sym = currency === 'ORG' ? '€' : (symbols[currency] || "€");
+
     const getChartData = () => {
         const data: { name: string; value: number; color?: string }[] = [];
 
-        if (allocationView === "Type") {
-            assets.forEach(asset => {
-                const existing = data.find(item => item.name === asset.type);
-                if (existing) {
-                    existing.value += asset.totalValueEUR;
-                } else {
-                    data.push({
-                        name: asset.type,
-                        value: asset.totalValueEUR,
-                        color: ASSET_COLORS[asset.type] || ASSET_COLORS['DEFAULT']
-                    });
-                }
-            });
-        } else {
-            assets.forEach(asset => {
-                const name = asset.sector || 'Unknown';
-                const existing = data.find(item => item.name === name);
-                if (existing) {
-                    existing.value += asset.totalValueEUR;
-                } else {
-                    data.push({ name, value: asset.totalValueEUR });
-                }
-            });
-        }
+        assets.forEach(asset => {
+            let key = 'Other';
+            if (view === "Type") key = asset.type;
+            else if (view === "Sector") key = asset.sector || 'Unknown';
+            else if (view === "Exchange") key = asset.exchange || 'Unknown';
+            else if (view === "Portfolio") key = asset.platform || 'My Portfolio'; // Map Portfolio -> Platform
+
+            const existing = data.find(item => item.name === key);
+            if (existing) {
+                existing.value += asset.totalValueEUR;
+            } else {
+                data.push({
+                    name: key,
+                    value: asset.totalValueEUR,
+                    color: view === "Type" ? (ASSET_COLORS[asset.type] || ASSET_COLORS['DEFAULT']) : undefined
+                });
+            }
+        });
 
         return data.sort((a, b) => b.value - a.value);
     };
 
     const chartData = getChartData();
-    const DEFAULT_COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444'];
+    const DEFAULT_COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
 
     return (
-        <div style={{
-            background: 'var(--bg-primary)',
-            borderRadius: '1rem',
-            border: '1px solid var(--border)',
-            overflow: 'hidden'
-        }}>
-            {/* Compact Balance Section */}
-            <div
-                onClick={() => setIsExpanded(!isExpanded)}
-                style={{
-                    padding: '0.85rem',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    borderBottom: '1px solid var(--border)'
-                }}
-            >
-                {/* Horizontal Symmetric Layout */}
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: '1rem'
-                }}>
-                    {/* Left: Total Value + Change */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                            fontSize: '1.75rem',
-                            fontWeight: 900,
-                            color: 'var(--text-primary)',
-                            letterSpacing: '-0.03em',
-                            lineHeight: 1,
-                            marginBottom: '0.35rem'
-                        }}>
-                            {convert(totalValueEUR).toLocaleString('de-DE', { maximumFractionDigits: 0 })}{sym}
-                        </div>
-                        {/* Portfolio Total Change */}
-                        <div style={{
-                            fontSize: '0.7rem',
-                            fontWeight: 800,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.3rem'
-                        }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>Total</span>
-                            <span style={{ color: totalReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                                {totalReturnPct >= 0 ? '+' : ''}{totalReturnPct.toFixed(1)}%
-                            </span>
-                            <span style={{
-                                opacity: 0.8,
-                                color: totalReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)'
-                            }}>
-                                {totalReturnEUR >= 0 ? '+' : ''}{sym}{convert(totalReturnEUR).toLocaleString('de-DE', { maximumFractionDigits: 0 })}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Right: Period Selector + Return */}
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'flex-end',
-                        gap: '0.35rem'
-                    }}>
-                        {/* Period Selector */}
-                        <div style={{
-                            background: 'var(--bg-secondary)',
+        <div className="neo-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {/* View Toggle */}
+            <div style={{
+                display: 'flex',
+                gap: '0.3rem',
+                background: 'var(--bg-secondary)',
+                padding: '0.25rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border)'
+            }}>
+                {(["Portfolio", "Type", "Sector", "Exchange"] as AllocationView[]).map(v => (
+                    <button
+                        key={v}
+                        onClick={() => setView(v)}
+                        style={{
+                            flex: 1,
+                            background: view === v ? 'var(--surface)' : 'transparent',
+                            border: 'none',
                             borderRadius: '6px',
-                            padding: '0.2rem',
-                            display: 'flex',
-                            gap: '0.1rem',
-                            border: '1px solid var(--border)'
-                        }}>
-                            {(["1D", "1W", "1M", "1Y"] as Period[]).map(period => (
-                                <button
-                                    key={period}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedPeriod(period);
-                                    }}
-                                    style={{
-                                        background: selectedPeriod === period ? 'var(--accent)' : 'transparent',
-                                        color: selectedPeriod === period ? '#fff' : 'var(--text-muted)',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        padding: '0.3rem 0.4rem',
-                                        fontSize: '0.65rem',
-                                        fontWeight: 800,
-                                        cursor: 'pointer',
-                                        transition: 'all 0.15s',
-                                        letterSpacing: '0.02em'
-                                    }}
-                                >
-                                    {period}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Period Return */}
-                        <div style={{
+                            color: view === v ? 'var(--accent)' : 'var(--text-secondary)',
+                            padding: '0.4rem',
                             fontSize: '0.7rem',
                             fontWeight: 800,
-                            textAlign: 'right',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.3rem'
-                        }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>
-                                {selectedPeriod === '1D' ? 'Today' : selectedPeriod === '1W' ? '1 Week' : selectedPeriod === '1M' ? '1 Month' : '1 Year'}
-                            </span>
-                            <span style={{ color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                                {periodReturnPct >= 0 ? '+' : ''}{periodReturnPct.toFixed(1)}%
-                            </span>
-                            <span style={{
-                                opacity: 0.8,
-                                color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)'
-                            }}>
-                                {periodReturnEUR >= 0 ? '+' : ''}{sym}{convert(periodReturnEUR).toLocaleString('de-DE', { maximumFractionDigits: 0 })}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Expand/Collapse Icon */}
-                    <div style={{
-                        fontSize: '1.2rem',
-                        color: 'var(--text-muted)',
-                        transition: 'transform 0.2s',
-                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                        flexShrink: 0
-                    }}>
-                        ↓
-                    </div>
-                </div>
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.03em',
+                            boxShadow: view === v ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+                        }}
+                    >
+                        {v}
+                    </button>
+                ))}
             </div>
 
-            {/* Allocation Section - Expandable */}
-            {isExpanded && (
-                <div style={{
-                    padding: '0.85rem'
-                }}>
-                    {/* Toggle Type/Sector */}
-                    <div style={{
-                        display: 'flex',
-                        gap: '0.3rem',
-                        marginBottom: '0.85rem',
-                        background: 'var(--bg-secondary)',
-                        padding: '0.25rem',
-                        borderRadius: '6px',
-                        border: '1px solid var(--border)'
-                    }}>
-                        {(["Type", "Sector"] as AllocationView[]).map(view => (
-                            <button
-                                key={view}
-                                onClick={() => setAllocationView(view)}
-                                style={{
-                                    flex: 1,
-                                    background: allocationView === view ? 'var(--surface)' : 'transparent',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    color: allocationView === view ? 'var(--accent)' : 'var(--text-secondary)',
-                                    padding: '0.4rem',
-                                    fontSize: '0.65rem',
-                                    fontWeight: 800,
-                                    cursor: 'pointer',
-                                    transition: 'all 0.15s',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.03em'
-                                }}
-                            >
-                                {view}
-                            </button>
-                        ))}
-                    </div>
+            {/* Bars */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {chartData.map((item, index) => {
+                    const percentage = totalValueEUR > 0 ? (item.value / totalValueEUR) * 100 : 0;
+                    const color = item.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
 
-                    {/* Allocation Bars */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                        {chartData.map((item, index) => {
-                            const percentage = (item.value / totalValueEUR) * 100;
-                            const color = (item as any).color || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
-
-                            return (
-                                <div key={item.name}>
+                    return (
+                        <div key={item.name}>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                marginBottom: '0.3rem'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                     <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        marginBottom: '0.3rem'
+                                        width: '6px',
+                                        height: '6px',
+                                        borderRadius: '2px',
+                                        background: color,
+                                        boxShadow: `0 0 6px ${color}40`
+                                    }} />
+                                    <span style={{
+                                        fontSize: '0.75rem',
+                                        fontWeight: 700,
+                                        color: 'var(--text-primary)'
                                     }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                            <div style={{
-                                                width: '6px',
-                                                height: '6px',
-                                                borderRadius: '2px',
-                                                background: color,
-                                                boxShadow: `0 0 6px ${color}40`
-                                            }} />
-                                            <span style={{
-                                                fontSize: '0.7rem',
-                                                fontWeight: 700,
-                                                color: 'var(--text-primary)'
-                                            }}>
-                                                {item.name}
-                                            </span>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
-                                            <span style={{
-                                                fontSize: '0.7rem',
-                                                fontWeight: 800,
-                                                color: 'var(--text-primary)'
-                                            }}>
-                                                {percentage.toFixed(0)}%
-                                            </span>
-                                            <span style={{
-                                                fontSize: '0.65rem',
-                                                color: 'var(--text-muted)',
-                                                fontWeight: 600
-                                            }}>
-                                                {sym}{convert(item.value).toLocaleString('de-DE', { maximumFractionDigits: 0 })}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    {/* Progress Bar */}
-                                    <div style={{
-                                        width: '100%',
-                                        height: '5px',
-                                        background: 'var(--bg-secondary)',
-                                        borderRadius: '3px',
-                                        overflow: 'hidden'
-                                    }}>
-                                        <div style={{
-                                            width: `${percentage}%`,
-                                            height: '100%',
-                                            background: color,
-                                            borderRadius: '3px',
-                                            transition: 'width 0.4s ease'
-                                        }} />
-                                    </div>
+                                        {item.name}
+                                    </span>
                                 </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
+                                    <span style={{
+                                        fontSize: '0.75rem',
+                                        fontWeight: 800,
+                                        color: 'var(--text-primary)'
+                                    }}>
+                                        {percentage.toFixed(0)}%
+                                    </span>
+                                    <span style={{
+                                        fontSize: '0.7rem',
+                                        color: 'var(--text-muted)',
+                                        fontWeight: 600,
+                                        fontVariantNumeric: 'tabular-nums'
+                                    }}>
+                                        {isPrivacyMode
+                                            ? '****'
+                                            : `${sym}${convert(item.value).toLocaleString('de-DE', { maximumFractionDigits: 0 })}`
+                                        }
+                                    </span>
+                                </div>
+                            </div>
+                            {/* Progress Bar */}
+                            <div style={{
+                                width: '100%',
+                                height: '6px',
+                                background: 'var(--bg-secondary)',
+                                borderRadius: '3px',
+                                overflow: 'hidden'
+                            }}>
+                                <div style={{
+                                    width: `${percentage}%`,
+                                    height: '100%',
+                                    background: color,
+                                    borderRadius: '3px',
+                                    transition: 'width 0.4s ease'
+                                }} />
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 }

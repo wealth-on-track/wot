@@ -6,6 +6,7 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { useTheme } from "@/context/ThemeContext";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { handleSignOut } from "@/lib/authActions";
+import { LogOut, User } from "lucide-react";
 
 interface MobileHeaderProps {
     username: string;
@@ -107,6 +108,27 @@ export function MobileHeader({ username, isOwner }: MobileHeaderProps) {
                             letterSpacing: '0.02em',
                             opacity: 0.8
                         }}>TRACK</span>
+                    </div>
+
+                    {/* Beta Badge - Mobile */}
+                    <div style={{
+                        fontSize: '6px', // Slightly smaller for mobile
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        padding: '2px 5px',
+                        borderRadius: '6px',
+                        background: 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
+                        color: '#fff',
+                        boxShadow: '0 2px 8px var(--accent-glow)',
+                        animation: 'pulse-glow 3s ease-in-out infinite',
+                        userSelect: 'none',
+                        whiteSpace: 'nowrap',
+                        marginLeft: '0.3rem',
+                        alignSelf: 'flex-start',
+                        marginTop: '0px'
+                    }}>
+                        BETA V2
                     </div>
                 </div>
             </div>
@@ -224,21 +246,50 @@ export function MobileHeader({ username, isOwner }: MobileHeaderProps) {
 
                 {/* Sign Out (if owner) OR Login/Get Started (if guest) */}
                 {isOwner ? (
-                    <button
-                        onClick={() => handleSignOut()}
-                        style={{
-                            background: 'transparent',
-                            border: '1px solid var(--border)',
-                            borderRadius: '8px',
-                            padding: '0.5rem 0.75rem',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            color: 'var(--text-muted)',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        Exit
-                    </button>
+                    <>
+                        {/* User Profile / Settings */}
+                        <Link href="/settings" style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <div
+                                style={{
+                                    background: 'transparent',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '8px',
+                                    width: '36px',
+                                    height: '36px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'var(--text-muted)',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <User size={18} />
+                            </div>
+                        </Link>
+
+                        {/* Logout */}
+                        <button
+                            onClick={() => handleSignOut()}
+                            style={{
+                                background: 'transparent',
+                                border: '1px solid var(--border)',
+                                borderRadius: '8px',
+                                width: '36px',
+                                height: '36px', // Matching dimension
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--text-muted)',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <LogOut size={18} />
+                        </button>
+                    </>
                 ) : (
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <Link href="/login" style={{

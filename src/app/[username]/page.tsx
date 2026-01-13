@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import Dashboard from "@/components/DashboardV2";
 import { Navbar } from "@/components/Navbar";
 import { ClientWrapper } from "@/components/ClientWrapper";
-import { getPortfolioMetrics } from "@/lib/portfolio";
+import { getPortfolioMetricsOptimized } from "@/lib/portfolio-optimized";
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { isMobileDevice } from "@/lib/deviceDetection";
@@ -66,7 +66,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     let assetsWithValues: any[] = [];
 
     try {
-        const result = await getPortfolioMetrics(user.portfolio.assets, rates, false, session?.user?.name || session?.user?.email || 'System');
+        const result = await getPortfolioMetricsOptimized(user.portfolio.assets, rates, false, session?.user?.name || session?.user?.email || 'System');
         totalPortfolioValueEUR = result.totalValueEUR;
         assetsWithValues = result.assetsWithValues;
     } catch (e) {

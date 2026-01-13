@@ -71,7 +71,7 @@ export function LoginForm() {
     return (
         <div className="neo-card" style={{ padding: '2.5rem', width: '100%', maxWidth: '440px', boxShadow: 'var(--shadow-lg)' }}>
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '0.5rem' }}>Welcome Back</h1>
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '0.5rem' }}>Welcome</h1>
                 <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Access your professional portfolio dashboard</p>
             </div>
 

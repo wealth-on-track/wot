@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { auth } from "@/auth";
-import { handleSignOut } from "@/lib/authActions";
 import { InlineAssetSearch } from "./InlineAssetSearch";
 import { CurrencySelector } from "./CurrencySelector";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageToggle } from "./LanguageToggle";
-import { SignOutButton } from "./SignOutButton";
 import { NavbarActions } from "./NavbarActions";
-import { ArrowUpRight, Link2, LogOut, SlidersHorizontal, Sun, Moon } from "lucide-react";
+import { User, ShieldCheck } from "lucide-react";
 
 interface NavbarProps {
     totalBalance?: number;
@@ -134,9 +132,6 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
 
                             {/* Beta Badge */}
                             <div style={{
-                                position: 'absolute',
-                                top: '-2px',
-                                right: '-18px',
                                 fontSize: '7px',
                                 fontWeight: 700,
                                 textTransform: 'uppercase',
@@ -148,9 +143,12 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                                 boxShadow: '0 2px 8px var(--accent-glow)',
                                 animation: 'pulse-glow 3s ease-in-out infinite',
                                 userSelect: 'none',
-                                whiteSpace: 'nowrap'
+                                whiteSpace: 'nowrap',
+                                marginLeft: '0.4rem',
+                                alignSelf: 'flex-start',
+                                marginTop: '0px'
                             }}>
-                                BETA V1.2
+                                BETA V2
                             </div>
                         </Link>
                     </div>
@@ -186,25 +184,47 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                         alignItems: 'center',
                         justifyContent: 'flex-end', // Right aligned
                         height: '100%',
-                        gap: '0.5rem'
+                        gap: '0.75rem'
                     }}>
-                        {/* 1. Global Toggles (Always Visible) */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginRight: '0.5rem', paddingRight: '0.5rem', borderRight: '1px solid var(--border)' }}>
-                            <CurrencySelector />
-                            <LanguageToggle />
-                            <ThemeToggle />
-                        </div>
+                        {/* Admin Button (Only for authorized users) */}
+                        {session?.user?.email && (session.user.email === 'test1@example.com' || session.user.email === 'dev1@example.com') && (
+                            <Link
+                                href="/admin"
+                                className="navbar-btn"
+                                style={{
+                                    textDecoration: 'none',
+                                    marginRight: '1rem' // 3x spacing (0.5rem * 2 = 1rem extra)
+                                }}
+                                title="Admin Panel"
+                            >
+                                <ShieldCheck size={20} />
+                            </Link>
+                        )}
+
+                        {/* Global Toggles (Always Visible) */}
+                        <CurrencySelector />
+                        <LanguageToggle />
+                        <ThemeToggle />
 
                         {session?.user ? (
                             <>
-                                {/* Action Group */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    {/* 1. Filter (Portal Target) */}
-                                    <div id="navbar-extra-actions" style={{ display: 'flex', alignItems: 'center' }}></div>
+                                {/* Filter (Portal Target) */}
+                                <div id="navbar-extra-actions" style={{ display: 'flex', alignItems: 'center' }}></div>
 
-                                    {/* 2. Actions (Integrations + Logout) */}
-                                    <NavbarActions userEmail={session?.user?.email} />
-                                </div>
+                                {/* User Settings */}
+                                <Link
+                                    href="/settings"
+                                    className="navbar-btn"
+                                    style={{
+                                        textDecoration: 'none',
+                                    }}
+                                    title="Settings"
+                                >
+                                    <User size={20} />
+                                </Link>
+
+                                {/* Logout with Separator */}
+                                <NavbarActions />
                             </>
                         ) : (
                             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>

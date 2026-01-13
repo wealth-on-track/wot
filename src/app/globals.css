@@ -64,7 +64,7 @@
 
 /* PREMIUM LIGHT THEME (Apple Card Style - Requested) */
 body.light {
-  --bg-main: #EFF2F6;
+  --bg-main: #E2E6EA;
   /* Cool Gray - Better contrast with white cards */
   --bg-primary: #FFFFFF;
   --bg-secondary: #F1F5F9;
@@ -120,13 +120,18 @@ body {
   color: var(--text-primary);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.25s ease, color 0.25s ease;
   font-variant-numeric: tabular-nums;
 
   /* Layout Variables for consistency */
   --content-max-width: 80rem;
   /* 7xl Bento Standard */
   --content-padding: 1rem;
+}
+
+/* Smooth theme transitions for all elements */
+* {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
 }
 
 /* Base Panel / Card */
@@ -791,6 +796,41 @@ body.light .dropdown-item:hover {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Loading Animations */
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 2px 8px var(--accent-glow);
+  }
+
+  50% {
+    box-shadow: 0 4px 16px var(--accent-glow);
   }
 }
 

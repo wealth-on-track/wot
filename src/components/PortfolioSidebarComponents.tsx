@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { PortfolioChart } from "./PortfolioChart";
@@ -228,6 +228,7 @@ interface AllocationCardProps extends SidebarComponentProps {
     assets: any[];
     onFilterSelect?: (view: string, value: string) => void;
     activeFilters?: Record<string, string | null>;
+    variant?: 'default' | 'mobile';
 }
 
 // All available allocation views
@@ -241,7 +242,7 @@ const ALL_ALLOCATION_VIEWS = [
     { id: 'Platform', label: 'Platform' }
 ];
 
-export function AllocationCard({ assets, totalValueEUR, isBlurred = false, exchangeRates, onFilterSelect, activeFilters }: AllocationCardProps) {
+export function AllocationCard({ assets, totalValueEUR, isBlurred = false, exchangeRates, onFilterSelect, activeFilters, variant = 'default' }: AllocationCardProps) {
     const [hoveredSlice, setHoveredSlice] = useState<string | null>(null);
     const [allocationView, setAllocationView] = useState("Portfolio");
     const [viewOrder, setViewOrder] = useState(['Portfolio', 'Type', 'Exchange', 'Currency', 'Country', 'Sector', 'Platform', 'Positions']);
@@ -381,6 +382,263 @@ export function AllocationCard({ assets, totalValueEUR, isBlurred = false, excha
     const hoveredItem = hoveredSlice ? chartData.find(i => i.name === hoveredSlice) : null;
     const hoveredValue = hoveredItem ? convert(hoveredItem.value) : displayBalance;
     const hoveredPct = hoveredItem ? (hoveredItem.value / totalVal * 100) : null;
+
+    // Mobile Pagination Logic
+    const [mobilePage, setMobilePage] = useState(0); // 0 or 1
+
+    const getVisibleCategories = () => {
+        const all = viewOrder.filter(v => v !== 'Positions');
+        // Define specific split based on user request
+        if (mobilePage === 0) {
+            // Page 1: Everything EXCEPT Country, Sector, Platform
+            return all.filter(v => !['Country', 'Sector', 'Platform'].includes(v));
+        } else {
+            // Page 2: ONLY Country, Sector, Platform
+            return all.filter(v => ['Country', 'Sector', 'Platform'].includes(v));
+        }
+    };
+
+
+    // Privacy Mode Logic
+    const [showAmounts, setShowAmounts] = useState(true);
+
+    if (variant === 'mobile') {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {/* 1. Category Selector (Separate Card) */}
+                <div className="neo-card" style={{ padding: '0.5rem 0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.25rem' }}>
+
+                    {/* Left Arrow - Show only on Page 2 (Transition to Page 0) */}
+                    <button
+                        onClick={() => setMobilePage(0)}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: mobilePage === 1 ? 'var(--text-primary)' : 'transparent',
+                            cursor: mobilePage === 1 ? 'pointer' : 'default',
+                            padding: '0.5rem',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            opacity: mobilePage === 1 ? 1 : 0,
+                            transition: 'opacity 0.2s',
+                            width: '32px',
+                            flexShrink: 0
+                        }}
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+
+                    {/* Categories Container */}
+                    <div style={{
+                        display: 'flex',
+                        gap: '0.5rem',
+                        overflowX: 'hidden',
+                        justifyContent: 'center',
+                        flex: 1,
+                        flexWrap: 'nowrap'
+                    }}>
+                        {getVisibleCategories().map(view => (
+                            <button
+                                key={view}
+                                onClick={() => setAllocationView(view)}
+                                style={{
+                                    whiteSpace: 'nowrap',
+                                    padding: '0.5rem 0.8rem',
+                                    borderRadius: '999px',
+                                    background: allocationView === view ? 'var(--accent)' : 'var(--bg-secondary)',
+                                    border: 'none',
+                                    color: allocationView === view ? '#fff' : 'var(--text-muted)',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: allocationView === view ? '0 4px 12px var(--accent-glow)' : 'none',
+                                    flexShrink: 0
+                                }}
+                            >
+                                {view}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Right Arrow - Show only on Page 1 (Transition to Page 2) */}
+                    <button
+                        onClick={() => setMobilePage(1)}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: mobilePage === 0 ? 'var(--text-primary)' : 'transparent',
+                            cursor: mobilePage === 0 ? 'pointer' : 'default',
+                            padding: '0.5rem',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            opacity: mobilePage === 0 ? 1 : 0,
+                            transition: 'opacity 0.2s',
+                            width: '32px',
+                            flexShrink: 0
+                        }}
+                    >
+                        <ChevronRight size={20} />
+                    </button>
+                </div>
+
+                {/* 2. Chart & Details (Separate Card) - Ultra Compact */}
+                <div className="neo-card" style={{
+                    padding: '0.5rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0', // Zero gap between sections
+                    position: 'relative' // For absolute positioning of eye icon
+                }}>
+                    {/* Privacy Toggle Button - Moved to top right of card */}
+                    <button
+                        onClick={() => setShowAmounts(!showAmounts)}
+                        style={{
+                            position: 'absolute',
+                            top: '0.5rem',
+                            right: '0.5rem',
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '50%',
+                            width: '28px',
+                            height: '28px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            zIndex: 20,
+                            color: 'var(--text-muted)'
+                        }}
+                    >
+                        {showAmounts ? <Eye size={14} /> : <EyeOff size={14} />}
+                    </button>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0' }}>
+
+                        {/* Chart Area */}
+                        <div style={{ position: 'relative', width: '200px', height: '200px' }}>
+                            <PortfolioChart
+                                assets={chartData}
+                                totalValueEUR={totalValueEUR}
+                                showLegend={false}
+                                onHover={setHoveredSlice}
+                                onClick={(name) => onFilterSelect?.(allocationView, name)}
+                                activeSliceName={hoveredSlice}
+                            />
+                            <div style={{
+                                position: 'absolute',
+                                inset: 0,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                pointerEvents: 'none',
+                                textAlign: 'center',
+                                gap: '0'
+                            }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    {hoveredSlice || 'Net Worth'}
+                                </span>
+                                <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)', filter: isBlurred ? 'blur(12px)' : 'none', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                                    {showAmounts
+                                        ? (hoveredPct !== null
+                                            ? `${Math.round(hoveredPct)}%`
+                                            : `${sym}${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(displayBalance)}`)
+                                        : (hoveredPct !== null ? `${Math.round(hoveredPct)}%` : '****')
+                                    }
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Breakdown List (Legend) - Ultra Compact */}
+                        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                            {chartData.slice(0, 8).map((item, index) => {
+                                const pct = totalVal > 0 ? (item.value / totalVal) * 100 : 0;
+                                const activeFilterValue = activeFilters?.[allocationView] || null;
+                                const isSelected = activeFilterValue === item.name;
+                                const isHovered = hoveredSlice === item.name;
+
+                                return (
+                                    <div
+                                        key={item.name}
+                                        onClick={() => onFilterSelect?.(allocationView, item.name)}
+                                        onMouseEnter={() => setHoveredSlice(item.name)}
+                                        onMouseLeave={() => setHoveredSlice(null)}
+                                        style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            padding: '0.35rem 0.5rem',
+                                            cursor: 'pointer',
+                                            background: isSelected ? 'rgba(99, 102, 241, 0.12)' : isHovered ? 'var(--bg-secondary)' : 'var(--surface)',
+                                            border: isSelected ? '1px solid var(--accent)' : isHovered ? '1px solid var(--border)' : '1px solid var(--border-light)',
+                                            borderRadius: '6px',
+                                            transition: 'all 0.2s',
+                                            opacity: hoveredSlice && hoveredSlice !== item.name ? 0.4 : 1
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                            <div style={{
+                                                width: '0.6rem',
+                                                height: '0.6rem',
+                                                borderRadius: '2px',
+                                                backgroundColor: item.color,
+                                            }}></div>
+                                            <span style={{
+                                                fontSize: '0.75rem',
+                                                fontWeight: 700,
+                                                color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
+                                            }}>{item.name}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span style={{
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                color: 'var(--text-muted)',
+                                                fontVariantNumeric: 'tabular-nums'
+                                            }}>
+                                                {showAmounts
+                                                    ? `${sym}${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(convert(item.value))}`
+                                                    : '****'}
+                                            </span>
+                                            <span style={{
+                                                fontSize: '0.8rem',
+                                                fontWeight: 800,
+                                                color: 'var(--text-primary)',
+                                                fontVariantNumeric: 'tabular-nums',
+                                                minWidth: '32px',
+                                                textAlign: 'right'
+                                            }}>{Math.round(pct)}%</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Total Wealth Summary - Minimized */}
+                        <div style={{
+                            marginTop: '0.25rem',
+                            paddingTop: '0.25rem',
+                            borderTop: '1px solid var(--border)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            width: '100%',
+                            paddingLeft: '0.25rem',
+                            paddingRight: '0.25rem'
+                        }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                Total
+                            </span>
+                            <span style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                {showAmounts
+                                    ? `${sym}${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(displayBalance)}`
+                                    : '****'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>

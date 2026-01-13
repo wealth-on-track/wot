@@ -17,10 +17,10 @@ export interface BenchmarkAsset {
 }
 
 export const BENCHMARK_ASSETS: BenchmarkAsset[] = [
-    { id: 'XAUUSD', name: 'Gold (XAU/USD)', symbol: 'GC=F', color: '#FFD700' },
-    { id: 'NDX', name: 'NASDAQ 100', symbol: '^NDX', color: '#00C805' },
     { id: 'SPX', name: 'S&P 500', symbol: '^GSPC', color: '#0088FE' },
+    { id: 'IXIC', name: 'NASDAQ', symbol: '^IXIC', color: '#00C805' },
     { id: 'BIST100', name: 'BIST 100', symbol: 'XU100.IS', color: '#FF4444' },
+    { id: 'GOLD', name: 'Gold', symbol: 'GC=F', color: '#FFD700' },
     { id: 'BTC', name: 'Bitcoin', symbol: 'BTC-USD', color: '#F7931A' },
 ];
 
@@ -58,9 +58,9 @@ export async function fetchBenchmarkData(
                 break;
         }
 
-        // Call our API endpoint
+        // Call our API endpoint with period parameter
         const response = await fetch(
-            `/api/benchmark?symbol=${encodeURIComponent(symbol)}&start=${startDate.toISOString()}&end=${now.toISOString()}`
+            `/api/benchmark?symbol=${encodeURIComponent(symbol)}&start=${startDate.toISOString()}&end=${now.toISOString()}&period=${period}`
         );
 
         if (!response.ok) {

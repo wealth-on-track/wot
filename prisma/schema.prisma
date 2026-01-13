@@ -93,6 +93,12 @@ model Asset {
   updatedAt    DateTime      @updatedAt
   customGroup  String?
   portfolio    Portfolio     @relation(fields: [portfolioId], references: [id])
+
+  // Performance indexes
+  @@index([portfolioId, sortOrder])  // Fast portfolio asset fetching with ordering
+  @@index([portfolioId, createdAt])  // Alternative ordering by creation date
+  @@index([symbol])                  // Fast symbol lookups for price updates
+  @@index([category])                // Group by category queries
 }
 
 model BenchmarkCache {
@@ -103,6 +109,17 @@ model BenchmarkCache {
   updatedAt DateTime @updatedAt
 
   @@unique([symbol, period])
+}
+
+model BenchmarkPrice {
+  id        String   @id @default(cuid())
+  symbol    String   // ^GSPC, ^IXIC, ^DJI, XU100.IS, ^FTSE, ^GDAXI
+  date      DateTime // Normalized to midnight
+  price     Float    // Closing price
+  createdAt DateTime @default(now())
+
+  @@unique([symbol, date])
+  @@index([symbol, date])
 }
 
 model PriceCache {

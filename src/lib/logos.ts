@@ -45,12 +45,91 @@ export const getLogoUrl = (symbol: string, type: string, exchange?: string, coun
 
 
 
-    // 3. COMMODITIES: Static High-Quality Icons
+    // 3. COMMODITIES: Systematic Icon Mapping
+    // All commodity icons from Icons8 for reliability and consistency
     if (t === 'GOLD' || t === 'COMMODITY') {
-        // Updated to a cleaner, professional gold icon (Bars/Ingots)
-        if (s === 'XAU' || s === 'GAUTRY' || s.includes('GOLD')) return 'https://img.icons8.com/color/96/gold-bars.png';
-        if (s === 'XAG' || s === 'XAGTRY' || s.includes('SILVER')) return 'https://cdn-icons-png.flaticon.com/512/2908/2908842.png'; // Silver Bar
-        if (s.includes('OIL') || s === 'BRENT' || s === 'WTI') return 'https://cdn-icons-png.flaticon.com/512/2908/2908848.png'; // Oil Drop
+        // Comprehensive commodity mapping table
+        const commodityIcons: Record<string, string> = {
+            // Precious Metals
+            'GOLD': 'https://img.icons8.com/color/96/gold-bars.png',
+            'XAU': 'https://img.icons8.com/color/96/gold-bars.png',
+            'GAUTRY': 'https://img.icons8.com/color/96/gold-bars.png',
+            'GC': 'https://img.icons8.com/color/96/gold-bars.png',
+
+            'SILVER': 'https://img.icons8.com/fluency/96/silver-bars.png',
+            'XAG': 'https://img.icons8.com/fluency/96/silver-bars.png',
+            'XAGTRY': 'https://img.icons8.com/fluency/96/silver-bars.png',
+            'SI': 'https://img.icons8.com/fluency/96/silver-bars.png',
+
+            'PLATINUM': 'https://img.icons8.com/fluency/96/platinum.png',
+            'XPT': 'https://img.icons8.com/fluency/96/platinum.png',
+            'PL': 'https://img.icons8.com/fluency/96/platinum.png',
+
+            'PALLADIUM': 'https://img.icons8.com/fluency/96/diamonds.png',
+            'XPD': 'https://img.icons8.com/fluency/96/diamonds.png',
+            'PA': 'https://img.icons8.com/fluency/96/diamonds.png',
+
+            // Energy
+            'OIL': 'https://img.icons8.com/fluency/96/oil-industry.png',
+            'BRENT': 'https://img.icons8.com/fluency/96/oil-industry.png',
+            'WTI': 'https://img.icons8.com/fluency/96/oil-industry.png',
+            'CL': 'https://img.icons8.com/fluency/96/oil-industry.png',
+            'BZ': 'https://img.icons8.com/fluency/96/oil-industry.png',
+
+            'NATURAL_GAS': 'https://img.icons8.com/fluency/96/gas.png',
+            'NG': 'https://img.icons8.com/fluency/96/gas.png',
+
+            // Industrial Metals
+            'COPPER': 'https://img.icons8.com/fluency/96/copper.png',
+            'HG': 'https://img.icons8.com/fluency/96/copper.png',
+
+            'ALUMINUM': 'https://img.icons8.com/fluency/96/aluminum.png',
+            'ALI': 'https://img.icons8.com/fluency/96/aluminum.png',
+
+            'ZINC': 'https://img.icons8.com/fluency/96/ore.png',
+
+
+            'NICKEL': 'https://img.icons8.com/fluency/96/ore.png',
+            'NI': 'https://img.icons8.com/fluency/96/ore.png',
+
+            // Agriculture
+            'WHEAT': 'https://img.icons8.com/fluency/96/wheat.png',
+            'W': 'https://img.icons8.com/fluency/96/wheat.png',
+            'ZW': 'https://img.icons8.com/fluency/96/wheat.png',
+
+            'CORN': 'https://img.icons8.com/fluency/96/corn.png',
+            'ZC': 'https://img.icons8.com/fluency/96/corn.png',
+
+            'SOYBEANS': 'https://img.icons8.com/fluency/96/soy.png',
+            'ZS': 'https://img.icons8.com/fluency/96/soy.png',
+
+            'COFFEE': 'https://img.icons8.com/fluency/96/coffee-beans.png',
+            'KC': 'https://img.icons8.com/fluency/96/coffee-beans.png',
+
+            'SUGAR': 'https://img.icons8.com/fluency/96/sugar-cubes.png',
+            'SB': 'https://img.icons8.com/fluency/96/sugar-cubes.png',
+
+            'COTTON': 'https://img.icons8.com/fluency/96/cotton.png',
+            'CT': 'https://img.icons8.com/fluency/96/cotton.png',
+
+            'COCOA': 'https://img.icons8.com/fluency/96/cocoa.png',
+            'CC': 'https://img.icons8.com/fluency/96/cocoa.png',
+        };
+
+        // Check exact match first
+        if (commodityIcons[s]) {
+            return commodityIcons[s];
+        }
+
+        // Check partial match (for symbols like "GOLD_FUTURES", "BRENT_CRUDE", etc.)
+        for (const [key, icon] of Object.entries(commodityIcons)) {
+            if (s.includes(key)) {
+                return icon;
+            }
+        }
+
+        // Fallback: Generic commodity icon
+        return 'https://img.icons8.com/fluency/96/bar-chart.png';
     }
 
     // Special Overrides for known missing logos

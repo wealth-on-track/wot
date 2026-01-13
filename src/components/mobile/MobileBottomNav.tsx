@@ -1,17 +1,20 @@
 "use client";
 
-type View = 'overview' | 'positions' | 'add';
+type View = 'overview' | 'performance' | 'allocations' | 'positions';
 
 interface MobileBottomNavProps {
     activeView: View;
     onViewChange: (view: View) => void;
-    onAddClick: () => void;
 }
 
-export function MobileBottomNav({ activeView, onViewChange, onAddClick }: MobileBottomNavProps) {
+import { LayoutGrid, PieChart, TrendingUp, List } from "lucide-react";
+
+export function MobileBottomNav({ activeView, onViewChange }: MobileBottomNavProps) {
     const navItems = [
-        { id: 'overview' as View, label: 'Overview', icon: '📊' },
-        { id: 'positions' as View, label: 'Positions', icon: '💼' },
+        { id: 'overview' as View, label: 'Overview', icon: <LayoutGrid size={24} /> },
+        { id: 'performance' as View, label: 'Performance', icon: <TrendingUp size={24} /> },
+        { id: 'allocations' as View, label: 'Allocations', icon: <PieChart size={24} /> },
+        { id: 'positions' as View, label: 'Positions', icon: <List size={24} /> },
     ];
 
     return (
@@ -22,15 +25,14 @@ export function MobileBottomNav({ activeView, onViewChange, onAddClick }: Mobile
             right: 0,
             background: 'var(--bg-primary)',
             borderTop: '1px solid var(--border)',
-            padding: '0.75rem 1rem',
+            padding: '0.5rem 1rem',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-around',
-            gap: '0.5rem',
+            justifyContent: 'space-between',
             zIndex: 1000,
             backdropFilter: 'blur(12px)',
             WebkitBackdropFilter: 'blur(12px)',
-            paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))'
+            paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
         }}>
             {navItems.map(item => (
                 <button
@@ -38,55 +40,37 @@ export function MobileBottomNav({ activeView, onViewChange, onAddClick }: Mobile
                     onClick={() => onViewChange(item.id)}
                     style={{
                         flex: 1,
-                        background: activeView === item.id ? 'var(--bg-secondary)' : 'transparent',
+                        background: 'transparent',
                         border: 'none',
                         borderRadius: '12px',
-                        padding: '0.75rem',
+                        padding: '0.5rem',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        gap: '0.25rem',
+                        gap: '0.3rem',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        color: activeView === item.id ? 'var(--accent)' : 'var(--text-muted)'
+                        color: activeView === item.id ? 'var(--accent)' : 'var(--text-muted)',
+                        opacity: activeView === item.id ? 1 : 0.6
                     }}
                 >
-                    <div style={{ fontSize: '1.25rem' }}>{item.icon}</div>
                     <div style={{
-                        fontSize: '0.65rem',
-                        fontWeight: 800,
+                        transition: 'transform 0.2s',
+                        transform: activeView === item.id ? 'scale(1.1)' : 'scale(1)'
+                    }}>
+                        {item.icon}
+                    </div>
+                    <div style={{
+                        fontSize: '0.6rem',
+                        fontWeight: activeView === item.id ? 800 : 600,
                         textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
+                        letterSpacing: '0.02em',
+                        marginTop: '2px'
                     }}>
                         {item.label}
                     </div>
                 </button>
             ))}
-
-            {/* Add Button - Prominent */}
-            <button
-                onClick={onAddClick}
-                style={{
-                    width: '56px',
-                    height: '56px',
-                    background: 'var(--accent)',
-                    border: 'none',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 20px var(--accent-glow)',
-                    fontSize: '1.5rem',
-                    color: '#fff',
-                    transition: 'transform 0.2s'
-                }}
-                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            >
-                +
-            </button>
         </nav>
     );
 }

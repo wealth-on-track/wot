@@ -1532,18 +1532,20 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
     }, [preferences?.columns]);
 
     useEffect(() => {
-        // Save to LocalStorage AND Database
+        // Save to LocalStorage AND Database (only if user is owner)
         if (activeColumns.length > 0) {
             localStorage.setItem('user_columns', JSON.stringify(activeColumns));
 
-            // Debounce DB update to avoid spamming on rapid changes (if needed, but for now direct call on settling state is fine)
-            // Using a timeout to debounce effectively
-            const timer = setTimeout(() => {
-                updateUserPreferences({ columns: activeColumns }).catch(e => console.error("Failed to save preferences", e));
-            }, 1000);
-            return () => clearTimeout(timer);
+            // Only update database if user is authenticated and owner
+            if (isOwner) {
+                // Debounce DB update to avoid spamming on rapid changes
+                const timer = setTimeout(() => {
+                    updateUserPreferences({ columns: activeColumns }).catch(e => console.error("Failed to save preferences", e));
+                }, 1000);
+                return () => clearTimeout(timer);
+            }
         }
-    }, [activeColumns]);
+    }, [activeColumns, isOwner]);
 
     const { currency: globalCurrency } = useCurrency();
     const positionsViewCurrency = positionsViewCurrencyProp || globalCurrency;

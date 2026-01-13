@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, ReactNode, useState } from "react";
+import { useEffect, ReactNode } from "react";
 import Dashboard from "@/components/DashboardV2";
 import { CurrencyProvider, useCurrency } from "@/context/CurrencyContext";
-import versionData from "@/version.json";
 
 interface ClientWrapperProps {
     username: string;
@@ -47,7 +46,6 @@ function DashboardWrapper({ username, isOwner, totalValueEUR, assets, goals, sho
 }
 
 export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals = [], navbar, exchangeRates, preferences }: ClientWrapperProps) {
-    const [showChangelog, setShowChangelog] = useState(false);
 
     // Force cleanup of any potential scroll locks
     useEffect(() => {
@@ -122,41 +120,11 @@ export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals 
                         totalValueEUR={totalValueEUR}
                         assets={assets}
                         goals={goals}
-                        showChangelog={showChangelog}
+                        showChangelog={false}
                         exchangeRates={exchangeRates}
                         preferences={preferences}
                     />
                 </div>
-            </div>
-
-            <div style={{
-                textAlign: 'center',
-                padding: '2rem 0 3rem 0',
-                fontSize: '0.65rem',
-                opacity: 0.7,
-                color: 'var(--text-secondary)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.25rem'
-            }}>
-                <button
-                    onClick={() => setShowChangelog(!showChangelog)}
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'inherit',
-                        cursor: 'pointer',
-                        fontFamily: 'inherit',
-                        fontSize: 'inherit',
-                        textDecoration: 'none',
-                        transition: 'opacity 0.2s',
-                        opacity: showChangelog ? 1 : 0.7
-                    }}
-                    title="Click to see what's new"
-                >
-                    {versionData.version} - {versionData.buildDate} - {versionData.buildTime}
-                </button>
             </div>
         </CurrencyProvider>
     );

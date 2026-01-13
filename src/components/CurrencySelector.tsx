@@ -33,7 +33,7 @@ export function CurrencySelector() {
                 className="navbar-btn"
                 title={`Currency: ${currency === 'ORG' ? 'Original' : currency}`}
             >
-                <Coins size={18} />
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, fontFamily: 'var(--font-sans)', letterSpacing: '0.5px' }}>FX</span>
             </button>
 
             {/* Dropdown Menu */}

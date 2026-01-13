@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { MobileHeader } from "./MobileHeader";
-import { MobilePortfolioSummary } from "./MobilePortfolioSummary";
+import { MobilePortfolioSummary, MobileHomeAllocations } from "./MobilePortfolioSummary";
 import { MobileAssetList } from "./MobileAssetList";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { MobileAssetModal } from "./MobileAssetModal";
-import { MobileDesktopToggle } from "./MobileDesktopToggle";
 import type { AssetDisplay } from "@/lib/types";
 import type { Goal } from "@prisma/client";
+import { PortfolioPerformanceChart } from "../PortfolioPerformanceChart";
+import { AllocationCard } from "../PortfolioSidebarComponents";
 
 interface MobileDashboardProps {
     username: string;
@@ -19,7 +20,7 @@ interface MobileDashboardProps {
     exchangeRates: Record<string, number>;
 }
 
-type View = 'overview' | 'positions' | 'add';
+type View = 'overview' | 'performance' | 'allocations' | 'positions';
 
 export function MobileDashboard({
     username,
@@ -41,14 +42,24 @@ export function MobileDashboard({
         currentPrice: true
     });
 
+    // Global Privacy Mode
+    const [isPrivacyMode, setIsPrivacyMode] = useState(false);
+
+    // Performance View State
+    const [selectedBenchmarks, setSelectedBenchmarks] = useState<string[]>(['SPY']);
+    const [isPortfolioVisible, setIsPortfolioVisible] = useState(true);
+
     const handleEditAsset = (asset: AssetDisplay) => {
         setSelectedAsset(asset);
         setShowAssetModal(true);
     };
 
-    const handleAddAsset = () => {
-        setSelectedAsset(null);
-        setShowAssetModal(true);
+    const toggleBenchmark = (id: string) => {
+        if (selectedBenchmarks.includes(id)) {
+            setSelectedBenchmarks(prev => prev.filter(b => b !== id));
+        } else {
+            setSelectedBenchmarks(prev => [...prev, id]);
+        }
     };
 
     return (
@@ -59,7 +70,7 @@ export function MobileDashboard({
             display: 'flex',
             flexDirection: 'column'
         }}>
-            {/* Header */}
+            {/* Header - Always Visible */}
             <MobileHeader
                 username={username}
                 isOwner={isOwner}
@@ -69,29 +80,83 @@ export function MobileDashboard({
             <div style={{
                 flex: 1,
                 overflow: 'auto',
-                WebkitOverflowScrolling: 'touch'
+                WebkitOverflowScrolling: 'touch',
+                paddingTop: '0.5rem'
             }}>
+                {/* OVERVIEW VIEW */}
                 {activeView === 'overview' && (
                     <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {/* 1. Summary Card (Interactive) */}
                         <MobilePortfolioSummary
                             totalValueEUR={totalValueEUR}
                             assets={assets}
+                            isPrivacyMode={isPrivacyMode}
+                            onTogglePrivacy={() => setIsPrivacyMode(!isPrivacyMode)}
                         />
 
+                        {/* 2. Allocations Summary (Bars) */}
+                        <MobileHomeAllocations
+                            assets={assets}
+                            totalValueEUR={totalValueEUR}
+                            isPrivacyMode={isPrivacyMode}
+                        />
+
+                        {/* 3. Asset List */}
                         <MobileAssetList
                             assets={assets}
                             onEdit={handleEditAsset}
                             isCompact={true}
-                            maxDisplay={10}
+                            maxDisplay={5}
                             onViewAll={() => setActiveView('positions')}
                             onOpenSettings={() => setShowSettings(true)}
                             visibleFields={visibleFields}
+                            isPrivacyMode={isPrivacyMode}
                         />
                     </div>
                 )}
 
+                {/* PERFORMANCE VIEW */}
+                {activeView === 'performance' && (
+                    <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Portfolio Performance</h2>
+                        <div style={{ minHeight: '400px' }}>
+                            <PortfolioPerformanceChart
+                                username={username}
+                                totalValueEUR={totalValueEUR}
+                                selectedBenchmarks={selectedBenchmarks}
+                                isPortfolioVisible={isPortfolioVisible}
+                                onToggleBenchmark={toggleBenchmark}
+                                onTogglePortfolio={() => setIsPortfolioVisible(!isPortfolioVisible)}
+                                controlsPosition="bottom"
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* ALLOCATIONS VIEW */}
+                {activeView === 'allocations' && (
+                    <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <AllocationCard
+                            totalValueEUR={totalValueEUR}
+                            assets={assets}
+                            exchangeRates={exchangeRates}
+                            variant="mobile"
+                        />
+                    </div>
+                )}
+
+                {/* POSITIONS VIEW */}
                 {activeView === 'positions' && (
                     <div style={{ padding: '1rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>All Positions</h2>
+                            <button
+                                onClick={() => setShowSettings(true)}
+                                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '0.4rem', borderRadius: '8px', color: 'var(--text-muted)' }}
+                            >
+                                ⚙️
+                            </button>
+                        </div>
                         <MobileAssetList
                             assets={assets}
                             onEdit={handleEditAsset}
@@ -107,10 +172,9 @@ export function MobileDashboard({
             <MobileBottomNav
                 activeView={activeView}
                 onViewChange={setActiveView}
-                onAddClick={handleAddAsset}
             />
 
-            {/* Asset Modal */}
+            {/* Asset Modal (Edit Only now) */}
             {showAssetModal && (
                 <MobileAssetModal
                     asset={selectedAsset}
@@ -238,9 +302,6 @@ export function MobileDashboard({
                     </div>
                 </div>
             )}
-
-            {/* Desktop Toggle */}
-            <MobileDesktopToggle username={username} />
         </div>
     );
 }

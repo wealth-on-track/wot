@@ -211,9 +211,17 @@ export function InlineAssetSearch() {
                 if (data) {
                     setMarketData(data);
 
-                    // Don't override metadata from search result
-                    // Metadata was already set in handleSelectSymbol from search result
-                    // API is only for price data, not for metadata
+                    // NEW: Enrich Metadata (Sector/Country) if missing
+                    // This fixes the issue where EU stocks show as "UNKNOWN" sector
+                    // because the lightweight search API didn't have the data, but the Quote API does.
+                    if (data.sector && data.sector !== 'N/A' && (!sector || sector === 'UNKNOWN')) {
+                        console.log(`[InlineSearch] Enriching Sector: ${sector} -> ${data.sector}`);
+                        setSector(data.sector);
+                    }
+                    if (data.country && data.country !== 'N/A' && (!country || country === 'UNKNOWN')) {
+                        console.log(`[InlineSearch] Enriching Country: ${country} -> ${data.country}`);
+                        setCountry(data.country);
+                    }
 
                     // Prefill buy price (AVG COST) with previous close for convenience/indication
                     // Prefer previousClose if it's available and valid (>0)

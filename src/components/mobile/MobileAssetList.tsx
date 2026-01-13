@@ -17,6 +17,7 @@ interface MobileAssetListProps {
         cost: boolean;
         currentPrice: boolean;
     };
+    isPrivacyMode?: boolean;
 }
 
 export function MobileAssetList({
@@ -32,7 +33,8 @@ export function MobileAssetList({
         quantity: true,
         cost: true,
         currentPrice: true
-    }
+    },
+    isPrivacyMode = false
 }: MobileAssetListProps) {
     const { currency } = useCurrency();
 
@@ -80,14 +82,39 @@ export function MobileAssetList({
                 alignItems: 'center'
             }}>
                 <div style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 800,
-                    color: 'var(--text-primary)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em'
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem'
                 }}>
-                    Positions
+                    <div style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 800,
+                        color: 'var(--text-primary)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                    }}>
+                        Positions
+                    </div>
+                    {onViewAll && (
+                        <div
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onViewAll();
+                            }}
+                            style={{
+                                fontSize: '0.65rem',
+                                fontWeight: 700,
+                                color: 'var(--accent)',
+                                cursor: 'pointer',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em'
+                            }}
+                        >
+                            (View All)
+                        </div>
+                    )}
                 </div>
+
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -259,7 +286,10 @@ export function MobileAssetList({
                                     lineHeight: 1,
                                     fontVariantNumeric: 'tabular-nums'
                                 }}>
-                                    {displayTotalValue.toLocaleString('de-DE', { maximumFractionDigits: 0 })}{displaySymbol}
+                                    {isPrivacyMode
+                                        ? '****'
+                                        : `${displayTotalValue.toLocaleString('de-DE', { maximumFractionDigits: 0 })}${displaySymbol}`
+                                    }
                                 </div>
 
                                 {/* P/L % + Amount (only for non-CASH) */}
@@ -275,7 +305,10 @@ export function MobileAssetList({
                                     }}>
                                         <span>{isPositive ? '▲' : '▼'}{Math.abs(plPercentage).toFixed(1)}%</span>
                                         <span style={{ opacity: 0.8 }}>
-                                            {isPositive ? '+' : ''}{displaySymbol}{displayPlAmount.toLocaleString('de-DE', { maximumFractionDigits: 0 })}
+                                            {isPrivacyMode
+                                                ? '****'
+                                                : `${isPositive ? '+' : ''}${displaySymbol}${displayPlAmount.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`
+                                            }
                                         </span>
                                     </div>
                                 )}
@@ -285,43 +318,7 @@ export function MobileAssetList({
                 })}
             </div>
 
-            {/* View All Button */}
-            {hasMore && onViewAll && (
-                <div style={{
-                    padding: '0.5rem 0.85rem 0.65rem',
-                    borderTop: '1px solid var(--border)'
-                }}>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onViewAll();
-                        }}
-                        style={{
-                            width: '100%',
-                            background: 'var(--accent)',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '0.7rem',
-                            fontSize: '0.7rem',
-                            fontWeight: 900,
-                            color: '#fff',
-                            cursor: 'pointer',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            transition: 'opacity 0.15s ease',
-                            WebkitTapHighlightColor: 'transparent'
-                        }}
-                        onTouchStart={(e) => {
-                            e.currentTarget.style.opacity = '0.8';
-                        }}
-                        onTouchEnd={(e) => {
-                            e.currentTarget.style.opacity = '1';
-                        }}
-                    >
-                        View All {assets.length} →
-                    </button>
-                </div>
-            )}
+
         </div>
     );
 }

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { MobileClientWrapper } from "@/components/mobile/MobileClientWrapper";
-import { getPortfolioMetrics } from "@/lib/portfolio";
+import { getPortfolioMetricsOptimized } from "@/lib/portfolio-optimized";
 import { prisma } from "@/lib/prisma";
 import { getExchangeRates } from "@/lib/exchangeRates";
 
@@ -49,7 +49,7 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
     let assetsWithValues: any[] = [];
 
     try {
-        const result = await getPortfolioMetrics(user.portfolio.assets, rates, false, session?.user?.name || session?.user?.email || 'System');
+        const result = await getPortfolioMetricsOptimized(user.portfolio.assets, rates, false, session?.user?.name || session?.user?.email || 'System');
         totalPortfolioValueEUR = result.totalValueEUR;
         assetsWithValues = result.assetsWithValues;
     } catch (e) {
