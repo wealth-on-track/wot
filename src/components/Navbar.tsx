@@ -150,7 +150,7 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                                 userSelect: 'none',
                                 whiteSpace: 'nowrap'
                             }}>
-                                BETA V1
+                                BETA V1.2
                             </div>
                         </Link>
                     </div>
