@@ -188,6 +188,13 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                         height: '100%',
                         gap: '0.5rem'
                     }}>
+                        {/* 1. Global Toggles (Always Visible) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginRight: '0.5rem', paddingRight: '0.5rem', borderRight: '1px solid var(--border)' }}>
+                            <CurrencySelector />
+                            <LanguageToggle />
+                            <ThemeToggle />
+                        </div>
+
                         {session?.user ? (
                             <>
                                 {/* Action Group */}
@@ -195,13 +202,7 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                                     {/* 1. Filter (Portal Target) */}
                                     <div id="navbar-extra-actions" style={{ display: 'flex', alignItems: 'center' }}></div>
 
-                                    {/* 2. Language Toggle */}
-                                    <LanguageToggle />
-
-                                    {/* 3. Dark Mode Toggle */}
-                                    <ThemeToggle />
-
-                                    {/* 3. Actions (Integrations + Logout) */}
+                                    {/* 2. Actions (Integrations + Logout) */}
                                     <NavbarActions userEmail={session?.user?.email} />
                                 </div>
                             </>
