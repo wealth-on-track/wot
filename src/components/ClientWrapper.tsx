@@ -61,6 +61,27 @@ export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals 
         };
     }, []);
 
+    // Mobile Redirect Fallback (Client-Side)
+    // If server-side detection fails (e.g. edge cache), this catches it.
+    useEffect(() => {
+        const checkMobileRedirect = async () => {
+            // Dynamic import to avoid SSR issues or circular dependencies if any
+            const { isMobileDevice, isMobileScreen } = await import('@/lib/deviceDetection');
+
+            // Check if forced desktop
+            const forceDesktop = document.cookie.includes('forceDesktop=true');
+
+            if (!forceDesktop && (isMobileDevice() || isMobileScreen())) {
+                // Prevent loop if we are already on mobile (though this component shouldn't be rendered there)
+                if (!window.location.pathname.includes('/mobile')) {
+                    window.location.href = `/${username}/mobile`;
+                }
+            }
+        };
+
+        checkMobileRedirect();
+    }, [username]);
+
     // Automatic Price Update for Owner (Local/Dev support)
     useEffect(() => {
         if (!isOwner) return;
