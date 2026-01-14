@@ -8,7 +8,7 @@ import { LanguageProvider } from "@/context/LanguageContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "WOT - Wealth on Track!",
+  title: process.env.NODE_ENV === 'development' ? "WOT (Local)" : "WOT - Wealth on Track!",
   description: "Your wealth, finally on track.",
 };
 
