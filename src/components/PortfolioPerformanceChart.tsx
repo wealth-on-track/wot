@@ -27,6 +27,7 @@ interface PortfolioPerformanceChartProps {
     onToggleBenchmark: (id: string) => void;
     onTogglePortfolio: () => void;
     controlsPosition?: 'top' | 'bottom';
+    onSaveBenchmarks?: (benchmarks: string[]) => void;
 }
 
 type TimePeriod = '1D' | '1W' | '1M' | 'YTD' | '1Y' | 'ALL';
@@ -45,7 +46,8 @@ export function PortfolioPerformanceChart({
     isPortfolioVisible,
     onToggleBenchmark,
     onTogglePortfolio,
-    controlsPosition = 'top'
+    controlsPosition = 'top',
+    onSaveBenchmarks
 }: PortfolioPerformanceChartProps) {
     const { currency } = useCurrency();
     const { t } = useLanguage();
@@ -384,6 +386,29 @@ export function PortfolioPerformanceChart({
                                     {selectedBenchmarks.includes(b.id) && <Eye size={16} color={b.color} />}
                                 </div>
                             ))}
+                            {onSaveBenchmarks && (
+                                <div style={{ borderTop: '1px solid var(--border)', marginTop: '8px', paddingTop: '8px' }}>
+                                    <button
+                                        onClick={() => {
+                                            onSaveBenchmarks(selectedBenchmarks);
+                                            setShowCompareMenu(false);
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.5rem',
+                                            background: 'var(--accent)',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 700,
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Save Current Selection
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </>
                 )}

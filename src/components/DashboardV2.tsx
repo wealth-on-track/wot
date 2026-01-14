@@ -1594,7 +1594,21 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
 
     const [isCustomizeModalOpen, setIsCustomizeModalOpen] = useState(false);
     const [filterOrder, setFilterOrder] = useState(['customGroup', 'type', 'exchange', 'currency', 'country', 'sector', 'platform']);
-    const [selectedBenchmarks, setSelectedBenchmarks] = useState<string[]>(['NDX', 'SPX', 'BTC']);
+    const [selectedBenchmarks, setSelectedBenchmarks] = useState<string[]>(
+        (preferences?.benchmarks && Array.isArray(preferences.benchmarks))
+            ? preferences.benchmarks
+            : ['NDX', 'SPX', 'BTC']
+    );
+
+    const saveBenchmarks = async (benchmarks: string[]) => {
+        if (!isOwner) return;
+        try {
+            await updateUserPreferences({ benchmarks });
+        } catch (e) {
+            console.error('Failed to save benchmarks', e);
+        }
+    };
+
     const [isPortfolioVisible, setIsPortfolioVisible] = useState(true);
     const [isCompareOpen, setIsCompareOpen] = useState(false);
 
@@ -1877,7 +1891,6 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                     {/* LEFT COLUMN: Main Content (Filters + Assets) - Flex Grow */}
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: 0 }}>
 
-                        {/* Portfolio Performance Chart */}
                         <PortfolioPerformanceChart
                             username={username}
                             totalValueEUR={totalValueEUR}
@@ -1885,6 +1898,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                             isPortfolioVisible={isPortfolioVisible}
                             onToggleBenchmark={toggleBenchmark}
                             onTogglePortfolio={() => setIsPortfolioVisible(!isPortfolioVisible)}
+                            onSaveBenchmarks={saveBenchmarks}
                             onPeriodChange={(period) => {
                                 // Sync with dashboard time period if needed
                                 console.log('Period changed to:', period);
