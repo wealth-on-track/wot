@@ -306,7 +306,9 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
 
     // LEGACY LOGIC: Try TEFAS for 3-letter symbols (with Yahoo fallback)
     const isExplicitTefas = type === 'TEFAS' || type === 'FON';
-    const isTefasFundSignature = type === 'FUND' && symbol.length === 3 && !symbol.includes('.');
+    // Fix: Only treat as implicit TEFAS if exchange is empty, UNKNOWN, or explicitly TEFAS.
+    // This prevents blocking VOO (NYSE), SPY (Arca) etc.
+    const isTefasFundSignature = type === 'FUND' && symbol.length === 3 && !symbol.includes('.') && (!exchange || exchange === 'TEFAS' || exchange === 'UNKNOWN');
     const isImplicitTefasCandidate = (type === 'STOCK' || type === 'ETF') && symbol.length === 3 && !symbol.includes('.');
 
     // Union of all TEFAS candidates (but not strict)
@@ -421,7 +423,8 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
         let quote = derivedQuote || await getYahooQuote(searchSymbol, forceRefresh);
 
         // FALLBACK: If Yahoo fails (rate limit/block), try Finnhub for real-time price
-        if ((!quote || !quote.regularMarketPrice) && !derivedQuote && (type === 'STOCK' || type === 'ETF')) {
+        // UPDATE: Include FUND type in fallback
+        if ((!quote || !quote.regularMarketPrice) && !derivedQuote && (type === 'STOCK' || type === 'ETF' || type === 'FUND')) {
             try {
                 const { getQuote: getFinnhubQuote } = await import('./finnhubApi');
                 console.log(`[MarketData] Yahoo failed for ${symbol}, trying Finnhub fallback...`);
