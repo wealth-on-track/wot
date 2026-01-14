@@ -710,9 +710,9 @@ function AssetTableRow({
                 break;
             case 'NAME':
                 cellContent = (
-                    <div className="col-name" style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', minWidth: 0, width: '100%' }}>
+                    <div className="col-name" style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', minWidth: 0, width: '100%', height: '100%' }}>
                         <AssetLogo symbol={asset.symbol} type={asset.type} exchange={asset.exchange} name={companyName} logoUrl={logoUrl} size="2.2rem" />
-                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, gap: '2px', flex: 1 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, gap: '2px', flex: 1, justifyContent: 'center' }}>
                             <>
                                 <span
                                     title={originalName || companyName}
