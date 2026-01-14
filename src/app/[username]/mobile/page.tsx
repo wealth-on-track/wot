@@ -85,6 +85,7 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
             assets={assetsWithValues}
             goals={displayedGoals}
             exchangeRates={rates}
+            preferences={user.preferences}
         />
     );
 }

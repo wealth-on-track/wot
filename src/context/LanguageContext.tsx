@@ -131,7 +131,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     };
 
     const t = (key: string) => {
-        return translations[language][key] || key;
+        const langMap = translations[language] || translations['ENG'];
+        return langMap[key] || key;
     };
 
     return (

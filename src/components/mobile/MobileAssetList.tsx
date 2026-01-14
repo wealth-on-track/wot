@@ -211,60 +211,69 @@ export function MobileAssetList({
                                 flexDirection: 'column',
                                 gap: '0.25rem'
                             }}>
-                                {/* Asset Name */}
-                                <div
-                                    title={(asset as any).originalName || asset.name || asset.symbol}
-                                    style={{
-                                        fontSize: '0.8rem',
-                                        fontWeight: 800,
-                                        color: 'var(--text-primary)',
-                                        lineHeight: 1,
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                        cursor: 'default'
-                                    }}>
-                                    {asset.name || asset.symbol}
+                                {/* Asset Name + Quantity */}
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', minWidth: 0 }}>
+                                    <div
+                                        title={(asset as any).originalName || asset.name || asset.symbol}
+                                        style={{
+                                            fontSize: '0.8rem',
+                                            fontWeight: 800,
+                                            color: 'var(--text-primary)',
+                                            lineHeight: 1,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            cursor: 'default'
+                                        }}>
+                                        {asset.name || asset.symbol}
+                                    </div>
+                                    {asset.type !== 'CASH' && (
+                                        <div style={{
+                                            fontSize: '0.7rem',
+                                            fontWeight: 600,
+                                            color: 'var(--accent)',
+                                            whiteSpace: 'nowrap'
+                                        }}>
+                                            x{asset.quantity.toLocaleString('de-DE', { maximumFractionDigits: 2 })}
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* For CASH: show nothing, For others: show quantity, cost, price based on visibleFields */}
+                                {/* Cost & Price Row */}
                                 {asset.type === 'CASH' ? null : (
                                     <div style={{
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '0.4rem',
+                                        gap: '0.2rem',
                                         fontSize: '0.65rem',
                                         fontWeight: 600,
-                                        lineHeight: 1,
+                                        lineHeight: 1.2,
                                         color: 'var(--text-secondary)',
-                                        flexWrap: 'wrap'
+                                        marginTop: '0.2rem'
                                     }}>
-                                        {visibleFields.portfolio && asset.customGroup && (
-                                            <>
-                                                <span>{asset.customGroup}</span>
-                                                <span style={{ color: 'var(--border)' }}>|</span>
-                                            </>
-                                        )}
-                                        {visibleFields.platform && asset.platform && (
-                                            <>
-                                                <span>{asset.platform}</span>
-                                                <span style={{ color: 'var(--border)' }}>|</span>
-                                            </>
-                                        )}
-                                        {visibleFields.quantity && (
-                                            <>
-                                                <span>x{asset.quantity.toLocaleString('de-DE', { maximumFractionDigits: 2 })}</span>
-                                                <span style={{ color: 'var(--border)' }}>|</span>
-                                            </>
-                                        )}
                                         {visibleFields.cost && (
-                                            <>
-                                                <span>C:{displayBuyPrice.toLocaleString('de-DE', { maximumFractionDigits: 2 })}{displaySymbol}</span>
-                                                {visibleFields.currentPrice && <span style={{ color: 'var(--border)' }}>|</span>}
-                                            </>
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '2px',
+                                                minWidth: '65px', // Fixed width to vertically align P column
+                                            }}>
+                                                <span style={{ opacity: 0.5, fontWeight: 500 }}>C:</span>
+                                                <span style={{ color: 'var(--text-primary)' }}>
+                                                    {displayBuyPrice.toLocaleString('de-DE', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {visibleFields.cost && visibleFields.currentPrice && (
+                                            <span style={{ color: 'var(--border)', fontSize: '0.6rem', marginRight: '0.2rem' }}>|</span>
                                         )}
                                         {visibleFields.currentPrice && (
-                                            <span>P:{displayCurrentPrice.toLocaleString('de-DE', { maximumFractionDigits: 2 })}{displaySymbol}</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                                <span style={{ opacity: 0.5, fontWeight: 500 }}>P:</span>
+                                                <span style={{ color: 'var(--text-primary)' }}>
+                                                    {displayCurrentPrice.toLocaleString('de-DE', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
                                         )}
                                     </div>
                                 )}

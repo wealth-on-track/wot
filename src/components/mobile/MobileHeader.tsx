@@ -6,19 +6,19 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { useTheme } from "@/context/ThemeContext";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { handleSignOut } from "@/lib/authActions";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Eye, EyeOff } from "lucide-react";
 
 interface MobileHeaderProps {
     username: string;
     isOwner: boolean;
+    isPrivacyMode: boolean;
+    onTogglePrivacy: () => void;
 }
 
-export function MobileHeader({ username, isOwner }: MobileHeaderProps) {
+export function MobileHeader({ username, isOwner, isPrivacyMode, onTogglePrivacy }: MobileHeaderProps) {
     const { currency, setCurrency } = useCurrency();
     const { theme, toggleTheme } = useTheme();
-    const [isFxOpen, setIsFxOpen] = useState(false);
 
-    const CURRENCIES = ["ORG", "EUR", "USD", "TRY"] as const;
 
     return (
         <header style={{
@@ -56,12 +56,12 @@ export function MobileHeader({ username, isOwner }: MobileHeaderProps) {
                             }}>W</span>
                         </div>
                         <span style={{
-                            fontSize: '5.5px',
-                            fontWeight: 400,
+                            fontSize: '7px',
+                            fontWeight: 700,
                             color: 'var(--text-secondary)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.02em',
-                            opacity: 0.8
+                            opacity: 0.9
                         }}>WEALTH</span>
                     </div>
 
@@ -79,12 +79,12 @@ export function MobileHeader({ username, isOwner }: MobileHeaderProps) {
                             }}>O</span>
                         </div>
                         <span style={{
-                            fontSize: '5.5px',
-                            fontWeight: 400,
+                            fontSize: '7px',
+                            fontWeight: 700,
                             color: 'var(--text-secondary)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.02em',
-                            opacity: 0.8
+                            opacity: 0.9
                         }}>ON</span>
                     </div>
 
@@ -101,12 +101,12 @@ export function MobileHeader({ username, isOwner }: MobileHeaderProps) {
                             }}>T</span>
                         </div>
                         <span style={{
-                            fontSize: '5.5px',
-                            fontWeight: 400,
+                            fontSize: '7px',
+                            fontWeight: 700,
                             color: 'var(--text-secondary)',
                             textTransform: 'uppercase',
                             letterSpacing: '0.02em',
-                            opacity: 0.8
+                            opacity: 0.9
                         }}>TRACK</span>
                     </div>
 
@@ -124,105 +124,35 @@ export function MobileHeader({ username, isOwner }: MobileHeaderProps) {
                         animation: 'pulse-glow 3s ease-in-out infinite',
                         userSelect: 'none',
                         whiteSpace: 'nowrap',
-                        marginLeft: '0.3rem',
+                        marginLeft: '0rem', // Zero margin
                         alignSelf: 'flex-start',
                         marginTop: '0px'
                     }}>
-                        BETA V3
+                        BETA
                     </div>
                 </div>
             </div>
 
             {/* Controls */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {/* FX Currency Selector - Accordion */}
-                <div style={{ position: 'relative' }}>
-                    <button
-                        onClick={() => setIsFxOpen(!isFxOpen)}
-                        style={{
-                            background: 'var(--bg-secondary)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '8px',
-                            padding: '0.4rem 0.6rem',
-                            fontSize: '0.65rem',
-                            fontWeight: 800,
-                            color: 'var(--text-primary)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        <span>FX</span>
-                        <span style={{
-                            fontSize: '0.5rem',
-                            transform: isFxOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                            transition: 'transform 0.2s'
-                        }}>▼</span>
-                    </button>
-
-                    {/* Dropdown */}
-                    {isFxOpen && (
-                        <>
-                            {/* Backdrop */}
-                            <div
-                                onClick={() => setIsFxOpen(false)}
-                                style={{
-                                    position: 'fixed',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    bottom: 0,
-                                    zIndex: 999
-                                }}
-                            />
-                            {/* Menu */}
-                            <div style={{
-                                position: 'absolute',
-                                top: 'calc(100% + 0.5rem)',
-                                right: 0,
-                                background: 'var(--bg-secondary)',
-                                border: '1px solid var(--border)',
-                                borderRadius: '8px',
-                                padding: '0.5rem',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.3rem',
-                                zIndex: 1000,
-                                minWidth: '120px',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-                            }}>
-                                {CURRENCIES.map(curr => (
-                                    <button
-                                        key={curr}
-                                        onClick={() => {
-                                            setCurrency(curr);
-                                            setIsFxOpen(false);
-                                        }}
-                                        style={{
-                                            background: currency === curr ? 'var(--accent)' : 'transparent',
-                                            color: currency === curr ? '#fff' : 'var(--text-primary)',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            padding: '0.5rem 0.75rem',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 800,
-                                            cursor: 'pointer',
-                                            transition: 'all 0.15s',
-                                            textAlign: 'left'
-                                        }}
-                                    >
-                                        {curr}
-                                    </button>
-                                ))}
-                            </div>
-                        </>
-                    )}
-                </div>
-
-                {/* Language Toggle */}
-                <LanguageToggle />
+                {/* Privacy Toggle */}
+                <button
+                    onClick={onTogglePrivacy}
+                    style={{
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        width: '36px',
+                        height: '36px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)'
+                    }}
+                >
+                    {isPrivacyMode ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
 
                 {/* Theme Toggle */}
                 <button
@@ -291,33 +221,22 @@ export function MobileHeader({ username, isOwner }: MobileHeaderProps) {
                         </button>
                     </>
                 ) : (
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <Link href="/login" style={{
-                            textDecoration: 'none',
-                            background: 'transparent',
-                            border: '1px solid var(--border)',
-                            borderRadius: '8px',
-                            padding: '0.5rem 0.75rem',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            color: 'var(--text-primary)',
-                        }}>
-                            Login
-                        </Link>
-                        <Link href="/login" style={{
-                            textDecoration: 'none',
-                            background: 'var(--accent)',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '0.5rem 0.75rem',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                            color: '#fff',
-                            boxShadow: '0 2px 8px var(--accent-glow)'
-                        }}>
-                            Start
-                        </Link>
-                    </div>
+                    <Link href="/login" style={{
+                        textDecoration: 'none',
+                        background: 'var(--accent)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '0.5rem 1rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        color: '#fff',
+                        boxShadow: '0 2px 8px var(--accent-glow)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                    }}>
+                        Login
+                    </Link>
                 )}
             </div>
         </header>

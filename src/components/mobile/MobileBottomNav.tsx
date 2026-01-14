@@ -1,13 +1,13 @@
 "use client";
 
-type View = 'overview' | 'performance' | 'allocations' | 'positions';
+type View = 'overview' | 'performance' | 'allocations' | 'positions' | 'add';
 
 interface MobileBottomNavProps {
     activeView: View;
     onViewChange: (view: View) => void;
 }
 
-import { LayoutGrid, PieChart, TrendingUp, List } from "lucide-react";
+import { LayoutGrid, PieChart, TrendingUp, List, PlusCircle } from "lucide-react";
 
 export function MobileBottomNav({ activeView, onViewChange }: MobileBottomNavProps) {
     const navItems = [

@@ -64,7 +64,7 @@ export function MobilePortfolioSummary({
                         fontWeight: 900,
                         color: 'var(--text-primary)',
                         letterSpacing: '-0.03em',
-                        lineHeight: 1,
+                        lineHeight: 1.1, // Improved line height
                         fontVariantNumeric: 'tabular-nums'
                     }}>
                         {isPrivacyMode
@@ -72,37 +72,23 @@ export function MobilePortfolioSummary({
                             : `${convert(totalValueEUR).toLocaleString('de-DE', { maximumFractionDigits: 0 })}${sym}`
                         }
                     </div>
-                    {/* Privacy Toggle */}
-                    <button
-                        onClick={onTogglePrivacy}
-                        style={{
-                            background: 'transparent',
-                            border: 'none',
-                            padding: '0.2rem',
-                            cursor: 'pointer',
-                            color: 'var(--text-muted)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        {isPrivacyMode ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
                 </div>
 
-                {/* Portfolio Total Change */}
                 <div style={{
                     fontSize: '0.75rem',
                     fontWeight: 800,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.4rem'
+                    gap: '0.4rem',
+                    flexWrap: 'nowrap',
+                    whiteSpace: 'nowrap'
                 }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Total</span>
-                    <span style={{ color: totalReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                    <span style={{ fontWeight: 800, color: totalReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                         {totalReturnPct >= 0 ? '+' : ''}{totalReturnPct.toFixed(1)}%
                     </span>
                     <span style={{
+                        fontWeight: 500,
                         opacity: 0.8,
                         color: totalReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)'
                     }}>
@@ -119,6 +105,7 @@ export function MobilePortfolioSummary({
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'flex-end',
+                justifyContent: 'center', // Center vertically relative to the big number
                 gap: '0.4rem'
             }}>
                 {/* Period Selector */}
@@ -130,7 +117,7 @@ export function MobilePortfolioSummary({
                     gap: '0.1rem',
                     border: '1px solid var(--border)'
                 }}>
-                    {(["1D", "1W", "1M", "YTD", "ALL"] as Period[]).map(period => (
+                    {(["1D", "1W", "1M", "YTD", "1Y", "ALL"] as Period[]).map(period => (
                         <button
                             key={period}
                             onClick={() => setSelectedPeriod(period)}
@@ -164,10 +151,11 @@ export function MobilePortfolioSummary({
                     <span style={{ color: 'var(--text-secondary)' }}>
                         {selectedPeriod === '1D' ? 'Today' : selectedPeriod === '1W' ? '1W' : selectedPeriod === '1M' ? '1M' : selectedPeriod === 'YTD' ? 'YTD' : 'All'}
                     </span>
-                    <span style={{ color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                    <span style={{ fontWeight: 800, color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                         {periodReturnPct >= 0 ? '+' : ''}{periodReturnPct.toFixed(1)}%
                     </span>
                     <span style={{
+                        fontWeight: 500, // Normal weight for amount
                         opacity: 0.8,
                         color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)'
                     }}>
@@ -178,14 +166,15 @@ export function MobilePortfolioSummary({
                     </span>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 
 
 // --- New Allocations Component ---
+// Chevron imports removed
 
-type AllocationView = "Portfolio" | "Type" | "Sector" | "Exchange";
+type AllocationView = "Portfolio" | "Type" | "Sector" | "Exchange" | "Platform" | "Currency" | "Country";
 
 interface MobileHomeAllocationsProps {
     assets: AssetDisplay[];
@@ -214,7 +203,10 @@ export function MobileHomeAllocations({ assets, totalValueEUR, isPrivacyMode }: 
             if (view === "Type") key = asset.type;
             else if (view === "Sector") key = asset.sector || 'Unknown';
             else if (view === "Exchange") key = asset.exchange || 'Unknown';
-            else if (view === "Portfolio") key = asset.platform || 'My Portfolio'; // Map Portfolio -> Platform
+            else if (view === "Portfolio") key = asset.customGroup || 'My Portfolio'; // Map Portfolio -> Custom Group
+            else if (view === "Platform") key = asset.platform || 'Unknown';
+            else if (view === "Currency") key = asset.currency || 'Unknown';
+            else if (view === "Country") key = asset.country || 'Unknown';
 
             const existing = data.find(item => item.name === key);
             if (existing) {
@@ -239,30 +231,31 @@ export function MobileHomeAllocations({ assets, totalValueEUR, isPrivacyMode }: 
             {/* View Toggle */}
             <div style={{
                 display: 'flex',
-                gap: '0.3rem',
-                background: 'var(--bg-secondary)',
-                padding: '0.25rem',
-                borderRadius: '8px',
-                border: '1px solid var(--border)'
+                flexWrap: 'wrap',
+                gap: '0.4rem',
+                justifyContent: 'center'
             }}>
-                {(["Portfolio", "Type", "Sector", "Exchange"] as AllocationView[]).map(v => (
+                {(["Portfolio", "Type", "Sector", "Exchange", "Platform", "Currency", "Country"] as AllocationView[]).map(v => (
                     <button
                         key={v}
                         onClick={() => setView(v)}
                         style={{
-                            flex: 1,
-                            background: view === v ? 'var(--surface)' : 'transparent',
-                            border: 'none',
+                            flex: '1 0 22%', // 4 items per row approx
+                            background: view === v ? 'var(--surface)' : 'var(--bg-secondary)',
+                            border: view === v ? '1px solid var(--accent)' : '1px solid var(--border)',
                             borderRadius: '6px',
                             color: view === v ? 'var(--accent)' : 'var(--text-secondary)',
-                            padding: '0.4rem',
-                            fontSize: '0.7rem',
-                            fontWeight: 800,
+                            padding: '0.3rem 0.2rem',
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
                             cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             transition: 'all 0.15s',
                             textTransform: 'uppercase',
-                            letterSpacing: '0.03em',
-                            boxShadow: view === v ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+                            letterSpacing: '0.02em',
+                            boxShadow: view === v ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
                         }}
                     >
                         {v}

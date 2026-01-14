@@ -582,15 +582,26 @@ export async function getAutocompleteSuggestions(): Promise<{ portfolios: string
 }
 
 // Preferences Logic
-export async function updateUserPreferences(preferences: any) {
+export async function updateUserPreferences(newPreferences: any) {
     const session = await auth();
     if (!session?.user?.email) throw new Error("Not authenticated");
 
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { preferences: true }
+    });
+
+    const currentPreferences = (user?.preferences as Record<string, any>) || {};
+    const updatedPreferences = { ...currentPreferences, ...newPreferences };
+
     await prisma.user.update({
         where: { email: session.user.email },
-        data: { preferences }
+        data: { preferences: updatedPreferences }
     });
     // Optional: revalidatePath might not be needed if state is local, 
     // but good for ensuring fresh data on reload.
+    // Revalidate paths to ensure immediate updates on navigation
+    revalidatePath("/");
+    revalidatePath("/settings");
     revalidatePath("/[username]", "page");
 }

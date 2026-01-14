@@ -103,166 +103,207 @@ export function MobileAssetModal({ asset, onClose }: MobileAssetModalProps) {
                     <form style={{
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '0.75rem'
+                        gap: '0.8rem'
                     }}>
-                        {/* Symbol Input */}
-                        <div>
-                            <label style={{
-                                display: 'block',
-                                fontSize: '0.7rem',
-                                fontWeight: 800,
-                                color: 'var(--text-muted)',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.05em',
-                                marginBottom: '0.5rem'
-                            }}>
-                                Symbol
-                            </label>
-                            <input
-                                type="text"
-                                defaultValue={asset?.symbol || ''}
-                                placeholder="e.g. AAPL, BTC"
-                                style={{
-                                    width: '100%',
-                                    background: 'var(--bg-secondary)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '12px',
-                                    padding: '1rem',
-                                    fontSize: '1rem',
-                                    color: 'var(--text-primary)',
-                                    outline: 'none'
-                                }}
-                            />
+                        <input type="hidden" defaultValue={asset?.symbol || ''} />
+
+                        {/* REQUIRED SECTION - FRAMED */}
+                        <div style={{
+                            border: '1px solid var(--accent)',
+                            borderRadius: '12px',
+                            padding: '0.6rem',
+                            background: 'rgba(99, 102, 241, 0.05)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.5rem'
+                        }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                                {/* Quantity */}
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Quantity <span style={{ color: 'var(--accent)' }}>*</span></label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        defaultValue={asset?.quantity || ''}
+                                        placeholder="0"
+                                        style={{
+                                            width: '100%',
+                                            background: 'var(--bg-primary)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '8px',
+                                            padding: '0.5rem',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 600,
+                                            color: 'var(--text-primary)',
+                                            outline: 'none',
+                                            transition: 'border-color 0.2s'
+                                        }}
+                                        onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
+                                        onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
+                                    />
+                                </div>
+                                {/* Cost */}
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Avg. Cost <span style={{ color: 'var(--accent)' }}>*</span></label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        defaultValue={asset?.buyPrice || ''}
+                                        placeholder="0.00"
+                                        style={{
+                                            width: '100%',
+                                            background: 'var(--bg-primary)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '8px',
+                                            padding: '0.5rem',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 600,
+                                            color: 'var(--text-primary)',
+                                            outline: 'none',
+                                            transition: 'border-color 0.2s'
+                                        }}
+                                        onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
+                                        onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
+                                    />
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Quantity Input */}
-                        <div>
-                            <label style={{
-                                display: 'block',
-                                fontSize: '0.7rem',
+                        {/* OPTIONAL SECTION - FRAMED */}
+                        <div style={{
+                            border: '1px solid var(--border)',
+                            borderRadius: '12px',
+                            padding: '0.6rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.5rem'
+                        }}>
+                            <div style={{
+                                fontSize: '0.6rem',
                                 fontWeight: 800,
                                 color: 'var(--text-muted)',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em',
-                                marginBottom: '0.5rem'
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                marginBottom: '-0.1rem'
                             }}>
-                                Quantity
-                            </label>
-                            <input
-                                type="number"
-                                step="0.001"
-                                defaultValue={asset?.quantity || ''}
-                                placeholder="0.00"
-                                style={{
-                                    width: '100%',
-                                    background: 'var(--bg-secondary)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '12px',
-                                    padding: '1rem',
-                                    fontSize: '1rem',
-                                    color: 'var(--text-primary)',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-
-                        {/* Buy Price Input */}
-                        <div>
-                            <label style={{
-                                display: 'block',
-                                fontSize: '0.7rem',
-                                fontWeight: 800,
-                                color: 'var(--text-muted)',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.05em',
-                                marginBottom: '0.5rem'
-                            }}>
-                                Buy Price
-                            </label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                defaultValue={asset?.buyPrice || ''}
-                                placeholder="0.00"
-                                style={{
-                                    width: '100%',
-                                    background: 'var(--bg-secondary)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '12px',
-                                    padding: '1rem',
-                                    fontSize: '1rem',
-                                    color: 'var(--text-primary)',
-                                    outline: 'none'
-                                }}
-                            />
+                                Optional
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                                {/* Portfolio */}
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Portfolio</label>
+                                    <input
+                                        type="text"
+                                        defaultValue={asset?.customGroup || ''}
+                                        placeholder="Default"
+                                        style={{
+                                            width: '100%',
+                                            background: 'var(--bg-secondary)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '8px',
+                                            padding: '0.5rem',
+                                            fontSize: '0.85rem',
+                                            color: 'var(--text-primary)',
+                                            outline: 'none'
+                                        }}
+                                    />
+                                </div>
+                                {/* Platform */}
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Platform</label>
+                                    <input
+                                        type="text"
+                                        defaultValue={asset?.platform || ''}
+                                        placeholder="Binance"
+                                        style={{
+                                            width: '100%',
+                                            background: 'var(--bg-secondary)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '8px',
+                                            padding: '0.5rem',
+                                            fontSize: '0.85rem',
+                                            color: 'var(--text-primary)',
+                                            outline: 'none'
+                                        }}
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         {/* Action Buttons */}
                         <div style={{
                             display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.75rem',
-                            marginTop: '1rem'
+                            gap: '0.5rem',
+                            marginTop: '0.2rem'
                         }}>
+                            <button
+                                type="button"
+                                onClick={handleClose}
+                                style={{
+                                    flex: 1,
+                                    background: 'var(--bg-secondary)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '10px',
+                                    padding: '0.8rem 0.2rem',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    color: 'var(--text-primary)',
+                                    cursor: 'pointer',
+                                    textAlign: 'center',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis'
+                                }}
+                            >
+                                Cancel
+                            </button>
+
                             <button
                                 type="submit"
                                 style={{
-                                    width: '100%',
+                                    flex: 3,
                                     background: 'var(--accent)',
                                     border: 'none',
-                                    borderRadius: '12px',
-                                    padding: '1rem',
-                                    fontSize: '0.9rem',
+                                    borderRadius: '10px',
+                                    padding: '0.8rem',
+                                    fontSize: '0.85rem',
                                     fontWeight: 800,
                                     color: '#fff',
                                     cursor: 'pointer',
                                     textTransform: 'uppercase',
-                                    letterSpacing: '0.05em'
+                                    letterSpacing: '0.05em',
+                                    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                                    textAlign: 'center'
                                 }}
                             >
-                                {isEdit ? 'Update Position' : 'Add Position'}
+                                {isEdit ? 'Update' : 'Add'}
                             </button>
 
                             {isEdit && (
                                 <button
                                     type="button"
                                     style={{
-                                        width: '100%',
-                                        background: 'transparent',
+                                        flex: 1,
+                                        background: 'rgba(239, 68, 68, 0.1)',
                                         border: '1px solid var(--danger)',
-                                        borderRadius: '12px',
-                                        padding: '1rem',
-                                        fontSize: '0.9rem',
-                                        fontWeight: 800,
+                                        borderRadius: '10px',
+                                        padding: '0.8rem 0.2rem',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 700,
                                         color: 'var(--danger)',
                                         cursor: 'pointer',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.05em'
+                                        textAlign: 'center',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis'
                                     }}
                                 >
-                                    Delete Position
+                                    Delete
                                 </button>
                             )}
-
-                            <button
-                                type="button"
-                                onClick={handleClose}
-                                style={{
-                                    width: '100%',
-                                    background: 'var(--bg-secondary)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '12px',
-                                    padding: '1rem',
-                                    fontSize: '0.9rem',
-                                    fontWeight: 800,
-                                    color: 'var(--text-muted)',
-                                    cursor: 'pointer',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.05em'
-                                }}
-                            >
-                                Cancel
-                            </button>
                         </div>
                     </form>
                 </div>

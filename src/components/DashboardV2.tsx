@@ -448,7 +448,8 @@ const ALL_COLUMNS: ColumnConfig[] = [
     { id: 'PRICE', label: 'Price', isDefault: true },
     { id: 'VALUE', label: 'Total Value', isDefault: true },
     { id: 'VALUE_EUR', label: 'Total Value (€)', isDefault: true },
-    { id: 'PL', label: 'P&L (€)', isDefault: true },
+    { id: 'VALUE_EUR', label: 'Total Value (€)', isDefault: true },
+    { id: 'PL', label: `P&L`, isDefault: true }, // Label will be updated dynamically in render
 ];
 
 const COL_WIDTHS: Record<ColumnId, string> = {
@@ -1474,18 +1475,29 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
     const viewMode = "list";
     const [gridColumns, setGridColumns] = useState<1 | 2>(2);
 
+    // Initialize default time period from preferences or fallback to 1Y
+    // Sync with chartRange if available
+    const initialTimePeriod = preferences?.chartRange || '1Y';
+    const [timePeriod, setTimePeriod] = useState<string>(initialTimePeriod);
+
+    // Sync timePeriod with preferences dynamically
+    useEffect(() => {
+        if (preferences?.chartRange) {
+            setTimePeriod(preferences.chartRange);
+        }
+    }, [preferences?.chartRange]);
+
     const translatedColumns = useMemo(() => {
         return ALL_COLUMNS.map(col => {
             let label = col.label;
             if (col.id === 'NAME') label = t('name_col');
             else if (col.id === 'PRICE') label = t('price_col');
             else if (col.id === 'VALUE') label = t('value_col');
-            else if (col.id === 'PL') label = t('pl_col');
+            else if (col.id === 'PL') label = `P&L (${timePeriod})`; // Use dynamic timePeriod
             else if (col.id === 'PORTFOLIO_NAME') label = t('portfolio_cat');
             return { ...col, label };
         });
-    }, [t]);
-    const [timePeriod, setTimePeriod] = useState("ALL");
+    }, [t, timePeriod]);
 
     // Global Edit Mode State
     const [isGlobalEditMode, setIsGlobalEditMode] = useState(false);
@@ -1599,6 +1611,13 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
             ? preferences.benchmarks
             : ['NDX', 'SPX', 'BTC']
     );
+
+    // Sync benchmarks with preferences explicitly when they update (e.g. navigation back from settings)
+    useEffect(() => {
+        if (preferences?.benchmarks && Array.isArray(preferences.benchmarks)) {
+            setSelectedBenchmarks(preferences.benchmarks);
+        }
+    }, [preferences]);
 
     const saveBenchmarks = async (benchmarks: string[]) => {
         if (!isOwner) return;
@@ -1766,6 +1785,20 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
 
     const pLTitle = `P&L (${timePeriod})`;
 
+    // Update label specifically for PL column just for rendering if needed, 
+    // but the main translatedColumns memo above (line 1478) handles most translations.
+    // However, that one uses 't()'. 
+    // If we want to override P&L specifically with timePeriod:
+
+    // We can just rely on timePeriod being available and update the memo at 1478 to include pLTitle dependency.
+    // Let's modify the ORIGINAL memo instead of redeclaring.
+
+    // Deleting this redeclaration block to avoid conflict.
+    // We will update logic at line 1478 separately if needed, or update this block to use `translatedColumns` logic if it was meant to override.
+    // Given the context, we should probably just effectively merge the logic.
+
+    // FOR NOW: Delete this conflicting block. We will handle PL title update in the main memo.
+
     // Smart Filtering: Get unique values based on currently filtered assets
     // This ensures filter options only show what's available given active filters
     const getFilteredAssets = () => {
@@ -1899,6 +1932,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                             onToggleBenchmark={toggleBenchmark}
                             onTogglePortfolio={() => setIsPortfolioVisible(!isPortfolioVisible)}
                             onSaveBenchmarks={saveBenchmarks}
+                            defaultRange={preferences?.chartRange}
                             onPeriodChange={(period) => {
                                 // Sync with dashboard time period if needed
                                 console.log('Period changed to:', period);

@@ -12,6 +12,7 @@ interface MobileClientWrapperProps {
     assets: AssetDisplay[];
     goals: Goal[];
     exchangeRates: Record<string, number>;
+    preferences?: any;
 }
 
 export function MobileClientWrapper({
@@ -20,7 +21,8 @@ export function MobileClientWrapper({
     totalValueEUR,
     assets,
     goals,
-    exchangeRates
+    exchangeRates,
+    preferences
 }: MobileClientWrapperProps) {
     return (
         <CurrencyProvider>
@@ -31,6 +33,7 @@ export function MobileClientWrapper({
                 assets={assets}
                 goals={goals}
                 exchangeRates={exchangeRates}
+                preferences={preferences}
             />
         </CurrencyProvider>
     );

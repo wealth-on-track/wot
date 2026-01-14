@@ -4,6 +4,7 @@ import { useEffect, ReactNode } from "react";
 import Dashboard from "@/components/DashboardV2";
 import { CurrencyProvider, useCurrency } from "@/context/CurrencyContext";
 import { DeploymentFooter } from "./DeploymentFooter";
+import { PreferencesSync } from "./PreferencesSync";
 
 interface ClientWrapperProps {
     username: string;
@@ -107,6 +108,7 @@ export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals 
 
     return (
         <CurrencyProvider>
+            <PreferencesSync preferences={preferences} />
             {navbar}
 
             <div style={{ paddingTop: '6.5rem' }}>

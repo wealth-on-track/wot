@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { updateUserPreferences } from "@/lib/actions";
+import { useTheme } from "@/context/ThemeContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { User, Mail, Lock, Globe, DollarSign, Moon, Sun, ArrowLeft, Eye, EyeOff, TrendingUp, BarChart3, Clock } from "lucide-react";
+import { User, Mail, Lock, Globe, DollarSign, Moon, Sun, ArrowLeft, Eye, EyeOff, TrendingUp, BarChart3, Clock, Save } from "lucide-react";
 
 interface SettingsPageProps {
     userEmail: string;
@@ -14,6 +16,7 @@ export function SettingsPage({ userEmail }: SettingsPageProps) {
     const router = useRouter();
     const { currency, setCurrency } = useCurrency();
     const { language, setLanguage } = useLanguage();
+    const { theme, toggleTheme } = useTheme();
 
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
@@ -22,11 +25,15 @@ export function SettingsPage({ userEmail }: SettingsPageProps) {
     const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [isChangingPassword, setIsChangingPassword] = useState(false);
 
+    // Preferences saving state
+    const [isSavingPreferences, setIsSavingPreferences] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+
     // Portfolio preferences
     const [benchmarks, setBenchmarks] = useState<string[]>(['SPX']);
     const [chartRange, setChartRange] = useState<string>('1Y');
     const [timezone, setTimezone] = useState<string>('UTC');
-    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+
 
     const [isMobile, setIsMobile] = useState(false);
     const [mounted, setMounted] = useState(false);
@@ -49,8 +56,7 @@ export function SettingsPage({ userEmail }: SettingsPageProps) {
                 setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
             }
 
-            const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
-            if (savedTheme) setTheme(savedTheme);
+
         }
 
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -62,10 +68,10 @@ export function SettingsPage({ userEmail }: SettingsPageProps) {
     // Prevent hydration mismatch by not rendering theme-dependent UI until mounted
     if (!mounted) return null;
 
-    const handleThemeChange = (newTheme: 'light' | 'dark') => {
-        setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-        document.documentElement.setAttribute('data-theme', newTheme);
+    const handleThemeChange = (targetTheme: 'light' | 'dark') => {
+        if (theme !== targetTheme) {
+            toggleTheme();
+        }
     };
 
     const handleBenchmarkToggle = (benchmark: string) => {
@@ -86,6 +92,28 @@ export function SettingsPage({ userEmail }: SettingsPageProps) {
     const handleTimezoneChange = (newTimezone: string) => {
         setTimezone(newTimezone);
         localStorage.setItem('timezone', newTimezone);
+    };
+
+    const handleSavePreferences = async () => {
+        setIsSavingPreferences(true);
+        setSaveSuccess(false);
+        try {
+            await updateUserPreferences({
+                benchmarks,
+                chartRange,
+                timezone,
+                theme,
+                currency, // Note: these come from context, assume they are simple strings
+                language
+            });
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 2000);
+        } catch (e) {
+            console.error(e);
+            alert('Failed to save preferences');
+        } finally {
+            setIsSavingPreferences(false);
+        }
     };
 
     const handlePasswordChange = async (e: React.FormEvent) => {
@@ -217,162 +245,173 @@ export function SettingsPage({ userEmail }: SettingsPageProps) {
                     </h1>
                 </div>
 
-                {/* Content Layout - Grid Areas */}
+                {/* Content Layout - Flex Grid */}
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 2fr',
-                    gridTemplateRows: 'auto auto',
-                    gridTemplateAreas: isMobile
-                        ? '"account account" "password preferences"'
-                        : '"account preferences" "password preferences"',
+                    gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr',
                     gap: isMobile ? '0.5rem' : '1.5rem',
-                    alignItems: 'start',
-                    padding: isMobile ? '0.5rem' : '0'
+                    alignItems: 'stretch' // Makes both columns equal height
                 }}>
-                    {/* Account Information */}
-                    <section className="neo-card" style={{
-                        gridArea: 'account',
-                        padding: isMobile ? '0.75rem' : '1rem'
+
+                    {/* Left Column: Account + Password */}
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: isMobile ? '0.5rem' : '1.5rem',
+                        height: '100%'
                     }}>
-                        <h2 style={sectionTitleStyle}>
-                            <User size={isMobile ? 14 : 16} />
-                            Account
-                        </h2>
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            padding: isMobile ? '0.5rem' : '0.75rem',
-                            background: 'var(--bg-secondary)',
-                            borderRadius: '6px',
-                            border: '1px solid var(--border)'
+                        {/* Account Information */}
+                        <section className="neo-card" style={{
+                            padding: isMobile ? '0.75rem' : '1rem'
                         }}>
-                            <Mail size={14} style={{ color: 'var(--text-secondary)' }} />
-                            <span style={{ color: 'var(--text-primary)', fontWeight: 500, fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
-                                {userEmail}
-                            </span>
-                        </div>
-                    </section>
+                            <h2 style={sectionTitleStyle}>
+                                <User size={isMobile ? 14 : 16} />
+                                Account
+                            </h2>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: isMobile ? '0.5rem' : '0.75rem',
+                                background: 'var(--bg-secondary)',
+                                borderRadius: '6px',
+                                border: '1px solid var(--border)'
+                            }}>
+                                <Mail size={14} style={{ color: 'var(--text-secondary)' }} />
+                                <span style={{ color: 'var(--text-primary)', fontWeight: 500, fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
+                                    {userEmail}
+                                </span>
+                            </div>
+                        </section>
 
-                    {/* Password Change */}
-                    <section className="neo-card" style={{
-                        gridArea: 'password',
-                        padding: isMobile ? '0.75rem' : '1rem'
-                    }}>
-                        <h2 style={sectionTitleStyle}>
-                            <Lock size={isMobile ? 14 : 16} />
-                            Password
-                        </h2>
-
-                        <form onSubmit={handlePasswordChange} style={{
+                        {/* Password Change */}
+                        <section className="neo-card" style={{
+                            padding: isMobile ? '0.75rem' : '1rem',
+                            flex: 1, // This allows the password box to expand if needed to match height
                             display: 'flex',
-                            flexDirection: 'column',
-                            gap: isMobile ? '0.5rem' : '0.75rem'
+                            flexDirection: 'column'
                         }}>
-                            <div>
-                                <label style={labelStyle}>Current</label>
-                                <input
-                                    type={showPasswords ? "text" : "password"}
-                                    value={currentPassword}
-                                    onChange={(e) => setCurrentPassword(e.target.value)}
-                                    required
-                                    className="glass-button"
-                                    style={inputStyle}
-                                />
-                            </div>
+                            <h2 style={sectionTitleStyle}>
+                                <Lock size={isMobile ? 14 : 16} />
+                                Password
+                            </h2>
 
-                            <div>
-                                <label style={labelStyle}>New</label>
-                                <input
-                                    type={showPasswords ? "text" : "password"}
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    required
-                                    minLength={6}
-                                    className="glass-button"
-                                    style={inputStyle}
-                                />
-                            </div>
-
-                            <div>
-                                <label style={labelStyle}>Confirm</label>
-                                <input
-                                    type={showPasswords ? "text" : "password"}
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    required
-                                    minLength={6}
-                                    className="glass-button"
-                                    style={inputStyle}
-                                />
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={() => setShowPasswords(!showPasswords)}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    padding: '0',
-                                    fontSize: '0.75rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.3rem',
-                                    color: 'var(--accent)',
-                                    cursor: 'pointer',
-                                    fontWeight: 600
-                                }}
-                            >
-                                {showPasswords ? <EyeOff size={14} /> : <Eye size={14} />}
-                                {showPasswords ? 'Hide Secrets' : 'Show Secrets'}
-                            </button>
-
-                            {passwordMessage && (
-                                <div style={{
-                                    padding: '0.5rem',
-                                    borderRadius: '4px',
-                                    background: passwordMessage.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                    border: `1px solid ${passwordMessage.type === 'success' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                                    color: passwordMessage.type === 'success' ? '#22c55e' : '#ef4444',
-                                    fontSize: '0.75rem'
-                                }}>
-                                    {passwordMessage.text}
+                            <form onSubmit={handlePasswordChange} style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: isMobile ? '0.5rem' : '0.75rem',
+                                flex: 1 // Push content apart if needed
+                            }}>
+                                <div>
+                                    <label style={labelStyle}>Current</label>
+                                    <input
+                                        type={showPasswords ? "text" : "password"}
+                                        value={currentPassword}
+                                        onChange={(e) => setCurrentPassword(e.target.value)}
+                                        required
+                                        className="glass-button"
+                                        style={inputStyle}
+                                    />
                                 </div>
-                            )}
 
-                            <button
-                                type="submit"
-                                disabled={isChangingPassword}
-                                className="glass-button"
-                                style={{
-                                    padding: isMobile ? '0.5rem' : '0.6rem 1rem',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 700,
-                                    background: 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
-                                    color: 'white',
-                                    width: '100%',
-                                    opacity: isChangingPassword ? 0.6 : 1,
-                                    cursor: isChangingPassword ? 'not-allowed' : 'pointer',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.05em'
-                                }}
-                            >
-                                {isChangingPassword ? 'Changing...' : 'Update Password'}
-                            </button>
-                        </form>
-                    </section>
+                                <div>
+                                    <label style={labelStyle}>New</label>
+                                    <input
+                                        type={showPasswords ? "text" : "password"}
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        required
+                                        minLength={6}
+                                        className="glass-button"
+                                        style={inputStyle}
+                                    />
+                                </div>
 
-                    {/* Preferences */}
+                                <div>
+                                    <label style={labelStyle}>Confirm</label>
+                                    <input
+                                        type={showPasswords ? "text" : "password"}
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        required
+                                        minLength={6}
+                                        className="glass-button"
+                                        style={inputStyle}
+                                    />
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPasswords(!showPasswords)}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        padding: '0',
+                                        fontSize: '0.75rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.3rem',
+                                        color: 'var(--accent)',
+                                        cursor: 'pointer',
+                                        fontWeight: 600
+                                    }}
+                                >
+                                    {showPasswords ? <EyeOff size={14} /> : <Eye size={14} />}
+                                    {showPasswords ? 'Hide Secrets' : 'Show Secrets'}
+                                </button>
+
+                                {passwordMessage && (
+                                    <div style={{
+                                        padding: '0.5rem',
+                                        borderRadius: '4px',
+                                        background: passwordMessage.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                        border: `1px solid ${passwordMessage.type === 'success' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                                        color: passwordMessage.type === 'success' ? '#22c55e' : '#ef4444',
+                                        fontSize: '0.75rem'
+                                    }}>
+                                        {passwordMessage.text}
+                                    </div>
+                                )}
+
+                                <div style={{ marginTop: 'auto' }}>
+                                    <button
+                                        type="submit"
+                                        disabled={isChangingPassword}
+                                        className="glass-button"
+                                        style={{
+                                            padding: isMobile ? '0.5rem' : '0.6rem 1rem',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 700,
+                                            background: 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
+                                            color: 'white',
+                                            width: '100%',
+                                            opacity: isChangingPassword ? 0.6 : 1,
+                                            cursor: isChangingPassword ? 'not-allowed' : 'pointer',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.05em'
+                                        }}
+                                    >
+                                        {isChangingPassword ? 'Changing...' : 'Update Password'}
+                                    </button>
+                                </div>
+                            </form>
+                        </section>
+                    </div>
+
+                    {/* Right Column: Preferences */}
                     <section className="neo-card" style={{
-                        gridArea: 'preferences',
-                        padding: isMobile ? '0.75rem' : '1rem'
+                        padding: isMobile ? '0.75rem' : '1rem',
+                        width: isMobile ? '100%' : '65%', // Maintained verified width adjustment
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column'
                     }}>
                         <h2 style={sectionTitleStyle}>
                             <Globe size={isMobile ? 14 : 16} />
                             Preferences
                         </h2>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '0.5rem' : '0.75rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '0.5rem' : '0.75rem', flex: 1 }}>
                             {/* 1. Theme */}
                             <div style={{
                                 display: 'flex',
@@ -448,19 +487,21 @@ export function SettingsPage({ userEmail }: SettingsPageProps) {
                                 <select
                                     value={language}
                                     onChange={(e) => setLanguage(e.target.value as any)}
-                                    className="glass-button"
+                                    // Removed glass-button class to fix text color in light mode
                                     style={{
                                         padding: '0.3rem 0.6rem',
                                         fontSize: '0.75rem',
                                         cursor: 'pointer',
                                         minWidth: '90px',
                                         background: 'var(--bg-primary)',
-                                        border: 'none',
+                                        color: 'var(--text-primary)', // Explicitly set text color
+                                        border: '1px solid var(--border)', // Added border for better definition
+                                        borderRadius: '6px', // Added radius
                                         width: isMobile ? '100%' : 'auto'
                                     }}
                                 >
-                                    <option value="en">English</option>
-                                    <option value="tr">Türkçe</option>
+                                    <option value="ENG">English</option>
+                                    <option value="TR">Türkçe</option>
                                 </select>
                             </div>
 
@@ -485,14 +526,16 @@ export function SettingsPage({ userEmail }: SettingsPageProps) {
                                 <select
                                     value={currency}
                                     onChange={(e) => setCurrency(e.target.value as any)}
-                                    className="glass-button"
+                                    // Removed glass-button class to fix text color in light mode
                                     style={{
                                         padding: '0.3rem 0.6rem',
                                         fontSize: '0.75rem',
                                         cursor: 'pointer',
                                         minWidth: '90px',
                                         background: 'var(--bg-primary)',
-                                        border: 'none',
+                                        color: 'var(--text-primary)', // Explicitly set text color
+                                        border: '1px solid var(--border)', // Added border
+                                        borderRadius: '6px', // Added radius
                                         width: isMobile ? '100%' : 'auto'
                                     }}
                                 >
@@ -524,14 +567,16 @@ export function SettingsPage({ userEmail }: SettingsPageProps) {
                                 <select
                                     value={timezone}
                                     onChange={(e) => handleTimezoneChange(e.target.value)}
-                                    className="glass-button"
+                                    // Removed glass-button class to fix text color in light mode
                                     style={{
                                         padding: '0.3rem 0.6rem',
                                         fontSize: '0.75rem',
                                         cursor: 'pointer',
                                         minWidth: '120px',
                                         background: 'var(--bg-primary)',
-                                        border: 'none',
+                                        color: 'var(--text-primary)', // Explicitly set text color
+                                        border: '1px solid var(--border)', // Added border
+                                        borderRadius: '6px', // Added radius
                                         maxWidth: isMobile ? '100%' : '150px',
                                         width: isMobile ? '100%' : 'auto',
                                         textOverflow: 'ellipsis'
@@ -560,11 +605,14 @@ export function SettingsPage({ userEmail }: SettingsPageProps) {
                                 borderRadius: '6px',
                                 border: '1px solid var(--border)'
                             }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <TrendingUp size={14} style={{ color: 'var(--text-secondary)' }} />
-                                    <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
-                                        Comparison Benchmarks
-                                    </span>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <TrendingUp size={14} style={{ color: 'var(--text-secondary)' }} />
+                                        <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
+                                            Comparison Benchmarks
+                                        </span>
+                                    </div>
+                                    {/* Removed save button strictly for benchmarks */}
                                 </div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', justifyContent: isMobile ? 'center' : 'flex-start' }}>
                                     {availableBenchmarks.map(({ value, label }) => {
@@ -608,32 +656,60 @@ export function SettingsPage({ userEmail }: SettingsPageProps) {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <BarChart3 size={14} style={{ color: 'var(--text-secondary)' }} />
                                     <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
-                                        Chart Range
+                                        Default Chart Range
                                     </span>
                                 </div>
                                 <select
                                     value={chartRange}
                                     onChange={(e) => handleChartRangeChange(e.target.value)}
-                                    className="glass-button"
+                                    // Removed glass-button class to fix text color in light mode
                                     style={{
                                         padding: '0.3rem 0.6rem',
                                         fontSize: '0.75rem',
                                         cursor: 'pointer',
                                         minWidth: '80px',
                                         background: 'var(--bg-primary)',
-                                        border: 'none',
+                                        color: 'var(--text-primary)', // Explicitly set text color
+                                        border: '1px solid var(--border)', // Added border
+                                        borderRadius: '6px', // Added radius
                                         width: isMobile ? '100%' : 'auto'
                                     }}
                                 >
                                     <option value="1D">1 Day</option>
                                     <option value="1W">1 Week</option>
                                     <option value="1M">1 Month</option>
-                                    <option value="3M">3 Months</option>
-                                    <option value="6M">6 Months</option>
+                                    <option value="YTD">Year to Date (YTD)</option>
                                     <option value="1Y">1 Year</option>
-                                    <option value="5Y">5 Years</option>
                                     <option value="ALL">All Time</option>
                                 </select>
+                            </div>
+
+                            {/* Global Save Button for Preferences */}
+                            <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
+                                <button
+                                    onClick={handleSavePreferences}
+                                    disabled={isSavingPreferences}
+                                    className="glass-button"
+                                    style={{
+                                        width: '100%',
+                                        padding: isMobile ? '0.5rem' : '0.6rem 1rem',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 700,
+                                        background: saveSuccess ? 'var(--success)' : 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
+                                        color: 'white',
+                                        opacity: isSavingPreferences ? 0.6 : 1,
+                                        cursor: isSavingPreferences ? 'not-allowed' : 'pointer',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.5rem'
+                                    }}
+                                >
+                                    <Save size={16} />
+                                    {isSavingPreferences ? 'Saving...' : saveSuccess ? 'Saved Successfully!' : 'Save Preferences'}
+                                </button>
                             </div>
                         </div>
                     </section>

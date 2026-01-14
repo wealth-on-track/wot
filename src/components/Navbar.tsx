@@ -144,11 +144,11 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                                 animation: 'pulse-glow 3s ease-in-out infinite',
                                 userSelect: 'none',
                                 whiteSpace: 'nowrap',
-                                marginLeft: '0.4rem',
+                                marginLeft: '0rem', // Reduced margin
                                 alignSelf: 'flex-start',
                                 marginTop: '0px'
                             }}>
-                                BETA V3
+                                BETA
                             </div>
                         </Link>
                     </div>
