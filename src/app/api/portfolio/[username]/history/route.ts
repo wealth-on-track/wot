@@ -111,11 +111,33 @@ export async function GET(
             log('DEBUG: Strategy Backtesting DISABLED.');
         }
 
-        // Fallback if empty
+        // Fallback if empty (Safe Flat Line)
         if (historyData.length === 0) {
-            log('WARNING: No history data generated! Returning empty.');
-            // Return empty list so client handles "No Data" state
-            // historyData stays []
+            log('WARNING: No history data generated! Generating flat line fallback.');
+
+            let fallbackValue = 0;
+            try {
+                if (user.portfolio && user.portfolio.assets) {
+                    fallbackValue = user.portfolio.assets.reduce((sum, asset) => {
+                        // Use buyPrice as proxy for value if no snapshots exist
+                        // Check for nulls just in case, though schema says required
+                        const val = (Number(asset.quantity) || 0) * (Number(asset.buyPrice) || 0);
+                        return sum + val;
+                    }, 0);
+                }
+            } catch (e) {
+                log(`Fallback calculation failed: ${e}`);
+            }
+
+            // Create flat line
+            historyData.push({
+                date: startDate.toISOString(),
+                value: fallbackValue
+            });
+            historyData.push({
+                date: new Date().toISOString(),
+                value: fallbackValue
+            });
         }
 
         log(`DEBUG: Returning ${historyData.length} data points`);
