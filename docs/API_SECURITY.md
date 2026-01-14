@@ -107,13 +107,14 @@ The application implements:
 ### Monitoring
 
 Check API health:
+- **Allowed Origins**: `https://wot.money`, `http://localhost:3000`
 ```bash
-curl https://mpt1.vercel.app/admin/health
+curl https://wot.money/admin/health
 ```
 
 View API usage:
-- Dashboard: https://mpt1.vercel.app/admin
-- Requests log: https://mpt1.vercel.app/admin/requests
+- Dashboard: https://wot.money/admin
+- Requests log: https://wot.money/admin/requests
 
 ## Security Best Practices
 

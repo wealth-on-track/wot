@@ -12,7 +12,7 @@ We now have two distinct environments:
 | Environment | Branch | URL (Example) | Database (Recommended) |
 | :--- | :--- | :--- | :--- |
 | **Production** | `main` | `https://wot.money` | `wot-db` (Prisma Postgres) |
-| **Development** | `dev` | `https://wot-beta-git-dev-mpt.vercel.app` | `wot-db-dev` (Prisma Postgres) |
+| **Development** | `dev` | *(Vercel Preview URL)* | `wot-db-dev` (Prisma Postgres) |
 
 > **Critical**: Your local computer (`localhost:3000`) should ideally connect to the **Development** database to avoid accidental data loss in production.
 

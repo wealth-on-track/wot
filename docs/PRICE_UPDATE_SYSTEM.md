@@ -199,7 +199,7 @@ await trackApiRequest(provider, isSuccess, {
 
 ### Manual Price Update
 ```bash
-curl https://mpt1.vercel.app/api/cron/update-prices
+curl https://wot.money/api/cron/update-prices
 ```
 
 ### Check Category Distribution
