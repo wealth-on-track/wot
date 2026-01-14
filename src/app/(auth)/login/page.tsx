@@ -13,7 +13,7 @@ export default function LoginPage() {
         }}>
             <div style={{ textAlign: 'center' }}>
                 <h1 className="gradient-text" style={{ fontSize: '3.5rem', fontWeight: 800, marginBottom: '0.5rem', lineHeight: 1.1 }}>
-                    Modern Portfolio Tracker
+                    Wealth on Track
                 </h1>
                 <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', maxWidth: '500px', margin: '0 auto' }}>
                     Track your wealth!

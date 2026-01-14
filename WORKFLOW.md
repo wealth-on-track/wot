@@ -1,7 +1,7 @@
 # Professional Development Workflow
 *Last Updated: January 2024*
 
-This document outlines the professional "Git Flow" strategy we have established for the Modern Portfolio Tracker project. This workflow separates daily development from the stable production site.
+This document outlines the professional "Git Flow" strategy we have established for the Wealth on Track project. This workflow separates daily development from the stable production site.
 
 ---
 
@@ -11,8 +11,8 @@ We now have two distinct environments:
 
 | Environment | Branch | URL (Example) | Database (Recommended) |
 | :--- | :--- | :--- | :--- |
-| **Production** | `main` | `https://wot-beta.vercel.app` | `mpt_v1_prod` |
-| **Development** | `dev` | `https://wot-beta-git-dev-mpt.vercel.app` | `mpt_v1_dev` |
+| **Production** | `main` | `https://wot.money` | `wot-db` (Prisma Postgres) |
+| **Development** | `dev` | `https://wot-beta-git-dev-mpt.vercel.app` | `wot-db-dev` (Prisma Postgres) |
 
 > **Critical**: Your local computer (`localhost:3000`) should ideally connect to the **Development** database to avoid accidental data loss in production.
 

@@ -6,9 +6,9 @@ We have established a strict separation of concerns between **Development** and 
 
 | Feature | 💻 Local / Development | 🌍 Production / Live |
 | :--- | :--- | :--- |
-| **URL** | `http://localhost:3000` | `https://wot-beta.vercel.app` |
+| **URL** | `http://localhost:3000` | `https://wot.money` |
 | **Branch** | `dev` | `main` |
-| **Database** | `mpt_dev` (Neon) | `mpt_prod` (Neon/Vercel) |
+| **Database** | `wot-db-dev` | `wot-db` |
 | **Data Scope** | Fake / Test Data | Real User Data |
 
 ## 1. Is there a connection?

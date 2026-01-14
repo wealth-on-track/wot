@@ -2,7 +2,7 @@ import "@/app/mobile.css";
 import { ThemeProvider } from "@/context/ThemeContext";
 
 export const metadata = {
-    title: 'Portfolio Tracker - Mobile',
+    title: 'WOT - Mobile',
     description: 'Track your wealth on mobile',
     viewport: {
         width: 'device-width',
@@ -18,7 +18,7 @@ export const metadata = {
     appleWebApp: {
         capable: true,
         statusBarStyle: 'black-translucent',
-        title: 'Portfolio Tracker'
+        title: 'Wealth on Track'
     },
     formatDetection: {
         telephone: false

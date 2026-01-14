@@ -99,7 +99,7 @@ export function LandingPage({ isLoggedIn, username, userEmail }: LandingPageProp
                             maxWidth: '500px',
                             margin: isMobile ? '0 auto 2.5rem' : '0 0 2.5rem'
                         }}>
-                            The modern portfolio tracker for long-term investors. Track all your assets in one place, analyze performance, and reach your financial milestones.
+                            Wealth on Track is the platform for long-term investors. Track all your assets in one place, analyze performance, and reach your financial milestones.
                         </p>
 
                         {/* Social Proof */}
