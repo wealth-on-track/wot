@@ -2785,7 +2785,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                             border: '1px solid var(--border)',
                             borderRadius: 'var(--radius-lg)',
                             width: '100%',
-                            maxWidth: '400px',
+                            maxWidth: '300px',
                             boxShadow: 'var(--shadow-lg)',
                             padding: '1.5rem'
                         }} onClick={e => e.stopPropagation()}>

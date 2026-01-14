@@ -364,10 +364,11 @@ export function PortfolioPerformanceChart({
                     <>
                         <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setShowCompareMenu(false)} />
                         <div style={{
-                            position: 'absolute', [controlsPosition === 'bottom' ? 'bottom' : 'top']: '120%', [controlsPosition === 'bottom' ? 'left' : 'right']: 0, width: '220px',
+                            position: 'absolute', [controlsPosition === 'bottom' ? 'bottom' : 'top']: '120%', [controlsPosition === 'bottom' ? 'left' : 'right']: 0, width: '170px',
                             background: 'var(--surface)', border: '1px solid var(--border)',
                             borderRadius: '12px', padding: '8px', zIndex: 50,
-                            boxShadow: '0 10px 30px -10px rgba(0,0,0,0.2)'
+                            boxShadow: '0 10px 30px -10px rgba(0,0,0,0.2)',
+                            maxHeight: '300px', overflowY: 'auto'
                         }}>
                             <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', padding: '4px 8px', textTransform: 'uppercase' }}>
                                 Overlay
