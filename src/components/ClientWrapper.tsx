@@ -3,6 +3,7 @@
 import { useEffect, ReactNode } from "react";
 import Dashboard from "@/components/DashboardV2";
 import { CurrencyProvider, useCurrency } from "@/context/CurrencyContext";
+import { DeploymentFooter } from "./DeploymentFooter";
 
 interface ClientWrapperProps {
     username: string;
@@ -126,6 +127,7 @@ export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals 
                     />
                 </div>
             </div>
+            <DeploymentFooter />
         </CurrencyProvider>
     );
 }

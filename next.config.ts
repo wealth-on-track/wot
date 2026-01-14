@@ -106,6 +106,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Expose env vars to client
+  env: {
+    NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA || 'local-dev',
+    NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV || 'development',
+    NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
+  },
 };
 
 export default nextConfig;
