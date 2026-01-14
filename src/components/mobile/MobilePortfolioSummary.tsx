@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useCurrency } from "@/context/CurrencyContext";
 import { ASSET_COLORS } from "@/lib/constants";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ChevronRight, ChevronLeft } from "lucide-react";
 import type { AssetDisplay } from "@/lib/types";
 
 interface MobilePortfolioSummaryProps {
@@ -74,30 +74,7 @@ export function MobilePortfolioSummary({
                     </div>
                 </div>
 
-                <div style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    flexWrap: 'nowrap',
-                    whiteSpace: 'nowrap'
-                }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Total</span>
-                    <span style={{ fontWeight: 800, color: totalReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                        {totalReturnPct >= 0 ? '+' : ''}{totalReturnPct.toFixed(1)}%
-                    </span>
-                    <span style={{
-                        fontWeight: 500,
-                        opacity: 0.8,
-                        color: totalReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)'
-                    }}>
-                        {isPrivacyMode
-                            ? '****'
-                            : `${totalReturnEUR >= 0 ? '+' : ''}${sym}${convert(totalReturnEUR).toLocaleString('de-DE', { maximumFractionDigits: 0 })}`
-                        }
-                    </span>
-                </div>
+
             </div>
 
             {/* Right: Period Selector + Return */}
@@ -149,7 +126,7 @@ export function MobilePortfolioSummary({
                     gap: '0.4rem'
                 }}>
                     <span style={{ color: 'var(--text-secondary)' }}>
-                        {selectedPeriod === '1D' ? 'Today' : selectedPeriod === '1W' ? '1W' : selectedPeriod === '1M' ? '1M' : selectedPeriod === 'YTD' ? 'YTD' : 'All'}
+                        {selectedPeriod === '1D' ? 'Today' : selectedPeriod === 'ALL' ? 'All' : selectedPeriod}
                     </span>
                     <span style={{ fontWeight: 800, color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                         {periodReturnPct >= 0 ? '+' : ''}{periodReturnPct.toFixed(1)}%
@@ -185,6 +162,16 @@ interface MobileHomeAllocationsProps {
 export function MobileHomeAllocations({ assets, totalValueEUR, isPrivacyMode }: MobileHomeAllocationsProps) {
     const { currency } = useCurrency();
     const [view, setView] = useState<AllocationView>("Type");
+    const [page, setPage] = useState(0);
+
+    const groups: AllocationView[][] = [
+        ["Portfolio", "Type", "Sector", "Exchange"],
+        ["Platform", "Currency", "Country"]
+    ];
+
+    const handlePageToggle = () => {
+        setPage(prev => prev === 0 ? 1 : 0);
+    };
 
     const rates: Record<string, number> = { EUR: 1, USD: 1.05, TRY: 38.5 };
     const symbols: Record<string, string> = { EUR: "€", USD: "$", TRY: "₺" };
@@ -227,40 +214,71 @@ export function MobileHomeAllocations({ assets, totalValueEUR, isPrivacyMode }: 
     const DEFAULT_COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
 
     return (
-        <div className="neo-card" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {/* View Toggle */}
+        <div className="neo-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Paginated Header */}
             <div style={{
                 display: 'flex',
-                flexWrap: 'wrap',
-                gap: '0.4rem',
-                justifyContent: 'center'
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottom: '1px solid var(--border)',
+                paddingBottom: '0.8rem',
+                marginBottom: '0.2rem'
             }}>
-                {(["Portfolio", "Type", "Sector", "Exchange", "Platform", "Currency", "Country"] as AllocationView[]).map(v => (
-                    <button
-                        key={v}
-                        onClick={() => setView(v)}
-                        style={{
-                            flex: '1 0 22%', // 4 items per row approx
-                            background: view === v ? 'var(--surface)' : 'var(--bg-secondary)',
-                            border: view === v ? '1px solid var(--accent)' : '1px solid var(--border)',
-                            borderRadius: '6px',
-                            color: view === v ? 'var(--accent)' : 'var(--text-secondary)',
-                            padding: '0.3rem 0.2rem',
-                            fontSize: '0.65rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.15s',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.02em',
-                            boxShadow: view === v ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                        }}
-                    >
-                        {v}
-                    </button>
-                ))}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1.2rem',
+                    flex: 1
+                }}>
+                    {groups[page].map(v => (
+                        <button
+                            key={v}
+                            onClick={() => setView(v)}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                padding: '0',
+                                fontSize: '0.85rem',
+                                fontWeight: view === v ? 800 : 500,
+                                color: view === v ? 'var(--accent)' : 'var(--text-secondary)',
+                                cursor: 'pointer',
+                                transition: 'color 0.2s',
+                                position: 'relative'
+                            }}
+                        >
+                            {v}
+                            {view === v && (
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: '-0.95rem', // aligned with border-bottom of container
+                                    left: 0,
+                                    right: 0,
+                                    height: '2px',
+                                    background: 'var(--accent)',
+                                    borderRadius: '2px 2px 0 0'
+                                }} />
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                <button
+                    onClick={handlePageToggle}
+                    style={{
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '50%',
+                        width: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)'
+                    }}
+                >
+                    {page === 0 ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+                </button>
             </div>
 
             {/* Bars */}

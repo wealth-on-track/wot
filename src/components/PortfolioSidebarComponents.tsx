@@ -403,81 +403,86 @@ export function AllocationCard({ assets, totalValueEUR, isBlurred = false, excha
     const [showAmounts, setShowAmounts] = useState(true);
 
     if (variant === 'mobile') {
+        const groups = [
+            viewOrder.filter(v => !['Country', 'Sector', 'Platform', 'Positions'].includes(v)),
+            viewOrder.filter(v => ['Country', 'Sector', 'Platform', 'Positions'].includes(v))
+        ];
+
+        const handleMobilePageToggle = () => setMobilePage(prev => prev === 0 ? 1 : 0);
+
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {/* 1. Category Selector (Separate Card) */}
-                <div className="neo-card" style={{ padding: '0.5rem 0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.25rem' }}>
-
-                    {/* Left Arrow - Show only on Page 2 (Transition to Page 0) */}
-                    <button
-                        onClick={() => setMobilePage(0)}
-                        style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: mobilePage === 1 ? 'var(--text-primary)' : 'transparent',
-                            cursor: mobilePage === 1 ? 'pointer' : 'default',
-                            padding: '0.5rem',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            opacity: mobilePage === 1 ? 1 : 0,
-                            transition: 'opacity 0.2s',
-                            width: '32px',
-                            flexShrink: 0
-                        }}
-                    >
-                        <ChevronLeft size={20} />
-                    </button>
-
-                    {/* Categories Container */}
+                {/* 1. Category Selector (New Modern Style) */}
+                <div className="neo-card" style={{ padding: '0.85rem 1rem' }}>
                     <div style={{
                         display: 'flex',
-                        gap: '0.5rem',
-                        overflowX: 'hidden',
-                        justifyContent: 'center',
-                        flex: 1,
-                        flexWrap: 'nowrap'
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        borderBottom: '1px solid var(--border)',
+                        paddingBottom: '0.8rem',
+                        marginBottom: '0.2rem'
                     }}>
-                        {getVisibleCategories().map(view => (
-                            <button
-                                key={view}
-                                onClick={() => setAllocationView(view)}
-                                style={{
-                                    whiteSpace: 'nowrap',
-                                    padding: '0.5rem 0.8rem',
-                                    borderRadius: '999px',
-                                    background: allocationView === view ? 'var(--accent)' : 'var(--bg-secondary)',
-                                    border: 'none',
-                                    color: allocationView === view ? '#fff' : 'var(--text-muted)',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    boxShadow: allocationView === view ? '0 4px 12px var(--accent-glow)' : 'none',
-                                    flexShrink: 0
-                                }}
-                            >
-                                {view}
-                            </button>
-                        ))}
-                    </div>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1.2rem',
+                            flex: 1,
+                            overflowX: 'auto',
+                            scrollbarWidth: 'none'
+                        }}>
+                            {groups[mobilePage].map(view => (
+                                <button
+                                    key={view}
+                                    onClick={() => setAllocationView(view)}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        padding: '0',
+                                        fontSize: '0.85rem',
+                                        fontWeight: allocationView === view ? 800 : 500,
+                                        color: allocationView === view ? 'var(--accent)' : 'var(--text-secondary)',
+                                        cursor: 'pointer',
+                                        transition: 'color 0.2s',
+                                        position: 'relative',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                >
+                                    {view}
+                                    {allocationView === view && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: '-0.95rem',
+                                            left: 0,
+                                            right: 0,
+                                            height: '2px',
+                                            background: 'var(--accent)',
+                                            borderRadius: '2px 2px 0 0'
+                                        }} />
+                                    )}
+                                </button>
+                            ))}
+                        </div>
 
-                    {/* Right Arrow - Show only on Page 1 (Transition to Page 2) */}
-                    <button
-                        onClick={() => setMobilePage(1)}
-                        style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: mobilePage === 0 ? 'var(--text-primary)' : 'transparent',
-                            cursor: mobilePage === 0 ? 'pointer' : 'default',
-                            padding: '0.5rem',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            opacity: mobilePage === 0 ? 1 : 0,
-                            transition: 'opacity 0.2s',
-                            width: '32px',
-                            flexShrink: 0
-                        }}
-                    >
-                        <ChevronRight size={20} />
-                    </button>
+                        <button
+                            onClick={handleMobilePageToggle}
+                            style={{
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '50%',
+                                width: '24px',
+                                height: '24px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: 'var(--text-muted)',
+                                flexShrink: 0,
+                                marginLeft: '0.5rem'
+                            }}
+                        >
+                            {mobilePage === 0 ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+                        </button>
+                    </div>
                 </div>
 
                 {/* 2. Chart & Details (Separate Card) - Ultra Compact */}

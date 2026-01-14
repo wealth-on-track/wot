@@ -236,36 +236,7 @@ export function PortfolioPerformanceChart({
     };
 
     // --- Smart Y-Axis Domain ---
-    const yDomain = useMemo(() => {
-        if (zoomedData.length === 0) return ['auto', 'auto'];
 
-        let min = Infinity;
-        let max = -Infinity;
-
-        zoomedData.forEach(p => {
-            // Check Portfolio
-            if (isPortfolioVisible) {
-                const val = Number(p.portfolio);
-                if (val < min) min = val;
-                if (val > max) max = val;
-            }
-            // Check Benchmarks
-            selectedBenchmarks.forEach(id => {
-                const val = Number(p[id]);
-                if (!isNaN(val)) {
-                    if (val < min) min = val;
-                    if (val > max) max = val;
-                }
-            });
-        });
-
-        if (min === Infinity || max === -Infinity) return ['auto', 'auto'];
-
-        // Add 10% padding
-        const range = max - min;
-        const padding = range * 0.1 || 1; // Default 1% padding if flat
-        return [min - padding, max + padding];
-    }, [zoomedData, isPortfolioVisible, selectedBenchmarks]);
 
 
     const handlePeriodChange = (period: TimePeriod) => {
@@ -398,29 +369,7 @@ export function PortfolioPerformanceChart({
                                 {selectedBenchmarks.includes(b.id) && <Eye size={16} color={b.color} />}
                             </div>
                         ))}
-                        {onSaveBenchmarks && (
-                            <div style={{ borderTop: '1px solid var(--border)', marginTop: '8px', paddingTop: '8px' }}>
-                                <button
-                                    onClick={() => {
-                                        onSaveBenchmarks(selectedBenchmarks);
-                                        setShowCompareMenu(false);
-                                    }}
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.5rem',
-                                        background: 'var(--accent)',
-                                        color: '#fff',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 700,
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Save Current Selection
-                                </button>
-                            </div>
-                        )}
+
                     </div>
                 </>
             )}
@@ -547,7 +496,7 @@ export function PortfolioPerformanceChart({
                                         tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                                         axisLine={false}
                                         tickLine={false}
-                                        domain={yDomain}
+                                        domain={['auto', 'auto']}
                                         width={40}
                                     />
                                     <Tooltip content={<CustomTooltip />} />
@@ -607,28 +556,51 @@ export function PortfolioPerformanceChart({
 
     // --- DESKTOP LAYOUT ---
     return (
-        <div className="neo-card" style={{ padding: '1rem', height: '350px', display: 'flex', flexDirection: 'column' }}>
-            {/* Header: Amount & Controls */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginBottom: '1rem' }}>
-                {/* 1. Total Amount & Change */}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.8rem', flexWrap: 'wrap' }}>
-                    <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+        <div className="neo-card" style={{ padding: '1.25rem', height: '350px', display: 'flex', flexDirection: 'column' }}>
+            {/* Header: Single Row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                {/* Left: Amount & Returns */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                    <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
                         {currencySym}{fmtCurrency(displayedTotalValue)}
                     </h2>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', transform: 'translateY(-2px)', whiteSpace: 'nowrap' }}>
-                        <span style={{ fontSize: '0.9rem', fontWeight: 700, color: isPositive ? 'var(--success)' : 'var(--danger)' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                            {selectedPeriod} Return:
+                        </span>
+                        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: isPositive ? 'var(--success)' : 'var(--danger)' }}>
                             {portfolioData.length > 0 ? (isPositive ? '▲' : '▼') : ''}{Math.abs(portfolioStats.changePercent).toFixed(2)}%
                         </span>
-                        <span style={{ fontSize: '0.9rem', fontWeight: 600, color: isPositive ? 'var(--success)' : 'var(--danger)', opacity: 0.8 }}>
-                            {portfolioData.length > 0 ? (isPositive ? '+' : '-') : ''}{currencySym}{fmtCurrency(Math.abs(displayedChange))}
+                        <span style={{ fontSize: '0.95rem', fontWeight: 600, color: isPositive ? 'var(--success)' : 'var(--danger)', opacity: 0.8 }}>
+                            ({isPositive ? '+' : '-'}{currencySym}{fmtCurrency(Math.abs(displayedChange))})
                         </span>
                     </div>
                 </div>
 
-                {/* 2. Controls Row (Benchmarks & TimePeriod Dropdown) */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                {/* Right: Controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
                     <BenchmarkSelector />
-                    <TimePeriodSelector />
+                    <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-secondary)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        {(['1D', '1W', '1M', 'YTD', '1Y', 'ALL'] as const).map((period) => (
+                            <button
+                                key={period}
+                                onClick={() => handlePeriodChange(period)}
+                                style={{
+                                    padding: '0.25rem 0.6rem',
+                                    fontSize: '0.75rem',
+                                    fontWeight: selectedPeriod === period ? 700 : 600,
+                                    color: selectedPeriod === period ? '#fff' : 'var(--text-muted)',
+                                    background: selectedPeriod === period ? 'var(--accent)' : 'transparent',
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {period}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -667,7 +639,7 @@ export function PortfolioPerformanceChart({
                                 tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
                                 axisLine={false}
                                 tickLine={false}
-                                domain={yDomain}
+                                domain={['auto', 'auto']}
                             />
                             <Tooltip content={<CustomTooltip />} />
 
