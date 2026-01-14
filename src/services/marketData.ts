@@ -418,7 +418,34 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
             }
         }
 
-        const quote = derivedQuote || await getYahooQuote(searchSymbol, forceRefresh);
+        let quote = derivedQuote || await getYahooQuote(searchSymbol, forceRefresh);
+
+        // FALLBACK: If Yahoo fails (rate limit/block), try Finnhub for real-time price
+        if ((!quote || !quote.regularMarketPrice) && !derivedQuote && (type === 'STOCK' || type === 'ETF')) {
+            try {
+                const { getQuote: getFinnhubQuote } = await import('./finnhubApi');
+                console.log(`[MarketData] Yahoo failed for ${symbol}, trying Finnhub fallback...`);
+
+                // Finnhub often works better with clean symbol for US stocks
+                // If symbol is VOO, searchSymbol is VOO.
+                const fQuote = await getFinnhubQuote(searchSymbol);
+
+                if (fQuote && fQuote.c > 0) {
+                    quote = {
+                        symbol: searchSymbol,
+                        regularMarketPrice: fQuote.c,
+                        regularMarketPreviousClose: fQuote.pc,
+                        currency: 'USD', // Default, will be refined by profile if possible
+                        marketState: 'REGULAR',
+                        regularMarketTime: fQuote.t ? new Date(fQuote.t * 1000) : new Date(),
+                        ...quote // Keep any partial data
+                    } as any;
+                    console.log(`[MarketData] Finnhub Fallback Success: ${fQuote.c}`);
+                }
+            } catch (fallbackErr) {
+                console.warn('[MarketData] Finnhub fallback failed:', fallbackErr);
+            }
+        }
 
         if (quote && quote.regularMarketPrice) {
             // Apply special adjustments (Units, Splits fallback)
