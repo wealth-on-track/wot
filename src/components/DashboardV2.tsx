@@ -453,7 +453,7 @@ const ALL_COLUMNS: ColumnConfig[] = [
 
 const COL_WIDTHS: Record<ColumnId, string> = {
     PORTFOLIO_NAME: 'minmax(65px, 0.6fr)',
-    NAME: 'minmax(140px, 2fr)',
+    NAME: 'minmax(150px, 2.2fr)',
     PRICE: 'minmax(90px, 1fr)',
     VALUE: 'minmax(120px, 1.2fr)',
     PRICE_EUR: 'minmax(90px, 1fr)',
@@ -710,35 +710,36 @@ function AssetTableRow({
                 break;
             case 'NAME':
                 cellContent = (
-                    <div className="col-name" style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', minWidth: 0, width: '100%' }}>
-                        <AssetLogo symbol={asset.symbol} type={asset.type} exchange={asset.exchange} name={companyName} logoUrl={logoUrl} size="2.8rem" />
-                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, gap: '4px', flex: 1 }}>
+                    <div className="col-name" style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', minWidth: 0, width: '100%' }}>
+                        <AssetLogo symbol={asset.symbol} type={asset.type} exchange={asset.exchange} name={companyName} logoUrl={logoUrl} size="2.2rem" />
+                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, gap: '2px', flex: 1 }}>
                             <>
                                 <span
                                     title={originalName || companyName}
                                     style={{
-                                        fontSize: '1rem',
+                                        fontSize: '0.88rem',
                                         fontWeight: 700,
                                         color: 'var(--text-primary)',
                                         whiteSpace: 'nowrap',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',
                                         lineHeight: '1.2',
-                                        cursor: 'default'
+                                        cursor: 'default',
+                                        letterSpacing: '-0.01em'
                                     }}>
                                     {companyName}
                                 </span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>
                                         {asset.symbol}
                                     </span>
                                     <span style={{
-                                        fontSize: '0.7rem',
+                                        fontSize: '0.65rem',
                                         fontWeight: 600,
                                         color: 'var(--accent)',
                                         background: 'var(--accent-glow)', // New var
-                                        padding: '2px 6px',
-                                        borderRadius: '6px'
+                                        padding: '1px 5px',
+                                        borderRadius: '4px'
                                     }}>
                                         {asset.quantity >= 1000000
                                             ? (asset.quantity / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'
