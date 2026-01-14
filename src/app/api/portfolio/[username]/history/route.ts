@@ -111,24 +111,11 @@ export async function GET(
             log('DEBUG: Strategy Backtesting DISABLED.');
         }
 
-        // Fallback if empty (Create a flat line based on Current Value)
+        // Fallback if empty
         if (historyData.length === 0) {
-            log('WARNING: No history data generated! Falling back to current value.');
-
-            // Calculate total current value
-            const currentValue = user.portfolio.assets.reduce((sum, a) => {
-                return sum + (a.quantity * (a.buyPrice || 0));
-            }, 0);
-
-            // Create a 2-point line for the selected period
-            historyData.push({
-                date: startDate.toISOString(), // Start of period
-                value: currentValue // Assume flat
-            });
-            historyData.push({
-                date: new Date().toISOString(), // Now
-                value: currentValue
-            });
+            log('WARNING: No history data generated! Returning empty.');
+            // Return empty list so client handles "No Data" state
+            // historyData stays []
         }
 
         log(`DEBUG: Returning ${historyData.length} data points`);
