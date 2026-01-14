@@ -186,20 +186,24 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                         height: '100%',
                         gap: '0.75rem'
                     }}>
-                        {/* Admin Button (Only for authorized users) */}
-                        {session?.user?.email && (session.user.email === 'test1@example.com' || session.user.email === 'dev1@example.com') && (
-                            <Link
-                                href="/admin"
-                                className="navbar-btn"
-                                style={{
-                                    textDecoration: 'none',
-                                    marginRight: '1rem' // 3x spacing (0.5rem * 2 = 1rem extra)
-                                }}
-                                title="Admin Panel"
-                            >
-                                <ShieldCheck size={20} />
-                            </Link>
-                        )}
+                        {/* Admin Button: Visible to everyone in Local Dev, restricted in Prod */}
+                        {session?.user?.email && (
+                            process.env.NODE_ENV === 'development' ||
+                            session.user.email === 'test1@example.com' ||
+                            session.user.email === 'dev1@example.com'
+                        ) && (
+                                <Link
+                                    href="/admin"
+                                    className="navbar-btn"
+                                    style={{
+                                        textDecoration: 'none',
+                                        marginRight: '1rem' // 3x spacing (0.5rem * 2 = 1rem extra)
+                                    }}
+                                    title="Admin Panel"
+                                >
+                                    <ShieldCheck size={20} />
+                                </Link>
+                            )}
 
                         {/* Global Toggles (Always Visible) */}
                         <CurrencySelector />
