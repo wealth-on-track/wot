@@ -471,6 +471,24 @@ export function PortfolioPerformanceChart({
                         onMouseLeave={() => setIsChartHovered(false)}
                         onWheel={handleWheel}
                     >
+                        {isLoading && (
+                            <div style={{
+                                position: 'absolute', inset: 0,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(2px)', zIndex: 20
+                            }}>
+                                <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Loading...</span>
+                            </div>
+                        )}
+                        {!isLoading && portfolioData.length === 0 && (
+                            <div style={{
+                                position: 'absolute', inset: 0,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(1px)', zIndex: 20
+                            }}>
+                                <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>No data available</span>
+                            </div>
+                        )}
                         {isMounted && (
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={zoomedData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
@@ -612,6 +630,24 @@ export function PortfolioPerformanceChart({
                 onMouseLeave={() => setIsChartHovered(false)}
                 onWheel={handleWheel}
             >
+                {isLoading && (
+                    <div style={{
+                        position: 'absolute', inset: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(2px)', zIndex: 20
+                    }}>
+                        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Loading...</span>
+                    </div>
+                )}
+                {!isLoading && portfolioData.length === 0 && (
+                    <div style={{
+                        position: 'absolute', inset: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(1px)', zIndex: 20
+                    }}>
+                        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>No data available</span>
+                    </div>
+                )}
                 {isMounted && (
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart
