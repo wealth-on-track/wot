@@ -128,7 +128,7 @@ export function MobileHeader({ username, isOwner }: MobileHeaderProps) {
                         alignSelf: 'flex-start',
                         marginTop: '0px'
                     }}>
-                        BETA V2
+                        BETA V3
                     </div>
                 </div>
             </div>

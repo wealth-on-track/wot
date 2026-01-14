@@ -148,7 +148,7 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                                 alignSelf: 'flex-start',
                                 marginTop: '0px'
                             }}>
-                                BETA V2
+                                BETA V3
                             </div>
                         </Link>
                     </div>
