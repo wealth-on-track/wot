@@ -149,7 +149,7 @@ export async function authenticate(
 const AssetSchema = z.object({
     symbol: z.string().toUpperCase().min(1),
     category: z.enum(["BIST", "TEFAS", "US_MARKETS", "EU_MARKETS", "CRYPTO", "COMMODITIES", "FX", "CASH"]).optional(),  // New 8-category system
-    type: z.enum(["STOCK", "CRYPTO", "GOLD", "BOND", "FUND", "CASH", "COMMODITY", "CURRENCY"]),  // Legacy field
+    type: z.enum(["STOCK", "CRYPTO", "GOLD", "BOND", "FUND", "CASH", "COMMODITY", "CURRENCY", "ETF"]),  // Legacy field
     quantity: z.coerce.number().positive(),
     buyPrice: z.coerce.number().positive(),
     currency: z.enum(["USD", "EUR", "TRY"]),
@@ -295,7 +295,7 @@ const UpdateAssetSchema = z.object({
     buyPrice: z.coerce.number().nonnegative(),
     name: z.string().optional(),
     // symbol removed - cannot change ticker unique ID
-    type: z.enum(["STOCK", "CRYPTO", "GOLD", "BOND", "FUND", "CASH", "COMMODITY", "CURRENCY"]).optional(),
+    type: z.enum(["STOCK", "CRYPTO", "GOLD", "BOND", "FUND", "CASH", "COMMODITY", "CURRENCY", "ETF"]).optional(),
     currency: z.enum(["USD", "EUR", "TRY"]).optional(),
     exchange: z.string().optional(),
     sector: z.string().optional(),
@@ -304,7 +304,7 @@ const UpdateAssetSchema = z.object({
     customGroup: z.string().optional(),
 });
 
-export async function updateAsset(assetId: string, data: { quantity: number; buyPrice: number; name?: string; type?: "STOCK" | "CRYPTO" | "GOLD" | "BOND" | "FUND" | "CASH" | "COMMODITY"; currency?: "USD" | "EUR" | "TRY"; exchange?: string; sector?: string; country?: string; platform?: string; customGroup?: string }) {
+export async function updateAsset(assetId: string, data: { quantity: number; buyPrice: number; name?: string; type?: "STOCK" | "CRYPTO" | "GOLD" | "BOND" | "FUND" | "CASH" | "COMMODITY" | "CURRENCY" | "ETF"; currency?: "USD" | "EUR" | "TRY"; exchange?: string; sector?: string; country?: string; platform?: string; customGroup?: string }) {
     const session = await auth();
     if (!session?.user?.email) return { error: "Not authenticated" };
 
