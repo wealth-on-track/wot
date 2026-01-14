@@ -171,6 +171,7 @@ export async function addAsset(prevState: string | undefined, formData: FormData
     const validatedFields = AssetSchema.safeParse(rawData);
 
     if (!validatedFields.success) {
+        console.error('Asset validation failed:', validatedFields.error.format());
         return "Invalid input. Please check all fields.";
     }
 

@@ -283,7 +283,7 @@ function mapYahooType(type?: string): 'STOCK' | 'CRYPTO' | 'GOLD' | 'BOND' | 'FU
     if (!type) return 'STOCK';
     const t = type.toUpperCase();
     if (t === 'CRYPTOCURRENCY') return 'CRYPTO';
-    if (t === 'ETF') return 'ETF';
+    if (t === 'ETF') return 'FUND';  // Map ETF to FUND for AssetSchema compatibility
     if (t === 'MUTUALFUND') return 'FUND';
     if (t === 'FUTURE') return 'GOLD'; // Close enough for XAU
     if (t === 'EQUITY') return 'STOCK';

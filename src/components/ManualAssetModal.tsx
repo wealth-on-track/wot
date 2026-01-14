@@ -136,6 +136,9 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
 
         if (customGroup) formData.append('customGroup', customGroup);
 
+        // Send the asset name from search/metadata as originalName
+        if (name) formData.append('originalName', name);
+
         const res = await addAsset(undefined, formData);
 
         if (res === 'success') {
@@ -301,348 +304,348 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
                 {step === 2 && (
                     /* STEP 2: FORM - REDESIGNED 3-COLUMN LAYOUT */
                     <>
-                    {console.log('🔥 MODAL VERSION: 3-COLUMN REDESIGN v2.0 - JAN 9 2026')}
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        {console.log('🔥 MODAL VERSION: 3-COLUMN REDESIGN v2.0 - JAN 9 2026')}
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-                        {/* Type Indicator - Compact */}
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                            background: 'var(--bg-secondary)',
-                            padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-md)',
-                            border: `1px solid var(--border)`,
-                        }}>
-                            <div style={{ color: ASSET_COLORS[type], display: 'flex', transform: 'scale(0.8)' }}>{ASSET_TYPES.find(t => t.id === type)?.icon}</div>
-                            <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{ASSET_TYPES.find(t => t.id === type)?.label}</span>
-                            <button type="button" onClick={() => setStep(1)} style={{ marginLeft: 'auto', fontSize: '0.7rem', background: 'transparent', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 600 }}>Change</button>
-                        </div>
-
-                        {/* 3-Column Layout */}
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1.2fr 1px 1fr 1px 1fr',
-                            gap: '1rem',
-                            alignItems: 'start'
-                        }}>
-
-                            {/* LEFT COLUMN: Required User Input */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                                <div style={{
-                                    fontSize: '0.65rem',
-                                    fontWeight: 900,
-                                    color: 'var(--accent)',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.1em',
-                                    marginBottom: '-0.25rem'
-                                }}>
-                                    Required
-                                </div>
-
-                                {/* Symbol */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Symbol</label>
-                                    <input
-                                        required
-                                        value={symbol}
-                                        onChange={e => setSymbol(e.target.value)}
-                                        placeholder="AAPL"
-                                        style={{
-                                            padding: '0.625rem 0.75rem',
-                                            background: 'var(--bg-secondary)',
-                                            border: '2px solid var(--accent)',
-                                            borderRadius: 'var(--radius-md)',
-                                            color: 'var(--text-primary)',
-                                            fontSize: '0.9rem',
-                                            fontWeight: 600,
-                                            outline: 'none'
-                                        }}
-                                    />
-                                </div>
-
-                                {/* Quantity or Total Investment (BES only) */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                                        {type === 'BES' ? `Total (${currency})` : 'Quantity'}
-                                    </label>
-                                    <input
-                                        type="number"
-                                        step="any"
-                                        required
-                                        value={type === 'BES' ? totalValue : quantity}
-                                        onChange={e => type === 'BES' ? setTotalValue(e.target.value) : setQuantity(e.target.value)}
-                                        placeholder={type === 'BES' ? '1000' : '100'}
-                                        style={{
-                                            padding: '0.625rem 0.75rem',
-                                            background: 'var(--bg-secondary)',
-                                            border: '2px solid var(--accent)',
-                                            borderRadius: 'var(--radius-md)',
-                                            color: 'var(--text-primary)',
-                                            fontSize: '0.9rem',
-                                            fontWeight: 600,
-                                            outline: 'none'
-                                        }}
-                                    />
-                                    {type === 'BES' && quantity && (
-                                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-                                            ≈ {parseFloat(quantity).toLocaleString()} units
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Buy Price */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                    <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Cost/Unit</label>
-                                    <input
-                                        type="number"
-                                        step="any"
-                                        required
-                                        value={buyPrice}
-                                        onChange={e => setBuyPrice(e.target.value)}
-                                        placeholder="150.00"
-                                        style={{
-                                            padding: '0.625rem 0.75rem',
-                                            background: 'var(--bg-secondary)',
-                                            border: '2px solid var(--accent)',
-                                            borderRadius: 'var(--radius-md)',
-                                            color: 'var(--text-primary)',
-                                            fontSize: '0.9rem',
-                                            fontWeight: 600,
-                                            outline: 'none'
-                                        }}
-                                    />
-                                </div>
+                            {/* Type Indicator - Compact */}
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                background: 'var(--bg-secondary)',
+                                padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-md)',
+                                border: `1px solid var(--border)`,
+                            }}>
+                                <div style={{ color: ASSET_COLORS[type], display: 'flex', transform: 'scale(0.8)' }}>{ASSET_TYPES.find(t => t.id === type)?.icon}</div>
+                                <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{ASSET_TYPES.find(t => t.id === type)?.label}</span>
+                                <button type="button" onClick={() => setStep(1)} style={{ marginLeft: 'auto', fontSize: '0.7rem', background: 'transparent', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 600 }}>Change</button>
                             </div>
 
-                            {/* SEPARATOR 1 */}
-                            <div style={{ width: '1px', background: 'var(--border)', height: '100%', opacity: 0.3 }} />
+                            {/* 3-Column Layout */}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1.2fr 1px 1fr 1px 1fr',
+                                gap: '1rem',
+                                alignItems: 'start'
+                            }}>
 
-                            {/* MIDDLE COLUMN: Auto-filled but Editable */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                                <div style={{
-                                    fontSize: '0.65rem',
-                                    fontWeight: 900,
-                                    color: 'var(--text-muted)',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.1em',
-                                    marginBottom: '-0.25rem'
-                                }}>
-                                    Auto-filled
+                                {/* LEFT COLUMN: Required User Input */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                                    <div style={{
+                                        fontSize: '0.65rem',
+                                        fontWeight: 900,
+                                        color: 'var(--accent)',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.1em',
+                                        marginBottom: '-0.25rem'
+                                    }}>
+                                        Required
+                                    </div>
+
+                                    {/* Symbol */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Symbol</label>
+                                        <input
+                                            required
+                                            value={symbol}
+                                            onChange={e => setSymbol(e.target.value)}
+                                            placeholder="AAPL"
+                                            style={{
+                                                padding: '0.625rem 0.75rem',
+                                                background: 'var(--bg-secondary)',
+                                                border: '2px solid var(--accent)',
+                                                borderRadius: 'var(--radius-md)',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '0.9rem',
+                                                fontWeight: 600,
+                                                outline: 'none'
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Quantity or Total Investment (BES only) */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                                            {type === 'BES' ? `Total (${currency})` : 'Quantity'}
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            required
+                                            value={type === 'BES' ? totalValue : quantity}
+                                            onChange={e => type === 'BES' ? setTotalValue(e.target.value) : setQuantity(e.target.value)}
+                                            placeholder={type === 'BES' ? '1000' : '100'}
+                                            style={{
+                                                padding: '0.625rem 0.75rem',
+                                                background: 'var(--bg-secondary)',
+                                                border: '2px solid var(--accent)',
+                                                borderRadius: 'var(--radius-md)',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '0.9rem',
+                                                fontWeight: 600,
+                                                outline: 'none'
+                                            }}
+                                        />
+                                        {type === 'BES' && quantity && (
+                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                                                ≈ {parseFloat(quantity).toLocaleString()} units
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Buy Price */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Cost/Unit</label>
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            required
+                                            value={buyPrice}
+                                            onChange={e => setBuyPrice(e.target.value)}
+                                            placeholder="150.00"
+                                            style={{
+                                                padding: '0.625rem 0.75rem',
+                                                background: 'var(--bg-secondary)',
+                                                border: '2px solid var(--accent)',
+                                                borderRadius: 'var(--radius-md)',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '0.9rem',
+                                                fontWeight: 600,
+                                                outline: 'none'
+                                            }}
+                                        />
+                                    </div>
                                 </div>
 
-                                {/* Name */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                    <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Name</label>
-                                    <input
-                                        value={name}
-                                        onChange={e => setName(e.target.value)}
-                                        placeholder="Auto-detected"
-                                        style={{
-                                            padding: '0.625rem 0.75rem',
-                                            background: 'var(--surface)',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: 'var(--radius-md)',
-                                            color: 'var(--text-secondary)',
-                                            fontSize: '0.85rem',
-                                            outline: 'none'
-                                        }}
-                                    />
-                                </div>
+                                {/* SEPARATOR 1 */}
+                                <div style={{ width: '1px', background: 'var(--border)', height: '100%', opacity: 0.3 }} />
 
-                                {/* Currency */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                    <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Currency</label>
-                                    <select
-                                        value={currency}
-                                        onChange={e => setCurrency(e.target.value)}
-                                        style={{
-                                            padding: '0.625rem 0.75rem',
-                                            background: 'var(--surface)',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: 'var(--radius-md)',
-                                            color: 'var(--text-secondary)',
-                                            fontSize: '0.85rem',
-                                            outline: 'none',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        <option value="USD">USD ($)</option>
-                                        <option value="EUR">EUR (€)</option>
-                                        <option value="TRY">TRY (₺)</option>
-                                    </select>
-                                </div>
-
-                                {/* Exchange */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                    <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Exchange</label>
-                                    <input
-                                        value={exchange}
-                                        onChange={e => setExchange(e.target.value)}
-                                        placeholder="NASDAQ"
-                                        style={{
-                                            padding: '0.625rem 0.75rem',
-                                            background: 'var(--surface)',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: 'var(--radius-md)',
-                                            color: 'var(--text-secondary)',
-                                            fontSize: '0.85rem',
-                                            outline: 'none'
-                                        }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* SEPARATOR 2 */}
-                            <div style={{ width: '1px', background: 'var(--border)', height: '100%', opacity: 0.3 }} />
-
-                            {/* RIGHT COLUMN: Optional Metadata */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                                <div style={{
-                                    fontSize: '0.65rem',
-                                    fontWeight: 900,
-                                    color: 'var(--text-muted)',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.1em',
-                                    marginBottom: '-0.25rem',
-                                    opacity: 0.7
-                                }}>
-                                    Optional
-                                </div>
-
-                                {/* Country */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                    <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', opacity: 0.8 }}>Country</label>
-                                    <input
-                                        value={country}
-                                        onChange={e => setCountry(e.target.value)}
-                                        placeholder="USA"
-                                        size={Math.max(country?.length || 3, 8)}
-                                        style={{
-                                            padding: '0.5rem 0.6rem',
-                                            background: 'var(--surface)',
-                                            border: '1px solid transparent',
-                                            borderRadius: 'var(--radius-md)',
-                                            color: 'var(--text-muted)',
-                                            fontSize: '0.8rem',
-                                            outline: 'none',
-                                            opacity: 0.7,
-                                            maxWidth: '100%'
-                                        }}
-                                    />
-                                </div>
-
-                                {/* Sector */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                    <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', opacity: 0.8 }}>Sector</label>
-                                    <input
-                                        value={sector}
-                                        onChange={e => setSector(e.target.value)}
-                                        placeholder="Technology"
-                                        size={Math.max(sector?.length || 10, 12)}
-                                        style={{
-                                            padding: '0.5rem 0.6rem',
-                                            background: 'var(--surface)',
-                                            border: '1px solid transparent',
-                                            borderRadius: 'var(--radius-md)',
-                                            color: 'var(--text-muted)',
-                                            fontSize: '0.8rem',
-                                            outline: 'none',
-                                            opacity: 0.7,
-                                            maxWidth: '100%'
-                                        }}
-                                    />
-                                </div>
-
-                                {/* Platform */}
-                                <AutocompleteInput
-                                    value={platform}
-                                    onChange={setPlatform}
-                                    suggestions={suggestions.platforms}
-                                    placeholder="Broker"
-                                    label="Platform"
-                                    labelStyle={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', opacity: 0.8 }}
-                                    style={{
-                                        padding: '0.5rem 0.6rem',
-                                        background: 'var(--surface)',
-                                        border: '1px solid transparent',
-                                        borderRadius: 'var(--radius-md)',
+                                {/* MIDDLE COLUMN: Auto-filled but Editable */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                                    <div style={{
+                                        fontSize: '0.65rem',
+                                        fontWeight: 900,
                                         color: 'var(--text-muted)',
-                                        fontSize: '0.8rem',
-                                        outline: 'none',
-                                        opacity: 0.7,
-                                        maxWidth: '100%'
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.1em',
+                                        marginBottom: '-0.25rem'
+                                    }}>
+                                        Auto-filled
+                                    </div>
+
+                                    {/* Name */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Name</label>
+                                        <input
+                                            value={name}
+                                            onChange={e => setName(e.target.value)}
+                                            placeholder="Auto-detected"
+                                            style={{
+                                                padding: '0.625rem 0.75rem',
+                                                background: 'var(--surface)',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: 'var(--radius-md)',
+                                                color: 'var(--text-secondary)',
+                                                fontSize: '0.85rem',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Currency */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Currency</label>
+                                        <select
+                                            value={currency}
+                                            onChange={e => setCurrency(e.target.value)}
+                                            style={{
+                                                padding: '0.625rem 0.75rem',
+                                                background: 'var(--surface)',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: 'var(--radius-md)',
+                                                color: 'var(--text-secondary)',
+                                                fontSize: '0.85rem',
+                                                outline: 'none',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            <option value="USD">USD ($)</option>
+                                            <option value="EUR">EUR (€)</option>
+                                            <option value="TRY">TRY (₺)</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Exchange */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Exchange</label>
+                                        <input
+                                            value={exchange}
+                                            onChange={e => setExchange(e.target.value)}
+                                            placeholder="NASDAQ"
+                                            style={{
+                                                padding: '0.625rem 0.75rem',
+                                                background: 'var(--surface)',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: 'var(--radius-md)',
+                                                color: 'var(--text-secondary)',
+                                                fontSize: '0.85rem',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* SEPARATOR 2 */}
+                                <div style={{ width: '1px', background: 'var(--border)', height: '100%', opacity: 0.3 }} />
+
+                                {/* RIGHT COLUMN: Optional Metadata */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                                    <div style={{
+                                        fontSize: '0.65rem',
+                                        fontWeight: 900,
+                                        color: 'var(--text-muted)',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.1em',
+                                        marginBottom: '-0.25rem',
+                                        opacity: 0.7
+                                    }}>
+                                        Optional
+                                    </div>
+
+                                    {/* Country */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', opacity: 0.8 }}>Country</label>
+                                        <input
+                                            value={country}
+                                            onChange={e => setCountry(e.target.value)}
+                                            placeholder="USA"
+                                            size={Math.max(country?.length || 3, 8)}
+                                            style={{
+                                                padding: '0.5rem 0.6rem',
+                                                background: 'var(--surface)',
+                                                border: '1px solid transparent',
+                                                borderRadius: 'var(--radius-md)',
+                                                color: 'var(--text-muted)',
+                                                fontSize: '0.8rem',
+                                                outline: 'none',
+                                                opacity: 0.7,
+                                                maxWidth: '100%'
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Sector */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', opacity: 0.8 }}>Sector</label>
+                                        <input
+                                            value={sector}
+                                            onChange={e => setSector(e.target.value)}
+                                            placeholder="Technology"
+                                            size={Math.max(sector?.length || 10, 12)}
+                                            style={{
+                                                padding: '0.5rem 0.6rem',
+                                                background: 'var(--surface)',
+                                                border: '1px solid transparent',
+                                                borderRadius: 'var(--radius-md)',
+                                                color: 'var(--text-muted)',
+                                                fontSize: '0.8rem',
+                                                outline: 'none',
+                                                opacity: 0.7,
+                                                maxWidth: '100%'
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Platform */}
+                                    <AutocompleteInput
+                                        value={platform}
+                                        onChange={setPlatform}
+                                        suggestions={suggestions.platforms}
+                                        placeholder="Broker"
+                                        label="Platform"
+                                        labelStyle={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', opacity: 0.8 }}
+                                        style={{
+                                            padding: '0.5rem 0.6rem',
+                                            background: 'var(--surface)',
+                                            border: '1px solid transparent',
+                                            borderRadius: 'var(--radius-md)',
+                                            color: 'var(--text-muted)',
+                                            fontSize: '0.8rem',
+                                            outline: 'none',
+                                            opacity: 0.7,
+                                            maxWidth: '100%'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Portfolio Assignment - Below 3 columns */}
+                            <div style={{
+                                paddingTop: '0.5rem',
+                                borderTop: '1px solid var(--border)'
+                            }}>
+                                <AutocompleteInput
+                                    value={customGroup}
+                                    onChange={setCustomGroup}
+                                    suggestions={suggestions.portfolios}
+                                    placeholder="e.g. Retirement, Growth"
+                                    label="Portfolio (Optional)"
+                                    labelStyle={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', display: 'block' }}
+                                    style={{
+                                        padding: '0.625rem 0.75rem',
+                                        background: 'var(--surface)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: 'var(--radius-md)',
+                                        color: 'var(--text-secondary)',
+                                        fontSize: '0.85rem',
+                                        outline: 'none'
                                     }}
                                 />
                             </div>
-                        </div>
 
-                        {/* Portfolio Assignment - Below 3 columns */}
-                        <div style={{
-                            paddingTop: '0.5rem',
-                            borderTop: '1px solid var(--border)'
-                        }}>
-                            <AutocompleteInput
-                                value={customGroup}
-                                onChange={setCustomGroup}
-                                suggestions={suggestions.portfolios}
-                                placeholder="e.g. Retirement, Growth"
-                                label="Portfolio (Optional)"
-                                labelStyle={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem', display: 'block' }}
-                                style={{
-                                    padding: '0.625rem 0.75rem',
-                                    background: 'var(--surface)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: 'var(--radius-md)',
-                                    color: 'var(--text-secondary)',
-                                    fontSize: '0.85rem',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-
-                        {/* Save Button - Compact */}
-                        <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem' }}>
-                            <button
-                                type="submit"
-                                disabled={isSubmitting}
-                                style={{
-                                    flex: 1,
-                                    padding: '0.875rem',
-                                    background: 'var(--accent)',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: 'var(--radius-md)',
-                                    fontWeight: 800,
-                                    fontSize: '0.9rem',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '0.5rem',
-                                    transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-1px)')}
-                                onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
-                            >
-                                <Save size={18} />
-                                {isSubmitting ? 'Saving...' : 'Save'}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setStep(0)}
-                                style={{
-                                    background: 'transparent',
-                                    border: '1px solid var(--border)',
-                                    color: 'var(--text-muted)',
-                                    cursor: 'pointer',
-                                    fontSize: '0.8rem',
-                                    padding: '0.875rem 1.25rem',
-                                    borderRadius: 'var(--radius-md)',
-                                    fontWeight: 600
-                                }}
-                            >
-                                Back
-                            </button>
-                        </div>
-                    </form>
+                            {/* Save Button - Compact */}
+                            <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem' }}>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    style={{
+                                        flex: 1,
+                                        padding: '0.875rem',
+                                        background: 'var(--accent)',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: 'var(--radius-md)',
+                                        fontWeight: 800,
+                                        fontSize: '0.9rem',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.5rem',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                                    onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
+                                >
+                                    <Save size={18} />
+                                    {isSubmitting ? 'Saving...' : 'Save'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setStep(0)}
+                                    style={{
+                                        background: 'transparent',
+                                        border: '1px solid var(--border)',
+                                        color: 'var(--text-muted)',
+                                        cursor: 'pointer',
+                                        fontSize: '0.8rem',
+                                        padding: '0.875rem 1.25rem',
+                                        borderRadius: 'var(--radius-md)',
+                                        fontWeight: 600
+                                    }}
+                                >
+                                    Back
+                                </button>
+                            </div>
+                        </form>
                     </>
                 )}
             </div>
