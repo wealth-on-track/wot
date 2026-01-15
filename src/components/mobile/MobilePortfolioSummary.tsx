@@ -1,6 +1,4 @@
-"use client";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCurrency } from "@/context/CurrencyContext";
 import { ASSET_COLORS } from "@/lib/constants";
 import { Eye, EyeOff, ChevronRight, ChevronLeft } from "lucide-react";
@@ -11,6 +9,8 @@ interface MobilePortfolioSummaryProps {
     assets: AssetDisplay[];
     isPrivacyMode: boolean;
     onTogglePrivacy: () => void;
+    defaultPeriod?: string;
+    onPeriodChange?: (period: string) => void; // New prop to notify parent of period changes
 }
 
 type Period = "1D" | "1W" | "1M" | "YTD" | "1Y" | "ALL";
@@ -19,10 +19,27 @@ export function MobilePortfolioSummary({
     totalValueEUR,
     assets,
     isPrivacyMode,
-    onTogglePrivacy
+    onTogglePrivacy,
+    defaultPeriod = "1D",
+    onPeriodChange
 }: MobilePortfolioSummaryProps) {
     const { currency } = useCurrency();
-    const [selectedPeriod, setSelectedPeriod] = useState<Period>("1D");
+    const [selectedPeriod, setSelectedPeriod] = useState<Period>(defaultPeriod as Period);
+
+    // Sync state if prop changes
+    useEffect(() => {
+        if (defaultPeriod) {
+            setSelectedPeriod(defaultPeriod as Period);
+        }
+    }, [defaultPeriod]);
+
+    // Notify parent when period changes
+    const handlePeriodChange = (period: Period) => {
+        setSelectedPeriod(period);
+        if (onPeriodChange) {
+            onPeriodChange(period);
+        }
+    };
 
     const rates: Record<string, number> = { EUR: 1, USD: 1.05, TRY: 38.5 };
     const symbols: Record<string, string> = { EUR: "€", USD: "$", TRY: "₺" };
@@ -34,9 +51,6 @@ export function MobilePortfolioSummary({
     const sym = currency === 'ORG' ? '€' : (symbols[currency] || "€");
 
     // Mock returns based on period
-    const totalReturnEUR = totalValueEUR * 0.12;
-    const totalReturnPct = 12.0;
-
     const periodFactors: Record<Period, number> = {
         "1D": 0.015,
         "1W": 0.03,
@@ -45,105 +59,99 @@ export function MobilePortfolioSummary({
         "1Y": 0.12,
         "ALL": 0.15
     };
-    const periodReturnEUR = totalValueEUR * periodFactors[selectedPeriod];
-    const periodReturnPct = (periodReturnEUR / totalValueEUR) * 100;
+
+    // Recalculate based on selectedPeriod (dynamic)
+    const periodReturnEUR = totalValueEUR * (periodFactors[selectedPeriod] || 0.01);
+    const periodReturnPct = totalValueEUR > 0 ? (periodReturnEUR / totalValueEUR) * 100 : 0;
 
     return (
         <div className="neo-card" style={{
-            padding: '1rem',
+            padding: '1.5rem 1rem',
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            flexDirection: 'column',
             gap: '1rem'
         }}>
-            {/* Left: Total Value + Change */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.1rem' }}>
-                    <div style={{
-                        fontSize: '1.75rem',
-                        fontWeight: 900,
-                        color: 'var(--text-primary)',
-                        letterSpacing: '-0.03em',
-                        lineHeight: 1.1, // Improved line height
-                        fontVariantNumeric: 'tabular-nums'
-                    }}>
-                        {isPrivacyMode
-                            ? '****'
-                            : `${convert(totalValueEUR).toLocaleString('de-DE', { maximumFractionDigits: 0 })}${sym}`
-                        }
-                    </div>
-                </div>
-
-
-            </div>
-
-            {/* Right: Period Selector + Return */}
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-end',
-                justifyContent: 'center', // Center vertically relative to the big number
-                gap: '0.4rem'
-            }}>
-                {/* Period Selector */}
+            {/* Main Portfolio Value - Centered & Large */}
+            <div style={{ textAlign: 'center' }}>
                 <div style={{
-                    background: 'var(--bg-secondary)',
-                    borderRadius: '8px',
-                    padding: '0.2rem',
-                    display: 'flex',
-                    gap: '0.1rem',
-                    border: '1px solid var(--border)'
+                    fontSize: '2.5rem',
+                    fontWeight: 900,
+                    color: 'var(--text-primary)',
+                    letterSpacing: '-0.03em',
+                    lineHeight: 1,
+                    fontVariantNumeric: 'tabular-nums',
+                    marginBottom: '0.5rem'
                 }}>
-                    {(["1D", "1W", "1M", "YTD", "1Y", "ALL"] as Period[]).map(period => (
-                        <button
-                            key={period}
-                            onClick={() => setSelectedPeriod(period)}
-                            style={{
-                                background: selectedPeriod === period ? 'var(--accent)' : 'transparent',
-                                color: selectedPeriod === period ? '#fff' : 'var(--text-muted)',
-                                border: 'none',
-                                borderRadius: '6px',
-                                padding: '0.25rem 0.4rem',
-                                fontSize: '0.65rem',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                transition: 'all 0.15s',
-                                letterSpacing: '0.02em'
-                            }}
-                        >
-                            {period}
-                        </button>
-                    ))}
+                    {isPrivacyMode
+                        ? '****'
+                        : `${convert(totalValueEUR).toLocaleString('de-DE', { maximumFractionDigits: 0 })}${sym}`
+                    }
                 </div>
 
-                {/* Period Return */}
+                {/* Period Return Stats */}
                 <div style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 800,
-                    textAlign: 'right',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.4rem'
+                    justifyContent: 'center',
+                    gap: '0.5rem'
                 }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>
-                        {selectedPeriod === '1D' ? 'Today' : selectedPeriod === 'ALL' ? 'All' : selectedPeriod}
-                    </span>
-                    <span style={{ fontWeight: 800, color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                        {periodReturnPct >= 0 ? '+' : ''}{periodReturnPct.toFixed(1)}%
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                        {selectedPeriod === '1D' ? 'Today' : selectedPeriod === 'ALL' ? 'All Time' : selectedPeriod}
                     </span>
                     <span style={{
-                        fontWeight: 500, // Normal weight for amount
+                        color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)',
+                        fontSize: '1rem'
+                    }}>
+                        {periodReturnPct >= 0 ? '+' : ''}{periodReturnPct.toFixed(2)}%
+                    </span>
+                    <span style={{
+                        color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)',
                         opacity: 0.8,
-                        color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)'
+                        fontSize: '0.85rem'
                     }}>
                         {isPrivacyMode
                             ? '****'
-                            : `${periodReturnEUR >= 0 ? '+' : ''}${sym}${convert(periodReturnEUR).toLocaleString('de-DE', { maximumFractionDigits: 0 })}`
+                            : `(${periodReturnEUR >= 0 ? '+' : ''}${sym}${convert(periodReturnEUR).toLocaleString('de-DE', { maximumFractionDigits: 0 })})`
                         }
                     </span>
                 </div>
             </div>
-        </div >
+
+            {/* Period Selector - Outlined Buttons */}
+            <div style={{
+                display: 'flex',
+                gap: '0.3rem',
+                justifyContent: 'center',
+                flexWrap: 'nowrap',
+                overflow: 'hidden'
+            }}>
+                {(["1D", "1W", "1M", "YTD", "1Y", "ALL"] as Period[]).map(period => (
+                    <button
+                        key={period}
+                        onClick={() => handlePeriodChange(period)}
+                        style={{
+                            background: selectedPeriod === period ? 'var(--accent)' : 'transparent',
+                            color: selectedPeriod === period ? '#fff' : 'var(--text-muted)',
+                            border: selectedPeriod === period ? 'none' : '1.5px solid var(--border)',
+                            borderRadius: '6px',
+                            padding: '0.35rem 0.5rem',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            letterSpacing: '0.02em',
+                            minWidth: '0',
+                            flex: '1 1 auto',
+                            whiteSpace: 'nowrap'
+                        }}
+                    >
+                        {period}
+                    </button>
+                ))}
+            </div>
+        </div>
     );
 }
 
@@ -212,6 +220,14 @@ export function MobileHomeAllocations({ assets, totalValueEUR, isPrivacyMode }: 
 
     const chartData = getChartData();
     const DEFAULT_COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
+
+    if (totalValueEUR === 0 || assets.length === 0) {
+        return (
+            <div className="neo-card" style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Add assets to see allocations</p>
+            </div>
+        );
+    }
 
     return (
         <div className="neo-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>

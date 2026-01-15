@@ -2,6 +2,8 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { SettingsPage } from "@/components/SettingsPage";
 
+import { prisma } from "@/lib/prisma";
+
 export const dynamic = 'force-dynamic';
 
 export default async function Settings() {
@@ -12,5 +14,10 @@ export default async function Settings() {
         redirect('/login');
     }
 
-    return <SettingsPage userEmail={session.user.email} />;
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { preferences: true }
+    });
+
+    return <SettingsPage userEmail={session.user.email} preferences={user?.preferences as any} />;
 }

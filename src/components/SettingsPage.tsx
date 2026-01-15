@@ -10,9 +10,14 @@ import { User, Mail, Lock, Globe, DollarSign, Moon, Sun, ArrowLeft, Eye, EyeOff,
 
 interface SettingsPageProps {
     userEmail: string;
+    preferences?: {
+        defaultRange?: string;
+        benchmarks?: string[];
+        timezone?: string;
+    };
 }
 
-export function SettingsPage({ userEmail }: SettingsPageProps) {
+export function SettingsPage({ userEmail, preferences }: SettingsPageProps) {
     const router = useRouter();
     const { currency, setCurrency } = useCurrency();
     const { language, setLanguage } = useLanguage();
@@ -30,9 +35,9 @@ export function SettingsPage({ userEmail }: SettingsPageProps) {
     const [saveSuccess, setSaveSuccess] = useState(false);
 
     // Portfolio preferences
-    const [benchmarks, setBenchmarks] = useState<string[]>(['SPX']);
-    const [chartRange, setChartRange] = useState<string>('1Y');
-    const [timezone, setTimezone] = useState<string>('UTC');
+    const [benchmarks, setBenchmarks] = useState<string[]>(preferences?.benchmarks || ['SPX']);
+    const [chartRange, setChartRange] = useState<string>(preferences?.defaultRange || '1Y');
+    const [timezone, setTimezone] = useState<string>(preferences?.timezone || 'UTC');
 
 
     const [isMobile, setIsMobile] = useState(false);
@@ -100,7 +105,7 @@ export function SettingsPage({ userEmail }: SettingsPageProps) {
         try {
             await updateUserPreferences({
                 benchmarks,
-                chartRange,
+                defaultRange: chartRange,
                 timezone,
                 theme,
                 currency, // Note: these come from context, assume they are simple strings

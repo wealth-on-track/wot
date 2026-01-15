@@ -1,21 +1,21 @@
 "use client";
 
-type View = 'overview' | 'performance' | 'allocations' | 'positions' | 'add';
+import { Home, Layers, PieChart, Eye } from "lucide-react";
+
+export type Tab = 'dashboard' | 'positions' | 'allocation' | 'vision';
 
 interface MobileBottomNavProps {
-    activeView: View;
-    onViewChange: (view: View) => void;
+    activeTab: Tab;
+    onTabChange: (tab: Tab) => void;
 }
 
-import { LayoutGrid, PieChart, TrendingUp, List, PlusCircle } from "lucide-react";
-
-export function MobileBottomNav({ activeView, onViewChange }: MobileBottomNavProps) {
-    const navItems = [
-        { id: 'overview' as View, label: 'Overview', icon: <LayoutGrid size={24} /> },
-        { id: 'performance' as View, label: 'Performance', icon: <TrendingUp size={24} /> },
-        { id: 'allocations' as View, label: 'Allocations', icon: <PieChart size={24} /> },
-        { id: 'positions' as View, label: 'Positions', icon: <List size={24} /> },
-    ];
+export function MobileBottomNav({ activeTab, onTabChange }: MobileBottomNavProps) {
+    const tabs = [
+        { id: 'dashboard', label: 'Home', icon: Home },
+        { id: 'positions', label: 'Positions', icon: Layers },
+        { id: 'allocation', label: 'Allocation', icon: PieChart },
+        { id: 'vision', label: 'Vision', icon: Eye }
+    ] as const;
 
     return (
         <nav style={{
@@ -25,52 +25,50 @@ export function MobileBottomNav({ activeView, onViewChange }: MobileBottomNavPro
             right: 0,
             background: 'var(--bg-primary)',
             borderTop: '1px solid var(--border)',
-            padding: '0.5rem 1rem',
             display: 'flex',
+            justifyContent: 'space-around',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            padding: '8px 0',
+            paddingBottom: 'calc(8px + env(safe-area-inset-bottom))',
             zIndex: 1000,
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))'
+            boxShadow: '0 -4px 12px rgba(0,0,0,0.1)'
         }}>
-            {navItems.map(item => (
-                <button
-                    key={item.id}
-                    onClick={() => onViewChange(item.id)}
-                    style={{
-                        flex: 1,
-                        background: 'transparent',
-                        border: 'none',
-                        borderRadius: '12px',
-                        padding: '0.5rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        color: activeView === item.id ? 'var(--accent)' : 'var(--text-muted)',
-                        opacity: activeView === item.id ? 1 : 0.6
-                    }}
-                >
-                    <div style={{
-                        transition: 'transform 0.2s',
-                        transform: activeView === item.id ? 'scale(1.1)' : 'scale(1)'
-                    }}>
-                        {item.icon}
-                    </div>
-                    <div style={{
-                        fontSize: '0.6rem',
-                        fontWeight: activeView === item.id ? 800 : 600,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.02em',
-                        marginTop: '2px'
-                    }}>
-                        {item.label}
-                    </div>
-                </button>
-            ))}
+            {tabs.map(tab => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+
+                return (
+                    <button
+                        key={tab.id}
+                        onClick={() => onTabChange(tab.id as Tab)}
+                        style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: 'transparent',
+                            border: 'none',
+                            padding: '8px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            color: isActive ? 'var(--accent)' : 'var(--text-muted)'
+                        }}
+                    >
+                        <Icon
+                            size={22}
+                            strokeWidth={isActive ? 2.5 : 2}
+                        />
+                        <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: isActive ? 700 : 500,
+                            letterSpacing: '0.02em'
+                        }}>
+                            {tab.label}
+                        </span>
+                    </button>
+                );
+            })}
         </nav>
     );
 }

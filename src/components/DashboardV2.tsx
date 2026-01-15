@@ -587,6 +587,7 @@ function AssetTableRow({
     const nativeSymbol = getCurrencySymbol(asset.currency);
 
     // Global (Converted) Values for PRICE_EUR / VALUE_EUR / PL columns
+    // Use activeCurrency prop which we will pass down or derive
     const globalCurrency = positionsViewCurrency === 'ORG' ? 'EUR' : positionsViewCurrency;
     const globalRate = getRate(asset.currency, globalCurrency, exchangeRates);
     const globalSymbol = getCurrencySymbol(globalCurrency);
@@ -772,11 +773,19 @@ function AssetTableRow({
                             </div>
                         );
                     } else {
-                        // Show in native currency
+                        // LOGIC FIX: If Global Currency is selected (not ORG), show converted price
+                        const showConverted = positionsViewCurrency !== 'ORG';
+                        const displayPrice = showConverted ? globalPrice : nativePrice;
+                        const displaySymbol = showConverted ? globalSymbol : nativeSymbol;
+
+                        // Show in native or converted currency
                         cellContent = (
                             <div suppressHydrationWarning title={dateStr ? `Closing Price: ${dateStr}` : 'No market data available'} style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', width: '100%', fontVariantNumeric: 'tabular-nums', cursor: 'help', alignItems: 'flex-end', justifyContent: 'flex-start', height: '100%', gap: '4px' }}>
-                                <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: '1.2' }}>{nativeSymbol}{fmt(nativePrice)}</span>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{nativeSymbol}{fmt(asset.buyPrice)}</span>
+                                <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: '1.2' }}>{displaySymbol}{fmt(displayPrice)}</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                    {/* Secondary line: Show Buy Price (converted or native) */}
+                                    {displaySymbol}{fmt(showConverted ? asset.buyPrice * globalRate : asset.buyPrice)}
+                                </span>
                             </div>
                         );
                     }
@@ -1461,6 +1470,7 @@ function AssetGroupGrid({
 
 export default function Dashboard({ username, isOwner, totalValueEUR, assets, goals, isBlurred, showChangelog = false, exchangeRates, positionsViewCurrency: positionsViewCurrencyProp, preferences }: DashboardProps) {
     const { t } = useLanguage();
+
     const [mounted, setMounted] = useState(false);
     useEffect(() => {
         setMounted(true);
@@ -1561,7 +1571,8 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
     }, [activeColumns, isOwner]);
 
     const { currency: globalCurrency } = useCurrency();
-    const positionsViewCurrency = positionsViewCurrencyProp || globalCurrency;
+    // Fix: Prioritize Context (Client Selection) over Prop (Initial State)
+    const positionsViewCurrency = globalCurrency || positionsViewCurrencyProp || 'ORG';
 
     // Update items when assets prop changes (initial load or refetch)
     useEffect(() => {
@@ -2304,7 +2315,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                     }}>
                                                         <SortableContext items={activeColumns.map(c => `col:${c}`)} strategy={rectSortingStrategy}>
                                                             {activeColumns.map(colId => {
-                                                                const colDef = ALL_COLUMNS.find(c => c.id === colId);
+                                                                const colDef = translatedColumns.find(c => c.id === colId);
                                                                 let label = (colDef?.headerLabel || colDef?.label || colId).toUpperCase();
 
                                                                 // Dynamic label shortening for high column counts

@@ -99,8 +99,14 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
         }
     };
 
-    const handleDelete = async () => {
-        if (!confirm("Are you sure you want to delete this asset?")) return;
+    // Delete Confirmation State
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    const handleDeleteClick = () => {
+        setShowDeleteConfirm(true);
+    };
+
+    const handleConfirmDelete = async () => {
         setIsLoading(true);
         try {
             const res = await deleteAsset(asset.id);
@@ -114,6 +120,7 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
             console.error("Failed to delete:", error);
         } finally {
             setIsLoading(false);
+            setShowDeleteConfirm(false);
         }
     };
 
@@ -222,7 +229,7 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
                         {/* Delete */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                             <button
-                                onClick={handleDelete}
+                                onClick={handleDeleteClick}
                                 disabled={isLoading}
                                 style={{
                                     background: 'var(--danger-bg)', border: '1px solid var(--danger)40',
@@ -253,6 +260,58 @@ export function EditAssetModal({ asset, isOpen, onClose }: EditAssetModalProps) 
                         </div>
                     </div>
                 </div>
+
+                {/* Delete Confirmation Overlay */}
+                {showDeleteConfirm && (
+                    <div style={{
+                        position: 'absolute', inset: 0,
+                        background: 'var(--bg-primary)',
+                        zIndex: 20,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '2rem'
+                    }}>
+                        <div style={{
+                            width: '60px', height: '60px', borderRadius: '50%',
+                            background: 'var(--danger-bg)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: 'var(--danger)', marginBottom: '1rem'
+                        }}>
+                            <Trash2 size={28} />
+                        </div>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+                            Delete Position?
+                        </h3>
+                        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '2rem', textAlign: 'center' }}>
+                            This action cannot be undone. Are you sure?
+                        </p>
+                        <div style={{ display: 'flex', gap: '1rem', width: '100%', padding: '0 2rem' }}>
+                            <button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                style={{
+                                    flex: 1, padding: '0.8rem', borderRadius: '12px',
+                                    background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                                    border: 'none', fontWeight: 700, cursor: 'pointer'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmDelete}
+                                disabled={isLoading}
+                                style={{
+                                    flex: 1, padding: '0.8rem', borderRadius: '12px',
+                                    background: 'var(--danger)', color: '#fff',
+                                    border: 'none', fontWeight: 700, cursor: 'pointer'
+                                }}
+                            >
+                                {isLoading ? "Deleting..." : "Delete Permanently"}
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Body */}
                 <div className="custom-scrollbar" style={{ padding: '2rem', overflowY: 'auto', flex: 1 }}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -8,16 +8,38 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { handleSignOut } from "@/lib/authActions";
 import { LogOut, User, Eye, EyeOff } from "lucide-react";
 
+import { MobileStories } from "./MobileStories";
+import type { AssetDisplay } from "@/lib/types";
+
 interface MobileHeaderProps {
     username: string;
     isOwner: boolean;
     isPrivacyMode: boolean;
     onTogglePrivacy: () => void;
+    onLogoClick?: () => void;
+    // Stories Props
+    assets?: AssetDisplay[];
+    totalValueEUR?: number;
+    onNavigate?: (type: string, payload?: any) => void;
 }
 
-export function MobileHeader({ username, isOwner, isPrivacyMode, onTogglePrivacy }: MobileHeaderProps) {
+export function MobileHeader({
+    username,
+    isOwner,
+    isPrivacyMode,
+    onTogglePrivacy,
+    onLogoClick,
+    assets = [],
+    totalValueEUR = 0,
+    onNavigate = () => { }
+}: MobileHeaderProps) {
     const { currency, setCurrency } = useCurrency();
     const { theme, toggleTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
 
     return (
@@ -37,7 +59,15 @@ export function MobileHeader({ username, isOwner, isPrivacyMode, onTogglePrivacy
             WebkitBackdropFilter: 'blur(12px)'
         }}>
             {/* Logo */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div
+                onClick={onLogoClick}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    cursor: onLogoClick ? 'pointer' : 'default'
+                }}
+            >
                 <div style={{
                     display: 'flex',
                     gap: '1px',
@@ -135,6 +165,15 @@ export function MobileHeader({ username, isOwner, isPrivacyMode, onTogglePrivacy
 
             {/* Controls */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+
+                {/* Stories Trigger (New) */}
+                <MobileStories
+                    assets={assets}
+                    totalValueEUR={totalValueEUR}
+                    username={username}
+                    onNavigate={onNavigate}
+                />
+
                 {/* Privacy Toggle */}
                 <button
                     onClick={onTogglePrivacy}
@@ -171,7 +210,7 @@ export function MobileHeader({ username, isOwner, isPrivacyMode, onTogglePrivacy
                         fontSize: '1rem'
                     }}
                 >
-                    {theme === 'dark' ? '🌙' : '☀️'}
+                    {mounted ? (theme === 'dark' ? '🌙' : '☀️') : null}
                 </button>
 
                 {/* Sign Out (if owner) OR Login/Get Started (if guest) */}
