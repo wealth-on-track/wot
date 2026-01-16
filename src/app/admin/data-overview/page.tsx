@@ -2,7 +2,7 @@
 import { getDataOverview, getSystemHealthStats } from "@/lib/dataOverview";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Database, TrendingUp, TrendingDown, AlertCircle, CheckCircle } from "lucide-react";
+import { TrendingDown, AlertCircle, CheckCircle } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 

@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Search, Plus } from "lucide-react";
 import { searchSymbolsAction } from "@/app/actions/search";
 import { SymbolOption } from "@/lib/symbolSearch";
-// import { ASSET_COLORS } from "@/lib/constants"; // Commmented out to avoid error if missing
 import { getLogoUrl } from "@/lib/logos";
 
 const ASSET_COLORS: Record<string, string> = {
@@ -27,21 +26,33 @@ export function MobileAddAsset({ onAddKey }: MobileAddAssetProps) {
     const [isSearching, setIsSearching] = useState(false);
     const [addingSymbol, setAddingSymbol] = useState<string | null>(null);
 
+    // Ref to track the latest query to prevent race conditions
+    const latestQuery = useRef("");
+
     const handleSearch = async (term: string) => {
         setQuery(term);
+        latestQuery.current = term;
+
         if (term.length < 2) {
             setResults([]);
+            setIsSearching(false);
             return;
         }
 
         setIsSearching(true);
         try {
             const data = await searchSymbolsAction(term);
-            setResults(data);
+            // Race Check: Only update state if this response corresponds to the current query
+            if (term === latestQuery.current) {
+                setResults(data);
+            }
         } catch (error) {
             console.error("Search failed", error);
         } finally {
-            setIsSearching(false);
+            // Only turn off loading if this was the last request
+            if (term === latestQuery.current) {
+                setIsSearching(false);
+            }
         }
     };
 

@@ -644,10 +644,9 @@ export function PortfolioPerformanceChart({
         </div>
     );
 
-    // --- MOBILE LAYOUT (Separate Cards) ---
     if (controlsPosition === 'bottom') {
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', height: 'auto', width: '100%' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', height: 'auto', width: '100%' }}>
 
                 {/* 1. Amount Card - Only show if showPortfolioValue is true */}
                 {showPortfolioValue && (
@@ -672,14 +671,14 @@ export function PortfolioPerformanceChart({
                 )}
 
                 {/* 2. Chart Card */}
-                <div className="neo-card" style={{ padding: '0.5rem 0.5rem 0.2rem 0.5rem', display: 'flex', flexDirection: 'column' }}>
+                <div className="neo-card" style={{ padding: '0.5rem 0.5rem 0.2rem 0.5rem', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 20, overflow: 'visible' }}>
                     {/* Controls */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem', padding: '0 0.5rem', zIndex: 10 }}>
                         <BenchmarkSelector />
-                        <TimePeriodSelector />
+                        {showPeriodSelector && <TimePeriodSelector />}
                     </div>
                     {/* Chart */}
-                    <div style={{ width: '100%', height: '195px', position: 'relative' }}
+                    <div style={{ width: '100%', height: '160px', position: 'relative' }} // Reduced height
                         onMouseEnter={() => setIsChartHovered(true)}
                         onMouseLeave={() => setIsChartHovered(false)}
                         onWheel={handleWheel}
@@ -711,11 +710,11 @@ export function PortfolioPerformanceChart({
                                             <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={false} stroke="var(--text-secondary)" opacity={0.15} />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={false} stroke="var(--text-secondary)" opacity={0.1} /> {/* Lighter grid */}
                                     <XAxis
                                         dataKey="date"
                                         tickFormatter={formatXAxis}
-                                        tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+                                        tick={{ fontSize: 10, fill: '#9ca3af' }} // More gray
                                         axisLine={false}
                                         tickLine={false}
                                         minTickGap={30}
@@ -724,13 +723,13 @@ export function PortfolioPerformanceChart({
                                     />
                                     <YAxis
                                         tickFormatter={(val) => `${Math.round(val)}%`}
-                                        tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+                                        tick={{ fontSize: 10, fill: '#9ca3af' }} // More gray
                                         axisLine={false}
                                         tickLine={false}
                                         domain={['auto', 'auto']}
                                         width={40}
                                     />
-                                    <Tooltip content={<CustomTooltip />} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} /> {/* Better cursor for scrubbing */}
                                     {selectedBenchmarks.map(id => {
                                         const b = BENCHMARK_ASSETS.find(a => a.id === id);
                                         return <Line key={id} type="monotone" dataKey={id} stroke={b?.color} strokeWidth={2} dot={false} connectNulls animationDuration={800} />;
@@ -746,7 +745,7 @@ export function PortfolioPerformanceChart({
 
                 {/* 3. Summary Card */}
                 {zoomedData.length > 0 && (
-                    <div className="neo-card" style={{ padding: '0.5rem 0.8rem' }}>
+                    <div className="neo-card" style={{ padding: '0.8rem' }}>
                         {(() => {
                             const lastPoint = zoomedData[zoomedData.length - 1];
                             const comparisons = [];
@@ -758,17 +757,21 @@ export function PortfolioPerformanceChart({
                             comparisons.sort((a, b) => b.value - a.value);
 
                             return (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.2rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem', paddingBottom: '0.2rem', borderBottom: '1px solid var(--border)' }}>
                                         <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Performance ({selectedPeriod})</span>
                                         <span style={{ fontSize: '0.65rem', fontWeight: 500, color: 'var(--text-muted)' }}>{formatTooltipDate(lastPoint.date)}</span>
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: '8px 16px' // Row gap 8px, Col gap 16px
+                                    }}>
                                         {comparisons.map((item) => (
-                                            <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.3rem 0', borderBottom: '1px dashed var(--border)' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
-                                                    <div style={{ width: '6px', height: '6px', borderRadius: '2px', background: item.color, flexShrink: 0 }} />
-                                                    <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-primary)' }}>{item.name}</span>
+                                            <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px dashed var(--border)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                                                    <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: item.color, flexShrink: 0 }} />
+                                                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
                                                 </div>
                                                 <span style={{ fontSize: '0.8rem', fontWeight: 700, color: item.value >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                                                     {item.value > 0 ? '+' : ''}{item.value.toFixed(2)}%

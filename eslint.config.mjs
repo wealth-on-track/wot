@@ -12,6 +12,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Archived debug scripts and utility scripts (not part of production build)
+    "archive_debug_scripts/**",
+    "scripts/**",
+    "*.js",
+    "*.ts",  // Root-level TS scripts
+    "!src/**/*.ts",
+    "!src/**/*.tsx",
   ]),
 ]);
 

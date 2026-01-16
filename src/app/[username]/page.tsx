@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
-import Dashboard from "@/components/DashboardV2";
 import { Navbar } from "@/components/Navbar";
 import { ClientWrapper } from "@/components/ClientWrapper";
 import { getPortfolioMetricsOptimized } from "@/lib/portfolio-optimized";

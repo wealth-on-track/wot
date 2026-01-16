@@ -23,7 +23,9 @@ export function MobileBottomNav({ activeTab, onTabChange }: MobileBottomNavProps
             bottom: 0,
             left: 0,
             right: 0,
-            background: 'var(--bg-primary)',
+            background: 'rgba(255, 255, 255, 0.8)', // Translucent for blur
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
             borderTop: '1px solid var(--border)',
             display: 'flex',
             justifyContent: 'space-around',

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getRate } from '@/lib/currency';
-import fs from 'fs';
 
 export const dynamic = 'force-dynamic';
 
@@ -142,10 +140,14 @@ export async function GET(
 
         log(`DEBUG: Returning ${historyData.length} data points`);
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             data: historyData,
             source: snapshots.length >= Math.max(2, days / 5) ? 'database' : 'simulation'
         });
+
+        // Cache for 5 minutes on client, stale-while-revalidate for 10 minutes
+        response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+        return response;
 
     } catch (error) {
         log(`CRITICAL ERROR: ${error}`);

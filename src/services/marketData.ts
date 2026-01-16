@@ -139,7 +139,7 @@ export function isPriceStale(lastUpdate: Date): boolean {
     return lastUpdate.getTime() < effectiveThreshold.getTime();
 }
 
-export async function getMarketPrice(symbol: string, type: string, exchange?: string, forceRefresh: boolean = false, userId: string = 'System'): Promise<PriceResult | undefined> {
+export async function getMarketPrice(symbol: string, type: string, exchange?: string, forceRefresh: boolean = false, userId: string = 'System', category?: string): Promise<PriceResult | undefined> {
 
     // 0. GLOBAL CACHE CHECK (Closing Price Strategy)
     // If we have data in DB, use it unless forced.
@@ -309,7 +309,11 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
     // Fix: Only treat as implicit TEFAS if exchange is empty, UNKNOWN, or explicitly TEFAS.
     // This prevents blocking VOO (NYSE), SPY (Arca) etc.
     const isTefasFundSignature = type === 'FUND' && symbol.length === 3 && !symbol.includes('.') && (!exchange || exchange === 'TEFAS' || exchange === 'UNKNOWN');
-    const isImplicitTefasCandidate = (type === 'STOCK' || type === 'ETF') && symbol.length === 3 && !symbol.includes('.');
+    // If category is definitive US/EU/CRYPTO/etc, DO NOT assume TEFAS even for 3-letter stocks (like NKE, TAV, etc)
+    const isCategoryNonTefas = category && (category === 'US_MARKETS' || category === 'EU_MARKETS' || category === 'CRYPTO' || category === 'COMMODITIES' || category === 'FX' || category === 'BIST' || category === 'BENCHMARK');
+
+    // Only check implicit if NO definitive category is provided OR the category is strictly TEFAS
+    const isImplicitTefasCandidate = !isCategoryNonTefas && (type === 'STOCK' || type === 'ETF') && symbol.length === 3 && !symbol.includes('.');
 
     // Union of all TEFAS candidates (but not strict)
     if (isExplicitTefas || isTefasFundSignature || isImplicitTefasCandidate) {
@@ -613,7 +617,7 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
 /**
  * BATCH: Get prices for multiple symbols at once
  */
-export async function getBatchMarketPrices(assets: { symbol: string, type: string, exchange?: string }[], forceRefresh: boolean = false): Promise<Record<string, PriceResult | null>> {
+export async function getBatchMarketPrices(assets: { symbol: string, type: string, exchange?: string, category?: string }[], forceRefresh: boolean = false): Promise<Record<string, PriceResult | null>> {
     try {
         // Separate Yahoo-able assets from others
         const yahooSymbols: string[] = [];
@@ -657,9 +661,17 @@ export async function getBatchMarketPrices(assets: { symbol: string, type: strin
             const prevClose = quote.regularMarketPreviousClose ? applyAdjustments(quote.regularMarketPreviousClose) : 0;
             const change24h = (price - prevClose);
 
+            // STRICT CURRENCY ENFORCEMENT for Batch (Suffix Rule)
+            let batchCurrency = quote.currency || 'USD';
+            if (originalSym.endsWith('-EUR')) batchCurrency = 'EUR';
+            if (originalSym.endsWith('-USD')) batchCurrency = 'USD';
+            if (originalSym.endsWith('-TRY')) batchCurrency = 'TRY';
+            if (originalSym === 'GAUTRY' || originalSym === 'XAGTRY' || originalSym === 'AET') batchCurrency = 'TRY';
+
+
             results[originalSym] = {
                 price,
-                currency: quote.currency,
+                currency: batchCurrency,
                 timestamp: (quote.regularMarketTime || new Date()).toISOString(),
                 previousClose: prevClose,
                 change24h,

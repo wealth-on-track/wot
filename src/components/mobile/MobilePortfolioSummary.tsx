@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useCurrency } from "@/context/CurrencyContext";
-import { ASSET_COLORS } from "@/lib/constants";
-import { Eye, EyeOff, ChevronRight, ChevronLeft } from "lucide-react";
+import { CHART_COLORS } from "@/lib/constants";
+import { Eye, EyeOff, ChevronRight, ChevronLeft, ChevronDown } from "lucide-react";
 import type { AssetDisplay } from "@/lib/types";
 
 interface MobilePortfolioSummaryProps {
@@ -10,7 +10,7 @@ interface MobilePortfolioSummaryProps {
     isPrivacyMode: boolean;
     onTogglePrivacy: () => void;
     defaultPeriod?: string;
-    onPeriodChange?: (period: string) => void; // New prop to notify parent of period changes
+    onPeriodChange?: (period: string) => void;
 }
 
 type Period = "1D" | "1W" | "1M" | "YTD" | "1Y" | "ALL";
@@ -25,15 +25,14 @@ export function MobilePortfolioSummary({
 }: MobilePortfolioSummaryProps) {
     const { currency } = useCurrency();
     const [selectedPeriod, setSelectedPeriod] = useState<Period>(defaultPeriod as Period);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    // Sync state if prop changes
     useEffect(() => {
         if (defaultPeriod) {
             setSelectedPeriod(defaultPeriod as Period);
         }
     }, [defaultPeriod]);
 
-    // Notify parent when period changes
     const handlePeriodChange = (period: Period) => {
         setSelectedPeriod(period);
         if (onPeriodChange) {
@@ -45,12 +44,11 @@ export function MobilePortfolioSummary({
     const symbols: Record<string, string> = { EUR: "€", USD: "$", TRY: "₺" };
 
     const convert = (amount: number) => {
-        if (currency === 'ORG') return amount; // EUR base
+        if (currency === 'ORG') return amount;
         return amount * (rates[currency] || 1);
     };
     const sym = currency === 'ORG' ? '€' : (symbols[currency] || "€");
 
-    // Mock returns based on period
     const periodFactors: Record<Period, number> = {
         "1D": 0.015,
         "1W": 0.03,
@@ -60,27 +58,31 @@ export function MobilePortfolioSummary({
         "ALL": 0.15
     };
 
-    // Recalculate based on selectedPeriod (dynamic)
     const periodReturnEUR = totalValueEUR * (periodFactors[selectedPeriod] || 0.01);
     const periodReturnPct = totalValueEUR > 0 ? (periodReturnEUR / totalValueEUR) * 100 : 0;
 
     return (
         <div className="neo-card" style={{
-            padding: '1.5rem 1rem',
+            padding: '1.25rem 1rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '1rem'
+            gap: '0.5rem',
+            position: 'relative',
+            zIndex: isMenuOpen ? 50 : 1, // High z-index when menu is open
+            transition: 'z-index 0.1s'
         }}>
-            {/* Main Portfolio Value - Centered & Large */}
-            <div style={{ textAlign: 'center' }}>
+            {/* Header Row: Single Line Layout */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '8px' }}>
+
+                {/* 1. Total Amount (Left) */}
                 <div style={{
-                    fontSize: '2.5rem',
+                    fontSize: '1.4rem', // Reduced from 2rem to fit single line
                     fontWeight: 900,
                     color: 'var(--text-primary)',
                     letterSpacing: '-0.03em',
                     lineHeight: 1,
                     fontVariantNumeric: 'tabular-nums',
-                    marginBottom: '0.5rem'
+                    whiteSpace: 'nowrap'
                 }}>
                     {isPrivacyMode
                         ? '****'
@@ -88,76 +90,110 @@ export function MobilePortfolioSummary({
                     }
                 </div>
 
-                {/* Period Return Stats */}
-                <div style={{
-                    fontSize: '0.9rem',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem'
-                }}>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                        {selectedPeriod === '1D' ? 'Today' : selectedPeriod === 'ALL' ? 'All Time' : selectedPeriod}
-                    </span>
-                    <span style={{
-                        color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)',
-                        fontSize: '1rem'
-                    }}>
-                        {periodReturnPct >= 0 ? '+' : ''}{periodReturnPct.toFixed(2)}%
-                    </span>
-                    <span style={{
-                        color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)',
-                        opacity: 0.8,
-                        fontSize: '0.85rem'
-                    }}>
-                        {isPrivacyMode
-                            ? '****'
-                            : `(${periodReturnEUR >= 0 ? '+' : ''}${sym}${convert(periodReturnEUR).toLocaleString('de-DE', { maximumFractionDigits: 0 })})`
-                        }
-                    </span>
-                </div>
-            </div>
+                {/* 2. Stats & Period (Right) */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
 
-            {/* Period Selector - Outlined Buttons */}
-            <div style={{
-                display: 'flex',
-                gap: '0.3rem',
-                justifyContent: 'center',
-                flexWrap: 'nowrap',
-                overflow: 'hidden'
-            }}>
-                {(["1D", "1W", "1M", "YTD", "1Y", "ALL"] as Period[]).map(period => (
-                    <button
-                        key={period}
-                        onClick={() => handlePeriodChange(period)}
-                        style={{
-                            background: selectedPeriod === period ? 'var(--accent)' : 'transparent',
-                            color: selectedPeriod === period ? '#fff' : 'var(--text-muted)',
-                            border: selectedPeriod === period ? 'none' : '1.5px solid var(--border)',
-                            borderRadius: '6px',
-                            padding: '0.35rem 0.5rem',
-                            fontSize: '0.7rem',
+                    {/* Stats: % and Amount Change (Side by Side) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{
+                            color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)',
+                            fontSize: '0.85rem',
                             fontWeight: 700,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            letterSpacing: '0.02em',
-                            minWidth: '0',
-                            flex: '1 1 auto',
                             whiteSpace: 'nowrap'
-                        }}
-                    >
-                        {period}
-                    </button>
-                ))}
+                        }}>
+                            {periodReturnPct >= 0 ? '+' : ''}{periodReturnPct.toFixed(2)}%
+                        </span>
+                        <span style={{
+                            color: periodReturnEUR >= 0 ? 'var(--success)' : 'var(--danger)',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            opacity: 0.9
+                        }}>
+                            {isPrivacyMode
+                                ? '****'
+                                : `(${periodReturnEUR >= 0 ? '+' : ''}${convert(periodReturnEUR).toLocaleString('de-DE', { maximumFractionDigits: 0 })}${sym})`
+                            }
+                        </span>
+                    </div>
+
+                    {/* Divider */}
+                    <div style={{ width: '1px', height: '16px', background: 'var(--border)' }} />
+
+                    {/* Period Selector */}
+                    <div style={{ position: 'relative' }}>
+                        <button
+                            onClick={() => setIsMenuOpen(!isMenuOpen)}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                padding: '0', // Removed padding to save space
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '2px',
+                                cursor: 'pointer',
+                                color: 'var(--text-muted)'
+                            }}
+                        >
+                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                                {selectedPeriod}
+                            </span>
+                            <ChevronDown size={14} />
+                        </button>
+
+                        {isMenuOpen && (
+                            <>
+                                <div
+                                    style={{ position: 'fixed', inset: 0, zIndex: 9, cursor: 'default' }}
+                                    onClick={() => setIsMenuOpen(false)}
+                                />
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '120%',
+                                    right: 0,
+                                    background: 'var(--surface)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '12px',
+                                    padding: '4px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    minWidth: '80px',
+                                    boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                                    zIndex: 11
+                                }}>
+                                    {(["1D", "1W", "1M", "YTD", "1Y", "ALL"] as Period[]).map((period) => (
+                                        <button
+                                            key={period}
+                                            onClick={() => {
+                                                handlePeriodChange(period);
+                                                setIsMenuOpen(false);
+                                            }}
+                                            style={{
+                                                background: selectedPeriod === period ? 'var(--bg-secondary)' : 'transparent',
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                padding: '8px',
+                                                fontSize: '0.8rem',
+                                                fontWeight: 700,
+                                                color: selectedPeriod === period ? 'var(--accent)' : 'var(--text-primary)',
+                                                textAlign: 'center',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            {period}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );
 }
 
-
 // --- New Allocations Component ---
-// Chevron imports removed
 
 type AllocationView = "Portfolio" | "Type" | "Sector" | "Exchange" | "Platform" | "Currency" | "Country";
 
@@ -190,183 +226,136 @@ export function MobileHomeAllocations({ assets, totalValueEUR, isPrivacyMode }: 
     };
     const sym = currency === 'ORG' ? '€' : (symbols[currency] || "€");
 
-    const getChartData = () => {
-        const data: { name: string; value: number; color?: string }[] = [];
+    // Group assets by chosen view
+    const groupAssets = () => {
+        const grouped: Record<string, number> = {};
+        let total = 0;
 
-        assets.forEach(asset => {
-            let key = 'Other';
-            if (view === "Type") key = asset.type;
-            else if (view === "Sector") key = asset.sector || 'Unknown';
-            else if (view === "Exchange") key = asset.exchange || 'Unknown';
-            else if (view === "Portfolio") key = asset.customGroup || 'My Portfolio'; // Map Portfolio -> Custom Group
-            else if (view === "Platform") key = asset.platform || 'Unknown';
-            else if (view === "Currency") key = asset.currency || 'Unknown';
-            else if (view === "Country") key = asset.country || 'Unknown';
-
-            const existing = data.find(item => item.name === key);
-            if (existing) {
-                existing.value += asset.totalValueEUR;
-            } else {
-                data.push({
-                    name: key,
-                    value: asset.totalValueEUR,
-                    color: view === "Type" ? (ASSET_COLORS[asset.type] || ASSET_COLORS['DEFAULT']) : undefined
-                });
+        // "Portfolio" means group by Asset/Company Name directly (top holdings)
+        if (view === "Portfolio") {
+            const sorted = [...assets].sort((a, b) => b.totalValueEUR - a.totalValueEUR);
+            // Top 8
+            sorted.slice(0, 8).forEach(a => {
+                const key = a.name || a.symbol;
+                grouped[key] = a.totalValueEUR;
+                total += a.totalValueEUR;
+            });
+            // Others?
+            if (sorted.length > 8) {
+                grouped["Others"] = sorted.slice(8).reduce((sum, item) => sum + item.totalValueEUR, 0);
+                total += grouped["Others"];
             }
-        });
+        } else {
+            assets.forEach(asset => {
+                let key = "Other";
+                if (view === "Type") key = asset.type;
+                else if (view === "Sector") key = asset.sector || "Other";
+                else if (view === "Exchange") key = asset.exchange || "Other";
+                else if (view === "Platform") key = asset.platform || "Other";
+                else if (view === "Currency") key = asset.currency;
+                else if (view === "Country") key = asset.country || "Global";
 
-        return data.sort((a, b) => b.value - a.value);
+                grouped[key] = (grouped[key] || 0) + asset.totalValueEUR;
+                total += asset.totalValueEUR;
+            });
+        }
+        return { grouped, total };
     };
 
-    const chartData = getChartData();
-    const DEFAULT_COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
-
-    if (totalValueEUR === 0 || assets.length === 0) {
-        return (
-            <div className="neo-card" style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Add assets to see allocations</p>
-            </div>
-        );
-    }
+    const { grouped, total } = groupAssets();
+    const data = Object.entries(grouped)
+        .sort(([, v1], [, v2]) => v2 - v1)
+        .map(([name, value], i) => ({
+            name,
+            value,
+            percent: total > 0 ? (value / total) * 100 : 0,
+            color: CHART_COLORS[i % CHART_COLORS.length]
+        }));
 
     return (
         <div className="neo-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {/* Paginated Header */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderBottom: '1px solid var(--border)',
-                paddingBottom: '0.8rem',
-                marginBottom: '0.2rem'
-            }}>
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1.2rem',
-                    flex: 1
-                }}>
-                    {groups[page].map(v => (
-                        <button
-                            key={v}
-                            onClick={() => setView(v)}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                padding: '0',
-                                fontSize: '0.85rem',
-                                fontWeight: view === v ? 800 : 500,
-                                color: view === v ? 'var(--accent)' : 'var(--text-secondary)',
-                                cursor: 'pointer',
-                                transition: 'color 0.2s',
-                                position: 'relative'
-                            }}
-                        >
-                            {v}
-                            {view === v && (
-                                <div style={{
-                                    position: 'absolute',
-                                    bottom: '-0.95rem', // aligned with border-bottom of container
-                                    left: 0,
-                                    right: 0,
-                                    height: '2px',
-                                    background: 'var(--accent)',
-                                    borderRadius: '2px 2px 0 0'
-                                }} />
-                            )}
-                        </button>
-                    ))}
-                </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Allocation</h3>
 
-                <button
-                    onClick={handlePageToggle}
-                    style={{
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '50%',
-                        width: '24px',
-                        height: '24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        color: 'var(--text-muted)'
-                    }}
-                >
-                    {page === 0 ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-                </button>
+                {/* Pagination Dots (if we have multiple pages of views) */}
+                <div style={{ display: 'flex', gap: '4px' }}>
+                    <div
+                        onClick={() => setPage(0)}
+                        style={{
+                            width: '6px', height: '6px', borderRadius: '50%',
+                            background: page === 0 ? 'var(--text-primary)' : 'var(--border)',
+                            cursor: 'pointer'
+                        }}
+                    />
+                    <div
+                        onClick={() => setPage(1)}
+                        style={{
+                            width: '6px', height: '6px', borderRadius: '50%',
+                            background: page === 1 ? 'var(--text-primary)' : 'var(--border)',
+                            cursor: 'pointer'
+                        }}
+                    />
+                </div>
             </div>
 
-            {/* Bars */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {chartData.map((item, index) => {
-                    const percentage = totalValueEUR > 0 ? (item.value / totalValueEUR) * 100 : 0;
-                    const color = item.color || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
+            {/* View Selector (Pill) */}
+            <div style={{
+                display: 'flex',
+                background: 'var(--bg-secondary)',
+                borderRadius: '8px',
+                padding: '2px',
+                overflowX: 'auto',
+                gap: '2px',
+                scrollbarWidth: 'none'
+            }}>
+                {groups[page].map((v) => (
+                    <button
+                        key={v}
+                        onClick={() => setView(v)}
+                        style={{
+                            flex: 1,
+                            border: 'none',
+                            background: view === v ? 'var(--surface)' : 'transparent',
+                            borderRadius: '6px',
+                            padding: '6px 12px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            color: view === v ? 'var(--text-primary)' : 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            boxShadow: view === v ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        {v}
+                    </button>
+                ))}
+            </div>
 
-                    return (
-                        <div key={item.name}>
+
+            {/* List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {data.map((item, idx) => (
+                    <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: '0.3rem'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                    <div style={{
-                                        width: '6px',
-                                        height: '6px',
-                                        borderRadius: '2px',
-                                        background: color,
-                                        boxShadow: `0 0 6px ${color}40`
-                                    }} />
-                                    <span style={{
-                                        fontSize: '0.75rem',
-                                        fontWeight: 700,
-                                        color: 'var(--text-primary)'
-                                    }}>
-                                        {item.name}
-                                    </span>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
-                                    <span style={{
-                                        fontSize: '0.75rem',
-                                        fontWeight: 800,
-                                        color: 'var(--text-primary)'
-                                    }}>
-                                        {percentage.toFixed(0)}%
-                                    </span>
-                                    <span style={{
-                                        fontSize: '0.7rem',
-                                        color: 'var(--text-muted)',
-                                        fontWeight: 600,
-                                        fontVariantNumeric: 'tabular-nums'
-                                    }}>
-                                        {isPrivacyMode
-                                            ? '****'
-                                            : `${sym}${convert(item.value).toLocaleString('de-DE', { maximumFractionDigits: 0 })}`
-                                        }
-                                    </span>
-                                </div>
-                            </div>
-                            {/* Progress Bar */}
-                            <div style={{
-                                width: '100%',
-                                height: '6px',
-                                background: 'var(--bg-secondary)',
+                                width: '10px',
+                                height: '10px',
                                 borderRadius: '3px',
-                                overflow: 'hidden'
-                            }}>
-                                <div style={{
-                                    width: `${percentage}%`,
-                                    height: '100%',
-                                    background: color,
-                                    borderRadius: '3px',
-                                    transition: 'width 0.4s ease'
-                                }} />
+                                background: item.color
+                            }} />
+                            <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{item.name}</span>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+                                {isPrivacyMode ? '****' : item.percent.toFixed(1) + '%'}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                {isPrivacyMode ? '****' : `${sym}${convert(item.value).toLocaleString('de-DE', { maximumFractionDigits: 0 })}`}
                             </div>
                         </div>
-                    );
-                })}
+                    </div>
+                ))}
             </div>
         </div>
     );

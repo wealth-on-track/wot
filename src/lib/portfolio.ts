@@ -24,7 +24,7 @@ export async function getPortfolioMetrics(assets: any[], customRates?: Record<st
 
         // 1. Pre-fetch Market Data for the entire batch
         const marketDataBatch = await getBatchMarketPrices(
-            batch.map((a: any) => ({ symbol: a.symbol, type: a.type, exchange: a.exchange })),
+            batch.map((a: any) => ({ symbol: a.symbol, type: a.type, exchange: a.exchange, category: a.category })),
             forceRefresh
         );
 
@@ -82,7 +82,7 @@ async function processAsset(asset: any, customRates: Record<string, number> | un
     let priceData = preFetchedPrice;
     if (!priceData) {
         // Fallback for non-batchable assets (like TEFAS) or failed batch items
-        priceData = await getMarketPrice(asset.symbol, asset.type, asset.exchange, forceRefresh, userId);
+        priceData = await getMarketPrice(asset.symbol, asset.type, asset.exchange, forceRefresh, userId, asset.category);
     }
 
     const previousClose = (asset.type === 'CASH' || asset.symbol === 'EUR') ? 1 : (priceData ? priceData.price : asset.buyPrice);

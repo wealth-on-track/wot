@@ -142,6 +142,17 @@ export const detectCurrency = (sym: string): string | null => {
 
     if (!sym) return null;
     const s = sym.toUpperCase();
+
+    // Explicit Suffix Rules (Crypto/Pairs)
+    if (s.endsWith('-EUR')) return 'EUR';
+    if (s.endsWith('-USD')) return 'USD';
+    if (s.endsWith('-TRY')) return 'TRY';
+    if (s.endsWith('-GBP')) return 'GBP';
+    if (s.endsWith('-CAD')) return 'CAD';
+    if (s.endsWith('-AUD')) return 'AUD';
+    if (s.endsWith('-JPY')) return 'JPY';
+    if (s.endsWith('-CHF')) return 'CHF';
+
     if (s.endsWith('.AS') || s.endsWith('.DE') || s.endsWith('.PA') || s.endsWith('.MI') || s.endsWith('.MC') || s.endsWith('.BR') || s.endsWith('.VI') || s.endsWith('.MA') || s.endsWith('.IR') || s.endsWith('.TR') || s.endsWith('.SW')) return 'EUR';
     if (s.endsWith('.L')) return 'GBP';
     if (s.endsWith('.TO') || s.endsWith('.V') || s.endsWith('.CN') || s.endsWith('.NE')) return 'CAD';
@@ -153,10 +164,9 @@ export const detectCurrency = (sym: string): string | null => {
     if (s.endsWith('.JO')) return 'ZAR';
     if (s.endsWith('.IS') || s.endsWith('TRY')) return 'TRY'; // BIST and GAUTRY, XAUTRY, etc.
 
-    // Default to USD for major US exchanges or no suffix
+    // Default to USD only for dotless tickers that don't look like pairs
     if (!s.includes('.')) return 'USD';
 
-    if (!s.includes('.')) return 'USD';
     return null;
 };
 

@@ -17,7 +17,7 @@ interface SettingsPageProps {
     };
 }
 
-export function SettingsPage({ userEmail, preferences }: SettingsPageProps) {
+export function SettingsPage({ userEmail, preferences, onBack }: SettingsPageProps & { onBack?: () => void }) {
     const router = useRouter();
     const { currency, setCurrency } = useCurrency();
     const { language, setLanguage } = useLanguage();
@@ -224,7 +224,7 @@ export function SettingsPage({ userEmail, preferences }: SettingsPageProps) {
                     zIndex: 10
                 }}>
                     <button
-                        onClick={() => router.back()}
+                        onClick={() => onBack ? onBack() : router.back()}
                         className="navbar-btn"
                         style={{
                             cursor: 'pointer',

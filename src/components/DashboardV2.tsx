@@ -1944,9 +1944,8 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                             onTogglePortfolio={() => setIsPortfolioVisible(!isPortfolioVisible)}
                             onSaveBenchmarks={saveBenchmarks}
                             defaultRange={preferences?.chartRange}
-                            onPeriodChange={(period) => {
+                            onPeriodChange={() => {
                                 // Sync with dashboard time period if needed
-                                console.log('Period changed to:', period);
                             }}
                         />
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 interface AutocompleteInputProps {
     value: string;
@@ -22,24 +22,20 @@ export function AutocompleteInput({
     labelStyle
 }: AutocompleteInputProps) {
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        if (!value || value.length === 0) {
-            setFilteredSuggestions([]);
-            setShowSuggestions(false);
-            return;
-        }
-
-        // Filter suggestions that start with the current value (case insensitive)
-        const filtered = suggestions.filter(s =>
+    // Use useMemo instead of useEffect + setState to avoid cascading renders
+    const filteredSuggestions = useMemo(() => {
+        if (!value || value.length === 0) return [];
+        return suggestions.filter(s =>
             s.toLowerCase().startsWith(value.toLowerCase())
         );
-
-        setFilteredSuggestions(filtered);
-        setShowSuggestions(filtered.length > 0 && filtered[0].toLowerCase() !== value.toLowerCase());
     }, [value, suggestions]);
+
+    // Control visibility based on filtered results
+    const shouldShowSuggestions = showSuggestions &&
+        filteredSuggestions.length > 0 &&
+        filteredSuggestions[0].toLowerCase() !== value.toLowerCase();
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -77,7 +73,7 @@ export function AutocompleteInput({
                 autoComplete="off"
             />
 
-            {showSuggestions && filteredSuggestions.length > 0 && (
+            {shouldShowSuggestions && (
                 <div style={{
                     position: 'absolute',
                     top: '100%',

@@ -1,20 +1,53 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { memo, useState, useMemo, useCallback } from "react";
 import type { AssetDisplay } from "@/lib/types";
+import {
+    motion,
+    useMotionValue,
+    useTransform,
+    PanInfo,
+    AnimatePresence
+} from "framer-motion";
+import { Plus, Trash2, Edit2, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 interface MobileAssetCardProps {
     asset: AssetDisplay;
     currency: string;
     onEdit: (asset: AssetDisplay) => void;
     isPrivacyMode?: boolean;
-    timeHorizon?: string;
+    totalPortfolioValue?: number;
+    isCompactMode?: boolean;
+    isTopList?: boolean;
+    timeHorizon?: '1D' | '1W' | '1M' | 'YTD' | '1Y' | 'ALL';
+    highlightId?: string | null;
 }
 
-export function MobileAssetCard({ asset, currency, onEdit, isPrivacyMode, timeHorizon = 'ALL' }: MobileAssetCardProps) {
-    const [expanded, setExpanded] = useState(false);
+export const MobileAssetCard = memo(function MobileAssetCard({
+    asset,
+    currency,
+    onEdit,
+    isPrivacyMode,
+    totalPortfolioValue = 0,
+    isCompactMode = false,
+    isTopList = false,
+    timeHorizon = '1D', // Default to 1D if not passed
+    highlightId
+}: MobileAssetCardProps) {
+    // --- State & Motion ---
+    const x = useMotionValue(0);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
 
+    const isHighlighted = highlightId === asset.symbol;
+
+    // Background Opacity/Scale based on drag
+    const leftOpacity = useTransform(x, [0, 50], [0, 1]);
+    const rightOpacity = useTransform(x, [-50, 0], [1, 0]);
+
+    const SWIPE_THRESHOLD = 80;
+
+    // --- Currency Conversion ---
     const rates: Record<string, number> = { EUR: 1, USD: 1.05, TRY: 38.5 };
     const symbols: Record<string, string> = { EUR: "€", USD: "$", TRY: "₺" };
 
@@ -28,279 +61,355 @@ export function MobileAssetCard({ asset, currency, onEdit, isPrivacyMode, timeHo
     const displayCurrency = currency === 'ORG' ? (asset.currency || 'EUR') : currency;
     const displaySymbol = symbols[displayCurrency] || displayCurrency;
 
-    const currentPrice = asset.currentPrice || asset.buyPrice;
-    const totalValue = convert(currentPrice * asset.quantity, asset.currency || 'EUR');
-    const totalCost = convert(asset.buyPrice * asset.quantity, asset.currency || 'EUR');
+    // --- Values & Calcs ---
+    const currentPrice = asset.currentPrice || asset.buyPrice || 0;
+    const totalCost = asset.buyPrice * asset.quantity;
 
-    // P&L calculation based on time horizon (mock for now)
-    const plFactors: Record<string, number> = {
-        '1D': 0.2,
-        '1W': 0.4,
-        '1M': 0.6,
-        'YTD': 0.8,
-        '1Y': 0.9,
-        'ALL': 1.0
+    const displayTotalValue = convert(asset.totalValueEUR, 'EUR');
+    const displayTotalCost = convert(totalCost, asset.currency);
+    const displayBuyPrice = convert(asset.buyPrice, asset.currency);
+    const displayCurrentPrice = convert(currentPrice, asset.currency);
+
+    // Smart Format Helper
+    const smartFmt = (val: number) => {
+        // If value >= 100, no decimals. Else 2 decimals.
+        // Matches user rule: "2 digits use (small numbers), 3 digits don't (large numbers)"
+        const digits = val >= 100 ? 0 : 2;
+        return val.toLocaleString('de-DE', { minimumFractionDigits: digits, maximumFractionDigits: digits });
     };
-    const factor = plFactors[timeHorizon] || 1.0;
-    const pl = (totalValue - totalCost) * factor;
-    const plPct = totalCost > 0 ? (pl / totalCost) * 100 : 0;
-    const isPositive = pl >= 0;
 
-    // Get logo URL
+    // Calculate P&L based on Time Horizon
+    // Note: In a real app, historical data would be needed. 
+    // Here we simulate different returns or use available data properties.
+    // 1D = Based on previousClose
+    // ALL = Based on Cost Basis (Total P&L)
+    // Others = Simulation for UI demo as per request context "mock if needed"
+    const pnlData = useMemo(() => {
+        const d_1d = currentPrice - (asset.previousClose || currentPrice);
+        const p_1d = asset.previousClose > 0 ? (d_1d / asset.previousClose) * 100 : 0;
+
+        const totalPL = displayTotalValue - displayTotalCost;
+        const totalPLPct = displayTotalCost > 0 ? (totalPL / displayTotalCost) * 100 : 0;
+
+        // Simulation/Hashing for stable demo values for other periods
+        const seed = asset.symbol.length + asset.quantity;
+        const randomFactor = (seed % 10) / 10; // 0.0 - 0.9
+
+        let pct = 0;
+        let val = 0; // Value change is harder to calc without history price, but we focus on % display request
+
+        switch (timeHorizon) {
+            case '1D':
+                pct = p_1d;
+                break;
+            case 'ALL':
+                pct = totalPLPct;
+                break;
+            case '1W':
+                // Sim: usually a bit more than 1D
+                pct = p_1d * (1 + randomFactor);
+                break;
+            case '1M':
+                pct = p_1d * (2 + randomFactor); // Demo
+                break;
+            case 'YTD':
+            case '1Y':
+                pct = totalPLPct * 0.8; // Assume some accumulation
+                break;
+            default:
+                pct = p_1d;
+        }
+
+        return { pct, isPositive: pct >= 0 };
+    }, [timeHorizon, currentPrice, asset.previousClose, displayTotalValue, displayTotalCost, asset.symbol, asset.quantity]);
+
+    const changePct = pnlData.pct;
+    const isPositive = pnlData.isPositive;
+
+    const navVibrate = () => {
+        if (typeof window !== 'undefined' && window.navigator?.vibrate) {
+            window.navigator.vibrate(10);
+        }
+    };
+
+    const handleDragEnd = (event: any, info: PanInfo) => {
+        setIsDragging(false);
+        const offset = info.offset.x;
+
+        if (offset > SWIPE_THRESHOLD) {
+            navVibrate();
+            onEdit(asset);
+        } else if (offset < -SWIPE_THRESHOLD) {
+            navVibrate();
+        }
+    };
+
+    // Weight Calculation (kept for logic if needed elsewhere, but removed from UI)
+    const weight = (totalPortfolioValue > 0 && asset.totalValueEUR)
+        ? (asset.totalValueEUR / totalPortfolioValue) * 100
+        : 0;
+
     const logoUrl = asset.logoUrl || `https://logo.clearbit.com/${asset.symbol.toLowerCase()}.com`;
 
     return (
-        <div style={{
-            background: 'var(--surface)',
-            borderBottom: '1px solid var(--border)',
-            cursor: 'pointer',
-            transition: 'background 0.2s'
-        }}
-            onClick={() => setExpanded(!expanded)}
-        >
-            {/* Compact Row */}
+        <div style={{ position: 'relative', overflow: 'visible', marginBottom: isCompactMode ? '0' : '8px' }}>
+
+            {/* Background Actions Layer */}
             <div style={{
-                display: 'grid',
-                gridTemplateColumns: '38px 1fr 60px 65px 55px',
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '10px 12px'
+                padding: '0 20px',
+                background: x.get() > 0 ? 'var(--success)' : 'var(--danger)',
+                borderRadius: '16px',
+                zIndex: 0,
+                opacity: isDragging ? 1 : 0
             }}>
-                {/* Logo */}
-                <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    background: 'var(--bg-secondary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.9rem',
-                    fontWeight: 700,
-                    color: 'var(--text-primary)',
-                    overflow: 'hidden',
-                    flexShrink: 0
-                }}>
-                    {asset.logoUrl ? (
-                        <img
-                            src={logoUrl}
-                            alt={asset.symbol}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.parentElement!.textContent = asset.symbol.substring(0, 1);
-                            }}
-                        />
-                    ) : (
-                        asset.symbol.substring(0, 1)
-                    )}
-                </div>
-
-                {/* Name & Symbol */}
-                <div style={{ minWidth: 0 }}>
-                    <div style={{
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        color: 'var(--text-primary)',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        lineHeight: 1.2
-                    }}>
-                        {asset.name}
-                    </div>
-                    <div style={{
-                        fontSize: '0.65rem',
-                        fontWeight: 500,
-                        color: 'var(--text-secondary)',
-                        marginTop: '2px'
-                    }}>
-                        {asset.symbol}
-                    </div>
-                </div>
-
-                {/* Price */}
-                <div style={{ textAlign: 'right' }}>
-                    <div style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        color: 'var(--text-primary)',
-                        lineHeight: 1
-                    }}>
-                        {symbols[asset.currency || 'EUR']}{currentPrice.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                    </div>
-                </div>
-
-                {/* Value */}
-                <div style={{ textAlign: 'right' }}>
-                    <div style={{
-                        fontSize: '0.8rem',
-                        fontWeight: 800,
-                        color: 'var(--text-primary)',
-                        fontVariantNumeric: 'tabular-nums',
-                        lineHeight: 1
-                    }}>
-                        {isPrivacyMode ? '****' : `${displaySymbol}${totalValue.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`}
-                    </div>
-                </div>
-
-                {/* P&L Badge */}
-                <div style={{ textAlign: 'right' }}>
-                    {asset.type !== 'CASH' && (
-                        <div style={{
-                            background: isPositive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                            color: isPositive ? '#10b981' : '#ef4444',
-                            padding: '3px 5px',
-                            borderRadius: '5px',
-                            fontSize: '0.68rem',
-                            fontWeight: 700,
-                            display: 'inline-block',
-                            minWidth: '48px',
-                            textAlign: 'center',
-                            lineHeight: 1
-                        }}>
-                            {isPositive ? '+' : ''}{plPct.toFixed(1)}%
-                        </div>
-                    )}
-                </div>
+                <motion.div style={{ opacity: leftOpacity, color: '#fff' }}>
+                    <Plus size={24} strokeWidth={3} />
+                </motion.div>
+                <motion.div style={{ opacity: rightOpacity, marginLeft: 'auto', color: '#fff' }}>
+                    <Trash2 size={24} strokeWidth={3} />
+                </motion.div>
             </div>
 
-            {/* Expanded Details */}
-            {expanded && (
-                <div style={{
-                    background: 'linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%)',
-                    borderTop: '1px solid var(--border)',
-                    padding: '16px',
-                    animation: 'fadeIn 0.2s ease-out'
+            {/* Foreground Card */}
+            <motion.div
+                drag={isExpanded ? false : "x"}
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.2}
+                onDragStart={() => setIsDragging(true)}
+                onDragEnd={handleDragEnd}
+                onClick={() => setIsExpanded(!isExpanded)}
+                initial={false}
+                animate={{
+                    height: 'auto',
+                    marginBottom: isExpanded ? 16 : 0,
+                    // Highlight Animation Sequence
+                    borderColor: isHighlighted
+                        ? ["var(--border)", "var(--accent)", "var(--border)", "var(--accent)", "var(--border)", "var(--accent)", "var(--border)"]
+                        : "var(--border)",
+                    boxShadow: isHighlighted
+                        ? ["none", "0 0 0 4px rgba(99, 102, 241, 0.3)", "none", "0 0 0 4px rgba(99, 102, 241, 0.3)", "none", "0 0 0 4px rgba(99, 102, 241, 0.3)", "none"]
+                        : "none",
+                    backgroundColor: isExpanded ? "var(--bg-secondary)" : "var(--surface)"
                 }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {/* Stats Grid */}
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
-                        gap: '12px',
-                        marginBottom: '12px'
-                    }}>
-                        {/* Holdings */}
+                transition={{
+                    duration: isHighlighted ? 1.5 : 0.2, // Longer duration for the 3 flashes
+                    ease: "easeInOut",
+                    times: isHighlighted ? [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1] : undefined // Evenly timed flashes
+                }}
+                style={{
+                    x,
+                    padding: isCompactMode ? '10px 14px' : '16px',
+                    borderRadius: '16px',
+                    border: '1px solid var(--border)', // Default, overridden by animate
+                    position: 'relative',
+                    zIndex: isExpanded ? 20 : 10,
+                    cursor: 'pointer',
+                    touchAction: 'pan-y',
+                    overflow: 'hidden'
+                }}
+                whileTap={{ scale: 0.995 }}
+            >
+                {/* Main Content Row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: isCompactMode ? '12px' : '16px', justifyContent: 'space-between' }}>
+
+                    {/* LEFT SECTION */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isCompactMode ? '12px' : '16px', flex: 1, minWidth: 0 }}>
+                        {/* Logo */}
                         <div style={{
-                            background: 'var(--bg-primary)',
-                            padding: '12px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--border)'
+                            width: isCompactMode ? '36px' : '48px',
+                            height: isCompactMode ? '36px' : '48px',
+                            borderRadius: '12px',
+                            background: 'var(--bg-secondary)',
+                            overflow: 'hidden',
+                            border: '1px solid rgba(0,0,0,0.05)',
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
                         }}>
-                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, letterSpacing: '0.05em' }}>
-                                HOLDINGS
-                            </div>
-                            <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 700 }}>
-                                {asset.quantity.toLocaleString()}
-                            </div>
+                            {asset.logoUrl ? (
+                                <img
+                                    src={logoUrl}
+                                    alt={asset.symbol}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.parentElement!.textContent = asset.symbol.slice(0, 1);
+                                    }}
+                                />
+                            ) : (
+                                <span style={{ fontWeight: 800 }}>{asset.symbol[0]}</span>
+                            )}
                         </div>
 
-                        {/* Avg Cost */}
-                        <div style={{
-                            background: 'var(--bg-primary)',
-                            padding: '12px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--border)'
-                        }}>
-                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, letterSpacing: '0.05em' }}>
-                                AVG COST
+                        {/* Text Info - Updated Order: Name Top, Ticker+Price Bottom */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: isCompactMode ? '0px' : '2px', minWidth: 0 }}>
+                            {/* Row 1: Asset Name */}
+                            <div style={{
+                                fontSize: isCompactMode ? '0.9rem' : '1rem',
+                                fontWeight: 700,
+                                color: 'var(--text-primary)',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                maxWidth: '100%', // Allow flex to handle width
+                                lineHeight: 1.2
+                            }}>
+                                {asset.name}
                             </div>
-                            <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 700 }}>
-                                {asset.buyPrice.toLocaleString()} {asset.currency}
-                            </div>
-                        </div>
 
-                        {/* Total Cost */}
-                        <div style={{
-                            background: 'var(--bg-primary)',
-                            padding: '12px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--border)'
-                        }}>
-                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, letterSpacing: '0.05em' }}>
-                                TOTAL COST
-                            </div>
-                            <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 700 }}>
-                                {totalCost.toLocaleString('de-DE', { maximumFractionDigits: 0 })} {displaySymbol}
-                            </div>
-                        </div>
+                            {/* Row 2: Ticker & Price */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{
+                                    fontSize: isCompactMode ? '0.75rem' : '0.8rem',
+                                    color: 'var(--text-muted)',
+                                    fontWeight: 600
+                                }}>
+                                    {asset.symbol}
+                                </span>
 
-                        {/* Total Value */}
-                        <div style={{
-                            background: 'var(--bg-primary)',
-                            padding: '12px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--border)'
-                        }}>
-                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, letterSpacing: '0.05em' }}>
-                                TOTAL VALUE
-                            </div>
-                            <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 700 }}>
-                                {totalValue.toLocaleString('de-DE', { maximumFractionDigits: 0 })} {displaySymbol}
+                                {/* Separator */}
+                                <span style={{ color: 'var(--border)', fontSize: '0.8rem' }}>|</span>
+
+                                {/* Current Price */}
+                                <span style={{
+                                    fontSize: isCompactMode ? '0.75rem' : '0.8rem',
+                                    color: 'var(--text-muted)', // Match ticker color
+                                    fontWeight: 600
+                                }}>
+                                    {`${displaySymbol}${smartFmt(displayCurrentPrice)}`}
+                                </span>
                             </div>
                         </div>
                     </div>
 
-                    {/* P&L Breakdown */}
-                    <div style={{
-                        background: isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                        border: `1px solid ${isPositive ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                        borderRadius: '10px',
-                        padding: '12px',
-                        marginBottom: '12px'
-                    }}>
+
+                    {/* RIGHT SECTION: Price & Change */}
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: isCompactMode ? '2px' : '4px' }}>
+
+                        {/* Value - Applied smartFmt here as well for consistency */}
                         <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
+                            fontSize: isCompactMode ? '0.95rem' : '1.1rem',
+                            fontWeight: isCompactMode ? 600 : 800,
+                            color: 'var(--text-primary)',
+                            fontVariantNumeric: 'tabular-nums',
+                            letterSpacing: '-0.02em'
                         }}>
-                            <div>
-                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, letterSpacing: '0.05em' }}>
-                                    P&L ({timeHorizon})
-                                </div>
-                                <div style={{
-                                    fontSize: '1.1rem',
-                                    fontWeight: 900,
+                            {isPrivacyMode ? '****' : `${displaySymbol}${smartFmt(displayTotalValue)}`}
+                        </div>
+
+                        {/* Change Display - Dynamic based on Time Horizon */}
+                        {isCompactMode ? (
+                            // Compact
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '2px',
+                                color: isPositive ? 'var(--success)' : 'var(--danger)',
+                                fontSize: '0.75rem',
+                                fontWeight: 700
+                            }}>
+                                {isPositive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                                <span>{Math.abs(changePct).toFixed(0)}%</span>
+                            </div>
+                        ) : (
+                            // Standard Pill
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                background: isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                padding: '2px 6px',
+                                borderRadius: '6px'
+                            }}>
+                                {isPositive ? <TrendingUp size={12} color="#10b981" /> : <TrendingDown size={12} color="#ef4444" />}
+                                <span style={{
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
                                     color: isPositive ? '#10b981' : '#ef4444'
                                 }}>
-                                    {isPositive ? '+' : ''}{pl.toLocaleString('de-DE', { maximumFractionDigits: 0 })} {displaySymbol}
-                                </div>
+                                    {Math.abs(changePct).toFixed(0)}%
+                                </span>
                             </div>
-                            <div style={{
-                                fontSize: '1.5rem',
-                                fontWeight: 900,
-                                color: isPositive ? '#10b981' : '#ef4444'
-                            }}>
-                                {isPositive ? '+' : ''}{plPct.toFixed(2)}%
-                            </div>
-                        </div>
+                        )}
                     </div>
-
-                    {/* Edit Button */}
-                    <button
-                        onClick={() => onEdit(asset)}
-                        style={{
-                            width: '100%',
-                            padding: '12px',
-                            background: 'var(--accent)',
-                            border: 'none',
-                            borderRadius: '10px',
-                            color: '#fff',
-                            fontWeight: 700,
-                            fontSize: '0.85rem',
-                            cursor: 'pointer',
-                            transition: 'opacity 0.2s',
-                            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)'
-                        }}
-                        onMouseDown={(e) => e.currentTarget.style.opacity = '0.8'}
-                        onMouseUp={(e) => e.currentTarget.style.opacity = '1'}
-                    >
-                        Edit Position
-                    </button>
                 </div>
-            )}
+
+                {/* EXPANDABLE PANEL (Quick Stats) */}
+                <AnimatePresence>
+                    {isExpanded && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: "easeInOut" }}
+                            style={{ overflow: 'hidden' }}
+                        >
+                            <div style={{
+                                borderTop: '1px dashed var(--border)',
+                                marginTop: '12px',
+                                paddingTop: '12px',
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr 1fr 40px',
+                                gap: '8px',
+                                alignItems: 'center'
+                            }}>
+                                {/* Holdings (Larger space, Left Align) */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>HOLDINGS</span>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                                        {asset.quantity.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                                    </span>
+                                </div>
+
+                                {/* Avg Cost (Center Align for Balance) */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center', textAlign: 'center' }}>
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>AVG COST</span>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                                        {isPrivacyMode ? '****' : `${displaySymbol}${smartFmt(displayBuyPrice)}`}
+                                    </span>
+                                </div>
+
+                                {/* Total Cost (Right Align) */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end', textAlign: 'right' }}>
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>TOTAL COST</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                                            {isPrivacyMode ? '****' : `${displaySymbol}${smartFmt(displayTotalCost)}`}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Quick Edit Shortcut */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onEdit(asset);
+                                    }}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        padding: '0',
+                                        height: '100%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'flex-end',
+                                        cursor: 'pointer',
+                                        color: 'var(--text-secondary)'
+                                    }}
+                                >
+                                    <Edit2 size={18} />
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </motion.div>
         </div>
     );
-}
+});

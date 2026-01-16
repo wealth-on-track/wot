@@ -8,7 +8,6 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { handleSignOut } from "@/lib/authActions";
 import { LogOut, User, Eye, EyeOff } from "lucide-react";
 
-import { MobileStories } from "./MobileStories";
 import type { AssetDisplay } from "@/lib/types";
 
 interface MobileHeaderProps {
@@ -166,14 +165,6 @@ export function MobileHeader({
             {/* Controls */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
 
-                {/* Stories Trigger (New) */}
-                <MobileStories
-                    assets={assets}
-                    totalValueEUR={totalValueEUR}
-                    username={username}
-                    onNavigate={onNavigate}
-                />
-
                 {/* Privacy Toggle */}
                 <button
                     onClick={onTogglePrivacy}
@@ -217,11 +208,14 @@ export function MobileHeader({
                 {isOwner ? (
                     <>
                         {/* User Profile / Settings */}
-                        <Link href="/settings" style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}>
+                        <div
+                            onClick={() => onNavigate && onNavigate('settings')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer'
+                            }}>
                             <div
                                 style={{
                                     background: 'transparent',
@@ -238,7 +232,7 @@ export function MobileHeader({
                             >
                                 <User size={18} />
                             </div>
-                        </Link>
+                        </div>
 
                         {/* Logout */}
                         <button

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MobileAssetList } from "./MobileAssetList";
 import { PortfolioPerformanceChart } from "../PortfolioPerformanceChart";
-import { MobileHomeAllocations } from "./MobilePortfolioSummary";
+import { MobileAllocationPie } from "./MobileAllocationPie";
 import type { AssetDisplay } from "@/lib/types";
 
 interface MobileDashboardTabsProps {
@@ -99,7 +99,7 @@ export function MobileDashboardTabs({
                 )}
 
                 {activeTab === 'allocation' && (
-                    <MobileHomeAllocations
+                    <MobileAllocationPie
                         assets={assets}
                         totalValueEUR={totalValueEUR}
                         isPrivacyMode={isPrivacyMode}

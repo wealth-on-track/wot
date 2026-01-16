@@ -304,7 +304,6 @@ export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetMod
                 {step === 2 && (
                     /* STEP 2: FORM - REDESIGNED 3-COLUMN LAYOUT */
                     <>
-                        {console.log('🔥 MODAL VERSION: 3-COLUMN REDESIGN v2.0 - JAN 9 2026')}
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
                             {/* Type Indicator - Compact */}

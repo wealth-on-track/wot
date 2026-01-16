@@ -211,15 +211,11 @@ export function InlineAssetSearch() {
                 if (data) {
                     setMarketData(data);
 
-                    // NEW: Enrich Metadata (Sector/Country) if missing
-                    // This fixes the issue where EU stocks show as "UNKNOWN" sector
-                    // because the lightweight search API didn't have the data, but the Quote API does.
+                    // Enrich Metadata (Sector/Country) if missing from search API
                     if (data.sector && data.sector !== 'N/A' && (!sector || sector === 'UNKNOWN')) {
-                        console.log(`[InlineSearch] Enriching Sector: ${sector} -> ${data.sector}`);
                         setSector(data.sector);
                     }
                     if (data.country && data.country !== 'N/A' && (!country || country === 'UNKNOWN')) {
-                        console.log(`[InlineSearch] Enriching Country: ${country} -> ${data.country}`);
                         setCountry(data.country);
                     }
 
@@ -295,15 +291,12 @@ export function InlineAssetSearch() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('[DEBUG] handleSubmit triggered');
 
         if (!selectedSymbol) {
-            console.error('[DEBUG] No selectedSymbol');
             return;
         }
 
         try {
-            console.log('[DEBUG] handleSubmit - State values:', { sector, country, selectedSymbol, quantity, buyPrice });
 
             const formData = new FormData();
             formData.append('symbol', selectedSymbol.symbol);
@@ -332,14 +325,11 @@ export function InlineAssetSearch() {
             formData.append('country', country || 'UNKNOWN');
 
             // Add original name from search result
-            console.log('[DEBUG] selectedSymbol.fullName:', selectedSymbol.fullName);
             if (selectedSymbol.fullName) {
                 formData.append('originalName', selectedSymbol.fullName);
             }
 
-            console.log('[DEBUG] FormData prepared, calling addAsset');
             const result = await addAsset(undefined, formData);
-            console.log('[DEBUG] addAsset result:', result);
 
             if (result === 'success') {
                 // Reset form

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { InlineAssetSearch } from "./InlineAssetSearch";
-import { CurrencySelector } from "./CurrencySelector";
+
 import { ThemeToggle } from "./ThemeToggle";
-import { LanguageToggle } from "./LanguageToggle";
+
 import { NavbarActions } from "./NavbarActions";
 import { User, ShieldCheck } from "lucide-react";
 
@@ -206,8 +206,7 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                             )}
 
                         {/* Global Toggles (Always Visible) */}
-                        <CurrencySelector />
-                        <LanguageToggle />
+
                         <ThemeToggle />
 
                         {session?.user ? (

@@ -7,6 +7,14 @@ import { LanguageProvider } from "@/context/LanguageContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false, // Prevents pinch-zoom
+  themeColor: "#000000",
+};
+
 export const metadata: Metadata = {
   title: process.env.NODE_ENV === 'development' ? "WOT (Local)" : "WOT - Wealth on Track!",
   description: "Your wealth, finally on track.",
