@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { MobileClientWrapper } from "@/components/mobile/MobileClientWrapper";
 import { getPortfolioMetricsOptimized } from "@/lib/portfolio-optimized";
@@ -41,6 +41,14 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
 
     const isOwner = session?.user?.email === user.email;
 
+    // SECURITY: Prevent unauthorized access to private portfolios
+    // Only allow access if user is viewing their own portfolio
+    // Exception: demo portfolio is publicly accessible
+    if (!isOwner && decodedUsername.toLowerCase() !== 'demo') {
+        // User is trying to view someone else's portfolio - redirect to login
+        redirect('/login');
+    }
+
     // Fetch dynamic rates
     const rates = await getExchangeRates();
 
@@ -69,7 +77,7 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
     }
 
     // "Next Threshold" Goal Logic - Run in background (don't block page load)
-    import("@/lib/goalUtils").then(m => m.ensureThresholdGoal(user.portfolio!.id, totalPortfolioValueEUR)).catch(() => {});
+    import("@/lib/goalUtils").then(m => m.ensureThresholdGoal(user.portfolio!.id, totalPortfolioValueEUR)).catch(() => { });
 
     // Use goals from initial query (already fetched)
     const displayedGoals = user.portfolio.goals;

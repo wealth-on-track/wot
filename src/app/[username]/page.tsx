@@ -57,6 +57,14 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
     const isOwner = session?.user?.email === user.email;
 
+    // SECURITY: Prevent unauthorized access to private portfolios
+    // Only allow access if user is viewing their own portfolio
+    // Exception: demo portfolio is publicly accessible
+    if (!isOwner && decodedUsername.toLowerCase() !== 'demo') {
+        // User is trying to view someone else's portfolio - redirect to login
+        redirect('/login');
+    }
+
     // Fetch dynamic rates
     const rates = await getExchangeRates();
 
@@ -86,7 +94,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
     // "Next Threshold" Goal Logic - Run in background (don't block page load)
     // Fire-and-forget: ensureThresholdGoal updates DB, next page load will show updated goals
-    import("@/lib/goalUtils").then(m => m.ensureThresholdGoal(user.portfolio!.id, totalPortfolioValueEUR)).catch(() => {});
+    import("@/lib/goalUtils").then(m => m.ensureThresholdGoal(user.portfolio!.id, totalPortfolioValueEUR)).catch(() => { });
 
     // Use goals from initial query (already fetched with user.portfolio.goals)
     const displayedGoals = user.portfolio.goals;
