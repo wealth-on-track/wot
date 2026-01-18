@@ -61,6 +61,7 @@ model Goal {
   portfolio     Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
 }
 
+
 enum AssetCategory {
   BIST
   TEFAS
@@ -235,3 +236,5 @@ model AssetTransaction {
   @@index([portfolioId, type])
   @@unique([portfolioId, externalId]) // Prevent duplicate imports
 }
+
+// Insights model removed for rollback

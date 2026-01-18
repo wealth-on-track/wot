@@ -1,21 +1,58 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, Layers, History, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
 import { getClosedPositions, ClosedPosition } from "@/app/actions/history";
 import { useCurrency } from "@/context/CurrencyContext";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown, ChevronRight, ArrowRight } from "lucide-react";
+import type { AssetDisplay } from "@/lib/types";
 
-export function MobileClosedPositions() {
-    const [isOpen, setIsOpen] = useState(false);
+interface MobileClosedPositionsProps {
+    assets?: AssetDisplay[];
+}
+
+export function MobileClosedPositions({ assets = [] }: MobileClosedPositionsProps) {
     const [positions, setPositions] = useState<ClosedPosition[]>([]);
     const [loading, setLoading] = useState(false);
-    const { currency } = useCurrency(); // Keep context if needed for other things, but formatCurrency is missing
+    const [expandedId, setExpandedId] = useState<string | null>(null);
 
-    const formatCurrency = (val: number) => new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' }).format(val);
+    // Determine locale based on currency for proper formatting
+    const getLocale = (curr: string) => {
+        switch (curr) {
+            case 'TRY': return 'tr-TR';
+            case 'USD': return 'en-US';
+            case 'EUR': return 'de-DE';
+            default: return 'en-US';
+        }
+    };
 
-    // Fetch on mount or when opened to save data? 
-    // Let's fetch on mount so we can show the count in the header.
+    const formatCurrency = (val: number, posCurrency: string) => {
+        return new Intl.NumberFormat(getLocale(posCurrency), {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(val);
+    };
+
+    const formatPrice = (val: number, posCurrency: string) => {
+        return new Intl.NumberFormat(getLocale(posCurrency), {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(val);
+    };
+
+    const formatDate = (date: Date) => {
+        const d = new Date(date);
+        const day = d.getDate().toString().padStart(2, '0');
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}.${month}.${year}`;
+    };
+
+    const getSymbol = (code: string) => {
+        const symbols: Record<string, string> = { 'EUR': '€', 'USD': '$', 'TRY': '₺', 'GBP': '£' };
+        return symbols[code] || code;
+    }
+
     useEffect(() => {
         setLoading(true);
         getClosedPositions()
@@ -23,183 +60,171 @@ export function MobileClosedPositions() {
             .finally(() => setLoading(false));
     }, []);
 
-    // Calculate Summary
-    const totalRealizedPnl = positions.reduce((acc, p) => acc + (p.realizedPnl || 0), 0);
-    const totalCount = positions.length;
-
-    if (loading && positions.length === 0) {
-        return <div style={{ padding: '1rem', textAlign: 'center', opacity: 0.5 }}>Loading history...</div>;
+    if (loading) {
+        return (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                Loading closed positions...
+            </div>
+        );
     }
 
-    if (positions.length === 0) return null;
+    if (positions.length === 0) {
+        return (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No closed positions found.
+            </div>
+        );
+    }
+
+    const toggleExpand = (id: string) => {
+        setExpandedId(expandedId === id ? null : id);
+    };
 
     return (
-        <div style={{
-            marginTop: '1.5rem',
-            marginBottom: '2rem',
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: '24px',
-            overflow: 'hidden',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.02)'
-        }}>
-            {/* Header / Toggle */}
-            <div
-                onClick={() => setIsOpen(!isOpen)}
-                style={{
-                    padding: '1.25rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    cursor: 'pointer',
-                    background: isOpen ? 'var(--bg-secondary)' : 'transparent',
-                    transition: 'background 0.2s'
-                }}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#fff',
-                        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-                    }}>
-                        <Layers size={20} />
-                    </div>
-                    <div>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '2px' }}>
-                            Closed Positions
-                        </h3>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                {totalCount} positions
-                            </span>
-                            <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>•</span>
-                            <span style={{
-                                fontSize: '0.8rem',
-                                color: totalRealizedPnl >= 0 ? '#10b981' : '#ef4444',
-                                fontWeight: 600
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', paddingBottom: '20px' }}>
+            {positions.map((pos, idx) => {
+                const uniqueId = `${pos.symbol}-${idx}`;
+                const pnl = pos.realizedPnl || 0;
+                const totalCost = pos.totalInvested || 1;
+                const pnlPercent = (pnl / totalCost) * 100;
+                const isProfit = pnl >= 0;
+                const sym = getSymbol(pos.currency);
+                const isExpanded = expandedId === uniqueId;
+
+                // Attempt to find current price from passed assets
+                const activeAsset = assets.find(a => a.symbol === pos.symbol);
+                const currentPrice = activeAsset ? (activeAsset.currentPrice || activeAsset.buyPrice) : null;
+
+                return (
+                    <div key={uniqueId} style={{ background: 'var(--surface)', borderRadius: '0' }}>
+                        <div
+                            onClick={() => toggleExpand(uniqueId)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '4px 8px', // Ultra compact
+                                borderBottom: '1px solid var(--border)',
+                                cursor: 'pointer',
+                                height: '40px', // Fixed small height
+                                gap: '8px'
+                            }}
+                        >
+                            {/* 1. Logo (Tiny) */}
+                            <div style={{
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '4px',
+                                background: 'var(--bg-secondary)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '0.6rem',
+                                fontWeight: 800,
+                                color: 'var(--text-secondary)',
+                                flexShrink: 0
                             }}>
-                                {totalRealizedPnl >= 0 ? '+' : ''}{formatCurrency(totalRealizedPnl)} Total P&L
-                            </span>
-                        </div>
-                    </div>
-                </div>
+                                {pos.symbol.substring(0, 1)}
+                            </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    {/* Source Badge */}
-                    <div style={{
-                        padding: '4px 8px',
-                        background: 'rgba(59, 130, 246, 0.1)',
-                        borderRadius: '6px',
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        color: '#3b82f6',
-                        letterSpacing: '0.05em',
-                        textTransform: 'uppercase'
-                    }}>
-                        Source: DeGiro
-                    </div>
-
-                    {isOpen ? <ChevronUp size={20} color="var(--text-secondary)" /> : <ChevronDown size={20} color="var(--text-secondary)" />}
-                </div>
-            </div>
-
-            {/* Content */}
-            {isOpen && (
-                <div style={{ padding: '0 1rem 1rem 1rem' }}>
-                    <div style={{ height: '1px', background: 'var(--border)', marginBottom: '1rem', opacity: 0.5 }} />
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {positions.map((pos, idx) => {
-                            const pnl = pos.realizedPnl || 0;
-                            const isProfit = pnl >= 0;
-
-                            return (
-                                <div key={`${pos.symbol}-${idx}`} style={{
-                                    background: 'var(--bg-secondary)',
-                                    borderRadius: '16px',
-                                    padding: '1rem',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '12px'
-                                }}>
-                                    {/* Row 1: Header */}
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <div style={{
-                                                width: '32px', height: '32px', borderRadius: '50%',
-                                                background: 'var(--surface)',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-secondary)'
-                                            }}>
-                                                {pos.symbol.substring(0, 1)}
-                                            </div>
-                                            <div>
-                                                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                                                    {pos.name || pos.symbol}
-                                                </div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', gap: '6px' }}>
-                                                    <span>{pos.symbol}</span>
-                                                    <span>•</span>
-                                                    <span>{pos.transactionCount} txns</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{
-                                                fontSize: '1rem',
-                                                fontWeight: 800,
-                                                color: isProfit ? '#10b981' : '#ef4444'
-                                            }}>
-                                                {isProfit ? '+' : ''}{formatCurrency(pnl)}
-                                            </div>
-                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                                                Realized P&L
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Row 2: Stats Grid */}
-                                    <div style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: '1fr 1fr 1fr',
-                                        gap: '8px',
-                                        background: 'rgba(0,0,0,0.02)',
-                                        borderRadius: '10px',
-                                        padding: '8px'
-                                    }}>
-                                        <div>
-                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Bought</div>
-                                            <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{pos.totalQuantityBought.toFixed(2)}</div>
-                                        </div>
-                                        <div>
-                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Sold</div>
-                                            <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{pos.totalQuantitySold.toFixed(2)}</div>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Last Trade</div>
-                                            <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                                                {new Date(pos.lastTradeDate).toLocaleDateString()}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Row 3: Investment Details */}
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', padding: '0 4px' }}>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Invested: <b>{formatCurrency(pos.totalInvested)}</b></span>
-                                        <span style={{ color: 'var(--text-secondary)' }}>Sold For: <b>{formatCurrency(pos.totalRealized)}</b></span>
-                                    </div>
+                            {/* 2. Symbol & Truncated Name */}
+                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0px', overflow: 'hidden', flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                                        {pos.symbol}
+                                    </span>
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80px' }}>
+                                        {pos.name}
+                                    </span>
                                 </div>
-                            );
-                        })}
+                            </div>
+
+                            {/* 3. P&L % */}
+                            <span style={{
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                color: isProfit ? 'var(--success)' : 'var(--danger)',
+                                width: '45px',
+                                textAlign: 'right'
+                            }}>
+                                {isProfit ? '+' : ''}{Math.round(pnlPercent)}%
+                            </span>
+
+                            {/* 4. P&L Amount */}
+                            <span style={{
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                color: isProfit ? 'var(--success)' : 'var(--danger)',
+                                width: '55px',
+                                textAlign: 'right',
+                                fontFamily: 'var(--font-mono)'
+                            }}>
+                                {isProfit ? '+' : ''}{formatCurrency(pnl, pos.currency)}
+                            </span>
+
+                            {/* Chevron */}
+                            <div style={{ width: '12px', display: 'flex', justifyContent: 'center', opacity: 0.5 }}>
+                                {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            </div>
+                        </div>
+
+                        {/* EXPANDED DETAILS */}
+                        <AnimatePresence>
+                            {isExpanded && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    style={{ overflow: 'hidden', background: 'var(--bg-secondary)' }}
+                                >
+                                    <div style={{ padding: '8px 12px 12px 12px', fontSize: '0.7rem' }}>
+                                        {/* Summary Row */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid var(--border)' }}>
+                                            <div style={{ display: 'flex', gap: '12px' }}>
+                                                <span style={{ color: 'var(--text-secondary)' }}>Invested: <b style={{ color: 'var(--text-primary)' }}>{sym}{formatCurrency(pos.totalInvested, pos.currency)}</b></span>
+                                                <span style={{ color: 'var(--text-secondary)' }}>Sold: <b style={{ color: 'var(--text-primary)' }}>{sym}{formatCurrency(pos.totalRealized, pos.currency)}</b></span>
+                                            </div>
+
+                                            {currentPrice && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <span style={{ color: 'var(--text-secondary)' }}>Current Price:</span>
+                                                    <b style={{ color: 'var(--text-primary)' }}>{sym}{formatPrice(currentPrice, pos.currency)}</b>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Transactions - No Header */}
+                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                            <tbody>
+                                                {pos.transactions.map((tx, idx) => (
+                                                    <tr key={idx} style={{ color: 'var(--text-primary)', borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
+                                                        <td style={{
+                                                            padding: '3px 0',
+                                                            color: tx.type === 'BUY' ? '#10b981' : '#ef4444',
+                                                            fontWeight: 600,
+                                                            width: '30px'
+                                                        }}>
+                                                            {tx.type}
+                                                        </td>
+                                                        <td style={{ padding: '3px 0', textAlign: 'right', opacity: 0.8, fontFamily: 'var(--font-mono)' }}>
+                                                            {formatDate(tx.date)}
+                                                        </td>
+                                                        <td style={{ padding: '3px 0', textAlign: 'right', width: '40px' }}>
+                                                            {tx.quantity}
+                                                        </td>
+                                                        <td style={{ padding: '3px 0', textAlign: 'right', fontFamily: 'var(--font-mono)', width: '60px' }}>
+                                                            {formatPrice(tx.price, pos.currency)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
-                </div>
-            )}
+                );
+            })}
         </div>
     );
 }

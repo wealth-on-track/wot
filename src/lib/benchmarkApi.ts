@@ -30,38 +30,53 @@ export const BENCHMARK_ASSETS: BenchmarkAsset[] = [
  */
 export async function fetchBenchmarkData(
     symbol: string,
-    period: '1D' | '1W' | '1M' | 'YTD' | '1Y' | 'ALL'
+    period: '1D' | '1W' | '1M' | 'YTD' | '1Y' | 'ALL',
+    specificDate?: string // Optional: Force a specific date for 1D (YYYY-MM-DD)
 ): Promise<BenchmarkDataPoint[]> {
     try {
         // Calculate date range based on period
         const now = new Date();
         let startDate = new Date();
+        let endDate = new Date(); // Default to now
 
-        switch (period) {
-            case '1D':
-                startDate.setDate(now.getDate() - 1);
-                break;
-            case '1W':
-                startDate.setDate(now.getDate() - 7);
-                break;
-            case '1M':
-                startDate.setMonth(now.getMonth() - 1);
-                break;
-            case 'YTD':
-                startDate = new Date(now.getFullYear(), 0, 1);
-                break;
-            case '1Y':
-                startDate.setFullYear(now.getFullYear() - 1);
-                break;
-            case 'ALL':
-                startDate.setFullYear(now.getFullYear() - 5); // 5 years max
-                break;
+        if (specificDate && period === '1D') {
+            // Force specific date logic
+            startDate = new Date(specificDate);
+            startDate.setHours(0, 0, 0, 0);
+
+            endDate = new Date(specificDate);
+            endDate.setHours(23, 59, 59, 999);
+        } else {
+            switch (period) {
+                case '1D':
+                    startDate.setDate(now.getDate() - 1);
+                    break;
+                case '1W':
+                    startDate.setDate(now.getDate() - 7);
+                    break;
+                case '1M':
+                    startDate.setMonth(now.getMonth() - 1);
+                    break;
+                case 'YTD':
+                    startDate = new Date(now.getFullYear(), 0, 1);
+                    break;
+                case '1Y':
+                    startDate.setFullYear(now.getFullYear() - 1);
+                    break;
+                case 'ALL':
+                    startDate.setFullYear(now.getFullYear() - 5); // 5 years max
+                    break;
+            }
         }
 
         // Call our API endpoint with period parameter
-        const response = await fetch(
-            `/api/benchmark?symbol=${encodeURIComponent(symbol)}&start=${startDate.toISOString()}&end=${now.toISOString()}&period=${period}`
-        );
+        let url = `/api/benchmark?symbol=${encodeURIComponent(symbol)}&start=${startDate.toISOString()}&end=${endDate.toISOString()}&period=${period}`;
+
+        if (specificDate) {
+            url += '&forceDate=true';
+        }
+
+        const response = await fetch(url);
 
         if (!response.ok) {
             throw new Error(`Failed to fetch benchmark data: ${response.statusText}`);
@@ -89,9 +104,14 @@ export function calculateChange(current: number, previous: number): number {
 export function normalizeToPercentage(data: BenchmarkDataPoint[]): BenchmarkDataPoint[] {
     if (data.length === 0) return [];
 
-    const firstValue = data[0].value;
+    // Find first valid (non-null, non-zero) value
+    const firstValidPoint = data.find(p => p.value != null && p.value > 0);
+    if (!firstValidPoint) return data; // Return as-is if no valid data
+
+    const firstValue = firstValidPoint.value;
+
     return data.map(point => ({
         ...point,
-        change: calculateChange(point.value, firstValue)
+        change: point.value != null ? calculateChange(point.value, firstValue) : 0
     }));
 }

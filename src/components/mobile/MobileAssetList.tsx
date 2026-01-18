@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { ChevronDown, TrendingUp, TrendingDown, Weight, List, Clock } from "lucide-react";
+import { ChevronDown, TrendingUp, TrendingDown, Weight, List, Clock, History } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
 import type { AssetDisplay } from "@/lib/types";
 import { MobileAssetCard } from "./MobileAssetCard";
+import { MobileClosedPositions } from "./MobileClosedPositions";
 import {
     DndContext,
     closestCenter,
@@ -37,7 +38,7 @@ interface MobileAssetListProps {
     totalValueEUR?: number;
 }
 
-type FilterType = 'ALL' | 'GAINERS' | 'LOSERS' | 'WEIGHT';
+type FilterType = 'ALL' | 'GAINERS' | 'LOSERS' | 'WEIGHT' | 'CLOSED';
 
 export function MobileAssetList({
     assets,
@@ -140,13 +141,14 @@ export function MobileAssetList({
         { key: 'GAINERS', label: 'Gainers', icon: TrendingUp },
         { key: 'LOSERS', label: 'Losers', icon: TrendingDown },
         { key: 'WEIGHT', label: 'Weight', icon: Weight },
+        { key: 'CLOSED', label: 'Closed Positions', icon: History },
     ];
 
     const currentFilterLabel = filterOptions.find(f => f.key === filter)?.label || 'All';
     const CurrentFilterIcon = filterOptions.find(f => f.key === filter)?.icon || List;
 
     // Auto Compact Logic
-    const shouldCompact = assets.length > 10;
+    const shouldCompact = assets.length > 5;
 
     if (assets.length === 0) {
         return (
@@ -228,7 +230,7 @@ export function MobileAssetList({
                 zIndex: 40,
                 background: 'rgba(var(--bg-main-rgb), 0.95)', // Assuming css variable or fallback
                 backdropFilter: 'blur(12px)',
-                padding: '12px 4px',
+                padding: '8px 4px',
                 margin: '0 -4px', // Compensation for list padding
                 display: 'flex',
                 alignItems: 'center',
@@ -412,7 +414,7 @@ export function MobileAssetList({
             </div>
 
             {/* List */}
-            {filter === 'ALL' && !maxDisplay ? (
+            {filter === 'CLOSED' ? null : filter === 'ALL' && !maxDisplay ? (
                 // Draggable List only for ALL view
                 <DndContext
                     sensors={sensors}
@@ -423,7 +425,7 @@ export function MobileAssetList({
                         items={processedAssets.map(item => item.id)}
                         strategy={verticalListSortingStrategy}
                     >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             {processedAssets.map((asset) => (
                                 <SortableAssetItem
                                     key={asset.id}
@@ -442,7 +444,7 @@ export function MobileAssetList({
                 </DndContext>
             ) : (
                 // Static List for filtered views
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     {processedAssets.map((asset) => (
                         <MobileAssetCard
                             key={asset.id}
@@ -458,6 +460,11 @@ export function MobileAssetList({
                         />
                     ))}
                 </div>
+            )}
+
+            {/* Closed Positions View */}
+            {filter === 'CLOSED' && (
+                <MobileClosedPositions assets={assets} />
             )}
         </div>
     );

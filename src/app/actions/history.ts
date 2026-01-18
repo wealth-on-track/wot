@@ -1,8 +1,8 @@
-
 "use server";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getMarketPrice } from "@/services/marketData";
 
 export interface ClosedPosition {
     symbol: string;
@@ -24,6 +24,7 @@ export interface ClosedPosition {
         date: Date;
         currency: string;
     }>;
+    currentPrice?: number;
 }
 
 /**
@@ -35,10 +36,26 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        include: { portfolio: true }
+        include: {
+            portfolio: {
+                include: {
+                    assets: {
+                        select: { symbol: true, type: true, exchange: true, category: true }
+                    }
+                }
+            }
+        }
     });
 
     if (!user?.portfolio) return [];
+
+    // Map assets for type lookup (to help getMarketPrice)
+    const assetMap = new Map<string, { type: string, exchange: string, category: string }>();
+    user.portfolio.assets.forEach(a => assetMap.set(a.symbol, {
+        type: a.type,
+        exchange: a.exchange,
+        category: a.category
+    }));
 
     // Get all transactions
     const transactions = await prisma.assetTransaction.findMany({
@@ -88,16 +105,12 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
     for (const [symbol, data] of grouped.entries()) {
         const totalBought = data.buys.reduce((acc, t) => acc + t.qty, 0);
         const totalSold = data.sells.reduce((acc, t) => acc + t.qty, 0);
-        const netQuantity = totalBought - totalSold;
 
-        // Show ALL positions with transaction history (not just closed ones)
-        // This gives users complete visibility of their trading activity
+        // Show ALL positions with transaction history
         if (totalBought > 0 || totalSold > 0) {
             const totalInvested = data.buys.reduce((acc, t) => acc + (t.qty * t.price), 0);
             const totalRealized = data.sells.reduce((acc, t) => acc + (t.qty * t.price), 0);
 
-            // For partially closed positions, realizedPnl is the P&L on sold portion only
-            // For fully closed positions, it's the total P&L
             const realizedPnl = totalRealized - totalInvested;
 
             closedPositions.push({
@@ -120,6 +133,34 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
             });
         }
     }
+
+    // Enrich with current prices in parallel
+    // This allows the user to compare exit price with current market price
+    await Promise.all(closedPositions.map(async (pos) => {
+        // Try to infer type/exchange if not available in transactions
+        const assetInfo = assetMap.get(pos.symbol);
+
+        // Inference logic
+        let type = assetInfo?.type || 'STOCK';
+        let exchange = assetInfo?.exchange || pos.exchange;
+        const category = assetInfo?.category?.toString(); // Cast enum to string
+
+        // Heuristics if asset not in DB (deleted)
+        if (!assetInfo) {
+            if (pos.exchange === 'BINANCE' || pos.exchange === 'COINBASE') type = 'CRYPTO';
+            else if (pos.exchange === 'TEFAS') type = 'FUND';
+        }
+
+        try {
+            const result = await getMarketPrice(pos.symbol, type, exchange, false, 'History', category);
+            if (result && result.price) {
+                pos.currentPrice = result.price;
+            }
+        } catch (e) {
+            // Ignore price fetch errors for history
+            // console.warn(`Failed to fetch history price for ${pos.symbol}`, e);
+        }
+    }));
 
     // Sort by last trade date desc
     return closedPositions.sort((a, b) => b.lastTradeDate.getTime() - a.lastTradeDate.getTime());

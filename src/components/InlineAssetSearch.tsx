@@ -11,6 +11,7 @@ import { Plus, Search, Command, X, Save, Lock, Upload } from "lucide-react"; // 
 import { createPortal } from "react-dom";
 import { useLanguage } from "@/context/LanguageContext";
 import { ManualAssetModal } from "./ManualAssetModal";
+import { PremiumManualForm } from "./PremiumManualForm";
 
 import { getLogoUrl, getLogoProvider } from "@/lib/logos";
 import { AutocompleteInput } from "./AutocompleteInput";
@@ -97,6 +98,10 @@ export function InlineAssetSearch() {
     const [totalValue, setTotalValue] = useState(""); // For Funds
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [showManualModal, setShowManualModal] = useState(false);
+    const [showManualForm, setShowManualForm] = useState(false); // New: inline manual form
+    const [assetName, setAssetName] = useState(""); // New: for manual entry
+    const [assetType, setAssetType] = useState("STOCK"); // New: category
+    const [exchange, setExchange] = useState(""); // New: exchange field
 
     const [isFocused, setIsFocused] = useState(false);
     const [isPriceLoading, setIsPriceLoading] = useState(false);  // Track price loading state
@@ -593,13 +598,49 @@ export function InlineAssetSearch() {
                             );
                         })
                     ) : (
-                        <div style={{ padding: '2rem', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', fontWeight: 500 }}>No results found for "{searchQuery}"</div>
+                        <div style={{
+                            padding: '1.5rem 2rem 2rem 2rem',
+                            textAlign: 'center',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            minHeight: '200px'
+                        }}>
+                            {/* Title Section - At the top */}
+                            <div>
+                                {/* Line 1: "No results found for:" - Title style at top */}
+                                <div style={{
+                                    fontSize: '1.32rem', // 20% bigger (was 1.1rem)
+                                    fontWeight: 700,
+                                    color: 'var(--text-primary)',
+                                    marginBottom: '0.75rem',
+                                    letterSpacing: '-0.01em'
+                                }}>
+                                    No results found for:
+                                </div>
+
+                                {/* Line 2: Search query in quotes - Centered below title */}
+                                <div style={{
+                                    fontSize: '1rem',
+                                    fontWeight: 600,
+                                    color: 'var(--text-secondary)',
+                                    fontStyle: 'italic',
+                                    wordBreak: 'break-word'
+                                }}>
+                                    "{searchQuery}"
+                                </div>
+                            </div>
+
+                            {/* Add Manually Button - At the bottom */}
                             <button
-                                onClick={() => { setShowDropdown(false); setShowManualModal(true); }}
+                                onClick={() => {
+                                    setShowDropdown(false);
+                                    setShowManualForm(true);
+                                    setAssetName(searchQuery); // Pre-fill with search query
+                                }}
                                 style={{
                                     width: '100%',
-                                    padding: '0.875rem',
+                                    padding: '0.875rem 1rem',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -607,15 +648,26 @@ export function InlineAssetSearch() {
                                     background: 'var(--accent)',
                                     color: '#fff',
                                     fontWeight: 700,
+                                    fontSize: '0.9rem',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.05em',
                                     borderRadius: 'var(--radius-md)',
                                     border: 'none',
                                     cursor: 'pointer',
-                                    transition: 'all 0.2s'
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                                    marginTop: '1rem'
                                 }}
-                                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
-                                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(99, 102, 241, 0.4)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)';
+                                }}
                             >
-                                <Plus size={18} /> Add "{searchQuery}" Manually
+                                <Plus size={20} /> ADD Asset Manually
                             </button>
                         </div>
                     )}
@@ -891,6 +943,72 @@ export function InlineAssetSearch() {
                 document.body
             )}
 
+            {/* Premium 2-Column Manual Entry Form */}
+            {showManualForm && (
+                <PremiumManualForm
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    assetName={assetName}
+                    setAssetName={setAssetName}
+                    assetType={assetType}
+                    setAssetType={setAssetType}
+                    quantity={quantity}
+                    setQuantity={setQuantity}
+                    buyPrice={buyPrice}
+                    setBuyPrice={setBuyPrice}
+                    exchange={exchange}
+                    setExchange={setExchange}
+                    country={country}
+                    setCountry={setCountry}
+                    sector={sector}
+                    setSector={setSector}
+                    platform={platform}
+                    setPlatform={setPlatform}
+                    customGroup={customGroup}
+                    setCustomGroup={setCustomGroup}
+                    suggestions={suggestions}
+                    onClose={() => setShowManualForm(false)}
+                    onSubmit={async (e) => {
+                        e.preventDefault();
+                        const formData = new FormData();
+                        formData.append('symbol', searchQuery || 'MANUAL');
+                        formData.append('type', assetType);
+                        formData.append('quantity', quantity);
+                        formData.append('buyPrice', buyPrice);
+                        formData.append('currency', 'USD');
+                        if (assetName) formData.append('originalName', assetName);
+                        if (exchange) formData.append('exchange', exchange);
+                        if (country) formData.append('country', country);
+                        if (sector) formData.append('sector', sector);
+                        if (platform) formData.append('platform', platform);
+                        if (customGroup) formData.append('customGroup', customGroup);
+
+                        const result = await addAsset(undefined, formData);
+                        if (result === 'success') {
+                            setShowManualForm(false);
+                            setSearchQuery("");
+                            setAssetName("");
+                            setQuantity("");
+                            setBuyPrice("");
+                            router.refresh();
+                        }
+                    }}
+                    isValidNumberInput={isValidNumberInput}
+                    formatInputNumber={formatInputNumber}
+                />
+            )}
+
+
+
+
+
+            {/* Manual Asset Modal */}
+            {showManualModal && (
+                <ManualAssetModal
+                    onClose={() => setShowManualModal(false)}
+                    initialSymbol={searchQuery}
+                />
+            )}
 
         </div>
     );

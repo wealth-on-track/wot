@@ -11,10 +11,13 @@ import {
     ResponsiveContainer,
     Line
 } from 'recharts';
-import { LineChart as LineChartIcon, Eye, EyeOff, ChevronDown, TrendingDown, Activity, TrendingUp, Settings, Edit2 } from 'lucide-react';
+import { LineChart as LineChartIcon, Eye, EyeOff, ChevronDown, TrendingDown, Activity, TrendingUp, Settings, Edit2, Share2 } from 'lucide-react';
+import { ShareHub } from './share/ShareHub';
+import { ShareData } from './share/Templates';
 import { BENCHMARK_ASSETS, fetchBenchmarkData, normalizeToPercentage, BenchmarkDataPoint } from '@/lib/benchmarkApi';
 import { WotTabs } from "./WotTabs";
 import { VisionSettings } from "./VisionSettings";
+import { InsightsTab } from "./InsightsTab";
 import { formatEUR, formatNumber } from '@/lib/formatters';
 import { useCurrency } from '@/context/CurrencyContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -35,6 +38,7 @@ interface PortfolioPerformanceChartProps {
     showHistoryList?: boolean;
     showPortfolioValue?: boolean; // New prop to control portfolio value display
     showPeriodSelector?: boolean; // New prop to control period selector display
+    onShare?: (data: any) => void;
 }
 
 type TimePeriod = '1D' | '1W' | '1M' | 'YTD' | '1Y' | 'ALL';
@@ -67,14 +71,16 @@ export function PortfolioPerformanceChart({
     defaultRange,
     showHistoryList = false,
     showPortfolioValue = true,
-    showPeriodSelector = true
+    showPeriodSelector = true,
+    onShare
 }: PortfolioPerformanceChartProps) {
     const { currency } = useCurrency();
     const { t } = useLanguage();
     const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>((defaultRange as TimePeriod) || '1Y');
 
-    // Vision Mode State
-    const [isVisionMode, setIsVisionMode] = useState(false);
+    // Tab State: 'performance' | 'insights' | 'vision' | 'share'
+    const [activeView, setActiveView] = useState<'performance' | 'insights' | 'vision' | 'share'>('performance');
+    const [shareData, setShareData] = useState<ShareData | undefined>(undefined);
     const [visionYears, setVisionYears] = useState(10); // Default 10 years
     const [monthlyAdd, setMonthlyAdd] = useState(0); // Monthly contribution
     const [activeScenario, setActiveScenario] = useState<'bear' | 'expected' | 'bull' | 'custom'>('expected');
@@ -92,6 +98,7 @@ export function PortfolioPerformanceChart({
     const [showTimeMenu, setShowTimeMenu] = useState(false); // Added state for Time Menu
     const [portfolioData, setPortfolioData] = useState<BenchmarkDataPoint[]>([]);
     const [benchmarkData, setBenchmarkData] = useState<Record<string, BenchmarkDataPoint[]>>({});
+    const [activeReferenceDate, setActiveReferenceDate] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const [isChartHovered, setIsChartHovered] = useState(false);
@@ -159,29 +166,74 @@ export function PortfolioPerformanceChart({
         return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
     };
 
-    // 2. Fetch Benchmark History
+    // 2. Fetch Benchmark History (Smart 1D Logic)
     useEffect(() => {
         const fetchBenchmarks = async () => {
             const newBenchmarkData: Record<string, BenchmarkDataPoint[]> = {};
-            // Parallel fetch for speed
-            await Promise.all(selectedBenchmarks.map(async (benchmarkId) => {
-                const benchmark = BENCHMARK_ASSETS.find(b => b.id === benchmarkId);
-                if (benchmark) {
+            const TRADITIONAL_ASSETS = ['SPX', 'IXIC', 'BIST100']; // Assets that define "Market Open Days"
+            let referenceDate: string | undefined = undefined;
+
+            if (selectedPeriod === '1D') {
+                // Check if any traditional asset is selected
+                const leaderId = selectedBenchmarks.find(id => TRADITIONAL_ASSETS.includes(id));
+
+                if (leaderId) {
+                    // 1. Fetch Leader First to establish "Market Date"
+                    const leader = BENCHMARK_ASSETS.find(b => b.id === leaderId)!;
                     try {
-                        const data = await fetchBenchmarkData(benchmark.symbol, selectedPeriod);
-                        // Ensure data is sorted by date (ascending) before normalization
-                        const sortedData = data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                        newBenchmarkData[benchmarkId] = normalizeToPercentage(sortedData);
-                    } catch (e) { console.error(e); }
+                        const leaderData = await fetchBenchmarkData(leader.symbol, '1D');
+                        if (leaderData.length > 0) {
+                            // Sort to get latest info
+                            const sorted = leaderData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                            newBenchmarkData[leaderId] = normalizeToPercentage(sorted);
+
+                            // Extract Key Date (YYYY-MM-DD) from the leader's data
+                            // We look at the latest point
+                            const lastPoint = sorted[sorted.length - 1];
+                            referenceDate = new Date(lastPoint.date).toISOString().split('T')[0];
+                        }
+                    } catch (e) { console.error('Error fetching leader:', e); }
                 }
-            }));
+
+                // 2. Fetch Remaining Assets (aligning to referenceDate if exists)
+                await Promise.all(selectedBenchmarks.map(async (benchmarkId) => {
+                    // Skip if already fetched as leader
+                    if (benchmarkId === leaderId) return;
+
+                    const benchmark = BENCHMARK_ASSETS.find(b => b.id === benchmarkId);
+                    if (benchmark) {
+                        try {
+                            const data = await fetchBenchmarkData(benchmark.symbol, selectedPeriod, referenceDate);
+                            const sortedData = data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                            newBenchmarkData[benchmarkId] = normalizeToPercentage(sortedData);
+                        } catch (e) { console.error(e); }
+                    }
+                }));
+
+            } else {
+                // Standard Parallel Fetch for valid periods (1W, 1M, etc.)
+                await Promise.all(selectedBenchmarks.map(async (benchmarkId) => {
+                    const benchmark = BENCHMARK_ASSETS.find(b => b.id === benchmarkId);
+                    if (benchmark) {
+                        try {
+                            const data = await fetchBenchmarkData(benchmark.symbol, selectedPeriod);
+                            const sortedData = data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                            newBenchmarkData[benchmarkId] = normalizeToPercentage(sortedData);
+                        } catch (e) { console.error(e); }
+                    }
+                }));
+            }
+
             setBenchmarkData(newBenchmarkData);
+            // Save reference date for 1D mode (will be null for other periods)
+            setActiveReferenceDate(selectedPeriod === '1D' && referenceDate ? referenceDate : null);
         };
 
         if (selectedBenchmarks.length > 0) {
             fetchBenchmarks();
         } else {
             setBenchmarkData({});
+            setActiveReferenceDate(null);
         }
     }, [selectedBenchmarks, selectedPeriod]);
 
@@ -196,22 +248,59 @@ export function PortfolioPerformanceChart({
     }, [selectedPeriod]);
 
     // 3. Prepare Chart Data (Merging & Normalizing)
+    // 3. Prepare Chart Data (Merging & Normalizing)
     const chartData = useMemo(() => {
         const normalizedPortfolio = normalizeToPercentage(portfolioData);
         // Base Data Map
         const dataMap = new Map<string, ChartDataPoint>();
 
+        // Helper to get key based on granularity
+        const getKey = (dateStr: string) => {
+            if (activeView === 'vision') return new Date(dateStr).toISOString().split('T')[0];
+            if (selectedPeriod === '1D') return new Date(dateStr).toISOString(); // Keep full precision for 1D
+            return new Date(dateStr).toISOString().split('T')[0]; // Group by day for others
+        };
+
         // Init with Portfolio Data (History)
         normalizedPortfolio.forEach(point => {
-            const dateKey = new Date(point.date).toISOString().split('T')[0];
-            dataMap.set(dateKey, {
-                date: point.date,
-                portfolio: point.change || 0,
-            });
+            const dateKey = getKey(point.date);
+            const rawDate = point.date.split('T')[0];
+
+            // STRICT FILTERING FOR 1D: 
+            // If we have a reference date (from benchmarks), only show portfolio data for that day.
+            // But Portfolio Data is usually daily. 
+            // If we are showing 'Today' (or Friday) on 1D, we expect Portfolio to have one point for that day.
+            // However, chartData shouldn't just be one point if we want a line?
+            // Actually, for 1D, Portfolio is usually a flat line (yesterday close -> today live? or just today close).
+            // If we display full history, the x-axis breaks. 
+            // So YES, we must filter portfolio points to match the view.
+
+            if (activeView === 'vision') {
+                dataMap.set(dateKey, { date: point.date, portfolio: point.change || 0 });
+            } else if (selectedPeriod === '1D') {
+                // Only include if matches activeReferenceDate (if set) OR matches today if not set
+                // Dealing with timezones is tricky. unique 'YYYY-MM-DD' comparison.
+                if (activeReferenceDate) {
+                    if (rawDate === activeReferenceDate) {
+                        // We found the matching day. Ideally 1D chart for portfolio should be granular, but we only have 1 point.
+                        // To make it look good on a 5m chart, we might need to "stretch" it or let it be a single dot.
+                        // Recharts connects nulls, so we don't need to fake points. 
+                        // But if we ONLY have 1 point, no line draws. 
+                        // We might want to inject a 'start of day' point?
+                        dataMap.set(dateKey, { date: point.date, portfolio: point.change || 0 });
+                    }
+                } else {
+                    // Default behavior (latest day?)
+                    // Let's just allow the last point?
+                    dataMap.set(dateKey, { date: point.date, portfolio: point.change || 0 });
+                }
+            } else {
+                dataMap.set(dateKey, { date: point.date, portfolio: point.change || 0 });
+            }
         });
 
         // If Vision Mode: Calculate & Append Projections
-        if (isVisionMode && portfolioData.length > 0) {
+        if (activeView === 'vision' && portfolioData.length > 0) {
             const lastPoint = portfolioData[portfolioData.length - 1]; // Use raw raw value for projection base, percent for chart?
             // Actually, we are plotting PERCENTAGE change in the main chart.
             // For Vision, users want to see VALUE usually, but switching Y-Axis context is tricky.
@@ -244,7 +333,7 @@ export function PortfolioPerformanceChart({
                 // Future Date
                 const fDate = new Date(startDate);
                 fDate.setMonth(startDate.getMonth() + m);
-                const dateKey = fDate.toISOString().split('T')[0];
+                const dateKey = getKey(fDate.toISOString());
 
                 // 1. Calculate Standard Projection (Main Line)
                 cumulativeValue = (cumulativeValue * (1 + monthlyRate)) + monthlyAdd;
@@ -283,15 +372,19 @@ export function PortfolioPerformanceChart({
             Object.entries(benchmarkData).forEach(([benchmarkId, data]) => {
                 if (!data || data.length === 0) return;
                 data.forEach(point => {
-                    const dateKey = new Date(point.date).toISOString().split('T')[0];
+                    const dateKey = getKey(point.date);
                     const existing = dataMap.get(dateKey);
 
                     if (existing) {
                         existing[benchmarkId] = point.change || 0;
                     } else {
+                        // For 1D, if we have benchmark data but no portfolio data at this timestamp,
+                        // we create a new point. The Portfolio Line will gap (or connect if connectNulls is true).
+                        // Since we don't have intraday portfolio data, we don't set 'portfolio' here.
+                        // Ideally we would interpolate, but connectNulls is simpler.
                         dataMap.set(dateKey, {
                             date: point.date,
-                            portfolio: 0,
+                            // portfolio: undefined, // Implicitly undefined
                             [benchmarkId]: point.change || 0
                         });
                     }
@@ -302,7 +395,32 @@ export function PortfolioPerformanceChart({
         return Array.from(dataMap.values()).sort((a, b) =>
             new Date(a.date).getTime() - new Date(b.date).getTime()
         );
-    }, [portfolioData, benchmarkData, isVisionMode, visionYears, monthlyAdd, activeScenario, totalValueEUR, customRate, simulatedImpact]);
+    }, [portfolioData, benchmarkData, activeView, visionYears, monthlyAdd, activeScenario, totalValueEUR, customRate, simulatedImpact]);
+
+
+    // --- 1D Chart Date Label ---
+    const chartDateLabel = useMemo(() => {
+        if (selectedPeriod !== '1D') return null;
+
+        // Use activeReferenceDate if available (from Leader logic)
+        if (activeReferenceDate) {
+            const date = new Date(activeReferenceDate);
+            const str = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+            const day = date.toLocaleDateString('en-US', { weekday: 'long' });
+            return `${str} - ${day}`;
+        }
+
+        // Fallback: use latest point from chartData
+        if (chartData.length > 0) {
+            const lastPoint = chartData[chartData.length - 1];
+            const date = new Date(lastPoint.date);
+            const str = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+            const day = date.toLocaleDateString('en-US', { weekday: 'long' });
+            return `${str} - ${day}`;
+        }
+
+        return null;
+    }, [selectedPeriod, chartData, activeReferenceDate]);
 
     // --- Zoom Logic ---
     const zoomedData = useMemo(() => {
@@ -350,7 +468,7 @@ export function PortfolioPerformanceChart({
     // --- Formatters ---
     const formatXAxis = (tick: string) => {
         const date = new Date(tick);
-        if (isVisionMode) {
+        if (activeView === 'vision') {
             return date.getFullYear().toString();
         }
         switch (selectedPeriod) {
@@ -364,7 +482,7 @@ export function PortfolioPerformanceChart({
     };
 
     // --- HEADER ANIMATION STYLE ---
-    const headerStyle: React.CSSProperties = isVisionMode && chartData.length > 0 ? {
+    const headerStyle: React.CSSProperties = activeView === 'vision' && chartData.length > 0 ? {
         fontSize: '2rem',
         fontWeight: 800,
         background: 'linear-gradient(to right, #10b981, #34d399)',
@@ -401,7 +519,7 @@ export function PortfolioPerformanceChart({
     // Shared Tooltip Content Renderer
     const renderTooltipContent = (payload: any[], label: string) => {
         // --- VISION MODE TOOLTIP ---
-        if (isVisionMode) {
+        if (activeView === 'vision') {
             const dataPoint = payload[0]?.payload;
             const projectedVal = dataPoint?._actualValue || 0;
             const impactVal = dataPoint?._impactActualValue || 0;
@@ -674,9 +792,31 @@ export function PortfolioPerformanceChart({
                 {/* 2. Chart Card */}
                 <div className="neo-card" style={{ padding: '0.5rem 0.5rem 0.2rem 0.5rem', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 20, overflow: 'visible' }}>
                     {/* Controls */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem', padding: '0 0.5rem', zIndex: 10 }}>
-                        <BenchmarkSelector />
-                        {showPeriodSelector && <TimePeriodSelector />}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '0.2rem', padding: '0 0.5rem', zIndex: 10 }}>
+
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            {/* Benchmark Selector */}
+                            <BenchmarkSelector />
+
+                            {showPeriodSelector && (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                                    <div style={{ display: 'flex', background: 'rgba(0,0,0,0.03)', padding: '2px', borderRadius: '8px', gap: '2px' }}>
+                                        <TimePeriodSelector />
+                                    </div>
+                                    {selectedPeriod === '1D' && chartDateLabel && (
+                                        <span style={{
+                                            fontSize: '0.65rem',
+                                            color: 'var(--text-muted)',
+                                            fontWeight: 600,
+                                            letterSpacing: '0.02em',
+                                            paddingRight: '4px'
+                                        }}>
+                                            {chartDateLabel}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                     {/* Chart */}
                     <div style={{ width: '100%', height: '160px', position: 'relative' }} // Reduced height
@@ -791,119 +931,29 @@ export function PortfolioPerformanceChart({
 
 
 
-    // --- RENDER HELPERS ---
-    // --- RENDER HELPERS ---
-    const renderSegmentedControl = () => (
-        <WotTabs
-            tabs={[
-                { id: 'performance', label: 'Portfolio Performance' },
-                { id: 'vision', label: 'WOT Vision' }
-            ]}
-            activeTabId={!isVisionMode ? 'performance' : 'vision'}
-            onTabChange={(id) => setIsVisionMode(id === 'vision')}
-            theme="dark" // Usually charts are on dark background
-        />
-    );
-
-    // --- DESKTOP LAYOUT ---
-    // --- DESKTOP LAYOUT ---
-    // --- DESKTOP LAYOUT ---
-    // --- DESKTOP LAYOUT ---
-    // --- DESKTOP LAYOUT ---
-    // --- DESKTOP LAYOUT ---
     // --- DESKTOP LAYOUT ---
     return (
         <div style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
-            {/* 1. Integrated Tabs Area (WOT Integrated Tab System) */}
+            {/* 1. Integrated Tabs Area (WOT Unified Tab System) */}
             <div style={{
                 display: 'flex',
-                justifyContent: 'flex-start', // Align tabs to left only
+                justifyContent: 'flex-start',
                 alignItems: 'flex-end',
                 paddingLeft: '0',
                 paddingRight: '0.8rem',
                 marginBottom: '-1px',
                 zIndex: 10,
             }}>
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    gap: '4px',
-                    paddingLeft: '0'
-                }}>
-                    {/* Tab 1: Performance */}
-                    <button
-                        onClick={() => setIsVisionMode(false)}
-                        style={{
-                            fontSize: '0.9rem',
-                            fontWeight: 600,
-                            fontFamily: "'Inter', sans-serif",
-                            color: !isVisionMode ? 'var(--text-primary)' : 'var(--text-muted)',
-                            background: 'var(--surface)',
-                            border: !isVisionMode ? '1px solid var(--border)' : '1px solid transparent',
-                            borderBottom: !isVisionMode ? '1px solid var(--surface)' : '1px solid var(--border)',
-                            borderRadius: '12px 12px 0 0',
-                            padding: '12px 24px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            position: 'relative',
-                            zIndex: !isVisionMode ? 2 : 1,
-                            opacity: !isVisionMode ? 1 : 0.8, // Increased from 0.5
-                            transform: !isVisionMode ? 'translateY(1px)' : 'scale(0.98)',
-                        }}
-                        onMouseEnter={(e) => { if (isVisionMode) e.currentTarget.style.opacity = '0.9'; }}
-                        onMouseLeave={(e) => { if (isVisionMode) e.currentTarget.style.opacity = '0.8'; }}
-                    >
-                        Performance
-                        {!isVisionMode && (
-                            <div style={{
-                                position: 'absolute',
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                height: '2px',
-                                background: 'linear-gradient(90deg, #10B981 0%, #34D399 100%)',
-                                zIndex: 3
-                            }} />
-                        )}
-                    </button>
-
-                    {/* Tab 2: Vision */}
-                    <button
-                        onClick={() => setIsVisionMode(true)}
-                        style={{
-                            fontSize: '0.9rem',
-                            fontWeight: 600,
-                            fontFamily: "'Inter', sans-serif",
-                            color: isVisionMode ? 'var(--text-primary)' : 'var(--text-muted)',
-                            background: 'var(--surface)',
-                            border: isVisionMode ? '1px solid var(--border)' : '1px solid transparent',
-                            borderBottom: isVisionMode ? '1px solid var(--surface)' : '1px solid var(--border)',
-                            borderRadius: '12px 12px 0 0',
-                            padding: '12px 24px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            position: 'relative',
-                            zIndex: isVisionMode ? 2 : 1,
-                            opacity: isVisionMode ? 1 : 0.8, // Increased from 0.5
-                            transform: isVisionMode ? 'translateY(1px)' : 'scale(0.98)',
-                        }}
-                        onMouseEnter={(e) => { if (!isVisionMode) e.currentTarget.style.opacity = '0.9'; }}
-                        onMouseLeave={(e) => { if (!isVisionMode) e.currentTarget.style.opacity = '0.8'; }}
-                    >
-                        Vision
-                        {isVisionMode && (
-                            <div style={{
-                                position: 'absolute',
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                height: '2px',
-                                background: 'linear-gradient(90deg, #10B981 0%, #34D399 100%)',
-                                zIndex: 3
-                            }} />
-                        )}
-                    </button>
-                </div>
+                <WotTabs
+                    tabs={[
+                        { id: 'performance', label: 'Performance' },
+                        { id: 'insights', label: 'Insights' },
+                        { id: 'vision', label: 'Vision' },
+                        { id: 'share', label: <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>Share <Share2 size={13} strokeWidth={2.5} /></span> }
+                    ]}
+                    activeTabId={activeView}
+                    onTabChange={(id) => setActiveView(id as 'performance' | 'insights' | 'vision' | 'share')}
+                />
             </div>
 
             {/* 2. Main Card Content */}
@@ -930,209 +980,240 @@ export function PortfolioPerformanceChart({
                 }
             `}</style>
 
-                {/* Header: Consolidated Stats + Controls */}
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '1rem',
-                    paddingBottom: '0.5rem',
-                    borderBottom: '1px solid var(--border)' // Subtle separation line
-                }}>
-                    {/* LEFT: Portfolio Info */}
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '1.5rem' }}>
-                        {/* 1. Main Amount */}
+                {/* INSIGHTS REMOVED FOR DEBUGGING */}
+
+                {/* INSIGHTS VIEW */}
+                {activeView === 'insights' && (
+                    <div style={{ minHeight: '400px' }}>
+                        <InsightsTab username={username} />
+                    </div>
+                )}
+
+                {/* SHARE HUB VIEW */}
+                {activeView === 'share' && (
+                    <div style={{ minHeight: '400px' }}>
+                        <ShareHub initialData={shareData} initialTemplate="journey" />
+                    </div>
+                )}
+
+                {/* PERFORMANCE/VISION VIEW */}
+                {activeView !== 'insights' && activeView !== 'share' && (
+                    <>
+                        {/* Header: Consolidated Stats + Controls */}
                         <div style={{
-                            fontSize: '2rem', // Big Impact
-                            fontWeight: 800,
-                            color: 'var(--text-primary)',
-                            lineHeight: 1,
-                            fontVariantNumeric: 'tabular-nums',
-                            letterSpacing: '-0.03em'
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '1rem',
+                            paddingBottom: '0.5rem',
+                            borderBottom: '1px solid var(--border)' // Subtle separation line
                         }}>
-                            {currencySym}{fmtCurrency(Number(isVisionMode ? (chartData[chartData.length - 1]?._actualValue || displayedTotalValue) : displayedTotalValue))}
-                        </div>
+                            {/* LEFT: Portfolio Info */}
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '1.5rem' }}>
+                                {/* 1. Main Amount */}
+                                <div style={{
+                                    fontSize: '2rem', // Big Impact
+                                    fontWeight: 800,
+                                    color: 'var(--text-primary)',
+                                    lineHeight: 1,
+                                    fontVariantNumeric: 'tabular-nums',
+                                    letterSpacing: '-0.03em'
+                                }}>
+                                    {currencySym}{fmtCurrency(Number(activeView === 'vision' ? (chartData[chartData.length - 1]?._actualValue || displayedTotalValue) : displayedTotalValue))}
+                                </div>
 
-                        {/* 2. Changes */}
-                        {!isVisionMode && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                                <span style={{ fontSize: '1rem', fontWeight: 600, color: isPositive ? 'var(--success)' : 'var(--danger)', display: 'flex', alignItems: 'center' }}>
-                                    {isPositive ? '▲' : '▼'}{Math.abs(portfolioStats.changePercent).toFixed(2)}%
-                                </span>
-                                <span style={{ fontSize: '1rem', fontWeight: 500, color: isPositive ? 'var(--success)' : 'var(--danger)', opacity: 0.9 }}>
-                                    {isPositive ? '+' : '-'}{currencySym}{fmtCurrency(Math.abs(displayedChange))}
-                                </span>
+                                {/* 2. Changes */}
+                                {activeView !== 'vision' && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                        <span style={{ fontSize: '1rem', fontWeight: 600, color: isPositive ? 'var(--success)' : 'var(--danger)', display: 'flex', alignItems: 'center' }}>
+                                            {isPositive ? '▲' : '▼'}{Math.abs(portfolioStats.changePercent).toFixed(2)}%
+                                        </span>
+                                        <span style={{ fontSize: '1rem', fontWeight: 500, color: isPositive ? 'var(--success)' : 'var(--danger)', opacity: 0.9 }}>
+                                            {isPositive ? '+' : '-'}{currencySym}{fmtCurrency(Math.abs(displayedChange))}
+                                        </span>
+                                    </div>
+                                )}
+                                {activeView === 'vision' && (
+                                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#2DBC8E' }}>
+                                        Projected ({visionYears + 2026})
+                                    </div>
+                                )}
                             </div>
-                        )}
-                        {isVisionMode && (
-                            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#2DBC8E' }}>
-                                Projected ({visionYears + 2026})
-                            </div>
-                        )}
-                    </div>
 
-                    {/* RIGHT: Time Selectors + Benchmarks */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                        {/* Time Range Buttons (Only in Performance Mode) */}
-                        {!isVisionMode && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                {(['1D', '1W', '1M', 'YTD', '1Y', 'ALL'] as TimePeriod[]).map((period) => (
-                                    <button
-                                        key={period}
-                                        onClick={() => handlePeriodChange(period)}
-                                        style={{
-                                            padding: '4px 10px',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 700,
-                                            color: selectedPeriod === period ? '#ffffff' : 'var(--text-muted)',
-                                            background: selectedPeriod === period ? '#6366f1' : 'transparent',
-                                            borderRadius: '6px',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s',
-                                        }}
-                                    >
-                                        {period}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Vision Controls in Header if Vision Mode */}
-                        {isVisionMode && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', background: 'var(--bg-secondary)', borderRadius: '20px', border: '1px solid var(--border)' }}>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Goal:</span>
-                                <input
-                                    type="number"
-                                    value={visionYears + 2026}
-                                    onChange={(e) => setVisionYears(Number(e.target.value) - 2026)}
-                                    style={{ background: 'transparent', border: 'none', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', width: '40px', padding: 0, outline: 'none' }}
-                                />
-                            </div>
-                        )}
-
-                        {/* Benchmarks Selector */}
-                        {!isVisionMode && <BenchmarkSelector />}
-                    </div>
-                </div>
-
-                {/* Chart Container */}
-                <div style={{ width: '100%', height: '280px', position: 'relative' }} // Reduced height to 280px
-                    onMouseEnter={() => setIsChartHovered(true)}
-                    onMouseLeave={() => setIsChartHovered(false)}
-                    onWheel={handleWheel}
-                >
-                    {isLoading && (
-                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(2px)', zIndex: 20 }}>
-                            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Loading...</span>
-                        </div>
-                    )}
-
-                    {isMounted && (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={zoomedData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}> {/* negative left margin to pull y-axis in */}
-                                <defs>
-                                    <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                    </linearGradient>
-                                    <linearGradient id="colorVision" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#2DBC8E" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#2DBC8E" stopOpacity={0} />
-                                    </linearGradient>
-                                    <linearGradient id="ghostGradient" x1="0" y1="0" x2="1" y2="0">
-                                        <stop offset="0%" stopColor="#2DBC8E" stopOpacity={0.1} />
-                                        <stop offset="100%" stopColor="#2DBC8E" stopOpacity={0.4} />
-                                    </linearGradient>
-                                </defs>
-
-                                <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={true} stroke="rgba(0,0,0,0.05)" />
-
-                                <XAxis
-                                    dataKey="date"
-                                    tickFormatter={formatXAxis}
-                                    tick={{ fontSize: 11, fill: '#64748b' }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                    minTickGap={50}
-                                    dy={10}
-                                />
-
-                                {/* Restore Y Axis Visibility */}
-                                <YAxis
-                                    width={45}
-                                    domain={['auto', 'auto']}
-                                    tickFormatter={(val) => `${val}%`}
-                                    tick={{ fontSize: 10, fill: '#94a3b8' }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                />
-
-                                <Tooltip
-                                    content={<CustomTooltip />}
-                                    cursor={{ stroke: isVisionMode ? '#2DBC8E' : '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }}
-                                    wrapperStyle={{ outline: 'none' }}
-                                />
-
-                                {/* Standard Portfolio Line */}
-                                {!isVisionMode && (
-                                    <Area
-                                        type="monotone"
-                                        dataKey="portfolio"
-                                        stroke="#6366f1"
-                                        strokeWidth={3}
-                                        fill="url(#colorPortfolio)"
-                                        animationDuration={800}
-                                        activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }}
-                                    />
+                            {/* RIGHT: Time Selectors + Benchmarks */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                                {/* Time Range Buttons (Only in Performance Mode) */}
+                                {activeView !== 'vision' && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                            {(['1D', '1W', '1M', 'YTD', '1Y', 'ALL'] as TimePeriod[]).map((period) => (
+                                                <button
+                                                    key={period}
+                                                    onClick={() => handlePeriodChange(period)}
+                                                    style={{
+                                                        padding: '4px 10px',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 700,
+                                                        color: selectedPeriod === period ? '#ffffff' : 'var(--text-muted)',
+                                                        background: selectedPeriod === period ? '#6366f1' : 'transparent',
+                                                        borderRadius: '6px',
+                                                        border: 'none',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s',
+                                                    }}
+                                                >
+                                                    {period}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {selectedPeriod === '1D' && chartDateLabel && (
+                                            <span style={{
+                                                fontSize: '0.65rem',
+                                                color: 'var(--text-muted)',
+                                                fontWeight: 600,
+                                                letterSpacing: '0.02em',
+                                                paddingLeft: '8px'
+                                            }}>
+                                                {chartDateLabel}
+                                            </span>
+                                        )}
+                                    </div>
                                 )}
 
-                                {/* Vision Mode Lines */}
-                                {isVisionMode && (
-                                    <>
-                                        {/* Main Projection */}
-                                        <Area
-                                            type="monotone"
-                                            dataKey="projectedValue"
-                                            stroke="#2DBC8E"
-                                            strokeWidth={3}
-                                            fill="url(#colorVision)"
-                                            animationDuration={800}
-                                            activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }}
-                                            name="Projected"
+                                {/* Vision Controls in Header if Vision Mode */}
+                                {activeView === 'vision' && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', background: 'var(--bg-secondary)', borderRadius: '20px', border: '1px solid var(--border)' }}>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Goal:</span>
+                                        <input
+                                            type="number"
+                                            value={visionYears + 2026}
+                                            onChange={(e) => setVisionYears(Number(e.target.value) - 2026)}
+                                            style={{ background: 'transparent', border: 'none', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', width: '40px', padding: 0, outline: 'none' }}
                                         />
-
-                                        {/* Ghost Line (Impact) - Only if simulatedImpact/Active Scenario differs */}
-                                        <Area
-                                            type="monotone"
-                                            dataKey="impactValue"
-                                            stroke="url(#ghostGradient)"
-                                            strokeWidth={2}
-                                            strokeDasharray="5 5"
-                                            fill="none"
-                                            animationDuration={1000}
-                                            name="Potential"
-                                        />
-                                    </>
+                                    </div>
                                 )}
 
-                                {/* Benchmarks (Only in Performance Mode) */}
-                                {!isVisionMode && selectedBenchmarks.map(id => {
-                                    const b = BENCHMARK_ASSETS.find(a => a.id === id);
-                                    return <Line key={id} type="monotone" dataKey={id} stroke={b?.color} strokeWidth={2} dot={false} connectNulls animationDuration={800} />;
-                                })}
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    )}
-                </div>
+                                {/* Benchmarks Selector */}
+                                {activeView !== 'vision' && <BenchmarkSelector />}
+                            </div>
+                        </div>
 
+                        {/* Chart Container */}
+                        <div style={{ width: '100%', height: '280px', position: 'relative' }} // Reduced height to 280px
+                            onMouseEnter={() => setIsChartHovered(true)}
+                            onMouseLeave={() => setIsChartHovered(false)}
+                            onWheel={handleWheel}
+                        >
+                            {isLoading && (
+                                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(2px)', zIndex: 20 }}>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Loading...</span>
+                                </div>
+                            )}
 
-                {/* Close Main Card Div */}
+                            {isMounted && (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={zoomedData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}> {/* negative left margin to pull y-axis in */}
+                                        <defs>
+                                            <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                            </linearGradient>
+                                            <linearGradient id="colorVision" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#2DBC8E" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#2DBC8E" stopOpacity={0} />
+                                            </linearGradient>
+                                            <linearGradient id="ghostGradient" x1="0" y1="0" x2="1" y2="0">
+                                                <stop offset="0%" stopColor="#2DBC8E" stopOpacity={0.1} />
+                                                <stop offset="100%" stopColor="#2DBC8E" stopOpacity={0.4} />
+                                            </linearGradient>
+                                        </defs>
+
+                                        <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={true} stroke="rgba(0,0,0,0.05)" />
+
+                                        <XAxis
+                                            dataKey="date"
+                                            tickFormatter={formatXAxis}
+                                            tick={{ fontSize: 11, fill: '#64748b' }}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            minTickGap={50}
+                                            dy={10}
+                                        />
+
+                                        {/* Restore Y Axis Visibility */}
+                                        <YAxis
+                                            width={45}
+                                            domain={['auto', 'auto']}
+                                            tickFormatter={(val) => `${val}%`}
+                                            tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                            axisLine={false}
+                                            tickLine={false}
+                                        />
+
+                                        <Tooltip
+                                            content={<CustomTooltip />}
+                                            cursor={{ stroke: activeView === 'vision' ? '#2DBC8E' : '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                            wrapperStyle={{ outline: 'none' }}
+                                        />
+
+                                        {/* Standard Portfolio Line */}
+                                        {activeView !== 'vision' && (
+                                            <Area
+                                                type="monotone"
+                                                dataKey="portfolio"
+                                                stroke="#6366f1"
+                                                strokeWidth={3}
+                                                fill="url(#colorPortfolio)"
+                                                animationDuration={800}
+                                                activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }}
+                                            />
+                                        )}
+
+                                        {/* Vision Mode Lines */}
+                                        {activeView === 'vision' && (
+                                            <>
+                                                {/* Main Projection */}
+                                                <Area
+                                                    type="monotone"
+                                                    dataKey="projectedValue"
+                                                    stroke="#2DBC8E"
+                                                    strokeWidth={3}
+                                                    fill="url(#colorVision)"
+                                                    animationDuration={800}
+                                                    activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }}
+                                                    name="Projected"
+                                                />
+
+                                                {/* Ghost Line (Impact) - Only if simulatedImpact/Active Scenario differs */}
+                                                <Area
+                                                    type="monotone"
+                                                    dataKey="impactValue"
+                                                    stroke="url(#ghostGradient)"
+                                                    strokeWidth={2}
+                                                    strokeDasharray="5 5"
+                                                    fill="none"
+                                                    animationDuration={1000}
+                                                    name="Potential"
+                                                />
+                                            </>
+                                        )}
+
+                                        {/* Benchmarks (Only in Performance Mode) */}
+                                        {activeView !== 'vision' && selectedBenchmarks.map(id => {
+                                            const b = BENCHMARK_ASSETS.find(a => a.id === id);
+                                            return <Line key={id} type="monotone" dataKey={id} stroke={b?.color} strokeWidth={2} dot={false} connectNulls animationDuration={800} />;
+                                        })}
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            )}
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* 4. Performance Summary Card (Bottom) - Moved outside main card wrapper if needed, but for now kept inside flow */}
             {
-                showHistoryList && zoomedData.length > 0 && !isVisionMode && (
+                showHistoryList && zoomedData.length > 0 && activeView !== 'vision' && activeView !== 'share' && (
                     <div style={{
                         marginTop: '0.5rem',
                         background: 'var(--bg-secondary)',
@@ -1183,7 +1264,7 @@ export function PortfolioPerformanceChart({
             }
             {/* 5. Vision Controls (New Design) */}
             {
-                isVisionMode && (
+                activeView === 'vision' && (
                     <VisionSettings
                         visionYears={visionYears}
                         setVisionYears={setVisionYears}

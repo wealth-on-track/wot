@@ -23,10 +23,15 @@ interface PerformanceData {
 
 interface TopPerformersProps {
     assets: AssetDisplay[];
-    baseCurrency?: string; // User's selected base currency (EUR, USD, TRY, etc.)
+    baseCurrency: string; // User's selected base currency (EUR, USD, TRY, etc.)
+    username?: string;
+    onShare?: (data: any) => void;
 }
 
-export default function TopPerformers({ assets, baseCurrency = 'EUR' }: TopPerformersProps) {
+import { IntelligenceTrigger } from './share/ShareTriggers';
+
+export default function TopPerformers(props: TopPerformersProps) {
+    const { assets, baseCurrency, onShare } = props;
     const [period, setPeriod] = useState<'1W' | '1M' | 'YTD' | '1Y'>('1Y');
     const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
     const [loading, setLoading] = useState(true); // Start as loading to prevent flash of stale data
@@ -132,6 +137,15 @@ export default function TopPerformers({ assets, baseCurrency = 'EUR' }: TopPerfo
                 }}>
                     Top Performers
                 </h3>
+                {top3.length > 0 && <IntelligenceTrigger label="Brag" data={{
+                    username: props.username || 'Investor',
+                    favouriteAsset: top3[0] ? {
+                        name: top3[0].name,
+                        symbol: top3[0].symbol,
+                        changePercent: top3[0].performance[`changePercent${period}`],
+                        value: 0
+                    } : undefined
+                }} />}
 
                 {/* Period Selector - Pill Style */}
                 <div style={{ display: 'flex', background: 'var(--bg-secondary)', borderRadius: '6px', padding: '2px' }}>

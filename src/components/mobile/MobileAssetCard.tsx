@@ -178,7 +178,7 @@ export const MobileAssetCard = memo(function MobileAssetCard({
     const logoUrl = asset.logoUrl || `https://logo.clearbit.com/${asset.symbol.toLowerCase()}.com`;
 
     return (
-        <div style={{ position: 'relative', overflow: 'hidden', marginBottom: isCompactMode ? '0' : '8px' }}>
+        <div style={{ position: 'relative', overflow: 'hidden', marginBottom: '0' }}>
 
             {/* Background Actions Layer - Fixed position, revealed by card swipe */}
             <div style={{
@@ -235,7 +235,7 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                 initial={false}
                 style={{
                     x,
-                    padding: isCompactMode ? '10px 14px' : '16px',
+                    padding: isCompactMode ? '8px 10px' : '12px 14px',
                     borderRadius: '16px',
                     border: '1px solid var(--border)',
                     background: isExpanded ? 'var(--bg-secondary)' : 'var(--surface)',
@@ -269,15 +269,15 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                     />
                 )}
                 {/* Main Content Row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: isCompactMode ? '12px' : '16px', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isCompactMode ? '10px' : '14px', justifyContent: 'space-between' }}>
 
                     {/* LEFT SECTION */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: isCompactMode ? '12px' : '16px', flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isCompactMode ? '10px' : '14px', flex: 1, minWidth: 0 }}>
                         {/* Logo */}
                         <div style={{
-                            width: isCompactMode ? '36px' : '48px',
-                            height: isCompactMode ? '36px' : '48px',
-                            borderRadius: '12px',
+                            width: isCompactMode ? '32px' : '42px',
+                            height: isCompactMode ? '32px' : '42px',
+                            borderRadius: '10px',
                             background: 'var(--bg-secondary)',
                             overflow: 'hidden',
                             border: '1px solid rgba(0,0,0,0.05)',
@@ -297,7 +297,7 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                                     }}
                                 />
                             ) : (
-                                <span style={{ fontWeight: 800 }}>{asset.symbol[0]}</span>
+                                <span style={{ fontWeight: 800, fontSize: isCompactMode ? '0.8rem' : '1rem' }}>{asset.symbol[0]}</span>
                             )}
                         </div>
 
@@ -305,7 +305,7 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: isCompactMode ? '0px' : '2px', minWidth: 0 }}>
                             {/* Row 1: Asset Name */}
                             <div style={{
-                                fontSize: isCompactMode ? '0.9rem' : '1rem',
+                                fontSize: isCompactMode ? '0.85rem' : '0.95rem',
                                 fontWeight: 700,
                                 color: 'var(--text-primary)',
                                 whiteSpace: 'nowrap',
@@ -320,7 +320,7 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                             {/* Row 2: Ticker & Price */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <span style={{
-                                    fontSize: isCompactMode ? '0.75rem' : '0.8rem',
+                                    fontSize: isCompactMode ? '0.7rem' : '0.8rem',
                                     color: 'var(--text-muted)',
                                     fontWeight: 600
                                 }}>
@@ -328,11 +328,11 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                                 </span>
 
                                 {/* Separator */}
-                                <span style={{ color: 'var(--border)', fontSize: '0.8rem' }}>|</span>
+                                <span style={{ color: 'var(--border)', fontSize: '0.7rem' }}>|</span>
 
                                 {/* Current Price */}
                                 <span style={{
-                                    fontSize: isCompactMode ? '0.75rem' : '0.8rem',
+                                    fontSize: isCompactMode ? '0.7rem' : '0.8rem',
                                     color: 'var(--text-muted)', // Match ticker color
                                     fontWeight: 600
                                 }}>
@@ -344,11 +344,11 @@ export const MobileAssetCard = memo(function MobileAssetCard({
 
 
                     {/* RIGHT SECTION: Price & Change */}
-                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: isCompactMode ? '2px' : '4px' }}>
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: isCompactMode ? '0px' : '2px' }}>
 
                         {/* Value - Applied smartFmt here as well for consistency */}
                         <div style={{
-                            fontSize: isCompactMode ? '0.95rem' : '1.1rem',
+                            fontSize: isCompactMode ? '0.9rem' : '1.05rem',
                             fontWeight: isCompactMode ? 600 : 800,
                             color: 'var(--text-primary)',
                             fontVariantNumeric: 'tabular-nums',

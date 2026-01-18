@@ -19,6 +19,7 @@ import { trackLogoRequest } from "@/lib/actions";
 import Image from "next/image";
 import TopPerformers from './TopPerformers';
 export { TopPerformers as TopPerformersCard };
+import { MilestoneTrigger } from './share/ShareTriggers';
 
 // --- Shared Constants & Helpers ---
 interface Goal {
@@ -224,11 +225,23 @@ export function UnifiedPortfolioSummary({ totalValueEUR, isMock = false, isBlurr
 
 
 // --- Component 3: AllocationCard ---
-interface AllocationCardProps extends SidebarComponentProps {
+export interface AllocationCardProps {
     assets: any[];
+    totalValueEUR: number;
+    exchangeRates?: Record<string, number>;
+    isBlurred?: boolean;
+    variant?: 'default' | 'mobile';
     onFilterSelect?: (view: string, value: string) => void;
     activeFilters?: Record<string, string | null>;
-    variant?: 'default' | 'mobile';
+    onShare?: (data: any) => void;
+}
+
+export interface GoalsCardProps {
+    goals: Goal[];
+    isOwner: boolean;
+    exchangeRates?: Record<string, number>;
+    totalValueEUR: number;
+    onShare?: (data: any) => void;
 }
 
 // All available allocation views
@@ -274,10 +287,12 @@ export function AllocationCard({ assets, totalValueEUR, isBlurred = false, excha
         switch (allocationView) {
             case "Portfolio":
                 data = assets.reduce((acc: typeof data, asset) => {
-                    const name = asset.customGroup || asset.ownerCode || 'Main';
-                    const existing = acc.find(item => item.name === name);
+                    const rawName = asset.customGroup || asset.ownerCode || 'Main';
+                    // Normalize to lowercase for case-insensitive grouping
+                    const normalizedName = rawName.toLowerCase();
+                    const existing = acc.find(item => item.name.toLowerCase() === normalizedName);
                     if (existing) { existing.value += asset.totalValueEUR; }
-                    else { acc.push({ name, value: asset.totalValueEUR }); }
+                    else { acc.push({ name: rawName, value: asset.totalValueEUR }); }
                     return acc;
                 }, [] as typeof data);
                 break;
@@ -1005,7 +1020,7 @@ const SortableAllocationItem = ({ id, label, isPinned }: { id: string, label: st
 
 // --- Component 4: GoalsCard ---
 
-export function GoalsCard({ goals = [], isOwner, exchangeRates, totalValueEUR }: { goals: Goal[], isOwner: boolean, exchangeRates?: Record<string, number>, totalValueEUR: number }) {
+export function GoalsCard({ goals = [], isOwner, exchangeRates, totalValueEUR, onShare }: { goals: Goal[], isOwner: boolean, exchangeRates?: Record<string, number>, totalValueEUR: number, onShare: (data: any) => void }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
     const { t } = useLanguage();
@@ -1089,7 +1104,7 @@ export function GoalsCard({ goals = [], isOwner, exchangeRates, totalValueEUR }:
     );
 }
 
-function GoalItem({ goal, isOwner, exchangeRates, onClick }: { goal: Goal, isOwner: boolean, exchangeRates?: Record<string, number>, onClick: () => void }) {
+function GoalItem({ goal, isOwner, exchangeRates, onClick, onShare }: { goal: Goal, isOwner: boolean, exchangeRates?: Record<string, number>, onClick: () => void, onShare?: (data: any) => void }) {
     const { currency } = useCurrency();
 
     const convertValue = (amount: number, fromCurrency: string) => {
@@ -1187,18 +1202,31 @@ function GoalItem({ goal, isOwner, exchangeRates, onClick }: { goal: Goal, isOwn
 
             {/* Right: Text Info */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span style={{
-                        fontSize: '0.9rem',
-                        fontWeight: 700,
-                        color: 'var(--text-primary)',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                    }}>
-                        {goal.name}
-                    </span>
-                    {goal.type === 'SYSTEM_THRESHOLD' && <TrendingUpIcon size={12} color="var(--accent)" />}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{
+                            fontSize: '0.9rem',
+                            fontWeight: 700,
+                            color: 'var(--text-primary)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                        }}>
+                            {goal.name}
+                        </span>
+                        {goal.type === 'SYSTEM_THRESHOLD' && <TrendingUpIcon size={12} color="var(--accent)" />}
+                    </div>
+                    {/* Share Trigger */}
+                    <MilestoneTrigger
+                        onShare={onShare}
+                        data={{
+                            goal: {
+                                name: goal.name,
+                                target: goal.targetAmount,
+                                current: goal.currentAmount,
+                                percent: progress
+                            }
+                        }} />
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>

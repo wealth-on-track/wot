@@ -149,6 +149,7 @@ export async function getRecentActivities(options?: {
     });
 }
 
+
 /**
  * Get activity statistics
  */

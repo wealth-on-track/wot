@@ -13,7 +13,7 @@ const BENCHMARKS = [
 
 async function fetchHistory(symbol: string) {
     const end = Math.floor(Date.now() / 1000);
-    const start = end - (365 * 24 * 60 * 60); // 1 year ago
+    const start = end - (1825 * 24 * 60 * 60); // 5 years ago
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&period1=${start}&period2=${end}`;
 
     console.log(`Fetching ${symbol}...`);

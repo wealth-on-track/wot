@@ -23,8 +23,8 @@ const ASSET_TYPES = [
 
 export function ManualAssetModal({ onClose, initialSymbol = "" }: ManualAssetModalProps) {
     const router = useRouter();
-    // Step 0: Search (Optional but recommended), Step 1: Type Select (Fallback), Step 2: Form
-    const [step, setStep] = useState<0 | 1 | 2>(0);
+    // Skip to Step 2: Form directly (user can change category from form)
+    const [step, setStep] = useState<0 | 1 | 2>(2);
     const [type, setType] = useState<string>("STOCK");
 
     // Search State

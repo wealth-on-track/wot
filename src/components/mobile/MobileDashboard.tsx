@@ -358,7 +358,7 @@ export function MobileDashboard({
                                         totalValueEUR={totalValueEUR}
                                     />
 
-                                    <MobileClosedPositions />
+
                                 </motion.div>
                             )}
 

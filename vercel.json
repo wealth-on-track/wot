@@ -6,6 +6,10 @@
         {
             "path": "/api/cron/daily-snapshot",
             "schedule": "0 0 * * *"
+        },
+        {
+            "path": "/api/cron/update-benchmarks",
+            "schedule": "0 2 * * *"
         }
     ]
 }

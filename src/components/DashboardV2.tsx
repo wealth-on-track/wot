@@ -11,9 +11,12 @@ import { useRouter } from "next/navigation"; // Added router
 import { BENCHMARK_ASSETS } from "@/lib/benchmarkApi";
 
 import { ImportModal } from "./ImportModal";
+import { getClosedPositions } from "@/app/actions/history";
 import { deleteAsset, updateAsset, refreshPortfolioPrices, reorderAssets, trackLogoRequest, updateUserPreferences } from "@/lib/actions";
 import { AllocationCard, GoalsCard, TopPerformersCard } from "./PortfolioSidebarComponents";
 import { WotTabs } from "./WotTabs";
+import { InsightsTab } from "./InsightsTab";
+import { ShareHub } from "./share/ShareHub";
 import { EmptyPlaceholder } from "./EmptyPlaceholder";
 import { Inbox } from "lucide-react";
 import {
@@ -42,9 +45,10 @@ import { CSS } from '@dnd-kit/utilities';
 import { ASSET_COLORS } from "@/lib/constants";
 import { getLogoUrl } from "@/lib/logos";
 const TIME_PERIODS = ["ALL"];
-import { Bitcoin, Wallet, TrendingUp, PieChart, Gem, Coins, Layers, LayoutGrid, List, Save, X, Trash2, Settings, LayoutTemplate, Grid, Check, ChevronDown, ChevronRight, ChevronLeft, GripVertical, SlidersHorizontal, Briefcase, Banknote, MoreVertical, MoreHorizontal, Plus, Upload, Download, Search } from "lucide-react";
+import { Bitcoin, Wallet, TrendingUp, PieChart, Gem, Coins, Layers, LayoutGrid, List, Save, X, Trash2, Settings, LayoutTemplate, Grid, Check, ChevronDown, ChevronRight, ChevronLeft, GripVertical, SlidersHorizontal, Briefcase, Banknote, MoreVertical, MoreHorizontal, Plus, Upload, Download, Search, Rows } from "lucide-react";
 import { DetailedAssetCard } from "./DetailedAssetCard";
 import { ClosedPositions } from "./ClosedPositions";
+import { CompactAssetRow } from "./CompactAssetRow";
 import { getCompanyName } from "@/lib/companyNames";
 import { formatEUR, formatNumber } from "@/lib/formatters";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
@@ -474,8 +478,11 @@ const COL_WIDTHS: Record<ColumnId, string> = {
     CURRENCY: '0px',
     TICKER: '0px',
     EXCHANGE: '0px',
-    EARNINGS: '0px'
+    EARNINGS: '100px'
 };
+
+const COMPACT_GRID_TEMPLATE = "minmax(65px, 0.6fr) minmax(200px, 1fr) 130px 150px 140px 40px";
+
 
 // ... (DraggableHeader remains similar, maybe adjusted for padding) ...
 
@@ -1282,7 +1289,8 @@ function AssetGroup({
     timePeriod,
     exchangeRates,
     isGlobalEditMode,
-    onAssetClick
+    onAssetClick,
+    viewMode
 }: {
     type: string,
     assets: AssetDisplay[],
@@ -1297,7 +1305,8 @@ function AssetGroup({
     timePeriod: string,
     exchangeRates?: Record<string, number>,
     isGlobalEditMode?: boolean,
-    onAssetClick?: (asset: AssetDisplay) => void
+    onAssetClick?: (asset: AssetDisplay) => void,
+    viewMode: 'card' | 'compact'
 }) {
     const [isExpanded, setIsExpanded] = useState(false); // Default: Collapsed
 
@@ -1320,8 +1329,8 @@ function AssetGroup({
                 dragHandleProps={dragHandleProps}
                 isExpanded={isExpanded}
                 onToggle={() => setIsExpanded(!isExpanded)}
-                gridTemplate={columns ? columns.map(c => COL_WIDTHS[c]).join(' ') : '1fr'}
-                columns={columns}
+                gridTemplate={viewMode === 'compact' ? COMPACT_GRID_TEMPLATE : (columns ? columns.map(c => COL_WIDTHS[c]).join(' ') : '1fr')}
+                columns={viewMode === 'compact' ? ['NAME', 'PRICE', 'VALUE_EUR', 'PL'] as any : columns}
             />
 
             {/* Assets in Group - Collapsible */}
@@ -1338,19 +1347,31 @@ function AssetGroup({
                 <SortableContext items={(assets || []).map(a => a.id)} strategy={verticalListSortingStrategy}>
                     {(assets || []).map(asset => (
                         <SortableAssetRow key={asset.id} id={asset.id}>
-                            <AssetTableRow
-                                asset={asset}
-                                positionsViewCurrency={positionsViewCurrency}
-                                totalPortfolioValueEUR={totalPortfolioValueEUR}
-                                isOwner={isOwner}
-                                onDelete={onDelete}
-                                timeFactor={timeFactor}
-                                columns={columns}
-                                timePeriod={timePeriod}
-                                exchangeRates={exchangeRates}
-                                isGlobalEditMode={isGlobalEditMode}
-                                onAssetClick={onAssetClick}
-                            />
+                            {viewMode === 'compact' ? (
+                                <CompactAssetRow
+                                    asset={asset}
+                                    positionsViewCurrency={positionsViewCurrency}
+                                    exchangeRates={exchangeRates}
+                                    isOwner={isOwner}
+                                    onDelete={onDelete}
+                                    onAssetClick={onAssetClick}
+                                    isGlobalEditMode={isGlobalEditMode}
+                                />
+                            ) : (
+                                <AssetTableRow
+                                    asset={asset}
+                                    positionsViewCurrency={positionsViewCurrency}
+                                    totalPortfolioValueEUR={totalPortfolioValueEUR}
+                                    isOwner={isOwner}
+                                    onDelete={onDelete}
+                                    timeFactor={timeFactor}
+                                    columns={columns}
+                                    timePeriod={timePeriod}
+                                    exchangeRates={exchangeRates}
+                                    isGlobalEditMode={isGlobalEditMode}
+                                    onAssetClick={onAssetClick}
+                                />
+                            )}
                         </SortableAssetRow>
                     ))}
                 </SortableContext>
@@ -1425,7 +1446,7 @@ function AssetGroupGrid({
                 overflow: 'hidden',
                 transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
                 display: 'grid',
-                gridTemplateColumns: viewMode === 'list'
+                gridTemplateColumns: (viewMode as string) === 'list'
                     ? '1fr'
                     : `repeat(${gridColumns}, 1fr)`,
                 gap: '1rem',
@@ -1435,7 +1456,7 @@ function AssetGroupGrid({
                     {assets.map((asset) => {
                         return (
                             <SortableAssetCard key={asset.id} id={asset.id}>
-                                {viewMode === 'detailed' ? (
+                                {(viewMode as string) === 'detailed' ? (
                                     <DetailedAssetCard
                                         asset={asset}
                                         positionsViewCurrency={positionsViewCurrency}
@@ -1486,7 +1507,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
     const [items, setItems] = useState<AssetDisplay[]>(assets);
     const [orderedGroups, setOrderedGroups] = useState<string[]>([]);
     const [isGroupingEnabled, setIsGroupingEnabled] = useState(false);
-    const viewMode = "list";
+
     const [gridColumns, setGridColumns] = useState<1 | 2>(2);
 
     // New Header States
@@ -1498,6 +1519,26 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
     // Sync with chartRange if available
     const initialTimePeriod = preferences?.chartRange || '1Y';
     const [timePeriod, setTimePeriod] = useState<string>(initialTimePeriod);
+
+    // PortfolioChart specific (moved here for bubbling share intent)
+    const [selectedRange, setSelectedRange] = useState("1Y");
+    const [selectedBenchmarks, setSelectedBenchmarks] = useState<string[]>([]);
+
+    // --- Active Tab State ---
+    const [activeView, setActiveView] = useState<'performance' | 'insights' | 'vision' | 'share'>('performance');
+    const [shareIntent, setShareIntent] = useState<{
+        template?: 'global' | 'sector' | 'currency' | 'heavy_hitter' | 'journey' | 'milestone';
+        data?: any;
+    }>({});
+
+    const handleTabChange = (id: string) => {
+        setActiveView(id as any);
+    };
+
+    const handleShareIntent = (data: any, template?: string) => {
+        setShareIntent({ data, template: template as any });
+        setActiveView('share');
+    };
 
     // Sync timePeriod with preferences dynamically
     useEffect(() => {
@@ -1623,14 +1664,15 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
     const [customGroupFilter, setCustomGroupFilter] = useState<string | null>(null);
 
     // Filter UI States
-
     const [isCustomizeModalOpen, setIsCustomizeModalOpen] = useState(false);
     const [filterOrder, setFilterOrder] = useState(['customGroup', 'type', 'exchange', 'currency', 'country', 'sector', 'platform']);
-    const [selectedBenchmarks, setSelectedBenchmarks] = useState<string[]>(
-        (preferences?.benchmarks && Array.isArray(preferences.benchmarks))
-            ? preferences.benchmarks
-            : ['NDX', 'SPX', 'BTC']
-    );
+
+    // Initialize benchmarks if not already set by active tab logic (wait, I moved standard benchmark state up)
+    // Actually, I should merge the logic. Use the one I added at line 1525 as primary.
+    // I will remove this duplicate initialization and use the one above.
+    // However, the one above initialized with empty array. I should fix the initialization above.
+
+    // Changing this block to just use the effect for sync.
 
     // Sync benchmarks with preferences explicitly when they update (e.g. navigation back from settings)
     useEffect(() => {
@@ -1660,7 +1702,12 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
             if (countryFilter && asset.country !== countryFilter) return false;
             if (sectorFilter && asset.sector !== sectorFilter) return false;
             if (platformFilter && asset.platform !== platformFilter) return false;
-            if (customGroupFilter && (asset.customGroup || 'Main Portfolio') !== customGroupFilter) return false;
+            // Case-insensitive portfolio filter comparison
+            if (customGroupFilter) {
+                const assetGroup = (asset.customGroup || 'Main Portfolio').toLowerCase();
+                const filterGroup = customGroupFilter.toLowerCase();
+                if (assetGroup !== filterGroup) return false;
+            }
             return true;
         });
     }, [items, typeFilter, exchangeFilter, currencyFilter, countryFilter, sectorFilter, platformFilter, customGroupFilter]);
@@ -1692,7 +1739,14 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
         return sortedAssets.reduce((acc, asset) => {
             let key = 'Other';
 
-            if (groupingKey === 'customGroup') key = asset.customGroup || 'Main Portfolio';
+            if (groupingKey === 'customGroup') {
+                const rawKey = asset.customGroup || 'Main Portfolio';
+                // Normalize to lowercase for case-insensitive grouping
+                const normalizedKey = rawKey.toLowerCase();
+                // Find existing group with same normalized name
+                const existingKey = Object.keys(acc).find(k => k.toLowerCase() === normalizedKey);
+                key = existingKey || rawKey; // Use existing key if found, else use raw
+            }
             else if (groupingKey === 'type') key = asset.type;
             else if (groupingKey === 'country') key = asset.country || 'Unknown';
             else if (groupingKey === 'sector') key = asset.sector || 'Unknown';
@@ -1813,10 +1867,6 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
     // We can just rely on timePeriod being available and update the memo at 1478 to include pLTitle dependency.
     // Let's modify the ORIGINAL memo instead of redeclaring.
 
-    // Deleting this redeclaration block to avoid conflict.
-    // We will update logic at line 1478 separately if needed, or update this block to use `translatedColumns` logic if it was meant to override.
-    // Given the context, we should probably just effectively merge the logic.
-
     // FOR NOW: Delete this conflicting block. We will handle PL title update in the main memo.
 
     // Smart Filtering: Get unique values based on currently filtered assets
@@ -1829,7 +1879,12 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
             if (countryFilter && asset.country !== countryFilter) return false;
             if (sectorFilter && asset.sector !== sectorFilter) return false;
             if (platformFilter && asset.platform !== platformFilter) return false;
-            if (customGroupFilter && (asset.customGroup || 'Main Portfolio') !== customGroupFilter) return false;
+            // Case-insensitive portfolio filter comparison
+            if (customGroupFilter) {
+                const assetGroup = (asset.customGroup || 'Main Portfolio').toLowerCase();
+                const filterGroup = customGroupFilter.toLowerCase();
+                if (assetGroup !== filterGroup) return false;
+            }
             return true;
         });
     };
@@ -1905,8 +1960,20 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
     const activeFiltersCount = [typeFilter, exchangeFilter, currencyFilter, countryFilter, sectorFilter, platformFilter, customGroupFilter].filter(Boolean).length;
 
 
+    const [viewMode, setViewMode] = useState<'card' | 'compact'>('compact');
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isBlurredState, setIsBlurredState] = useState(isBlurred);
+    const [closedCount, setClosedCount] = useState(0);
+
+    // Fetch closed positions count on mount
+    useEffect(() => {
+        getClosedPositions()
+            .then(data => {
+                const count = data.filter(p => Math.abs(p.totalQuantityBought - p.totalQuantitySold) < 0.01).length;
+                setClosedCount(count);
+            })
+            .catch(err => console.error('Failed to fetch closed positions count:', err));
+    }, []);
 
     // Benchmark & Chart Controls (Lifted State)
 
@@ -1961,6 +2028,9 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
 
 
 
+
+
+
                         {/* Positions UI Header (Floating Tabs) */}
 
 
@@ -1980,8 +2050,8 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                 {/* Left: Tabs (Unified WotTabs) */}
                                 <WotTabs
                                     tabs={[
-                                        { id: 'open', label: 'Open Positions', count: availableAssets.length },
-                                        { id: 'closed', label: 'Closed Positions', count: 0, isHistory: true }
+                                        { id: 'open', label: 'Open Positions', count: availableAssets.length, isHistory: true },
+                                        { id: 'closed', label: 'Closed Positions', count: closedCount, isHistory: true }
                                     ]}
                                     activeTabId={activeTab}
                                     onTabChange={(id) => setActiveTab(id as 'open' | 'closed')}
@@ -1989,86 +2059,75 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
 
                                 {/* Right: Actions Toolbar */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingBottom: '0.5rem' }}>
-                                    {/* Filter Toggle (First) */}
+                                    {/* View Toggle (Icon Only) */}
                                     <button
-                                        onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                        onClick={() => setViewMode(viewMode === 'card' ? 'compact' : 'card')}
+                                        title={viewMode === 'card' ? "Switch to Compact View" : "Switch to Card View"}
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '0.5rem',
-                                            padding: '0.4rem 0.8rem',
+                                            justifyContent: 'center',
+                                            padding: '0.5rem',
+                                            background: 'var(--surface)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '6px',
+                                            color: 'var(--text-primary)',
+                                            cursor: 'pointer',
+                                            boxShadow: 'var(--shadow-sm)',
+                                            transition: 'all 0.2s',
+                                            width: '32px',
+                                            height: '32px'
+                                        }}
+                                        className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                                    >
+                                        {viewMode === 'card' ? <Rows size={16} /> : <LayoutGrid size={16} />}
+                                    </button>
+                                    {/* Filter Toggle (Icon Only) */}
+                                    <button
+                                        onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                        title="Filter Assets"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '0.5rem',
                                             background: isFilterOpen ? 'var(--accent)' : 'var(--surface)',
                                             border: '1px solid var(--border)',
                                             borderRadius: '6px',
                                             color: isFilterOpen ? '#fff' : 'var(--text-primary)',
-                                            fontSize: '0.85rem',
-                                            fontWeight: 500,
                                             cursor: 'pointer',
                                             boxShadow: 'var(--shadow-sm)',
-                                            transition: 'all 0.2s'
+                                            transition: 'all 0.2s',
+                                            width: '32px',
+                                            height: '32px'
                                         }}
                                         className={isFilterOpen ? '' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}
                                     >
-                                        <SlidersHorizontal size={14} />
-                                        <span>Filter</span>
+                                        <SlidersHorizontal size={16} />
                                     </button>
 
-                                    {/* Add Position Button (Second) */}
+                                    {/* Upload CSV Button (Icon Only) */}
                                     <button
-                                        onClick={() => {
-                                            // Scroll to top smoothly
-                                            window.scrollTo({ top: 0, behavior: 'smooth' });
-
-                                            // Focus on navbar search input after scroll
-                                            setTimeout(() => {
-                                                const searchInput = document.querySelector('input[placeholder*="add your asset"]') as HTMLInputElement;
-                                                if (searchInput) {
-                                                    searchInput.focus();
-                                                    searchInput.placeholder = "To add your asset, start searching...";
-                                                }
-                                            }, 500);
-                                        }}
+                                        onClick={() => setShowImportModal(true)}
+                                        title="Upload CSV"
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '0.5rem',
-                                            padding: '0.4rem 0.8rem',
+                                            justifyContent: 'center',
+                                            padding: '0.5rem',
                                             background: 'var(--surface)',
                                             border: '1px solid var(--border)',
                                             borderRadius: '6px',
                                             color: 'var(--text-primary)',
-                                            fontSize: '0.85rem',
-                                            fontWeight: 500,
                                             cursor: 'pointer',
                                             boxShadow: 'var(--shadow-sm)',
-                                            transition: 'all 0.2s'
+                                            transition: 'all 0.2s',
+                                            width: '32px',
+                                            height: '32px'
                                         }}
                                         className="hover:bg-gray-50 dark:hover:bg-gray-800"
                                     >
-                                        <Plus size={14} />
-                                        <span>Add Position</span>
-                                    </button>
-
-                                    {/* Upload CSV Button (Third) */}
-                                    <button
-                                        onClick={() => setShowImportModal(true)}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                            padding: '0.4rem 0.8rem',
-                                            background: 'var(--surface)',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: '6px',
-                                            color: 'var(--text-primary)',
-                                            fontSize: '0.85rem',
-                                            fontWeight: 500,
-                                            cursor: 'pointer',
-                                            boxShadow: 'var(--shadow-sm)',
-                                            transition: 'all 0.2s'
-                                        }}
-                                        className="hover:bg-gray-50 dark:hover:bg-gray-800"
-                                    >
-                                        <Plus size={14} />
-                                        <span>Upload CSV</span>
+                                        <Upload size={16} />
                                     </button>
                                 </div>
                             </div>
@@ -2145,7 +2204,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                     <ChangelogView />
                                                 ) : (
                                                     <>
-                                                        {viewMode === "list" ? (
+                                                        {viewMode === 'card' || viewMode === 'compact' ? (
                                                             <div style={{
                                                                 display: 'flex',
                                                                 flexDirection: 'column',
@@ -2161,7 +2220,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                     <div className="asset-table-header" style={{
                                                                         alignItems: 'center',
                                                                         display: 'grid',
-                                                                        gridTemplateColumns: activeColumns.map(c => COL_WIDTHS[c]).join(' ') + ' 40px',
+                                                                        gridTemplateColumns: viewMode === 'compact' ? COMPACT_GRID_TEMPLATE : (activeColumns.map(c => COL_WIDTHS[c]).join(' ') + ' 40px'),
                                                                         gap: 0,
                                                                         position: 'relative',
                                                                         zIndex: 40,
@@ -2173,8 +2232,8 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                         fontWeight: 700,
                                                                         transition: 'background 0.3s'
                                                                     }}>
-                                                                        <SortableContext items={activeColumns.map(c => `col:${c}`)} strategy={rectSortingStrategy}>
-                                                                            {activeColumns.map((colId, index) => {
+                                                                        <SortableContext items={activeColumns} strategy={horizontalListSortingStrategy}>
+                                                                            {viewMode === 'card' && activeColumns.map((colId, index) => {
                                                                                 const colDef = translatedColumns.find(c => c.id === colId);
                                                                                 let label = (colDef?.headerLabel || colDef?.label || colId).toUpperCase();
 
@@ -2269,6 +2328,37 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                                 );
                                                                             })}
                                                                         </SortableContext>
+
+                                                                        {/* COMPACT MODE HEADERS */}
+                                                                        {viewMode === 'compact' && (
+                                                                            <>
+                                                                                {/* 1. Icon Space */}
+                                                                                <div />
+
+                                                                                {/* 2. Name / Ticker */}
+                                                                                <div style={{ padding: '0 0.5rem', fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center' }}>
+                                                                                    NAME
+                                                                                </div>
+
+                                                                                {/* 3. Price / Cost */}
+                                                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', padding: '0 3.5rem 0 0.5rem', justifyContent: 'center', width: '100%', textAlign: 'right' }}>
+                                                                                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', lineHeight: 1.2 }}>PRICE</span>
+                                                                                    <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', lineHeight: 1.2 }}>COST</span>
+                                                                                </div>
+
+                                                                                {/* 4. Total Value / Total Cost */}
+                                                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', padding: '0 2.5rem 0 0.5rem', justifyContent: 'center', width: '100%', textAlign: 'right' }}>
+                                                                                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', lineHeight: 1.2 }}>TOTAL VALUE</span>
+                                                                                    <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', lineHeight: 1.2 }}>TOTAL COST</span>
+                                                                                </div>
+
+                                                                                {/* 5. P&L */}
+                                                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', padding: '0 0.5rem', justifyContent: 'center', width: '100%', textAlign: 'right' }}>
+                                                                                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', lineHeight: 1.2 }}>P&L (%)</span>
+                                                                                    <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', lineHeight: 1.2 }}>AMOUNT</span>
+                                                                                </div>
+                                                                            </>
+                                                                        )}
 
                                                                         <div style={{
                                                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -2475,6 +2565,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                         {orderedGroups.filter(type => groupedAssets[type]).map(type => (
                                                                             <SortableGroup key={type} id={`group:${type}`} disabled={isGlobalEditMode}>
                                                                                 <AssetGroup
+                                                                                    viewMode={viewMode}
                                                                                     type={type}
                                                                                     assets={groupedAssets[type]}
                                                                                     totalEUR={groupTotals[type]}
@@ -2496,20 +2587,32 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                     <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
                                                                         {filteredAssets.map((asset, index) => (
                                                                             <SortableAssetRow key={asset.id} id={asset.id} disabled={isGlobalEditMode}>
-                                                                                <AssetTableRow
-                                                                                    asset={asset}
-                                                                                    positionsViewCurrency={positionsViewCurrency}
-                                                                                    totalPortfolioValueEUR={totalValueEUR}
-                                                                                    isOwner={isOwner}
-                                                                                    onDelete={handleDelete}
-                                                                                    timeFactor={getTimeFactor()}
-                                                                                    rowIndex={index}
-                                                                                    columns={activeColumns}
-                                                                                    timePeriod={timePeriod}
-                                                                                    exchangeRates={exchangeRates}
-                                                                                    isGlobalEditMode={isGlobalEditMode}
-                                                                                    onAssetClick={setEditingAsset}
-                                                                                />
+                                                                                {viewMode === 'compact' ? (
+                                                                                    <CompactAssetRow
+                                                                                        asset={asset}
+                                                                                        positionsViewCurrency={positionsViewCurrency}
+                                                                                        exchangeRates={exchangeRates}
+                                                                                        isOwner={isOwner}
+                                                                                        onDelete={handleDelete}
+                                                                                        onAssetClick={setEditingAsset}
+                                                                                        isGlobalEditMode={isGlobalEditMode}
+                                                                                    />
+                                                                                ) : (
+                                                                                    <AssetTableRow
+                                                                                        asset={asset}
+                                                                                        positionsViewCurrency={positionsViewCurrency}
+                                                                                        totalPortfolioValueEUR={totalValueEUR}
+                                                                                        isOwner={isOwner}
+                                                                                        onDelete={handleDelete}
+                                                                                        timeFactor={getTimeFactor()}
+                                                                                        rowIndex={index}
+                                                                                        columns={activeColumns}
+                                                                                        timePeriod={timePeriod}
+                                                                                        exchangeRates={exchangeRates}
+                                                                                        isGlobalEditMode={isGlobalEditMode}
+                                                                                        onAssetClick={setEditingAsset}
+                                                                                    />
+                                                                                )}
                                                                             </SortableAssetRow>
                                                                         ))}
                                                                     </SortableContext>
@@ -2518,7 +2621,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                 {filteredAssets.length === 0 && (
                                                                     <EmptyPlaceholder
                                                                         title="No Assets Found"
-                                                                        description="We couldn't find any assets matching your current filters. Try generating a new asset or adjusting your search."
+                                                                        description="Go to search bar and search your assets"
                                                                         icon={Inbox}
                                                                         height="300px"
                                                                     />
@@ -2567,7 +2670,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                             {filteredAssets.map((asset, index) => {
                                                                                 return (
                                                                                     <SortableAssetCard key={asset.id} id={asset.id} disabled={isGlobalEditMode}>
-                                                                                        {viewMode === 'detailed' ? (
+                                                                                        {(viewMode as string) === 'detailed' ? (
                                                                                             <DetailedAssetCard
                                                                                                 asset={asset}
                                                                                                 positionsViewCurrency={positionsViewCurrency}
@@ -2651,9 +2754,20 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
 
 
                                 {goals && goals.length > 0 && (
-                                    <GoalsCard goals={goals || []} isOwner={isOwner} exchangeRates={exchangeRates} totalValueEUR={totalValueEUR} />
+                                    <GoalsCard
+                                        goals={goals || []}
+                                        isOwner={isOwner}
+                                        exchangeRates={exchangeRates}
+                                        totalValueEUR={totalValueEUR}
+                                        onShare={(data: any) => handleShareIntent(data, 'milestone')}
+                                    />
                                 )}
-                                <TopPerformersCard assets={assets} baseCurrency={globalCurrency} />
+                                <TopPerformersCard
+                                    assets={assets}
+                                    baseCurrency={globalCurrency}
+                                    username={username}
+                                    onShare={(data: any) => handleShareIntent(data, 'heavy_hitter')}
+                                />
                             </>
                         )}
                     </div>
