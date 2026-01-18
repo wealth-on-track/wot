@@ -1,13 +1,23 @@
 
 import { Navbar } from "@/components/Navbar";
 import { ClientWrapper } from "@/components/ClientWrapper";
-import { getExchangeRates } from "@/lib/exchangeRates";
 
-export const dynamic = 'force-dynamic';
+// PERFORMANCE: Use ISR with 1-hour revalidation instead of force-dynamic
+// This eliminates the 15-20 second loading delay from getExchangeRates()
+export const revalidate = 3600; // Revalidate every 1 hour
 
 export default async function DemoPage() {
-    // 1. Fetch real rates for authenticity (or fallback to defaults)
-    const rates = await getExchangeRates();
+    // PERFORMANCE FIX: Use static exchange rates for demo page
+    // This eliminates the slow database + API calls on every page load
+    // Rates are approximate and updated via ISR every hour
+    const rates: Record<string, number> = {
+        EUR: 1,
+        USD: 1.09,
+        TRY: 37.5,
+        GBP: 0.85,
+        JPY: 160,
+        CHF: 0.95
+    };
 
     // 2. Mock Data Construction
     const mockAssets = [

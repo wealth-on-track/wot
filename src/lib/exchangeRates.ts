@@ -73,7 +73,17 @@ export async function getExchangeRates(): Promise<RatesMap> {
             const yahooSymbols = requiredCurrencies.map(c => `EUR${c}=X`);
 
             const { getYahooQuotes } = await import('@/services/yahooApi');
-            const quotes = await getYahooQuotes(yahooSymbols);
+
+            // PERFORMANCE FIX: Add timeout to prevent long loading times
+            // If Yahoo Finance is slow, fall back to cached rates
+            const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Yahoo Finance API timeout')), 5000)
+            );
+
+            const quotes = await Promise.race([
+                getYahooQuotes(yahooSymbols),
+                timeoutPromise
+            ]);
 
             const newRates: Record<string, number> = {};
 
@@ -107,6 +117,9 @@ export async function getExchangeRates(): Promise<RatesMap> {
                 console.warn("Using emergency fallback rates");
                 rates['USD'] = 1.09;
                 rates['TRY'] = 37.5;
+                rates['GBP'] = 0.85;
+                rates['JPY'] = 160;
+                rates['CHF'] = 0.95;
             }
         }
     }
