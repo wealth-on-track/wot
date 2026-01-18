@@ -75,9 +75,9 @@ export async function getExchangeRates(): Promise<RatesMap> {
             const { getYahooQuotes } = await import('@/services/yahooApi');
 
             // PERFORMANCE FIX: Add timeout to prevent long loading times
-            // If Yahoo Finance is slow, fall back to cached rates
+            // Reduced to 2.5s for better mobile experience (was 5s)
             const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('Yahoo Finance API timeout')), 5000)
+                setTimeout(() => reject(new Error('Yahoo Finance API timeout')), 2500)
             );
 
             const quotes = await Promise.race([
