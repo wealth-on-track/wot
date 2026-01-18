@@ -14,6 +14,7 @@ import {
 import { LineChart as LineChartIcon, Eye, EyeOff, ChevronDown, TrendingDown, Activity, TrendingUp, Settings, Edit2 } from 'lucide-react';
 import { BENCHMARK_ASSETS, fetchBenchmarkData, normalizeToPercentage, BenchmarkDataPoint } from '@/lib/benchmarkApi';
 import { WotTabs } from "./WotTabs";
+import { VisionSettings } from "./VisionSettings";
 import { formatEUR, formatNumber } from '@/lib/formatters';
 import { useCurrency } from '@/context/CurrencyContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -48,9 +49,9 @@ interface ChartDataPoint {
 }
 
 const SCENARIOS = {
-    conservative: { label: 'Conservative', rate: 0.06, color: '#f87171' },
-    moderate: { label: 'Moderate', rate: 0.10, color: '#6366f1' },
-    aggressive: { label: 'Aggressive', rate: 0.15, color: '#10b981' }
+    bear: { label: 'Bear', rate: 0.03, color: '#EF4444' },
+    expected: { label: 'Expected', rate: 0.10, color: '#8B5CF6' },
+    bull: { label: 'Bull', rate: 0.15, color: '#10B981' }
 };
 
 export function PortfolioPerformanceChart({
@@ -75,11 +76,9 @@ export function PortfolioPerformanceChart({
     // Vision Mode State
     const [isVisionMode, setIsVisionMode] = useState(false);
     const [visionYears, setVisionYears] = useState(10); // Default 10 years
-    const [monthlyContribution, setMonthlyContribution] = useState(0);
-    const [activeScenario, setActiveScenario] = useState<keyof typeof SCENARIOS | 'custom'>('moderate');
-    const [customRate, setCustomRate] = useState(15); // Default custom rate 15%
-    const [isCustomInputActive, setIsCustomInputActive] = useState(false);
-    const [tempCustomRate, setTempCustomRate] = useState('15');
+    const [monthlyAdd, setMonthlyAdd] = useState(0); // Monthly contribution
+    const [activeScenario, setActiveScenario] = useState<'bear' | 'expected' | 'bull' | 'custom'>('expected');
+    const [customRate, setCustomRate] = useState(10); // Default custom rate 10%
 
     // UI State for Period Dropdown
     const [isPeriodMenuOpen, setIsPeriodMenuOpen] = useState(false);
@@ -248,13 +247,13 @@ export function PortfolioPerformanceChart({
                 const dateKey = fDate.toISOString().split('T')[0];
 
                 // 1. Calculate Standard Projection (Main Line)
-                cumulativeValue = (cumulativeValue * (1 + monthlyRate)) + monthlyContribution;
-                totalInvested += monthlyContribution;
+                cumulativeValue = (cumulativeValue * (1 + monthlyRate)) + monthlyAdd;
+                totalInvested += monthlyAdd;
 
                 // 2. Calculate Impact Projection (Ghost Line)
                 // Assumption: The 'Impact' is a one-time lump sum added NOW. 
                 // So it compounds along with the rest of the portfolio.
-                cumulativeImpactValue = (cumulativeImpactValue * (1 + monthlyRate)) + monthlyContribution;
+                cumulativeImpactValue = (cumulativeImpactValue * (1 + monthlyRate)) + monthlyAdd;
 
                 // Growth since "Today" (Base vs Impact)
                 const growthFactorSinceToday = cumulativeValue / totalValueEUR;
@@ -303,7 +302,7 @@ export function PortfolioPerformanceChart({
         return Array.from(dataMap.values()).sort((a, b) =>
             new Date(a.date).getTime() - new Date(b.date).getTime()
         );
-    }, [portfolioData, benchmarkData, isVisionMode, visionYears, monthlyContribution, activeScenario, totalValueEUR, customRate, simulatedImpact]);
+    }, [portfolioData, benchmarkData, isVisionMode, visionYears, monthlyAdd, activeScenario, totalValueEUR, customRate, simulatedImpact]);
 
     // --- Zoom Logic ---
     const zoomedData = useMemo(() => {
@@ -1182,49 +1181,19 @@ export function PortfolioPerformanceChart({
                     </div>
                 )
             }
-            {/* 5. Vision Controls (Overlay at Bottom) */}
+            {/* 5. Vision Controls (New Design) */}
             {
                 isVisionMode && (
-                    <div style={{
-                        marginTop: '1rem',
-                        background: 'var(--bg-secondary)',
-                        borderRadius: '12px',
-                        padding: '1rem',
-                        border: '1px solid var(--border)',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                        animation: 'slideUp 0.3s ease-out'
-                    }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.8fr 1.4fr', gap: '1.5rem', alignItems: 'start' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', height: '1rem', display: 'flex', alignItems: 'center' }}>
-                                    Time Horizon: <span style={{ color: 'var(--text-primary)', marginLeft: '4px' }}>{visionYears} Years</span>
-                                </label>
-                                <div style={{ height: '36px', display: 'flex', alignItems: 'center' }}>
-                                    <input type="range" min="1" max="30" value={visionYears} onChange={(e) => setVisionYears(Number(e.target.value))} style={{ width: '100%', accentColor: '#2DBC8E' }} />
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', height: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>Scenario</label>
-                                <div style={{ display: 'flex', background: 'var(--bg-primary)', borderRadius: '8px', padding: '2px', border: '1px solid var(--border)', height: '36px' }}>
-                                    {(['conservative', 'moderate', 'aggressive', 'custom'] as const).map(s => (
-                                        <button key={s} onClick={() => setActiveScenario(s)} style={{ flex: 1, padding: '0 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, border: 'none', background: activeScenario === s ? (s === 'custom' ? '#f59e0b' : '#2DBC8E') : 'transparent', color: activeScenario === s ? '#fff' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
-                                            {s.charAt(0).toUpperCase() + s.slice(1)}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: activeScenario === 'custom' ? '#f59e0b' : '#2DBC8E', textTransform: 'uppercase', height: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                                    {activeScenario === 'custom' ? 'Custom Rate' : 'Annual Return'}
-                                </label>
-                                <div style={{ height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                                    <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
-                                        {activeScenario === 'custom' ? customRate : SCENARIOS[activeScenario].rate}%
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <VisionSettings
+                        visionYears={visionYears}
+                        setVisionYears={setVisionYears}
+                        monthlyAdd={monthlyAdd}
+                        setMonthlyAdd={setMonthlyAdd}
+                        scenario={activeScenario}
+                        setScenario={setActiveScenario}
+                        customRate={customRate}
+                        setCustomRate={setCustomRate}
+                    />
                 )
             }
 
