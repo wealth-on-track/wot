@@ -13,10 +13,12 @@ import {
 } from 'recharts';
 import { LineChart as LineChartIcon, Eye, EyeOff, ChevronDown, TrendingDown, Activity, TrendingUp, Settings, Edit2 } from 'lucide-react';
 import { BENCHMARK_ASSETS, fetchBenchmarkData, normalizeToPercentage, BenchmarkDataPoint } from '@/lib/benchmarkApi';
+import { WotTabs } from "./WotTabs";
 import { formatEUR, formatNumber } from '@/lib/formatters';
 import { useCurrency } from '@/context/CurrencyContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { convertCurrency, getCurrencySymbol } from '@/lib/currency';
+import { motion } from 'framer-motion';
 
 interface PortfolioPerformanceChartProps {
     username: string;
@@ -46,9 +48,9 @@ interface ChartDataPoint {
 }
 
 const SCENARIOS = {
-    bear: { label: 'Bear', rate: 0.04, color: '#f87171' },
-    expected: { label: 'Expected', rate: 0.10, color: '#6366f1' },
-    bull: { label: 'Bull', rate: 0.20, color: '#10b981' }
+    conservative: { label: 'Conservative', rate: 0.06, color: '#f87171' },
+    moderate: { label: 'Moderate', rate: 0.10, color: '#6366f1' },
+    aggressive: { label: 'Aggressive', rate: 0.15, color: '#10b981' }
 };
 
 export function PortfolioPerformanceChart({
@@ -74,7 +76,7 @@ export function PortfolioPerformanceChart({
     const [isVisionMode, setIsVisionMode] = useState(false);
     const [visionYears, setVisionYears] = useState(10); // Default 10 years
     const [monthlyContribution, setMonthlyContribution] = useState(0);
-    const [activeScenario, setActiveScenario] = useState<keyof typeof SCENARIOS | 'custom'>('expected');
+    const [activeScenario, setActiveScenario] = useState<keyof typeof SCENARIOS | 'custom'>('moderate');
     const [customRate, setCustomRate] = useState(15); // Default custom rate 15%
     const [isCustomInputActive, setIsCustomInputActive] = useState(false);
     const [tempCustomRate, setTempCustomRate] = useState('15');
@@ -790,697 +792,445 @@ export function PortfolioPerformanceChart({
 
 
 
+    // --- RENDER HELPERS ---
+    // --- RENDER HELPERS ---
+    const renderSegmentedControl = () => (
+        <WotTabs
+            tabs={[
+                { id: 'performance', label: 'Portfolio Performance' },
+                { id: 'vision', label: 'WOT Vision' }
+            ]}
+            activeTabId={!isVisionMode ? 'performance' : 'vision'}
+            onTabChange={(id) => setIsVisionMode(id === 'vision')}
+            theme="dark" // Usually charts are on dark background
+        />
+    );
+
+    // --- DESKTOP LAYOUT ---
+    // --- DESKTOP LAYOUT ---
+    // --- DESKTOP LAYOUT ---
+    // --- DESKTOP LAYOUT ---
+    // --- DESKTOP LAYOUT ---
+    // --- DESKTOP LAYOUT ---
     // --- DESKTOP LAYOUT ---
     return (
-        <div className="neo-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <style>{`
+        <div style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
+            {/* 1. Integrated Tabs Area (WOT Integrated Tab System) */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'flex-start', // Align tabs to left only
+                alignItems: 'flex-end',
+                paddingLeft: '0',
+                paddingRight: '0.8rem',
+                marginBottom: '-1px',
+                zIndex: 10,
+            }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    gap: '4px',
+                    paddingLeft: '0'
+                }}>
+                    {/* Tab 1: Performance */}
+                    <button
+                        onClick={() => setIsVisionMode(false)}
+                        style={{
+                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            fontFamily: "'Inter', sans-serif",
+                            color: !isVisionMode ? 'var(--text-primary)' : 'var(--text-muted)',
+                            background: 'var(--surface)',
+                            border: !isVisionMode ? '1px solid var(--border)' : '1px solid transparent',
+                            borderBottom: !isVisionMode ? '1px solid var(--surface)' : '1px solid var(--border)',
+                            borderRadius: '12px 12px 0 0',
+                            padding: '12px 24px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            position: 'relative',
+                            zIndex: !isVisionMode ? 2 : 1,
+                            opacity: !isVisionMode ? 1 : 0.8, // Increased from 0.5
+                            transform: !isVisionMode ? 'translateY(1px)' : 'scale(0.98)',
+                        }}
+                        onMouseEnter={(e) => { if (isVisionMode) e.currentTarget.style.opacity = '0.9'; }}
+                        onMouseLeave={(e) => { if (isVisionMode) e.currentTarget.style.opacity = '0.8'; }}
+                    >
+                        Performance
+                        {!isVisionMode && (
+                            <div style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                height: '2px',
+                                background: 'linear-gradient(90deg, #10B981 0%, #34D399 100%)',
+                                zIndex: 3
+                            }} />
+                        )}
+                    </button>
+
+                    {/* Tab 2: Vision */}
+                    <button
+                        onClick={() => setIsVisionMode(true)}
+                        style={{
+                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            fontFamily: "'Inter', sans-serif",
+                            color: isVisionMode ? 'var(--text-primary)' : 'var(--text-muted)',
+                            background: 'var(--surface)',
+                            border: isVisionMode ? '1px solid var(--border)' : '1px solid transparent',
+                            borderBottom: isVisionMode ? '1px solid var(--surface)' : '1px solid var(--border)',
+                            borderRadius: '12px 12px 0 0',
+                            padding: '12px 24px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            position: 'relative',
+                            zIndex: isVisionMode ? 2 : 1,
+                            opacity: isVisionMode ? 1 : 0.8, // Increased from 0.5
+                            transform: isVisionMode ? 'translateY(1px)' : 'scale(0.98)',
+                        }}
+                        onMouseEnter={(e) => { if (!isVisionMode) e.currentTarget.style.opacity = '0.9'; }}
+                        onMouseLeave={(e) => { if (!isVisionMode) e.currentTarget.style.opacity = '0.8'; }}
+                    >
+                        Vision
+                        {isVisionMode && (
+                            <div style={{
+                                position: 'absolute',
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                height: '2px',
+                                background: 'linear-gradient(90deg, #10B981 0%, #34D399 100%)',
+                                zIndex: 3
+                            }} />
+                        )}
+                    </button>
+                </div>
+            </div>
+
+            {/* 2. Main Card Content */}
+            <div className="neo-card" style={{
+                padding: '1.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                position: 'relative',
+                overflow: 'visible',
+                borderTopLeftRadius: '0px',
+                borderTopRightRadius: '12px',
+                borderBottomLeftRadius: '12px',
+                borderBottomRightRadius: '12px',
+                marginTop: 0,
+                background: 'var(--surface)', // Matches active tab perfectly
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-md)'
+            }}>
+                <style>{`
                 @keyframes pulse-green {
                     0%, 100% { filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.3)); transform: scale(1); }
                     50% { filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.5)); transform: scale(1.02); }
                 }
             `}</style>
-            {/* Header: Single Row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                {/* Left: Amount & Returns */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                    <div>
-                        {isVisionMode && chartData.length > 0 ? (
-                            // Vision Mode: Show Projected Value
-                            (() => {
-                                const lastPt = chartData[chartData.length - 1];
-                                const projectedVal = lastPt._actualValue || totalValueEUR;
-                                return (
-                                    <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0, textShadow: '0 0 20px rgba(99, 102, 241, 0.3)' }}>
-                                        {currencySym}{fmtCurrency(Number(projectedVal))}
-                                    </h2>
-                                );
-                            })()
-                        ) : (
-                            // Normal Mode
-                            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
-                                {currencySym}{fmtCurrency(displayedTotalValue)}
-                            </h2>
+
+                {/* Header: Consolidated Stats + Controls */}
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '1rem',
+                    paddingBottom: '0.5rem',
+                    borderBottom: '1px solid var(--border)' // Subtle separation line
+                }}>
+                    {/* LEFT: Portfolio Info */}
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '1.5rem' }}>
+                        {/* 1. Main Amount */}
+                        <div style={{
+                            fontSize: '2rem', // Big Impact
+                            fontWeight: 800,
+                            color: 'var(--text-primary)',
+                            lineHeight: 1,
+                            fontVariantNumeric: 'tabular-nums',
+                            letterSpacing: '-0.03em'
+                        }}>
+                            {currencySym}{fmtCurrency(Number(isVisionMode ? (chartData[chartData.length - 1]?._actualValue || displayedTotalValue) : displayedTotalValue))}
+                        </div>
+
+                        {/* 2. Changes */}
+                        {!isVisionMode && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                <span style={{ fontSize: '1rem', fontWeight: 600, color: isPositive ? 'var(--success)' : 'var(--danger)', display: 'flex', alignItems: 'center' }}>
+                                    {isPositive ? '▲' : '▼'}{Math.abs(portfolioStats.changePercent).toFixed(2)}%
+                                </span>
+                                <span style={{ fontSize: '1rem', fontWeight: 500, color: isPositive ? 'var(--success)' : 'var(--danger)', opacity: 0.9 }}>
+                                    {isPositive ? '+' : '-'}{currencySym}{fmtCurrency(Math.abs(displayedChange))}
+                                </span>
+                            </div>
                         )}
                         {isVisionMode && (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginTop: '4px' }}>
-                                Estimated Value in {new Date().getFullYear() + visionYears}
-                            </span>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#2DBC8E' }}>
+                                Projected ({visionYears + 2026})
+                            </div>
                         )}
                     </div>
 
-                    {!isVisionMode && (
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                                {selectedPeriod} Return:
-                            </span>
-                            <span style={{ fontSize: '0.95rem', fontWeight: 700, color: isPositive ? 'var(--success)' : 'var(--danger)' }}>
-                                {portfolioData.length > 0 ? (isPositive ? '▲' : '▼') : ''}{Math.abs(portfolioStats.changePercent).toFixed(2)}%
-                            </span>
-                            <span style={{ fontSize: '0.95rem', fontWeight: 600, color: isPositive ? 'var(--success)' : 'var(--danger)', opacity: 0.8 }}>
-                                ({isPositive ? '+' : '-'}{currencySym}{fmtCurrency(Math.abs(displayedChange))})
-                            </span>
+                    {/* RIGHT: Time Selectors + Benchmarks */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                        {/* Time Range Buttons (Only in Performance Mode) */}
+                        {!isVisionMode && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                {(['1D', '1W', '1M', 'YTD', '1Y', 'ALL'] as TimePeriod[]).map((period) => (
+                                    <button
+                                        key={period}
+                                        onClick={() => handlePeriodChange(period)}
+                                        style={{
+                                            padding: '4px 10px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 700,
+                                            color: selectedPeriod === period ? '#ffffff' : 'var(--text-muted)',
+                                            background: selectedPeriod === period ? '#6366f1' : 'transparent',
+                                            borderRadius: '6px',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                        }}
+                                    >
+                                        {period}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Vision Controls in Header if Vision Mode */}
+                        {isVisionMode && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', background: 'var(--bg-secondary)', borderRadius: '20px', border: '1px solid var(--border)' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Goal:</span>
+                                <input
+                                    type="number"
+                                    value={visionYears + 2026}
+                                    onChange={(e) => setVisionYears(Number(e.target.value) - 2026)}
+                                    style={{ background: 'transparent', border: 'none', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', width: '40px', padding: 0, outline: 'none' }}
+                                />
+                            </div>
+                        )}
+
+                        {/* Benchmarks Selector */}
+                        {!isVisionMode && <BenchmarkSelector />}
+                    </div>
+                </div>
+
+                {/* Chart Container */}
+                <div style={{ width: '100%', height: '280px', position: 'relative' }} // Reduced height to 280px
+                    onMouseEnter={() => setIsChartHovered(true)}
+                    onMouseLeave={() => setIsChartHovered(false)}
+                    onWheel={handleWheel}
+                >
+                    {isLoading && (
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(2px)', zIndex: 20 }}>
+                            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Loading...</span>
                         </div>
+                    )}
+
+                    {isMounted && (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={zoomedData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}> {/* negative left margin to pull y-axis in */}
+                                <defs>
+                                    <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="colorVision" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#2DBC8E" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#2DBC8E" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="ghostGradient" x1="0" y1="0" x2="1" y2="0">
+                                        <stop offset="0%" stopColor="#2DBC8E" stopOpacity={0.1} />
+                                        <stop offset="100%" stopColor="#2DBC8E" stopOpacity={0.4} />
+                                    </linearGradient>
+                                </defs>
+
+                                <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={true} stroke="rgba(0,0,0,0.05)" />
+
+                                <XAxis
+                                    dataKey="date"
+                                    tickFormatter={formatXAxis}
+                                    tick={{ fontSize: 11, fill: '#64748b' }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                    minTickGap={50}
+                                    dy={10}
+                                />
+
+                                {/* Restore Y Axis Visibility */}
+                                <YAxis
+                                    width={45}
+                                    domain={['auto', 'auto']}
+                                    tickFormatter={(val) => `${val}%`}
+                                    tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                />
+
+                                <Tooltip
+                                    content={<CustomTooltip />}
+                                    cursor={{ stroke: isVisionMode ? '#2DBC8E' : '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                    wrapperStyle={{ outline: 'none' }}
+                                />
+
+                                {/* Standard Portfolio Line */}
+                                {!isVisionMode && (
+                                    <Area
+                                        type="monotone"
+                                        dataKey="portfolio"
+                                        stroke="#6366f1"
+                                        strokeWidth={3}
+                                        fill="url(#colorPortfolio)"
+                                        animationDuration={800}
+                                        activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }}
+                                    />
+                                )}
+
+                                {/* Vision Mode Lines */}
+                                {isVisionMode && (
+                                    <>
+                                        {/* Main Projection */}
+                                        <Area
+                                            type="monotone"
+                                            dataKey="projectedValue"
+                                            stroke="#2DBC8E"
+                                            strokeWidth={3}
+                                            fill="url(#colorVision)"
+                                            animationDuration={800}
+                                            activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }}
+                                            name="Projected"
+                                        />
+
+                                        {/* Ghost Line (Impact) - Only if simulatedImpact/Active Scenario differs */}
+                                        <Area
+                                            type="monotone"
+                                            dataKey="impactValue"
+                                            stroke="url(#ghostGradient)"
+                                            strokeWidth={2}
+                                            strokeDasharray="5 5"
+                                            fill="none"
+                                            animationDuration={1000}
+                                            name="Potential"
+                                        />
+                                    </>
+                                )}
+
+                                {/* Benchmarks (Only in Performance Mode) */}
+                                {!isVisionMode && selectedBenchmarks.map(id => {
+                                    const b = BENCHMARK_ASSETS.find(a => a.id === id);
+                                    return <Line key={id} type="monotone" dataKey={id} stroke={b?.color} strokeWidth={2} dot={false} connectNulls animationDuration={800} />;
+                                })}
+                            </AreaChart>
+                        </ResponsiveContainer>
                     )}
                 </div>
 
-                {/* Right: Controls */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
 
-                    {/* Vision Toggle */}
-                    <button
-                        onClick={() => setIsVisionMode(!isVisionMode)}
-                        style={{
-                            padding: '0.4rem 0.8rem',
-                            borderRadius: '8px',
-                            border: isVisionMode ? '1px solid #7c3aed' : '1px solid rgba(139, 92, 246, 0.3)',
-                            background: isVisionMode ? '#8b5cf6' : 'rgba(139, 92, 246, 0.08)',
-                            color: isVisionMode ? '#fff' : '#8b5cf6',
-                            fontSize: '0.8rem', fontWeight: 800,
-                            cursor: 'pointer',
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            boxShadow: isVisionMode ? '0 0 15px rgba(139, 92, 246, 0.5)' : 'none',
-                            textShadow: isVisionMode ? '0 1px 2px rgba(0,0,0,0.2)' : 'none'
-                        }}
-                    >
-                        {isVisionMode ? <Eye size={16} /> : <EyeOff size={16} />}
-                        <span>WOT VISION</span>
-                    </button>
+                {/* Close Main Card Div */}
+            </div>
 
-                    {/* Impact Toggle (only in Vision Mode) */}
-                    {isVisionMode && (
-                        <button
-                            onClick={() => setIsImpactPanelOpen(!isImpactPanelOpen)}
-                            style={{
-                                padding: '0.4rem 0.8rem',
-                                borderRadius: '8px',
-                                border: isImpactPanelOpen ? '1px solid #fbbf24' : '1px solid rgba(251, 191, 36, 0.3)',
-                                background: isImpactPanelOpen ? 'rgba(251, 191, 36, 0.15)' : 'rgba(251, 191, 36, 0.05)',
-                                color: '#fbbf24',
-                                fontSize: '0.75rem',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                transition: 'all 0.3s',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                            }}
-                        >
-                            <Settings size={14} />
-                            <span>WOT BOOST</span>
-                        </button>
-                    )}
+            {/* 4. Performance Summary Card (Bottom) - Moved outside main card wrapper if needed, but for now kept inside flow */}
+            {
+                showHistoryList && zoomedData.length > 0 && !isVisionMode && (
+                    <div style={{
+                        marginTop: '0.5rem',
+                        background: 'var(--bg-secondary)',
+                        borderRadius: '12px',
+                        padding: '1.25rem',
+                        border: '1px solid var(--border)',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}>
+                        {/* ... existing summary content ... */}
+                        {(() => {
+                            const lastPoint = zoomedData[zoomedData.length - 1];
+                            const periodLabel = selectedPeriod === '1D' ? 'Today' : selectedPeriod === 'ALL' ? 'All Time' : selectedPeriod;
+                            const comparisons: any[] = [];
+                            if (isPortfolioVisible) comparisons.push({ name: 'My Portfolio', value: Number(lastPoint.portfolio), color: '#6366f1' });
+                            selectedBenchmarks.forEach(id => {
+                                const val = Number(lastPoint[id]);
+                                if (!isNaN(val)) {
+                                    const b = BENCHMARK_ASSETS.find(a => a.id === id);
+                                    comparisons.push({ name: b?.name || id, value: val, color: b?.color || '#ccc' });
+                                }
+                            });
+                            comparisons.sort((a, b) => b.value - a.value);
 
-                    {!isVisionMode && <BenchmarkSelector />}
-
-                    {/* Compact Time Period Dropdown - Only show if showPeriodSelector is true */}
-                    {!isVisionMode && showPeriodSelector && (
-                        <div style={{ position: 'relative' }}>
-                            <button
-                                onClick={() => setIsPeriodMenuOpen(!isPeriodMenuOpen)}
-                                style={{
-                                    padding: '0.4rem 0.8rem',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 700,
-                                    borderRadius: '8px',
-                                    border: '1px solid var(--border)',
-                                    background: 'var(--bg-secondary)',
-                                    color: 'var(--text-primary)',
-                                    cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', gap: '6px',
-                                    minWidth: '70px', justifyContent: 'center',
-                                    transition: 'all 0.2s'
-                                }}
-                            >
-                                {selectedPeriod}
-                                <ChevronDown size={14} style={{ transform: isPeriodMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                            </button>
-
-                            {/* Dropdown Menu */}
-                            {isPeriodMenuOpen && (
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '110%',
-                                    right: 0,
-                                    background: 'var(--bg-secondary)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '10px',
-                                    padding: '4px',
-                                    display: 'flex', flexDirection: 'column', gap: '2px',
-                                    zIndex: 50,
-                                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-                                    minWidth: '80px',
-                                    animation: 'popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                                    backdropFilter: 'blur(10px)'
-                                }}>
-                                    {(['1D', '1W', '1M', 'YTD', '1Y', 'ALL'] as const).map((period) => (
-                                        <button
-                                            key={period}
-                                            onClick={() => {
-                                                handlePeriodChange(period);
-                                                setIsPeriodMenuOpen(false);
-                                            }}
-                                            style={{
-                                                padding: '0.4rem 0.8rem',
-                                                fontSize: '0.75rem',
-                                                fontWeight: selectedPeriod === period ? 700 : 500,
-                                                color: selectedPeriod === period ? '#fff' : 'var(--text-primary)',
-                                                background: selectedPeriod === period ? 'var(--accent)' : 'transparent',
-                                                borderRadius: '6px',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                textAlign: 'center',
-                                                transition: 'all 0.1s'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (selectedPeriod !== period) e.currentTarget.style.background = 'var(--surface-hover)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (selectedPeriod !== period) e.currentTarget.style.background = 'transparent';
-                                            }}
-                                        >
-                                            {period}
+                            return (
+                                <>
+                                    <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Performance</span>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{periodLabel} Return</span>
+                                    </h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                        {comparisons.map((item) => (
+                                            <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                                    <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: item.color }} />
+                                                    <span style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)' }}>{item.name}</span>
+                                                </div>
+                                                <span style={{ fontSize: '0.95rem', fontWeight: 800, color: item.value >= 0 ? 'var(--success)' : 'var(--danger)', fontVariantNumeric: 'tabular-nums' }}>
+                                                    {item.value > 0 ? '+' : ''}{item.value.toFixed(2)}%
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            );
+                        })()}
+                    </div>
+                )
+            }
+            {/* 5. Vision Controls (Overlay at Bottom) */}
+            {
+                isVisionMode && (
+                    <div style={{
+                        marginTop: '1rem',
+                        background: 'var(--bg-secondary)',
+                        borderRadius: '12px',
+                        padding: '1rem',
+                        border: '1px solid var(--border)',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                        animation: 'slideUp 0.3s ease-out'
+                    }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.8fr 1.4fr', gap: '1.5rem', alignItems: 'start' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', height: '1rem', display: 'flex', alignItems: 'center' }}>
+                                    Time Horizon: <span style={{ color: 'var(--text-primary)', marginLeft: '4px' }}>{visionYears} Years</span>
+                                </label>
+                                <div style={{ height: '36px', display: 'flex', alignItems: 'center' }}>
+                                    <input type="range" min="1" max="30" value={visionYears} onChange={(e) => setVisionYears(Number(e.target.value))} style={{ width: '100%', accentColor: '#2DBC8E' }} />
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', height: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>Scenario</label>
+                                <div style={{ display: 'flex', background: 'var(--bg-primary)', borderRadius: '8px', padding: '2px', border: '1px solid var(--border)', height: '36px' }}>
+                                    {(['conservative', 'moderate', 'aggressive', 'custom'] as const).map(s => (
+                                        <button key={s} onClick={() => setActiveScenario(s)} style={{ flex: 1, padding: '0 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, border: 'none', background: activeScenario === s ? (s === 'custom' ? '#f59e0b' : '#2DBC8E') : 'transparent', color: activeScenario === s ? '#fff' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
+                                            {s.charAt(0).toUpperCase() + s.slice(1)}
                                         </button>
                                     ))}
                                 </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* 3. Chart Area */}
-            {/* IMPORTANT: Fixed height to ensure visibility when parent is height: auto */}
-            <div
-                style={{ width: '100%', height: '220px', position: 'relative', marginBottom: '1rem' }}
-                onMouseEnter={() => setIsChartHovered(true)}
-                onMouseLeave={() => setIsChartHovered(false)}
-                onWheel={handleWheel}
-            >
-                {isLoading && (
-                    <div style={{
-                        position: 'absolute', inset: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(2px)', zIndex: 20
-                    }}>
-                        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Loading...</span>
-                    </div>
-                )}
-                {!isLoading && portfolioData.length === 0 && (
-                    <div style={{
-                        position: 'absolute', inset: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(1px)', zIndex: 20
-                    }}>
-                        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>No data available</span>
-                    </div>
-                )}
-                {isMounted && (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart
-                            data={zoomedData}
-                            margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                        >
-                            <defs>
-                                <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                </linearGradient>
-                                <linearGradient id="colorVision" x1="0" y1="0" x2="1" y2="0">
-                                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.2} />
-                                    <stop offset="100%" stopColor="#10b981" stopOpacity={0.6} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={false} stroke="var(--text-secondary)" opacity={0.2} />
-                            <XAxis
-                                dataKey="date"
-                                tickFormatter={formatXAxis}
-                                tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
-                                axisLine={false}
-                                tickLine={false}
-                                minTickGap={30}
-                                dy={10}
-                            />
-                            <YAxis
-                                tickFormatter={(val) => `${val}%`}
-                                tick={{ fontSize: 11, fill: 'var(--text-muted)' }}
-                                axisLine={false}
-                                tickLine={false}
-                                domain={['auto', 'auto']}
-                            />
-                            <Tooltip content={<CustomTooltip />} />
-
-                            {/* Benchmarks (Lines) */}
-                            {selectedBenchmarks.map(id => {
-                                const b = BENCHMARK_ASSETS.find(a => a.id === id);
-                                return (
-                                    <Line
-                                        key={id}
-                                        type="monotone"
-                                        dataKey={id}
-                                        stroke={b?.color}
-                                        strokeWidth={2}
-                                        dot={false}
-                                        activeDot={{ r: 4, strokeWidth: 0 }}
-                                        connectNulls
-                                        animationDuration={800}
-                                        strokeOpacity={0.8}
-                                    />
-                                );
-                            })}
-
-                            {/* Portfolio (Area) - Render last to be on top? No, usually Lines on top of Area */}
-                            {isPortfolioVisible && (
-                                <>
-                                    <Area
-                                        type="monotone"
-                                        dataKey={isVisionMode ? "projectedValue" : "portfolio"}
-                                        stroke={isVisionMode ? "#10b981" : "#6366f1"}
-                                        strokeWidth={3}
-                                        fillOpacity={1}
-                                        fill={isVisionMode ? "url(#colorVision)" : "url(#colorPortfolio)"}
-                                        activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2, fill: isVisionMode ? '#10b981' : '#6366f1' }}
-                                        connectNulls
-                                        animationDuration={1000}
-                                    />
-                                    {/* Vision Mode: Ghost Line (Impact) */}
-                                    {isVisionMode && simulatedImpact !== 0 && (
-                                        <Line
-                                            type="monotone"
-                                            dataKey="impactValue"
-                                            stroke="#fbbf24"
-                                            strokeWidth={2}
-                                            strokeDasharray="5 5"
-                                            dot={false}
-                                            activeDot={{ r: 5, strokeWidth: 0, fill: '#fbbf24' }}
-                                            animationDuration={1000}
-                                            style={{ filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.5))' }}
-                                        />
-                                    )}
-                                </>
-                            )}
-
-                            {/* Vision Projection (Dashed/Glowing) */}
-                            {isVisionMode && (
-                                <Area
-                                    type="monotone"
-                                    dataKey="projectedValue"
-                                    stroke="var(--accent)"
-                                    strokeWidth={3}
-                                    strokeDasharray="5 5"
-                                    fillOpacity={1}
-                                    fill="url(#colorVision)"
-                                    activeDot={{ r: 8, stroke: '#fff', strokeWidth: 2, fill: '#10b981' }}
-                                    connectNulls
-                                    animationDuration={1500}
-                                />
-                            )}
-                        </AreaChart>
-                    </ResponsiveContainer>
-                )}
-            </div>
-
-            {/* 4. Performance Summary Card (Bottom) */}
-            {showHistoryList && zoomedData.length > 0 && !isVisionMode && (
-                <div style={{
-                    marginTop: '0.5rem',
-                    background: 'var(--bg-secondary)',
-                    borderRadius: '12px',
-                    padding: '1.25rem',
-                    border: '1px solid var(--border)',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                }}>
-                    {(() => {
-                        const lastPoint = zoomedData[zoomedData.length - 1];
-
-                        // Dynamic period label
-                        const periodLabel = selectedPeriod === '1D' ? 'Today' :
-                            selectedPeriod === 'ALL' ? 'All Time' :
-                                selectedPeriod;
-
-                        // Prepare comparison data
-                        const comparisons: any[] = [];
-
-                        // 1. Portfolio
-                        if (isPortfolioVisible) {
-                            comparisons.push({
-                                name: 'My Portfolio',
-                                value: Number(lastPoint.portfolio),
-                                color: '#6366f1'
-                            });
-                        }
-
-                        // 2. Benchmarks
-                        selectedBenchmarks.forEach(id => {
-                            const val = Number(lastPoint[id]);
-                            if (!isNaN(val)) {
-                                const b = BENCHMARK_ASSETS.find(a => a.id === id);
-                                comparisons.push({
-                                    name: b?.name || id,
-                                    value: val,
-                                    color: b?.color || '#ccc'
-                                });
-                            }
-                        });
-
-                        comparisons.sort((a, b) => b.value - a.value);
-
-                        return (
-                            <>
-                                <h3 style={{
-                                    fontSize: '0.9rem',
-                                    fontWeight: 700,
-                                    color: 'var(--text-muted)',
-                                    marginBottom: '1rem',
-                                    borderBottom: '1px solid var(--border)',
-                                    paddingBottom: '0.75rem',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center'
-                                }}>
-                                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Performance</span>
-                                    <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{periodLabel} Return</span>
-                                </h3>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                                    {comparisons.map((item) => (
-                                        <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                                <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: item.color }} />
-                                                <span style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-primary)' }}>{item.name}</span>
-                                            </div>
-                                            <span style={{
-                                                fontSize: '0.95rem',
-                                                fontWeight: 800,
-                                                color: item.value >= 0 ? 'var(--success)' : 'var(--danger)',
-                                                fontVariantNumeric: 'tabular-nums'
-                                            }}>
-                                                {item.value > 0 ? '+' : ''}{item.value.toFixed(2)}%
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
-                        );
-                    })()}
-                </div>
-            )}
-
-            {/* 5. Vision Controls (Overlay at Bottom) */}
-            {isVisionMode && (
-                <div style={{
-                    marginTop: '1rem',
-                    background: 'var(--bg-secondary)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                    border: '1px solid var(--border)',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                    animation: 'slideUp 0.3s ease-out'
-                }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.8fr 1.4fr', gap: '1.5rem', alignItems: 'start' }}>
-
-                        {/* 1. Time Horizon Slider */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', height: '1rem', display: 'flex', alignItems: 'center' }}>
-                                Time Horizon: <span style={{ color: 'var(--text-primary)', marginLeft: '4px' }}>{visionYears} Years</span>
-                            </label>
-                            {/* Control Container for Alignment */}
-                            <div style={{ height: '36px', display: 'flex', alignItems: 'center' }}>
-                                <input
-                                    type="range"
-                                    min="1" max="30"
-                                    value={visionYears}
-                                    onChange={(e) => setVisionYears(Number(e.target.value))}
-                                    style={{
-                                        width: '100%',
-                                        accentColor: 'var(--accent)',
-                                        height: '6px',
-                                        borderRadius: '3px',
-                                        cursor: 'pointer'
-                                    }}
-                                />
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '-8px' }}>
-                                <span>1Y</span>
-                                <span>30Y</span>
-                            </div>
-                        </div>
-
-                        {/* 2. Monthly Contribution */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', height: '1rem', display: 'flex', alignItems: 'center' }}>
-                                Monthly Add ({currencySym})
-                            </label>
-                            {/* Control Container for Alignment */}
-                            <div style={{ height: '36px', display: 'flex', alignItems: 'center' }}>
-                                <input
-                                    type="number"
-                                    value={monthlyContribution}
-                                    onChange={(e) => setMonthlyContribution(Number(e.target.value))}
-                                    style={{
-                                        background: 'var(--surface)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '6px',
-                                        padding: '0 0.5rem',
-                                        height: '100%',
-                                        color: 'var(--text-primary)',
-                                        fontSize: '0.9rem',
-                                        fontWeight: 600,
-                                        width: '100%'
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* 3. Market Scenario */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '1rem' }}>
-                                <span>Market Scenario</span>
-                                {activeScenario === 'custom' ? (
-                                    <span
-                                        style={{ color: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '2px', cursor: 'pointer' }}
-                                        onClick={() => {
-                                            if (!isCustomInputActive) {
-                                                setTempCustomRate(customRate.toString());
-                                                setIsCustomInputActive(true);
-                                            }
-                                        }}
-                                    >
-                                        ({isCustomInputActive ? (
-                                            <input
-                                                type="text"
-                                                value={tempCustomRate}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    // Allow only numbers
-                                                    if (/^\d*$/.test(val)) {
-                                                        setTempCustomRate(val);
-                                                        // Update chart immediately if value is valid
-                                                        const num = Number(val);
-                                                        if (!isNaN(num)) {
-                                                            setCustomRate(num);
-                                                        }
-                                                    }
-                                                }}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        const num = Number(tempCustomRate);
-                                                        setCustomRate(isNaN(num) ? 0 : num);
-                                                        setIsCustomInputActive(false);
-                                                    }
-                                                }}
-                                                onBlur={() => {
-                                                    const num = Number(tempCustomRate);
-                                                    setCustomRate(isNaN(num) ? 0 : num);
-                                                    setIsCustomInputActive(false);
-                                                }}
-                                                // Focus the input when mounted
-                                                ref={(input) => { if (input) input.focus(); }}
-                                                style={{
-                                                    width: '28px',
-                                                    background: 'transparent',
-                                                    border: 'none',
-                                                    borderBottom: '1px dashed #8b5cf6',
-                                                    color: '#8b5cf6',
-                                                    textAlign: 'center',
-                                                    fontWeight: 700,
-                                                    padding: 0,
-                                                    fontSize: '0.75rem',
-                                                    outline: 'none',
-                                                    appearance: 'textfield',
-                                                    MozAppearance: 'textfield'
-                                                }}
-                                            />
-                                        ) : (
-                                            <span>{customRate}</span>
-                                        )}%)
-                                    </span>
-                                ) : (
-                                    <span style={{ color: activeScenario === 'bear' ? '#f87171' : activeScenario === 'bull' ? '#10b981' : '#6366f1' }}>
-                                        ({(SCENARIOS[activeScenario as keyof typeof SCENARIOS]?.rate * 100)}%)
-                                    </span>
-                                )}
-                            </label>
-                            {/* Control Container for Alignment */}
-                            <div style={{ height: '36px', display: 'flex', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', gap: '6px', width: '100%', height: '100%' }}>
-                                    {/* Preset Scenarios */}
-                                    {(Object.entries(SCENARIOS) as [keyof typeof SCENARIOS, any][]).map(([key, data]) => {
-                                        const isActive = activeScenario === key;
-                                        let Icon = Activity;
-                                        if (key === 'bear') Icon = TrendingDown;
-                                        if (key === 'bull') Icon = TrendingUp;
-
-                                        return (
-                                            <button
-                                                key={key}
-                                                onClick={() => setActiveScenario(key as any)}
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '0',
-                                                    fontSize: '0.7rem',
-                                                    fontWeight: 700,
-                                                    borderRadius: '6px',
-                                                    border: isActive ? 'none' : '1px solid var(--border)',
-                                                    cursor: 'pointer',
-                                                    background: isActive ? data.color : 'var(--surface)',
-                                                    color: isActive ? '#fff' : 'var(--text-muted)',
-                                                    transition: 'all 0.2s',
-                                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
-                                                    minWidth: '0',
-                                                    height: '100%'
-                                                }}
-                                                title={`${data.label} (${data.rate * 100}%)`}
-                                            >
-                                                <Icon size={14} />
-                                                <span style={{ fontSize: '0.65rem' }}>{data.label}</span>
-                                            </button>
-                                        );
-                                    })}
-
-                                    {/* Custom Button */}
-                                    <button
-                                        onClick={() => setActiveScenario('custom')}
-                                        style={{
-                                            flex: 1,
-                                            padding: '0',
-                                            fontSize: '0.7rem',
-                                            fontWeight: 700,
-                                            borderRadius: '6px',
-                                            border: activeScenario === 'custom' ? 'none' : '1px solid var(--border)',
-                                            cursor: 'pointer',
-                                            background: activeScenario === 'custom' ? '#8b5cf6' : 'var(--surface)',
-                                            color: activeScenario === 'custom' ? '#fff' : 'var(--text-muted)',
-                                            transition: 'all 0.2s',
-                                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
-                                            minWidth: '0',
-                                            height: '100%'
-                                        }}
-                                        title="Custom Rate"
-                                    >
-                                        <Edit2 size={14} />
-                                        <span style={{ fontSize: '0.65rem' }}>Custom</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    {/* 4. WOT Impact (Ghost Line) - Collapsible */}
-                    {isImpactPanelOpen && (
-                        <div style={{
-                            marginTop: '1rem',
-                            paddingTop: '1rem',
-                            borderTop: '1px dashed rgba(251, 191, 36, 0.3)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.75rem',
-                            background: 'rgba(251, 191, 36, 0.03)',
-                            padding: '1rem',
-                            borderRadius: '8px',
-                            border: '1px solid rgba(251, 191, 36, 0.15)'
-                        }}>
-                            {/* Header */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                                <div style={{ width: '4px', height: '16px', borderRadius: '2px', background: '#fbbf24' }}></div>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    WOT Magic Line
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: activeScenario === 'custom' ? '#f59e0b' : '#2DBC8E', textTransform: 'uppercase', height: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                    {activeScenario === 'custom' ? 'Custom Rate' : 'Annual Return'}
                                 </label>
-                            </div>
-
-                            {/* Description */}
-                            <p style={{
-                                fontSize: '0.75rem',
-                                color: 'var(--text-muted)',
-                                lineHeight: 1.5,
-                                margin: 0,
-                                fontWeight: 500
-                            }}>
-                                Discover the future power of every penny you don't spend today. Enter an amount and watch the golden line reveal the extra momentum it adds to your portfolio. Start building your future wealth today!
-                            </p>
-
-                            {/* Amount Input */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                <label style={{
-                                    fontSize: '0.75rem',
-                                    fontWeight: 700,
-                                    color: 'var(--text-muted)',
-                                    textTransform: 'uppercase',
-                                    minWidth: '60px'
-                                }}>
-                                    Opportunity Cost
-                                </label>
-                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1 }}>
-                                    <span style={{ position: 'absolute', left: '0.75rem', fontSize: '0.85rem', color: '#fbbf24', fontWeight: 700 }}>{currencySym}</span>
-                                    <input
-                                        type="text"
-                                        value={isImpactActive
-                                            ? (tempImpact === '' ? '' : new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(parseFloat(tempImpact) || 0))
-                                            : simulatedImpact === 0 ? '' : new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(simulatedImpact)}
-                                        placeholder="50.000"
-                                        onFocus={() => {
-                                            setTempImpact('');
-                                            setIsImpactActive(true);
-                                        }}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/[^0-9]/g, '');
-                                            setTempImpact(val);
-                                            // Update immediately for instant chart update
-                                            const num = parseFloat(val);
-                                            setSimulatedImpact(isNaN(num) || val === '' ? 0 : num);
-                                        }}
-                                        onBlur={() => {
-                                            const num = parseFloat(tempImpact);
-                                            setSimulatedImpact(isNaN(num) || tempImpact === '' ? 0 : num);
-                                            setIsImpactActive(false);
-                                        }}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                const num = parseFloat(tempImpact);
-                                                setSimulatedImpact(isNaN(num) || tempImpact === '' ? 0 : num);
-                                                setIsImpactActive(false);
-                                            }
-                                        }}
-                                        style={{
-                                            background: 'rgba(251, 191, 36, 0.1)',
-                                            border: '1px solid rgba(251, 191, 36, 0.4)',
-                                            borderRadius: '6px',
-                                            padding: '0.5rem 0.75rem 0.5rem 2rem',
-                                            color: '#fbbf24',
-                                            fontSize: '0.95rem',
-                                            fontWeight: 700,
-                                            width: '100%',
-                                            outline: 'none',
-                                            textAlign: 'left'
-                                        }}
-                                    />
+                                <div style={{ height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                    <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+                                        {activeScenario === 'custom' ? customRate : SCENARIOS[activeScenario].rate}%
+                                    </span>
                                 </div>
                             </div>
                         </div>
-                    )}
-                </div>
-            )}
+                    </div>
+                )
+            }
+
         </div>
+
+
+
     );
 }

@@ -68,14 +68,11 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
         totalPortfolioValueEUR = assetsWithValues.reduce((sum, a) => sum + a.totalValueEUR, 0);
     }
 
-    // "Next Threshold" Goal Logic
-    await import("@/lib/goalUtils").then(m => m.ensureThresholdGoal(user.portfolio!.id, totalPortfolioValueEUR));
+    // "Next Threshold" Goal Logic - Run in background (don't block page load)
+    import("@/lib/goalUtils").then(m => m.ensureThresholdGoal(user.portfolio!.id, totalPortfolioValueEUR)).catch(() => {});
 
-    // Re-fetch goals to reflect any potential updates from ensureThresholdGoal
-    const displayedGoals = await prisma.goal.findMany({
-        where: { portfolioId: user.portfolio!.id },
-        orderBy: { createdAt: 'asc' }
-    });
+    // Use goals from initial query (already fetched)
+    const displayedGoals = user.portfolio.goals;
 
     return (
         <MobileClientWrapper

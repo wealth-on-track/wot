@@ -1,0 +1,430 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { ChevronDown, ChevronUp, Clock, Award } from "lucide-react";
+import { getClosedPositions, ClosedPosition } from "@/app/actions/history";
+
+const formatCurrency = (val: number, currency: string = 'EUR') => {
+    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: currency }).format(val);
+};
+
+const formatNumber = (val: number) => {
+    return new Intl.NumberFormat('de-DE').format(val);
+};
+
+const formatPercent = (val: number) => {
+    return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(val) + '%';
+};
+
+interface GroupedMonth {
+    month: string;
+    monthKey: string;
+    positions: ClosedPosition[];
+}
+
+export function ClosedPositions() {
+    const [isOpen, setIsOpen] = useState(false);
+    const [positions, setPositions] = useState<ClosedPosition[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [expandedPositions, setExpandedPositions] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+        setLoading(true);
+        getClosedPositions()
+            .then(data => setPositions(data))
+            .catch(err => console.error('[ClosedPositions] Error:', err))
+            .finally(() => setLoading(false));
+    }, []);
+
+    // Group by month
+    const groupedByMonth: GroupedMonth[] = positions.reduce((acc, pos) => {
+        const date = new Date(pos.lastTradeDate);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+        let group = acc.find(g => g.monthKey === monthKey);
+        if (!group) {
+            group = {
+                month: monthName,
+                monthKey,
+                positions: []
+            };
+            acc.push(group);
+        }
+
+        group.positions.push(pos);
+        return acc;
+    }, [] as GroupedMonth[]);
+
+    // Sort by date descending
+    groupedByMonth.sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+
+    const totalPnl = positions.reduce((acc, p) => acc + (p.realizedPnl || 0), 0);
+    const totalCount = positions.length;
+    const profitableCount = positions.filter(p => p.realizedPnl > 0).length;
+    const winRate = totalCount > 0 ? (profitableCount / totalCount) * 100 : 0;
+
+    const toggleExpand = (symbol: string) => {
+        setExpandedPositions(prev => {
+            const next = new Set(prev);
+            if (next.has(symbol)) {
+                next.delete(symbol);
+            } else {
+                next.add(symbol);
+            }
+            return next;
+        });
+    };
+
+    const calculateHoldDays = (transactions: ClosedPosition['transactions']) => {
+        if (transactions.length < 2) return 0;
+        const firstDate = new Date(transactions[0].date);
+        const lastDate = new Date(transactions[transactions.length - 1].date);
+        return Math.floor((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
+    };
+
+    const calculateReturn = (pos: ClosedPosition) => {
+        if (pos.totalInvested === 0) return 0;
+        return (pos.realizedPnl / pos.totalInvested) * 100;
+    };
+
+    return (
+        <div style={{
+            marginTop: '1.5rem',
+            marginBottom: '1rem',
+            background: 'rgba(255, 255, 255, 0.7)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
+            overflow: 'hidden'
+        }}>
+            {/* Header */}
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                style={{
+                    padding: '1.25rem 1.5rem',
+                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(168, 85, 247, 0.05))',
+                    borderBottom: isOpen ? '1px solid rgba(0, 0, 0, 0.05)' : 'none',
+                    transition: 'all 0.3s ease'
+                }}
+            >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                        }}>
+                            <Clock size={20} color="white" />
+                        </div>
+                        <div>
+                            <h3 style={{
+                                fontSize: '1.1rem',
+                                fontWeight: 700,
+                                color: '#1a202c',
+                                margin: 0,
+                                fontFamily: 'Inter, system-ui, sans-serif'
+                            }}>
+                                Transaction History
+                            </h3>
+                            <p style={{
+                                fontSize: '0.75rem',
+                                color: '#718096',
+                                margin: '2px 0 0 0',
+                                fontFamily: 'Inter, system-ui, sans-serif'
+                            }}>
+                                {loading ? 'Loading...' : `${totalCount} positions • ${formatPercent(winRate)} win rate`}
+                            </p>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        {isOpen ? <ChevronUp size={20} color="#718096" /> : <ChevronDown size={20} color="#718096" />}
+                    </div>
+                </div>
+            </div>
+
+            {/* Content */}
+            {isOpen && (
+                <div style={{ padding: '1rem 0' }}>
+                    {loading ? (
+                        <div style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>
+                            <div className="animate-spin" style={{ margin: '0 auto 1rem', width: '32px', height: '32px', border: '3px solid #e5e7eb', borderTopColor: '#667eea', borderRadius: '50%' }} />
+                            <p style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Loading positions...</p>
+                        </div>
+                    ) : positions.length === 0 ? (
+                        <div style={{ padding: '3rem 2rem', textAlign: 'center' }}>
+                            <Award size={48} color="#cbd5e0" style={{ margin: '0 auto 1rem' }} />
+                            <h4 style={{ fontSize: '1rem', fontWeight: 600, color: '#4a5568', margin: '0 0 0.5rem 0', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                No Transaction History Yet
+                            </h4>
+                            <p style={{ fontSize: '0.85rem', color: '#9ca3af', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                Your closed positions will appear here
+                            </p>
+                        </div>
+                    ) : (
+                        <div style={{ position: 'relative' }}>
+                            {/* Monthly Grouped Timeline */}
+                            {groupedByMonth.map((group, groupIdx) => (
+                                <div key={group.monthKey} style={{ marginBottom: '1.5rem' }}>
+                                    {/* Sticky Month Header */}
+                                    <div style={{
+                                        position: 'sticky',
+                                        top: 0,
+                                        zIndex: 10,
+                                        background: 'rgba(255, 255, 255, 0.98)',
+                                        backdropFilter: 'blur(10px)',
+                                        padding: '0.75rem 1.5rem',
+                                        marginBottom: '12px',
+                                        borderBottom: '1px solid rgba(0, 0, 0, 0.06)'
+                                    }}>
+                                        <h4 style={{
+                                            fontSize: '0.85rem',
+                                            fontWeight: 700,
+                                            color: '#4a5568',
+                                            margin: 0,
+                                            fontFamily: 'Inter, system-ui, sans-serif',
+                                            letterSpacing: '0.5px',
+                                            textTransform: 'uppercase'
+                                        }}>
+                                            {group.month}
+                                        </h4>
+                                    </div>
+
+                                    {/* Positions */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '0 1.5rem' }}>
+                                        {group.positions.map((pos, posIdx) => {
+                                            const isExpanded = expandedPositions.has(pos.symbol);
+                                            const pnl = pos.realizedPnl || 0;
+                                            const isProfit = pnl >= 0;
+                                            const holdDays = calculateHoldDays(pos.transactions);
+                                            const returnPercent = calculateReturn(pos);
+                                            const isClosed = Math.abs(pos.totalQuantityBought - pos.totalQuantitySold) < 0.01;
+                                            const lastTx = pos.transactions[pos.transactions.length - 1];
+
+                                            return (
+                                                <div key={`${pos.symbol}-${posIdx}`}>
+                                                    {/* Modern Ledger Card */}
+                                                    <div
+                                                        onClick={() => toggleExpand(pos.symbol)}
+                                                        style={{
+                                                            height: '72px',
+                                                            padding: '0 1rem',
+                                                            background: 'linear-gradient(135deg, #1A1A1A 0%, #1E1E1E 100%)',
+                                                            border: '0.5px solid',
+                                                            borderImage: 'linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%) 1',
+                                                            borderRadius: '10px',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.3s ease',
+                                                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                                                            position: 'relative',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'space-between'
+                                                        }}
+                                                        className="hover:shadow-lg hover:scale-[1.01]"
+                                                    >
+                                                        {/* REALIZED Badge - Golden */}
+                                                        {isClosed && (
+                                                            <div style={{
+                                                                position: 'absolute',
+                                                                top: '8px',
+                                                                right: '8px',
+                                                                padding: '2px 6px',
+                                                                borderRadius: '4px',
+                                                                background: 'rgba(212, 175, 55, 0.15)',
+                                                                border: '0.5px solid rgba(212, 175, 55, 0.4)',
+                                                                fontSize: '0.55rem',
+                                                                fontWeight: 700,
+                                                                color: '#D4AF37',
+                                                                fontFamily: 'Inter, system-ui, sans-serif',
+                                                                letterSpacing: '0.8px',
+                                                                textTransform: 'uppercase'
+                                                            }}>
+                                                                REALIZED
+                                                            </div>
+                                                        )}
+
+                                                        {/* Left: Asset & Action */}
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                            {/* Logo */}
+                                                            <div style={{
+                                                                width: '40px',
+                                                                height: '40px',
+                                                                borderRadius: '8px',
+                                                                background: 'linear-gradient(135deg, #2A2A2A, #333333)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                fontSize: '0.75rem',
+                                                                fontWeight: 800,
+                                                                color: '#9ca3af',
+                                                                fontFamily: 'Inter, system-ui, sans-serif',
+                                                                border: '1px solid rgba(255, 255, 255, 0.05)'
+                                                            }}>
+                                                                {pos.symbol.substring(0, 2)}
+                                                            </div>
+
+                                                            {/* Ticker & Action */}
+                                                            <div>
+                                                                <div style={{
+                                                                    fontSize: '0.95rem',
+                                                                    fontWeight: 700,
+                                                                    color: '#ffffff',
+                                                                    fontFamily: 'Inter, system-ui, sans-serif',
+                                                                    lineHeight: 1.2,
+                                                                    marginBottom: '4px'
+                                                                }}>
+                                                                    {pos.symbol}
+                                                                </div>
+                                                                <div style={{
+                                                                    fontSize: '0.7rem',
+                                                                    color: '#6b7280',
+                                                                    fontFamily: 'Inter, system-ui, sans-serif',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '6px'
+                                                                }}>
+                                                                    <span style={{
+                                                                        color: lastTx.type === 'BUY' ? '#2DBC8E' : '#EB5757',
+                                                                        fontWeight: 600
+                                                                    }}>
+                                                                        {lastTx.type}
+                                                                    </span>
+                                                                    <span>•</span>
+                                                                    <span>{new Date(pos.lastTradeDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Right: Financials */}
+                                                        <div style={{ textAlign: 'right', paddingRight: isClosed ? '70px' : '0' }}>
+                                                            <div style={{
+                                                                fontSize: '1rem',
+                                                                fontWeight: 600,
+                                                                fontFamily: 'Inter, system-ui, sans-serif',
+                                                                color: '#ffffff',
+                                                                lineHeight: 1.2,
+                                                                marginBottom: '4px'
+                                                            }}>
+                                                                {formatCurrency(pos.totalRealized)}
+                                                            </div>
+                                                            {isClosed && (
+                                                                <div style={{
+                                                                    fontSize: '0.7rem',
+                                                                    fontWeight: 600,
+                                                                    fontFamily: 'Inter, system-ui, sans-serif',
+                                                                    color: isProfit ? '#2DBC8E' : '#EB5757'
+                                                                }}>
+                                                                    {isProfit ? '+' : ''}{formatCurrency(pnl)} ({isProfit ? '+' : ''}{formatPercent(returnPercent)})
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Expanded Transaction Details */}
+                                                    {isExpanded && (
+                                                        <div style={{
+                                                            marginTop: '8px',
+                                                            padding: '1rem',
+                                                            background: 'linear-gradient(135deg, #1A1A1A 0%, #1E1E1E 100%)',
+                                                            border: '0.5px solid rgba(255, 255, 255, 0.05)',
+                                                            borderRadius: '10px',
+                                                            animation: 'slideDown 0.3s ease-out'
+                                                        }}>
+                                                            {/* Summary */}
+                                                            <div style={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '8px',
+                                                                marginBottom: '1rem',
+                                                                paddingBottom: '0.75rem',
+                                                                borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                                                fontSize: '0.7rem',
+                                                                color: '#9ca3af',
+                                                                fontFamily: 'Inter, system-ui, sans-serif'
+                                                            }}>
+                                                                <span>Bought: {formatNumber(pos.totalQuantityBought)}</span>
+                                                                <span>•</span>
+                                                                <span>Sold: {formatNumber(pos.totalQuantitySold)}</span>
+                                                                {isClosed && holdDays > 0 && (
+                                                                    <>
+                                                                        <span>•</span>
+                                                                        <span>held {holdDays} days</span>
+                                                                    </>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Transactions */}
+                                                            {pos.transactions.map((tx, txIdx) => (
+                                                                <div key={txIdx} style={{
+                                                                    display: 'flex',
+                                                                    justifyContent: 'space-between',
+                                                                    alignItems: 'center',
+                                                                    padding: '0.5rem 0',
+                                                                    borderBottom: txIdx === pos.transactions.length - 1 ? 'none' : '1px solid rgba(255, 255, 255, 0.03)'
+                                                                }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                        <div style={{
+                                                                            padding: '4px 8px',
+                                                                            borderRadius: '6px',
+                                                                            fontSize: '0.65rem',
+                                                                            fontWeight: 700,
+                                                                            background: tx.type === 'BUY' ? 'rgba(45, 188, 142, 0.1)' : 'rgba(235, 87, 87, 0.1)',
+                                                                            color: tx.type === 'BUY' ? '#2DBC8E' : '#EB5757',
+                                                                            fontFamily: 'Inter, system-ui, sans-serif'
+                                                                        }}>
+                                                                            {tx.type}
+                                                                        </div>
+                                                                        <span style={{
+                                                                            fontSize: '0.75rem',
+                                                                            color: '#d1d5db',
+                                                                            fontFamily: 'Inter, system-ui, sans-serif'
+                                                                        }}>
+                                                                            {formatNumber(tx.quantity)} @ {formatCurrency(tx.price, tx.currency)}
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style={{
+                                                                        fontSize: '0.7rem',
+                                                                        color: '#6b7280',
+                                                                        fontFamily: 'Inter, system-ui, sans-serif'
+                                                                    }}>
+                                                                        {new Date(tx.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <style jsx>{`
+                @keyframes slideDown {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            `}</style>
+        </div>
+    );
+}

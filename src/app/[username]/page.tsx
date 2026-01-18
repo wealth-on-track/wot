@@ -84,15 +84,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         totalPortfolioValueEUR = assetsWithValues.reduce((sum, a) => sum + a.totalValueEUR, 0);
     }
 
-    // "Next Threshold" Goal Logic
-    // Automatically manage the smart goal based on current portfolio value
-    await import("@/lib/goalUtils").then(m => m.ensureThresholdGoal(user.portfolio!.id, totalPortfolioValueEUR));
+    // "Next Threshold" Goal Logic - Run in background (don't block page load)
+    // Fire-and-forget: ensureThresholdGoal updates DB, next page load will show updated goals
+    import("@/lib/goalUtils").then(m => m.ensureThresholdGoal(user.portfolio!.id, totalPortfolioValueEUR)).catch(() => {});
 
-    // Re-fetch goals to reflect any potential updates from ensureThresholdGoal
-    const displayedGoals = await prisma.goal.findMany({
-        where: { portfolioId: user.portfolio!.id },
-        orderBy: { createdAt: 'asc' }
-    });
+    // Use goals from initial query (already fetched with user.portfolio.goals)
+    const displayedGoals = user.portfolio.goals;
 
     return (
         <ClientWrapper

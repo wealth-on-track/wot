@@ -46,12 +46,12 @@ async function generateUniqueUsername(email: string): Promise<string> {
     return username;
 }
 
-export async function register(prevState: string | undefined, formData: FormData) {
+export async function register(prevState: any, formData: FormData) {
     const rawData = Object.fromEntries(formData.entries());
     const validatedFields = RegisterSchema.safeParse(rawData);
 
     if (!validatedFields.success) {
-        return "Invalid fields. Please check your input.";
+        return { error: "Invalid fields. Please check your input.", timestamp: Date.now() };
     }
 
     const { email, password } = validatedFields.data;
@@ -62,7 +62,7 @@ export async function register(prevState: string | undefined, formData: FormData
         });
 
         if (existingUser) {
-            return "User already exists.";
+            return { error: "User already exists.", timestamp: Date.now() };
         }
 
         const username = await generateUniqueUsername(email);
@@ -95,11 +95,11 @@ export async function register(prevState: string | undefined, formData: FormData
             redirectTo: `/${username}`,
         });
 
-        return "success";
+        return { success: true, timestamp: Date.now() };
 
     } catch (error) {
         if (error instanceof AuthError) {
-            return "Failed to sign in after registration.";
+            return { error: "Failed to sign in after registration.", timestamp: Date.now() };
         }
         console.error("Registration error:", error);
         throw error;
@@ -107,7 +107,7 @@ export async function register(prevState: string | undefined, formData: FormData
 }
 
 export async function authenticate(
-    prevState: string | undefined,
+    prevState: any,
     formData: FormData,
 ) {
     try {
@@ -119,12 +119,12 @@ export async function authenticate(
         });
 
         if (!user) {
-            return "user_not_found";
+            return { status: "user_not_found", timestamp: Date.now() };
         }
 
         const passwordsMatch = await bcrypt.compare(password, user.password);
         if (!passwordsMatch) {
-            return "Invalid credentials.";
+            return { error: "Invalid credentials.", timestamp: Date.now() };
         }
 
         const redirectTo = `/${user.username}`;
@@ -133,18 +133,23 @@ export async function authenticate(
             ...Object.fromEntries(formData),
             redirectTo,
         });
+
+        return { success: true, timestamp: Date.now() };
     } catch (error) {
         if (error instanceof AuthError) {
             switch (error.type) {
                 case "CredentialsSignin":
-                    return "Invalid credentials.";
+                    return { error: "Invalid credentials.", timestamp: Date.now() };
                 default:
-                    return "Something went wrong.";
+                    return { error: "Something went wrong.", timestamp: Date.now() };
             }
         }
         throw error;
     }
 }
+
+// Supported currencies across the platform (aligned with Yahoo Finance & global exchanges)
+const SUPPORTED_CURRENCIES = ["USD", "EUR", "TRY", "GBP", "CHF", "JPY", "CAD", "AUD", "HKD", "SGD", "ZAR", "CNY", "NZD", "INR", "SEK", "NOK", "DKK", "PLN", "CZK", "HUF", "MXN", "BRL", "KRW", "TWD", "THB", "IDR", "MYR", "PHP", "VND", "ILS", "AED", "SAR", "RUB"] as const;
 
 const AssetSchema = z.object({
     symbol: z.string().toUpperCase().min(1),
@@ -152,7 +157,7 @@ const AssetSchema = z.object({
     type: z.enum(["STOCK", "CRYPTO", "GOLD", "BOND", "FUND", "CASH", "COMMODITY", "CURRENCY", "ETF"]),  // Legacy field
     quantity: z.coerce.number().positive(),
     buyPrice: z.coerce.number().positive(),
-    currency: z.enum(["USD", "EUR", "TRY"]),
+    currency: z.enum(SUPPORTED_CURRENCIES),
     exchange: z.string().optional(),
     sector: z.string().optional(),
     country: z.string().optional(),
@@ -296,7 +301,7 @@ const UpdateAssetSchema = z.object({
     name: z.string().optional(),
     // symbol removed - cannot change ticker unique ID
     type: z.enum(["STOCK", "CRYPTO", "GOLD", "BOND", "FUND", "CASH", "COMMODITY", "CURRENCY", "ETF"]).optional(),
-    currency: z.enum(["USD", "EUR", "TRY"]).optional(),
+    currency: z.enum(SUPPORTED_CURRENCIES).optional(),
     exchange: z.string().optional(),
     sector: z.string().optional(),
     country: z.string().optional(),
@@ -304,7 +309,9 @@ const UpdateAssetSchema = z.object({
     customGroup: z.string().optional(),
 });
 
-export async function updateAsset(assetId: string, data: { quantity: number; buyPrice: number; name?: string; type?: "STOCK" | "CRYPTO" | "GOLD" | "BOND" | "FUND" | "CASH" | "COMMODITY" | "CURRENCY" | "ETF"; currency?: "USD" | "EUR" | "TRY"; exchange?: string; sector?: string; country?: string; platform?: string; customGroup?: string }) {
+type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
+
+export async function updateAsset(assetId: string, data: { quantity: number; buyPrice: number; name?: string; type?: "STOCK" | "CRYPTO" | "GOLD" | "BOND" | "FUND" | "CASH" | "COMMODITY" | "CURRENCY" | "ETF"; currency?: SupportedCurrency; exchange?: string; sector?: string; country?: string; platform?: string; customGroup?: string }) {
     const session = await auth();
     if (!session?.user?.email) return { error: "Not authenticated" };
 
@@ -508,12 +515,15 @@ export async function trackLogoRequest(provider: string, isSuccess: boolean, sym
     "use server";
     try {
         const session = await auth();
+        // Silently skip if no session (e.g. demo mode)
+        if (!session?.user?.id) return;
+
         const { trackActivity } = await import("@/services/telemetry");
 
         // Log to System Activity Log (Visible in Admin Panel)
         await trackActivity('API', 'LOGO_FETCH', {
-            userId: session?.user?.id,
-            username: session?.user?.name || session?.user?.email?.split('@')[0],
+            userId: session.user.id,
+            username: session.user.name || session.user.email?.split('@')[0],
             targetType: 'LOGO',
             targetId: `${symbol} (${provider})`,
             status: isSuccess ? 'SUCCESS' : 'ERROR',
@@ -527,7 +537,7 @@ export async function trackLogoRequest(provider: string, isSuccess: boolean, sym
         });
     } catch (error) {
         // Silently fail - dont break UI if telemetry fails
-        console.error("Failed to track logo request:", error);
+        // console.error("Failed to track logo request:", error); 
     }
 }
 

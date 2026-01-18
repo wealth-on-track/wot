@@ -421,7 +421,8 @@ export async function getYahooQuotes(symbols: string[], forceRefresh: boolean = 
     const results: Record<string, YahooQuote | null> = {};
     let missingSymbols: string[] = [];
 
-    // 1. Check Cache & DB
+    // 1. Check Memory Cache FIRST (instant)
+    const symbolsToCheckDB: string[] = [];
     for (const symbol of symbols) {
         const cacheKey = `yahoo:quote:${symbol}`;
         if (!forceRefresh) {
@@ -430,27 +431,38 @@ export async function getYahooQuotes(symbols: string[], forceRefresh: boolean = 
                 results[symbol] = cachedData;
                 continue;
             }
+        }
+        symbolsToCheckDB.push(symbol);
+    }
 
-            const dbCache = await prisma.priceCache.findUnique({ where: { symbol } });
-            if (dbCache) {
-                // Check freshness (Half-Past Hour Strategy)
-                if (!isPriceStale(dbCache.updatedAt)) {
-                    const quote: YahooQuote = {
-                        symbol: dbCache.symbol,
-                        regularMarketPrice: dbCache.previousClose,
-                        // Respect TEFAS currency
-                        currency: (dbCache.source === 'TEFAS' || dbCache.source === 'FON') ? dbCache.currency : (detectCurrency(dbCache.symbol) || dbCache.currency),
-                        regularMarketTime: dbCache.tradeTime || dbCache.updatedAt,
-                        regularMarketPreviousClose: dbCache.previousClose,
-                        marketState: undefined
-                    };
-                    apiCache.set(cacheKey, quote, 10);
-                    results[symbol] = quote;
-                    continue;
-                }
+    // 2. BATCH DB READ - Single query instead of N queries
+    if (symbolsToCheckDB.length > 0 && !forceRefresh) {
+        const dbCaches = await prisma.priceCache.findMany({
+            where: { symbol: { in: symbolsToCheckDB } }
+        });
+
+        const dbCacheMap = new Map(dbCaches.map(c => [c.symbol, c]));
+
+        for (const symbol of symbolsToCheckDB) {
+            const dbCache = dbCacheMap.get(symbol);
+            if (dbCache && !isPriceStale(dbCache.updatedAt)) {
+                const quote: YahooQuote = {
+                    symbol: dbCache.symbol,
+                    regularMarketPrice: dbCache.previousClose,
+                    currency: (dbCache.source === 'TEFAS' || dbCache.source === 'FON') ? dbCache.currency : (detectCurrency(dbCache.symbol) || dbCache.currency),
+                    regularMarketTime: dbCache.tradeTime || dbCache.updatedAt,
+                    regularMarketPreviousClose: dbCache.previousClose,
+                    marketState: undefined
+                };
+                const cacheKey = `yahoo:quote:${symbol}`;
+                apiCache.set(cacheKey, quote, 10);
+                results[symbol] = quote;
+            } else {
+                missingSymbols.push(symbol);
             }
         }
-        missingSymbols.push(symbol);
+    } else {
+        missingSymbols = symbolsToCheckDB;
     }
 
     // Deduplicate missing symbols
@@ -458,12 +470,15 @@ export async function getYahooQuotes(symbols: string[], forceRefresh: boolean = 
 
     if (missingSymbols.length === 0) return results;
 
-    // 2. Fetch Missing from API (Batch)
+    // 3. Fetch Missing from API (Batch)
     try {
         console.log(`[YahooApi] Batch Fetching for ${missingSymbols.length} symbols:`, missingSymbols);
 
         // Yahoo library supports array of symbols for 'quote'
         const quotes = await yahooFinance.quote(missingSymbols);
+
+        // Collect DB writes for parallel execution
+        const dbWrites: Promise<any>[] = [];
 
         // Map back to our structure
         for (const q of quotes) {
@@ -479,83 +494,63 @@ export async function getYahooQuotes(symbols: string[], forceRefresh: boolean = 
             };
 
             // Save to Results
-            // Note: Yahoo sometimes returns different symbol casing or slight variants, we try to match requested
-            // But usually q.symbol is reliable.
             results[q.symbol] = quote;
-            // Also map input symbol if it differs only by case
             const inputSymbol = missingSymbols.find(s => s.toUpperCase() === q.symbol.toUpperCase());
             if (inputSymbol) results[inputSymbol] = quote;
 
-            // Save to Cache & DB
+            // Save to Memory Cache immediately
             const cacheKey = `yahoo:quote:${q.symbol}`;
             apiCache.set(cacheKey, quote, 0.5);
 
-            await prisma.priceCache.upsert({
-                where: { symbol: quote.symbol },
-                create: {
-                    symbol: quote.symbol,
-                    previousClose: quote.regularMarketPrice || 0,
-                    currency: quote.currency || 'USD',
-                    tradeTime: quote.regularMarketTime,
-                    updatedAt: new Date()
-                },
-                update: {
-                    previousClose: quote.regularMarketPrice || 0,
-                    currency: quote.currency || 'USD',
-                    tradeTime: quote.regularMarketTime,
-                    updatedAt: new Date()
-                }
-            }).catch(e => console.warn(`[YahooApi] Batch Write Error for ${q.symbol}`, e));
+            // Queue DB write (non-blocking)
+            dbWrites.push(
+                prisma.priceCache.upsert({
+                    where: { symbol: quote.symbol },
+                    create: {
+                        symbol: quote.symbol,
+                        previousClose: quote.regularMarketPrice || 0,
+                        currency: quote.currency || 'USD',
+                        tradeTime: quote.regularMarketTime,
+                        updatedAt: new Date()
+                    },
+                    update: {
+                        previousClose: quote.regularMarketPrice || 0,
+                        currency: quote.currency || 'USD',
+                        tradeTime: quote.regularMarketTime,
+                        updatedAt: new Date()
+                    }
+                }).catch(e => console.warn(`[YahooApi] Batch Write Error for ${q.symbol}`, e))
+            );
         }
 
-        // 3. Handle Totally Failed Symbols (Return null for them)
+        // Execute all DB writes in parallel (fire-and-forget style, don't block response)
+        Promise.all(dbWrites).catch(() => { });
+
+        // 4. Handle missed symbols - use cache values or null (skip slow fallbacks for speed)
         for (const s of missingSymbols) {
             if (!results[s]) {
-                // Try fallback logic (Alpha/Finnhub/Direct) INDIVIDUALLY if important
-                // But for batch, maybe just failing is acceptable for speed?
-                // Or we can try getYahooQuote(s) for these few stragglers.
-                console.warn(`[YahooApi] Batch missed ${s}, trying single fallback...`);
-                try {
-                    const fallback = await getYahooQuote(s, true); // Force refresh single to try alternate sources
-                    results[s] = fallback;
-
-                    if (!fallback) {
-                        // NEGATIVE CACHING for Batch
-                        await prisma.priceCache.upsert({
-                            where: { symbol: s },
-                            create: { symbol: s, previousClose: 0, currency: 'USD', tradeTime: new Date(), updatedAt: new Date(), source: 'ERROR' },
-                            update: { previousClose: 0, currency: 'USD', tradeTime: new Date(), updatedAt: new Date(), source: 'ERROR' }
-                        }).catch(e => console.warn(`[YahooApi] Batch Error Upsert failed:`, e));
-                    }
-
-                } catch (e) {
-                    results[s] = null;
-                    // NEGATIVE CACHING for Batch
-                    await prisma.priceCache.upsert({
-                        where: { symbol: s },
-                        create: { symbol: s, previousClose: 0, currency: 'USD', tradeTime: new Date(), updatedAt: new Date(), source: 'ERROR' },
-                        update: { previousClose: 0, currency: 'USD', tradeTime: new Date(), updatedAt: new Date(), source: 'ERROR' }
-                    }).catch(e => console.warn(`[YahooApi] Batch Error Upsert failed 2:`, e));
-                }
+                // Don't do expensive individual fallbacks - just return null
+                // The next refresh will try again
+                console.warn(`[YahooApi] Batch missed ${s}, skipping fallback for speed`);
+                results[s] = null;
             }
         }
 
     } catch (e: any) {
         console.warn('[YahooApi] Batch Fetch Error (likely 429/Crumb):', e.message || e);
-        // Robust Fallback: Try Direct Chart API for all missing symbols in parallel
-        // This bypasses the library rate limits or session issues
-        await Promise.all(missingSymbols.map(async (s) => {
-            try {
-                const fallback = await getDirectQuoteFallback(s);
-                if (fallback) {
+        // Quick fallback: Try Direct Chart API in parallel (limited concurrency)
+        const PARALLEL_LIMIT = 5;
+        for (let i = 0; i < missingSymbols.length; i += PARALLEL_LIMIT) {
+            const batch = missingSymbols.slice(i, i + PARALLEL_LIMIT);
+            await Promise.all(batch.map(async (s) => {
+                try {
+                    const fallback = await getDirectQuoteFallback(s);
                     results[s] = fallback;
-                } else {
+                } catch {
                     results[s] = null;
                 }
-            } catch {
-                results[s] = null;
-            }
-        }));
+            }));
+        }
     }
 
     return results;

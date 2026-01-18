@@ -1,0 +1,9 @@
+Symbol,Company Name,Quantity,Buy Price,Currency,Type,Platform
+AAPL,Apple Inc,10,150.50,USD,STOCK,IBKR
+MSFT,Microsoft Corp,5,380.00,USD,STOCK,IBKR
+GOOGL,Alphabet Inc,3,140.25,USD,STOCK,Fidelity
+NVDA,NVIDIA Corporation,8,875.00,USD,STOCK,IBKR
+BTC-USD,Bitcoin,0.5,42000,USD,CRYPTO,Coinbase
+ETH-USD,Ethereum,2.5,2250,USD,CRYPTO,Coinbase
+THYAO.IS,Turkish Airlines,100,280.50,TRY,STOCK,Midas
+ASELS.IS,Aselsan,50,55.40,TRY,STOCK,Midas

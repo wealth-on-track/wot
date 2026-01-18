@@ -1,71 +1,36 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { authenticate, register } from "@/lib/actions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export function LoginForm() {
-    const [authResult, authAction] = useActionState(authenticate, undefined);
-    const [registerResult, registerAction] = useActionState(register, undefined);
+    const [authResult, authAction, isAuthPending] = useActionState(authenticate, undefined);
+    const [registerResult, registerAction, isRegisterPending] = useActionState(register, undefined);
     const [isRegistering, setIsRegistering] = useState(false);
     const [formData, setFormData] = useState<FormData | null>(null);
     const router = useRouter();
 
+    // Combined loading state for general UI disabled states
+    const isLoading = isAuthPending || isRegisterPending;
+
+    // Effect to handle switching to registration mode if user not found
     // Effect to handle switching to registration mode if user not found
     useEffect(() => {
-        if (authResult === "user_not_found") {
+        if (authResult?.status === "user_not_found") {
             setIsRegistering(true);
         }
     }, [authResult]);
 
-    // If we are in "confirmation" mode, this might still be used if we go with the prompt flow.
-    // However, the register action now handles auto-login and redirecting itself.
+    // Reset loading when register result comes back
+
 
     // Capture form data on submit to reuse for registration
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const form = event.currentTarget;
-        const newFormData = new FormData(form);
-        setFormData(newFormData);
-
-        // If we are in "confirmation" mode, this submit button would likely be the "OK" button
-        // But the main form is for login.
-
-        // Let's rely on the action prop for the main form, but intercept to save data.
-        // Actually, preventing default stops the action prop.
-        // We should construct form data and call the action manually?
-        // Or simpler: let the form action handle it, but how do we get data for register step?
-        // We can just keep the inputs in the DOM and submit them to register action?
-
-        // Better approach:
-        // Main form has inputs. Action is `authAction`.
-        // If `authResult` is "user_not_found", we show a modal/overlay.
-        // The modal has "OK" button.
-        // "OK" button triggers `registerAction` with the SAME inputs.
-        // We can achieve this by having hidden inputs in a secondary form, or just using `bind`?
-        // Or simpler: Just keep one form, change the `action` based on state?
-        // If `isRegistering`, action becomes `registerAction`.
-
-        if (isRegistering) {
-            // If we are already in registering state (showing the prompt), 
-            // accessing this might be different.
-            // Let's build the UI first.
-        }
-
         // Default behavior for React 19 actions is confusing with manual submits.
         // Let's just use the `action={authAction}` on the form, and a separate button for register confirming.
-    };
-
-    const handleCreateAccount = () => {
-        if (formData) {
-            // We have the data from the previous failed login attempt
-            // We need to submit this to register
-            // We can't pass FormData directly to useActionState's dispatch easily if it expects payload?
-            // React signatures are `(payload)` matching the action.
-            // `registerAction` expects FormData.
-            registerAction(formData);
-        }
     };
 
     return (
@@ -130,8 +95,12 @@ export function LoginForm() {
                     />
                 </div>
 
-                {authResult && authResult !== "user_not_found" && !isRegistering && (
-                    <div style={{ color: 'var(--danger)', fontSize: '0.85rem', textAlign: 'center', fontWeight: 600 }}>{authResult}</div>
+                {authResult?.error && !isRegistering && (
+                    <div style={{ color: 'var(--danger)', fontSize: '0.85rem', textAlign: 'center', fontWeight: 600 }}>{authResult.error}</div>
+                )}
+
+                {registerResult?.error && (
+                    <div style={{ color: 'var(--danger)', fontSize: '0.85rem', textAlign: 'center', fontWeight: 600 }}>{registerResult.error}</div>
                 )}
 
                 {isRegistering ? (
@@ -143,6 +112,7 @@ export function LoginForm() {
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <button
                                 type="button"
+                                disabled={isLoading}
                                 onClick={() => setIsRegistering(false)}
                                 style={{
                                     flex: 1,
@@ -152,13 +122,16 @@ export function LoginForm() {
                                     color: 'var(--text-primary)',
                                     borderRadius: 'var(--radius-md)',
                                     fontWeight: 700,
-                                    cursor: 'pointer'
+                                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                                    opacity: isLoading ? 0.6 : 1
                                 }}
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
+                                disabled={isLoading}
+                                // formAction={registerAction} // Handled by strict logic below
                                 style={{
                                     flex: 2,
                                     padding: '0.875rem',
@@ -167,11 +140,27 @@ export function LoginForm() {
                                     border: 'none',
                                     borderRadius: 'var(--radius-md)',
                                     fontWeight: 800,
-                                    cursor: 'pointer',
-                                    boxShadow: '0 4px 6px rgba(79, 70, 229, 0.2)'
+                                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                                    boxShadow: '0 4px 6px rgba(79, 70, 229, 0.2)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '0.5rem'
                                 }}
                             >
-                                Confirm
+                                {isRegisterPending ? (
+                                    <>
+                                        <span style={{
+                                            width: '14px',
+                                            height: '14px',
+                                            border: '2px solid rgba(255,255,255,0.3)',
+                                            borderTopColor: '#fff',
+                                            borderRadius: '50%',
+                                            animation: 'spin 0.8s linear infinite'
+                                        }} />
+                                        Creating...
+                                    </>
+                                ) : 'Create Account'}
                             </button>
                         </div>
                     </div>
@@ -179,26 +168,46 @@ export function LoginForm() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
                         <button
                             type="submit"
+                            disabled={isLoading}
+                            // Default submit is authAction
                             style={{
                                 width: '100%',
                                 padding: '1rem',
-                                background: 'var(--accent)',
+                                background: isAuthPending ? 'var(--accent-muted, #6366f1cc)' : 'var(--accent)',
                                 color: '#fff',
                                 border: 'none',
                                 borderRadius: 'var(--radius-md)',
                                 fontWeight: 800,
                                 fontSize: '1rem',
-                                cursor: 'pointer',
+                                cursor: isLoading ? 'not-allowed' : 'pointer',
                                 transition: 'all 0.2s',
-                                boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)'
+                                boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
+                                opacity: isLoading ? 0.6 : 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem'
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
+                            onMouseEnter={(e) => !isLoading && (e.currentTarget.style.transform = 'translateY(-2px)')}
                             onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
                         >
-                            Sign In
+                            {isAuthPending ? (
+                                <>
+                                    <span style={{
+                                        width: '16px',
+                                        height: '16px',
+                                        border: '2px solid rgba(255,255,255,0.3)',
+                                        borderTopColor: '#fff',
+                                        borderRadius: '50%',
+                                        animation: 'spin 0.8s linear infinite'
+                                    }} />
+                                    Signing in...
+                                </>
+                            ) : 'Sign In'}
                         </button>
                         <button
                             type="submit"
+                            disabled={isLoading}
                             formAction={(formData) => {
                                 setFormData(formData);
                                 registerAction(formData);
@@ -206,19 +215,36 @@ export function LoginForm() {
                             style={{
                                 width: '100%',
                                 padding: '1rem',
-                                background: 'transparent',
+                                background: isRegisterPending ? 'var(--bg-secondary)' : 'transparent',
                                 color: 'var(--text-secondary)',
                                 border: '1px solid var(--border)',
                                 borderRadius: 'var(--radius-md)',
                                 fontWeight: 600,
                                 fontSize: '0.9rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
+                                cursor: isLoading ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s',
+                                opacity: isLoading ? 0.6 : 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem'
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-secondary)')}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                            onMouseEnter={(e) => !isLoading && (e.currentTarget.style.background = 'var(--bg-secondary)')}
+                            onMouseLeave={(e) => !isLoading && (e.currentTarget.style.background = 'transparent')}
                         >
-                            Create Account
+                            {isRegisterPending ? (
+                                <>
+                                    <span style={{
+                                        width: '14px',
+                                        height: '14px',
+                                        border: '2px solid rgba(100,100,100,0.3)',
+                                        borderTopColor: 'var(--text-secondary)',
+                                        borderRadius: '50%',
+                                        animation: 'spin 0.8s linear infinite'
+                                    }} />
+                                    Creating account...
+                                </>
+                            ) : 'Create Account'}
                         </button>
                     </div>
                 )}

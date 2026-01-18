@@ -4,13 +4,16 @@
 
 import React, { useState, useEffect, useRef, useMemo, useId } from "react";
 import { createPortal } from "react-dom";
+import { motion } from "framer-motion";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useRouter } from "next/navigation"; // Added router
 import { BENCHMARK_ASSETS } from "@/lib/benchmarkApi";
-import { InlineAssetSearch } from "./InlineAssetSearch";
+
+import { ImportModal } from "./ImportModal";
 import { deleteAsset, updateAsset, refreshPortfolioPrices, reorderAssets, trackLogoRequest, updateUserPreferences } from "@/lib/actions";
 import { AllocationCard, GoalsCard, TopPerformersCard } from "./PortfolioSidebarComponents";
+import { WotTabs } from "./WotTabs";
 import { EmptyPlaceholder } from "./EmptyPlaceholder";
 import { Inbox } from "lucide-react";
 import {
@@ -39,8 +42,9 @@ import { CSS } from '@dnd-kit/utilities';
 import { ASSET_COLORS } from "@/lib/constants";
 import { getLogoUrl } from "@/lib/logos";
 const TIME_PERIODS = ["ALL"];
-import { Bitcoin, Wallet, TrendingUp, PieChart, Gem, Coins, Layers, LayoutGrid, List, Save, X, Trash2, Settings, LayoutTemplate, Grid, Check, ChevronDown, ChevronRight, ChevronLeft, GripVertical, SlidersHorizontal, Briefcase, Banknote, MoreVertical, MoreHorizontal, Plus } from "lucide-react";
+import { Bitcoin, Wallet, TrendingUp, PieChart, Gem, Coins, Layers, LayoutGrid, List, Save, X, Trash2, Settings, LayoutTemplate, Grid, Check, ChevronDown, ChevronRight, ChevronLeft, GripVertical, SlidersHorizontal, Briefcase, Banknote, MoreVertical, MoreHorizontal, Plus, Upload, Download, Search } from "lucide-react";
 import { DetailedAssetCard } from "./DetailedAssetCard";
+import { ClosedPositions } from "./ClosedPositions";
 import { getCompanyName } from "@/lib/companyNames";
 import { formatEUR, formatNumber } from "@/lib/formatters";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
@@ -1485,6 +1489,11 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
     const viewMode = "list";
     const [gridColumns, setGridColumns] = useState<1 | 2>(2);
 
+    // New Header States
+    const [activeTab, setActiveTab] = useState<'open' | 'closed'>('open');
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+
     // Initialize default time period from preferences or fallback to 1Y
     // Sync with chartRange if available
     const initialTimePeriod = preferences?.chartRange || '1Y';
@@ -1523,10 +1532,10 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
     const [assetToDelete, setAssetToDelete] = useState<AssetDisplay | null>(null);
 
     // Column State
-    // Fix: Initialize with preferences if available, else Defaults
+    // Fix: Initialize with preferences if available, else Defaults (Deduplicated)
     const [activeColumns, setActiveColumns] = useState<ColumnId[]>(
         (preferences?.columns && Array.isArray(preferences.columns))
-            ? preferences.columns
+            ? Array.from(new Set(preferences.columns)) // Ensure uniqueness
             : translatedColumns.filter(c => c.isDefault).map(c => c.id)
     );
     const [isAdjustListOpen, setIsAdjustListOpen] = useState(false);
@@ -1544,7 +1553,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                     if (Array.isArray(parsed)) {
                         const validColumns = parsed.filter((id: string) => translatedColumns.some(c => c.id === id));
                         if (validColumns.length > 0) {
-                            setActiveColumns(validColumns);
+                            setActiveColumns(Array.from(new Set(validColumns))); // Ensure uniqueness
                         }
                     }
                 } catch (e) {
@@ -1873,7 +1882,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
     const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
 
     // Close Adjust List on outside click
-    const adjustListRef = useRef<HTMLDivElement>(null);
+    const adjustListRef = useRef<HTMLButtonElement>(null);
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (adjustListRef.current && !adjustListRef.current.contains(event.target as Node)) {
@@ -1933,7 +1942,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                 <div className="dashboard-layout-container">
 
                     {/* LEFT COLUMN: Main Content (Filters + Assets) - Flex Grow */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: 0 }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0', minWidth: 0 }}>
 
                         <PortfolioPerformanceChart
                             username={username}
@@ -1948,807 +1957,669 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                 // Sync with dashboard time period if needed
                             }}
                         />
+                        <div style={{ height: '1.5rem' }} /> {/* Manual spacer instead of gap */}
 
 
-                        {/* 1. Smart Filter Bar (Maximized Space + Bottom Clear) */}
-                        <div className="neo-card" style={{
-                            padding: '0.6rem 0.8rem',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.6rem',
-                            zIndex: 60,
-                            position: 'relative',
-                            width: '100%',
-                        }}>
-                            <style jsx>{`
-                                .no-scrollbar::-webkit-scrollbar {
-                                    display: none;
-                                }
-                            `}</style>
 
-                            {/* ROW 1: Filters (Full Width, Single Line) */}
+                        {/* Positions UI Header (Floating Tabs) */}
+
+
+                        {/* UNIFIED TABLE SYSTEM */}
+                        <div style={{ marginTop: '2rem' }}>
+                            {/* 1. Header & Toolbar (Outside Card, Zero-Gap) */}
                             <div style={{
                                 display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.3rem',
-                                width: '100%',
+                                justifyContent: 'space-between',
+                                alignItems: 'flex-end',
+                                paddingLeft: '0', // Zero left padding (matches Performance)
+                                paddingRight: '0.8rem', // Small right padding for toolbar
+                                marginBottom: '-1px', // The overlapping magic
+                                position: 'relative',
+                                zIndex: 10
                             }}>
-                                <div style={{ display: 'flex', gap: '0.3rem', flex: 1, minWidth: 0, alignItems: 'center' }}>
+                                {/* Left: Tabs (Unified WotTabs) */}
+                                <WotTabs
+                                    tabs={[
+                                        { id: 'open', label: 'Open Positions', count: availableAssets.length },
+                                        { id: 'closed', label: 'Closed Positions', count: 0, isHistory: true }
+                                    ]}
+                                    activeTabId={activeTab}
+                                    onTabChange={(id) => setActiveTab(id as 'open' | 'closed')}
+                                />
 
-                                    {/* Left Arrow (Only on Page 1) */}
-                                    {filterPage === 1 && (
-                                        <button
-                                            onClick={() => setFilterPage(0)}
-                                            style={{
-                                                height: '2.4rem',
-                                                width: '2.4rem',
-                                                padding: 0,
-                                                background: 'var(--bg-secondary)',
-                                                border: '1px solid var(--border)',
-                                                borderRadius: '50%', // Circle
-                                                color: 'var(--text-primary)',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                transition: 'all 0.2s',
-                                                flexShrink: 0
-                                            }}
-                                            className="hover:bg-gray-100 dark:hover:bg-gray-800"
-                                        >
-                                            <ChevronLeft size={16} />
-                                        </button>
-                                    )}
+                                {/* Right: Actions Toolbar */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingBottom: '0.5rem' }}>
+                                    {/* Filter Toggle (First) */}
+                                    <button
+                                        onClick={() => setIsFilterOpen(!isFilterOpen)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem',
+                                            padding: '0.4rem 0.8rem',
+                                            background: isFilterOpen ? 'var(--accent)' : 'var(--surface)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '6px',
+                                            color: isFilterOpen ? '#fff' : 'var(--text-primary)',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 500,
+                                            cursor: 'pointer',
+                                            boxShadow: 'var(--shadow-sm)',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        className={isFilterOpen ? '' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}
+                                    >
+                                        <SlidersHorizontal size={14} />
+                                        <span>Filter</span>
+                                    </button>
 
-                                    {/* Filters: Animated Sliding Effect */}
-                                    {filterCategories.map((category, index) => {
-                                        // Logic for visibility
-                                        // Indices 0,1: Show on Page 0 only
-                                        // Indices 2,3,4: Always Show (Anchors)
-                                        // Indices 5,6: Show on Page 1 only
-                                        const isVisible = (index < 2 && filterPage === 0) || (index >= 2 && index <= 4) || (index > 4 && filterPage === 1);
+                                    {/* Add Position Button (Second) */}
+                                    <button
+                                        onClick={() => {
+                                            // Scroll to top smoothly
+                                            window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                                        return (
-                                            <div key={category.id} style={{
-                                                position: 'relative',
-                                                flex: isVisible ? '1 1 auto' : '0 0 0',
-                                                minWidth: 0,
-                                                maxWidth: isVisible ? '160px' : '0px',
-                                                opacity: isVisible ? 1 : 0,
-                                                transform: `scale(${isVisible ? 1 : 0.9})`,
-                                                overflow: 'hidden',
-                                                transition: 'all 1.5s cubic-bezier(0.25, 1, 0.5, 1)', // Slower, smoother ease-out
-                                                marginLeft: isVisible ? '0' : '-0.3rem', // Counteract parent gap when hidden (approx)
-                                                pointerEvents: isVisible ? 'auto' : 'none',
-                                                visibility: isVisible ? 'visible' : 'hidden' // Ensure it's hidden from screen readers/tab when closed
-                                            }}>
-                                                <button
-                                                    className="filter-btn"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (activeFilterCategory === category.id) {
-                                                            setActiveFilterCategory(null);
-                                                        } else {
-                                                            const rect = e.currentTarget.getBoundingClientRect();
-                                                            setDropdownPos({ top: rect.bottom + 5, left: rect.left });
-                                                            setActiveFilterCategory(category.id);
-                                                        }
-                                                    }}
-                                                    style={{
-                                                        background: category.active ? '#4F46E5' : 'var(--bg-secondary)',
-                                                        border: 'none',
-                                                        borderRadius: 'var(--radius-md)',
-                                                        color: category.active ? '#fff' : 'var(--text-secondary)',
-                                                        boxShadow: category.active ? 'inset 0 2px 4px rgba(0,0,0,0.2)' : 'none',
-                                                        padding: '0 0.7rem',
-                                                        height: '2.4rem',
-                                                        width: '100%', // Takes full width of container
-                                                        minWidth: 'max-content', // Prevent text squashing during transition
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: 600,
-                                                        cursor: 'pointer',
-                                                        transition: 'background 0.2s',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        gap: '0.5rem',
-                                                        whiteSpace: 'nowrap',
-                                                        fontFamily: 'inherit'
-                                                    }}
-                                                    title={category.label}
-                                                    tabIndex={isVisible ? 0 : -1}
-                                                >
-                                                    <span style={{ fontSize: '0.8rem', opacity: 0.7, flexShrink: 0 }}>{category.icon}</span>
-                                                    <span style={{
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        maxWidth: '110px'
-                                                    }}>{category.active ? category.active : category.label}</span>
-                                                    <ChevronDown size={10} style={{ opacity: 0.5, flexShrink: 0 }} />
-                                                </button>
+                                            // Focus on navbar search input after scroll
+                                            setTimeout(() => {
+                                                const searchInput = document.querySelector('input[placeholder*="add your asset"]') as HTMLInputElement;
+                                                if (searchInput) {
+                                                    searchInput.focus();
+                                                    searchInput.placeholder = "To add your asset, start searching...";
+                                                }
+                                            }, 500);
+                                        }}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem',
+                                            padding: '0.4rem 0.8rem',
+                                            background: 'var(--surface)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '6px',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 500,
+                                            cursor: 'pointer',
+                                            boxShadow: 'var(--shadow-sm)',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                                    >
+                                        <Plus size={14} />
+                                        <span>Add Position</span>
+                                    </button>
 
-                                                {/* Dropdown Menu (Fixed Position via Portal) */}
-                                                {activeFilterCategory === category.id && category.items.length > 0 && createPortal(
-                                                    <div
-                                                        className="filter-dropdown"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        style={{
-                                                            position: 'fixed',
-                                                            top: dropdownPos.top,
-                                                            left: dropdownPos.left,
-                                                            background: 'var(--surface)',
-                                                            border: '1px solid var(--border)',
-                                                            borderRadius: '1rem',
-                                                            padding: '0.5rem',
-                                                            minWidth: '200px',
-                                                            maxHeight: '350px',
-                                                            overflowY: 'auto',
-                                                            zIndex: 9999,
-                                                            boxShadow: 'var(--shadow-md)'
-                                                        }}>
-                                                        {category.items.map(item => (
-                                                            <button
-                                                                key={item}
-                                                                onClick={() => {
-                                                                    category.setter(category.active === item ? null : item);
-                                                                    setActiveFilterCategory(null);
-                                                                }}
-                                                                className="dropdown-item"
-                                                                style={{
-                                                                    width: '100%',
-                                                                    padding: '0.7rem 1rem',
-                                                                    background: category.active === item ? 'var(--bg-secondary)' : 'transparent',
-                                                                    border: 'none',
-                                                                    borderRadius: '0.4rem',
-                                                                    color: category.active === item ? 'var(--accent)' : 'var(--text-secondary)',
-                                                                    fontSize: '0.85rem',
-                                                                    fontWeight: category.active === item ? 700 : 500,
-                                                                    cursor: 'pointer',
-                                                                    textAlign: 'left',
-                                                                    transition: 'all 0.2s',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'space-between',
-                                                                    marginBottom: '0.1rem',
-                                                                }}
-                                                            >
-                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item}</span>
-                                                                {category.active === item ? <Check size={14} /> : <span style={{ opacity: 0.2 }}>➜</span>}
-                                                            </button>
-                                                        ))}
-                                                    </div>,
-                                                    document.body
-                                                )}
-                                            </div>
-                                        )
-                                    })}
-
-                                    <div style={{ width: '1px', height: '1.4rem', background: 'var(--border)', margin: '0 0.4rem', alignSelf: 'center' }}></div>
-
-                                    {/* Right Arrow (Only on Page 0) - Replaces 'More Filters' */}
-                                    {filterPage === 0 && (
-                                        <button
-                                            onClick={() => setFilterPage(1)}
-                                            style={{
-                                                height: '2.4rem',
-                                                width: '2.4rem', // Square/Circle
-                                                padding: 0,
-                                                background: 'var(--bg-secondary)',
-                                                border: '1px solid var(--border)',
-                                                borderRadius: '50%', // Circle
-                                                color: 'var(--text-primary)',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                transition: 'all 0.2s',
-                                                flexShrink: 0
-                                            }}
-                                            className="hover:bg-gray-100 dark:hover:bg-gray-800"
-                                            title="More Filters"
-                                        >
-                                            <ChevronRight size={16} />
-                                            {/* Optional Badge if hidden filters are active */}
-                                            {filterCategories.slice(5).filter(c => c.active).length > 0 && (
-                                                <div style={{
-                                                    position: 'absolute',
-                                                    top: -2,
-                                                    right: -2,
-                                                    width: '8px',
-                                                    height: '8px',
-                                                    borderRadius: '50%',
-                                                    background: 'var(--accent)',
-                                                    border: '1px solid var(--surface)'
-                                                }} />
-                                            )}
-                                        </button>
-                                    )}
-
+                                    {/* Upload CSV Button (Third) */}
+                                    <button
+                                        onClick={() => setShowImportModal(true)}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                            padding: '0.4rem 0.8rem',
+                                            background: 'var(--surface)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '6px',
+                                            color: 'var(--text-primary)',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 500,
+                                            cursor: 'pointer',
+                                            boxShadow: 'var(--shadow-sm)',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                                    >
+                                        <Plus size={14} />
+                                        <span>Upload CSV</span>
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* ROW 2: Filter Summary (Dynamic & Minimal) */}
-                            {activeFiltersCount > 0 && (
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    padding: '0.6rem 0.4rem 0.2rem 0.4rem',
-                                    marginTop: '0.4rem',
-                                    borderTop: '1px solid var(--border-muted)',
-                                    animation: 'fadeIn 0.3s ease-out'
-                                }}>
-                                    {/* Left: Clear Action */}
-                                    <button
-                                        onClick={() => {
-                                            setTypeFilter(null);
-                                            setExchangeFilter(null);
-                                            setCurrencyFilter(null);
-                                            setCountryFilter(null);
-                                            setSectorFilter(null);
-                                            setPlatformFilter(null);
-                                            setCustomGroupFilter(null);
-                                        }}
-                                        className="group"
-                                        style={{
-                                            background: 'transparent',
-                                            border: 'none',
-                                            color: 'var(--text-muted)',
-                                            padding: '0.25rem 0.5rem',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 600,
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s',
+                            {/* 2. Main Content Card */}
+                            <div className="neo-card" style={{
+                                background: 'var(--surface)',
+                                border: '1px solid var(--border)',
+                                borderTopLeftRadius: '0px', // Flat to merge with active tab
+                                borderTopRightRadius: '12px', // Rounded (matches Performance card)
+                                borderBottomLeftRadius: '12px',
+                                borderBottomRightRadius: '12px',
+                                marginTop: 0, // No gap between tabs and card
+                                boxShadow: 'var(--shadow-md)',
+                                overflow: 'hidden',
+                                minHeight: '400px',
+                                position: 'relative'
+                            }}>
+                                {/* Filter Panel (Condition) */}
+                                {activeTab === 'open' && isFilterOpen && (
+                                    <div style={{
+                                        padding: '1rem',
+                                        borderBottom: '1px solid var(--border)',
+                                        background: 'var(--bg-secondary)',
+                                        animation: 'slideDown 0.2s ease-out'
+                                    }}>
+                                        {/* ROW 1: Filters */}
+                                        <div style={{
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '0.4rem',
-                                            borderRadius: 'var(--radius-sm)',
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = 'var(--bg-secondary)';
-                                            e.currentTarget.style.color = 'var(--text-primary)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = 'transparent';
-                                            e.currentTarget.style.color = 'var(--text-muted)';
-                                        }}
-                                    >
-                                        <X size={14} />
-                                        <span style={{ letterSpacing: '0.02em' }}>{t('clear_filters')}</span>
-                                    </button>
-
-                                    {/* Right: Info Group */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.75rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{t('assets')}:</span>
-                                            <span style={{
-                                                background: 'transparent',
-                                                padding: '0',
-                                                borderRadius: '0',
-                                                fontWeight: 800,
-                                                color: 'var(--text-primary)',
-                                                fontVariantNumeric: 'tabular-nums'
-                                            }}>
-                                                {availableAssets.length}
-                                            </span>
-                                        </div>
-
-                                        <div style={{ width: '1px', height: '0.8rem', background: 'var(--border-muted)' }}></div>
-
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{t('total')}:</span>
-                                            <span style={{
-                                                fontWeight: 800,
-                                                color: 'var(--accent)',
-                                                fontVariantNumeric: 'tabular-nums'
-                                            }}>
-                                                {getCurrencySymbol(displayCurrencyForTotal)}{fmtMinimal(filteredTotalConverted)}
-                                            </span>
-                                            <span style={{
-                                                fontSize: '0.75rem',
-                                                fontWeight: 800,
-                                                color: '#10b981',
-                                                background: 'transparent',
-                                                padding: '0',
-                                                borderRadius: '0',
-                                                border: '1px solid rgba(16, 185, 129, 0.12)',
-                                                fontVariantNumeric: 'tabular-nums'
-                                            }}>
-                                                {filteredTotalPercentage.toFixed(0)}%
-                                            </span>
+                                            gap: '0.3rem',
+                                            width: '100%',
+                                        }}>
+                                            <div style={{ display: 'flex', gap: '0.3rem', flex: 1, minWidth: 0, alignItems: 'center' }}>
+                                                {filterCategories.map((category) => (
+                                                    <button
+                                                        key={category.id}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (activeFilterCategory === category.id) {
+                                                                setActiveFilterCategory(null);
+                                                            } else {
+                                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                                setDropdownPos({ top: rect.bottom + 5, left: rect.left });
+                                                                setActiveFilterCategory(category.id);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            background: category.active ? '#4F46E5' : 'var(--surface)',
+                                                            border: '1px solid var(--border)',
+                                                            borderRadius: '6px',
+                                                            color: category.active ? '#fff' : 'var(--text-secondary)',
+                                                            padding: '0.4rem 0.8rem',
+                                                            fontSize: '0.75rem',
+                                                            display: 'flex', alignItems: 'center', gap: '0.4rem',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        {category.icon} <span>{category.label}</span> <ChevronDown size={10} />
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
-
-
-
-
-                        </div>
-
-
-                        {/* 3. Positions List Box */}
-
-                        <div className="neo-card" style={{
-                            padding: '0',
-                            overflow: 'hidden',
-                            border: '1px solid var(--border)',
-                            boxShadow: 'var(--shadow-md)',
-                            background: 'var(--surface)',
-                            borderRadius: 'var(--radius-lg)',
-                            marginTop: '0.5rem'
-                        }}>
-                            {/* ASSETS BODY */}
-                            <div style={{ minHeight: '400px' }}>
-                                {showChangelog ? (
-                                    <ChangelogView />
-                                ) : (
-                                    <>
-                                        {viewMode === "list" ? (
-                                            <div style={{
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                width: '100%',
-                                                background: 'var(--surface)',
-                                                borderRadius: 'var(--radius-lg)',
-                                                border: '1px solid var(--border)',
-                                                boxShadow: 'var(--shadow-sm)',
-                                                overflow: 'hidden'
-                                            }}>
-                                                {/* Table Header Always Show in List View */}
-                                                {true && (
-                                                    <div className="asset-table-header" style={{
-                                                        alignItems: 'center',
-                                                        display: 'grid',
-                                                        gridTemplateColumns: activeColumns.map(c => COL_WIDTHS[c]).join(' ') + ' 40px',
-                                                        gap: 0,
-                                                        position: 'relative',
-                                                        zIndex: 40,
-                                                        paddingTop: '0.75rem',
-                                                        paddingBottom: '0.75rem',
-                                                        borderBottom: '1px solid var(--border)',
-                                                        background: 'var(--bg-secondary)',
-                                                        color: 'var(--text-primary)',
-                                                        fontWeight: 700,
-                                                        transition: 'background 0.3s'
-                                                    }}>
-                                                        <SortableContext items={activeColumns.map(c => `col:${c}`)} strategy={rectSortingStrategy}>
-                                                            {activeColumns.map(colId => {
-                                                                const colDef = translatedColumns.find(c => c.id === colId);
-                                                                let label = (colDef?.headerLabel || colDef?.label || colId).toUpperCase();
-
-                                                                // Dynamic label shortening for high column counts
-                                                                if (activeColumns.length >= 7) {
-                                                                    if (colId === 'EXCHANGE') label = 'EXCH.';
-                                                                    // if (colId === 'CURRENCY') label = 'CCY'; // Removed legacy logic
-                                                                }
-
-                                                                // Dynamic Header Labels for Currency
-                                                                const globalCurrency = positionsViewCurrency === 'ORG' ? 'EUR' : positionsViewCurrency;
-                                                                const globalSym = getCurrencySymbol(globalCurrency);
-
-                                                                let headerContent: React.ReactNode = label;
-
-                                                                if (colId === 'CURRENCY') {
-                                                                    headerContent = (
-                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                            <Banknote size={12} strokeWidth={2.5} style={{ opacity: 0.8 }} />
-                                                                            <span>FX</span>
-                                                                        </div>
-                                                                    );
-                                                                } else if (colId === 'PRICE') {
-                                                                    headerContent = (
-                                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
-                                                                            <span>PRICE</span>
-                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>COST</span>
-                                                                        </div>
-                                                                    );
-                                                                } else if (colId === 'PRICE_EUR') {
-                                                                    headerContent = (
-                                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
-                                                                            <span>PRICE ({globalSym})</span>
-                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>COST ({globalSym})</span>
-                                                                        </div>
-                                                                    );
-                                                                } else if (colId === 'VALUE') {
-                                                                    headerContent = (
-                                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
-                                                                            <span>Total Value</span>
-                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>Total Cost</span>
-                                                                        </div>
-                                                                    );
-                                                                } else if (colId === 'VALUE_EUR') {
-                                                                    headerContent = (
-                                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
-                                                                            <span>Total Value ({globalSym})</span>
-                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>Total Cost ({globalSym})</span>
-                                                                        </div>
-                                                                    );
-                                                                }
-
-
-                                                                return (
-                                                                    <DraggableHeader key={colId} id={`col:${colId}`} columnsCount={activeColumns.length}>
-                                                                        <div style={{
-                                                                            display: 'flex',
-                                                                            flexDirection: 'column',
-                                                                            alignItems: ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL', 'EARNINGS'].includes(colId) ? 'flex-end' : 'flex-start',
-                                                                            justifyContent: 'center',
-                                                                            height: '100%',
-                                                                            width: '100%',
-                                                                            paddingTop: '0.6rem',
-                                                                            paddingBottom: '0.6rem',
-                                                                            paddingLeft: '0.5rem',
-                                                                            paddingRight: ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL', 'EARNINGS'].includes(colId) ? '0.5rem' : '0.5rem',
-                                                                            opacity: 0.9
-                                                                        }}>
-                                                                            {colId === 'PORTFOLIO_NAME' ? (
-                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
-                                                                                    <Briefcase size={14} strokeWidth={2.5} style={{ opacity: 0.8 }} />
-                                                                                </div>
-                                                                            ) : (
-                                                                                <div style={{
-                                                                                    fontSize: '0.75rem', // Increased size for readability
-                                                                                    fontWeight: 700,
-                                                                                    color: 'var(--text-secondary)', // Brighter text
-                                                                                    letterSpacing: '0.02em',
-                                                                                    textTransform: 'uppercase',
-                                                                                    lineHeight: 1.3,
-                                                                                    width: '100%',
-                                                                                    textAlign: ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL', 'EARNINGS'].includes(colId) ? 'right' : 'left',
-                                                                                    display: 'flex',
-                                                                                    flexDirection: 'column',
-                                                                                    alignItems: ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL', 'EARNINGS'].includes(colId) ? 'flex-end' : 'flex-start',
-                                                                                }}>
-                                                                                    {headerContent}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    </DraggableHeader>
-                                                                );
-                                                            })}
-                                                        </SortableContext>
-
-                                                        <div style={{
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                            position: 'sticky',
-                                                            right: 0,
-                                                            background: 'var(--bg-secondary)', // Matches header
-                                                            zIndex: 20,
-                                                            width: '40px',
-                                                            padding: 0
-                                                        }}>
-                                                            <button
-                                                                onClick={() => setIsAdjustListOpen(true)}
-                                                                style={{
-                                                                    background: 'transparent',
-                                                                    border: 'none',
-                                                                    cursor: 'pointer',
-                                                                    color: 'var(--text-muted)',
-                                                                    padding: '6px',
-                                                                    transition: 'all 0.2s',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    opacity: 0.8,
-                                                                    borderRadius: '4px'
-                                                                }}
-                                                                onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.color = 'var(--text-primary)';
-                                                                    e.currentTarget.style.background = 'rgba(0,0,0,0.05)';
-                                                                }}
-                                                                onMouseLeave={(e) => {
-                                                                    e.currentTarget.style.color = 'var(--text-muted)';
-                                                                    e.currentTarget.style.background = 'transparent';
-                                                                }}
-                                                                title="Adjust Columns"
-                                                            >
-                                                                <Settings size={18} />
-                                                            </button>
-                                                        </div>
-
-                                                        {/* Column Adjustment Modal */}
-                                                        {isAdjustListOpen && createPortal(
-                                                            <div style={{
-                                                                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                                                                background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
-                                                                zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
-                                                            }} onClick={() => setIsAdjustListOpen(false)}>
-                                                                <div style={{
-                                                                    background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
-                                                                    width: '100%', maxWidth: '400px', boxShadow: 'var(--shadow-lg)', padding: '1.5rem', maxHeight: '85vh', display: 'flex', flexDirection: 'column'
-                                                                }} onClick={e => e.stopPropagation()}>
-                                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexShrink: 0 }}>
-                                                                        <div>
-                                                                            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em' }}>{t('table_columns')}</h3>
-                                                                            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Drag items to show/hide columns.</p>
-                                                                        </div>
-                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                                            <button
-                                                                                onClick={() => setActiveColumns(translatedColumns.filter(c => c.isDefault).map(c => c.id))}
-                                                                                style={{
-                                                                                    background: 'var(--bg-secondary)', border: 'none', color: 'var(--text-muted)',
-                                                                                    padding: '0 0.8rem', height: '30px', borderRadius: '15px', cursor: 'pointer',
-                                                                                    fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', transition: 'all 0.2s'
-                                                                                }}
-                                                                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; }}
-                                                                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-                                                                            >
-                                                                                Reset
-                                                                            </button>
-                                                                            <button onClick={() => setIsAdjustListOpen(false)} style={{ background: 'var(--bg-secondary)', border: 'none', color: 'var(--text-primary)', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', paddingRight: '0.5rem' }}>
-                                                                        <DndContext
-                                                                            collisionDetection={closestCenter}
-                                                                            sensors={sensors}
-                                                                            onDragStart={(event) => setActiveDragId(event.active.id as string)}
-                                                                            onDragCancel={() => setActiveDragId(null)}
-                                                                            onDragEnd={(event) => {
-                                                                                const { active, over } = event;
-                                                                                setActiveDragId(null);
-
-                                                                                if (over) {
-                                                                                    const activeId = active.id as ColumnId;
-                                                                                    const overId = over.id as string;
-                                                                                    const isActiveInActive = activeColumns.includes(activeId);
-
-                                                                                    // Check if dropped into Hidden Container directly
-                                                                                    if (overId === 'hidden-columns-container' && isActiveInActive) {
-                                                                                        if (activeColumns.length > 1) {
-                                                                                            setActiveColumns(activeColumns.filter(c => c !== activeId));
-                                                                                        }
-                                                                                        return;
-                                                                                    }
-
-                                                                                    const isOverInActive = activeColumns.includes(overId as ColumnId);
-
-                                                                                    if (isActiveInActive && isOverInActive) {
-                                                                                        // Active -> Active: Reorder
-                                                                                        setActiveColumns((items) => {
-                                                                                            const oldIndex = items.indexOf(activeId);
-                                                                                            const newIndex = items.indexOf(overId as ColumnId);
-                                                                                            return arrayMove(items, oldIndex, newIndex);
-                                                                                        });
-                                                                                    } else if (!isActiveInActive && isOverInActive) {
-                                                                                        // Hidden -> Active: Insert
-                                                                                        const overIndex = activeColumns.indexOf(overId as ColumnId);
-                                                                                        const newActive = [...activeColumns];
-                                                                                        if (overIndex !== -1) newActive.splice(overIndex, 0, activeId);
-                                                                                        else newActive.push(activeId);
-                                                                                        setActiveColumns(newActive);
-                                                                                    } else if (isActiveInActive && !isOverInActive) {
-                                                                                        // Active -> Hidden: Remove (when dropped on an item in hidden list)
-                                                                                        if (activeColumns.length > 1) {
-                                                                                            setActiveColumns(activeColumns.filter(c => c !== activeId));
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            }}
-                                                                        >
-                                                                            {/* Active Columns */}
-                                                                            <div>
-                                                                                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Active Columns</div>
-                                                                                <SortableContext items={activeColumns} strategy={verticalListSortingStrategy}>
-                                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minHeight: '50px' }}>
-                                                                                        {activeColumns.map((colId) => {
-                                                                                            const colDef = translatedColumns.find(c => c.id === colId);
-                                                                                            return (
-                                                                                                <SortableColumnItem
-                                                                                                    key={colId}
-                                                                                                    id={colId}
-                                                                                                    label={colDef?.label || colId}
-                                                                                                    type="active"
-                                                                                                />
-                                                                                            );
-                                                                                        })}
-                                                                                    </div>
-                                                                                </SortableContext>
-                                                                            </div>
-
-                                                                            {/* Available Columns */}
-                                                                            <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                                                                                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Hidden Columns</div>
-                                                                                <DroppableArea id="hidden-columns-container" style={{
-                                                                                    display: 'flex', flexDirection: 'column', gap: '0.5rem',
-                                                                                    minHeight: '100px', flex: 1,
-                                                                                    background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', padding: '0.5rem',
-                                                                                    border: activeDragId && activeColumns.includes(activeDragId as any) ? '1px dashed var(--accent)' : '1px dashed transparent',
-                                                                                    transition: 'border-color 0.2s'
-                                                                                }}>
-                                                                                    <SortableContext items={translatedColumns.filter(c => !activeColumns.includes(c.id)).map(c => c.id)} strategy={verticalListSortingStrategy}>
-                                                                                        {translatedColumns.filter(c => !activeColumns.includes(c.id)).length === 0 ? (
-                                                                                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
-                                                                                                Drag columns here to hide
-                                                                                            </div>
-                                                                                        ) : (
-                                                                                            translatedColumns.filter(c => !activeColumns.includes(c.id)).map(col => (
-                                                                                                <SortableColumnItem
-                                                                                                    key={col.id}
-                                                                                                    id={col.id}
-                                                                                                    label={col.label}
-                                                                                                    type="passive"
-                                                                                                />
-                                                                                            ))
-                                                                                        )}
-                                                                                    </SortableContext>
-                                                                                </DroppableArea>
-                                                                            </div>
-
-                                                                            <DragOverlay>
-                                                                                {activeDragId ? (() => {
-                                                                                    const col = translatedColumns.find(c => c.id === activeDragId);
-                                                                                    if (!col) return null;
-                                                                                    const isActive = activeColumns.includes(activeDragId as any);
-                                                                                    return (
-                                                                                        <ColumnItem
-                                                                                            label={col.label}
-                                                                                            type={isActive ? 'active' : 'passive'}
-                                                                                            isOverlay={true}
-                                                                                        />
-                                                                                    );
-                                                                                })() : null}
-                                                                            </DragOverlay>
-                                                                        </DndContext>
-                                                                    </div>
-
-                                                                    <button
-                                                                        onClick={() => setIsAdjustListOpen(false)}
-                                                                        style={{
-                                                                            width: '100%', marginTop: '1rem', padding: '0.8rem', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px var(--accent-glow)', flexShrink: 0
-                                                                        }}
-                                                                    >
-                                                                        Done
-                                                                    </button>
-                                                                </div>
-                                                            </div>,
-                                                            document.body
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {groupingKey !== 'none' ? (
-                                                    <SortableContext items={orderedGroups.filter(g => groupedAssets[g]).map(g => `group:${g}`)} strategy={verticalListSortingStrategy}>
-                                                        {orderedGroups.filter(type => groupedAssets[type]).map(type => (
-                                                            <SortableGroup key={type} id={`group:${type}`} disabled={isGlobalEditMode}>
-                                                                <AssetGroup
-                                                                    type={type}
-                                                                    assets={groupedAssets[type]}
-                                                                    totalEUR={groupTotals[type]}
-                                                                    positionsViewCurrency={positionsViewCurrency}
-                                                                    totalPortfolioValueEUR={totalValueEUR}
-                                                                    isOwner={isOwner}
-                                                                    onDelete={handleDelete}
-                                                                    timeFactor={getTimeFactor()}
-                                                                    columns={activeColumns}
-                                                                    timePeriod={timePeriod}
-                                                                    exchangeRates={exchangeRates}
-                                                                    isGlobalEditMode={isGlobalEditMode}
-                                                                    onAssetClick={setEditingAsset}
-                                                                />
-                                                            </SortableGroup>
-                                                        ))}
-                                                    </SortableContext>
-                                                ) : (
-                                                    <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-                                                        {filteredAssets.map((asset, index) => (
-                                                            <SortableAssetRow key={asset.id} id={asset.id} disabled={isGlobalEditMode}>
-                                                                <AssetTableRow
-                                                                    asset={asset}
-                                                                    positionsViewCurrency={positionsViewCurrency}
-                                                                    totalPortfolioValueEUR={totalValueEUR}
-                                                                    isOwner={isOwner}
-                                                                    onDelete={handleDelete}
-                                                                    timeFactor={getTimeFactor()}
-                                                                    rowIndex={index}
-                                                                    columns={activeColumns}
-                                                                    timePeriod={timePeriod}
-                                                                    exchangeRates={exchangeRates}
-                                                                    isGlobalEditMode={isGlobalEditMode}
-                                                                    onAssetClick={setEditingAsset}
-                                                                />
-                                                            </SortableAssetRow>
-                                                        ))}
-                                                    </SortableContext>
-                                                )}
-
-                                                {filteredAssets.length === 0 && (
-                                                    <EmptyPlaceholder
-                                                        title="No Assets Found"
-                                                        description="We couldn't find any assets matching your current filters. Try generating a new asset or adjusting your search."
-                                                        icon={Inbox}
-                                                        height="300px"
-                                                    />
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                                {isGroupingEnabled ? (
-                                                    <SortableContext items={orderedGroups.map(g => `group:${g}`)} strategy={verticalListSortingStrategy}>
-                                                        {orderedGroups.map(type => {
-                                                            const groupAssets = groupedAssets[type];
-                                                            if (!groupAssets) return null;
-                                                            const groupTotal = groupTotals[type] || 0;
-
-                                                            return (
-                                                                <SortableGroup key={type} id={`group:${type}`} disabled={isGlobalEditMode}>
-                                                                    <AssetGroupGrid
-                                                                        type={type}
-                                                                        assets={groupAssets}
-                                                                        groupTotal={groupTotal}
-                                                                        totalPortfolioValueEUR={totalValueEUR}
-                                                                        positionsViewCurrency={positionsViewCurrency}
-                                                                        viewMode={viewMode}
-                                                                        gridColumns={gridColumns}
-                                                                        isBlurred={isBlurred}
-                                                                        isOwner={isOwner}
-                                                                        onDelete={handleDelete}
-                                                                        timeFactor={getTimeFactor()}
-                                                                        timePeriod={timePeriod}
-                                                                        exchangeRates={exchangeRates}
-                                                                        isGlobalEditMode={isGlobalEditMode}
-                                                                        onAssetClick={setEditingAsset}
-                                                                    />
-                                                                </SortableGroup>
-                                                            );
-                                                        })}
-                                                    </SortableContext>
-                                                ) : (
-                                                    <div style={{
-                                                        display: 'grid',
-                                                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                                                        gap: '1rem',
-                                                        transition: 'all 0.3s ease'
-                                                    }}>
-                                                        <SortableContext items={items.map(i => i.id)} strategy={rectSortingStrategy}>
-                                                            {filteredAssets.map((asset, index) => {
-                                                                return (
-                                                                    <SortableAssetCard key={asset.id} id={asset.id} disabled={isGlobalEditMode}>
-                                                                        {viewMode === 'detailed' ? (
-                                                                            <DetailedAssetCard
-                                                                                asset={asset}
-                                                                                positionsViewCurrency={positionsViewCurrency}
-                                                                                totalPortfolioValueEUR={totalValueEUR}
-                                                                                isBlurred={isBlurred}
-                                                                                isOwner={isOwner}
-                                                                                onDelete={handleDelete}
-                                                                                timeFactor={getTimeFactor()}
-                                                                                timePeriod={timePeriod}
-                                                                                exchangeRates={exchangeRates}
-                                                                            />
-                                                                        ) : (
-                                                                            <AssetCard
-                                                                                asset={asset}
-                                                                                positionsViewCurrency={positionsViewCurrency}
-                                                                                totalPortfolioValueEUR={totalValueEUR}
-                                                                                isBlurred={isBlurred}
-                                                                                isOwner={isOwner}
-                                                                                onDelete={handleDelete}
-                                                                                timeFactor={getTimeFactor()}
-                                                                                timePeriod={timePeriod}
-                                                                                exchangeRates={exchangeRates}
-                                                                                isGlobalEditMode={isGlobalEditMode}
-                                                                                onAssetClick={setEditingAsset}
-                                                                            />
-                                                                        )}
-                                                                    </SortableAssetCard>
-                                                                );
-                                                            })}
-                                                        </SortableContext>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </>
                                 )}
+
+                                {/* Main Content Body */}
+                                <div style={{ flex: 1, overflow: 'hidden', padding: '0' }}>
+                                    {activeTab === 'open' ? (
+                                        <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                                            {/* ASSETS BODY */}
+                                            <div style={{ minHeight: '400px' }}>
+                                                {showChangelog ? (
+                                                    <ChangelogView />
+                                                ) : (
+                                                    <>
+                                                        {viewMode === "list" ? (
+                                                            <div style={{
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                width: '100%',
+                                                                background: 'var(--surface)',
+                                                                borderRadius: 'var(--radius-lg)',
+                                                                border: '1px solid var(--border)',
+                                                                boxShadow: 'var(--shadow-sm)',
+                                                                overflow: 'hidden'
+                                                            }}>
+                                                                {/* Table Header Always Show in List View */}
+                                                                {true && (
+                                                                    <div className="asset-table-header" style={{
+                                                                        alignItems: 'center',
+                                                                        display: 'grid',
+                                                                        gridTemplateColumns: activeColumns.map(c => COL_WIDTHS[c]).join(' ') + ' 40px',
+                                                                        gap: 0,
+                                                                        position: 'relative',
+                                                                        zIndex: 40,
+                                                                        paddingTop: '0.75rem',
+                                                                        paddingBottom: '0.75rem',
+                                                                        borderBottom: '1px solid var(--border)',
+                                                                        background: 'var(--bg-secondary)',
+                                                                        color: 'var(--text-primary)',
+                                                                        fontWeight: 700,
+                                                                        transition: 'background 0.3s'
+                                                                    }}>
+                                                                        <SortableContext items={activeColumns.map(c => `col:${c}`)} strategy={rectSortingStrategy}>
+                                                                            {activeColumns.map((colId, index) => {
+                                                                                const colDef = translatedColumns.find(c => c.id === colId);
+                                                                                let label = (colDef?.headerLabel || colDef?.label || colId).toUpperCase();
+
+                                                                                // Dynamic label shortening for high column counts
+                                                                                if (activeColumns.length >= 7) {
+                                                                                    if (colId === 'EXCHANGE') label = 'EXCH.';
+                                                                                    // if (colId === 'CURRENCY') label = 'CCY'; // Removed legacy logic
+                                                                                }
+
+                                                                                // Dynamic Header Labels for Currency
+                                                                                const globalCurrency = positionsViewCurrency === 'ORG' ? 'EUR' : positionsViewCurrency;
+                                                                                const globalSym = getCurrencySymbol(globalCurrency);
+
+                                                                                let headerContent: React.ReactNode = label;
+
+                                                                                if (colId === 'CURRENCY') {
+                                                                                    headerContent = (
+                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                                            <Banknote size={12} strokeWidth={2.5} style={{ opacity: 0.8 }} />
+                                                                                            <span>FX</span>
+                                                                                        </div>
+                                                                                    );
+                                                                                } else if (colId === 'PRICE') {
+                                                                                    headerContent = (
+                                                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
+                                                                                            <span>PRICE</span>
+                                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>COST</span>
+                                                                                        </div>
+                                                                                    );
+                                                                                } else if (colId === 'PRICE_EUR') {
+                                                                                    headerContent = (
+                                                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
+                                                                                            <span>PRICE ({globalSym})</span>
+                                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>COST ({globalSym})</span>
+                                                                                        </div>
+                                                                                    );
+                                                                                } else if (colId === 'VALUE') {
+                                                                                    headerContent = (
+                                                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+                                                                                            <span>Total Value</span>
+                                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>Total Cost</span>
+                                                                                        </div>
+                                                                                    );
+                                                                                } else if (colId === 'VALUE_EUR') {
+                                                                                    headerContent = (
+                                                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
+                                                                                            <span>Total Value ({globalSym})</span>
+                                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>Total Cost ({globalSym})</span>
+                                                                                        </div>
+                                                                                    );
+                                                                                }
+
+
+                                                                                return (
+                                                                                    <DraggableHeader key={`${colId}-${index}`} id={`col:${colId}`} columnsCount={activeColumns.length}>
+                                                                                        <div style={{
+                                                                                            display: 'flex',
+                                                                                            flexDirection: 'column',
+                                                                                            alignItems: ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL', 'EARNINGS'].includes(colId) ? 'flex-end' : 'flex-start',
+                                                                                            justifyContent: 'center',
+                                                                                            height: '100%',
+                                                                                            width: '100%',
+                                                                                            paddingTop: '0.6rem',
+                                                                                            paddingBottom: '0.6rem',
+                                                                                            paddingLeft: '0.5rem',
+                                                                                            paddingRight: ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL', 'EARNINGS'].includes(colId) ? '0.5rem' : '0.5rem',
+                                                                                            opacity: 0.9
+                                                                                        }}>
+                                                                                            {colId === 'PORTFOLIO_NAME' ? (
+                                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
+                                                                                                    <Briefcase size={14} strokeWidth={2.5} style={{ opacity: 0.8 }} />
+                                                                                                </div>
+                                                                                            ) : (
+                                                                                                <div style={{
+                                                                                                    fontSize: '0.75rem', // Increased size for readability
+                                                                                                    fontWeight: 700,
+                                                                                                    color: 'var(--text-secondary)', // Brighter text
+                                                                                                    letterSpacing: '0.02em',
+                                                                                                    textTransform: 'uppercase',
+                                                                                                    lineHeight: 1.3,
+                                                                                                    width: '100%',
+                                                                                                    textAlign: ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL', 'EARNINGS'].includes(colId) ? 'right' : 'left',
+                                                                                                    display: 'flex',
+                                                                                                    flexDirection: 'column',
+                                                                                                    alignItems: ['PRICE', 'PRICE_EUR', 'VALUE', 'VALUE_EUR', 'PL', 'EARNINGS'].includes(colId) ? 'flex-end' : 'flex-start',
+                                                                                                }}>
+                                                                                                    {headerContent}
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </DraggableHeader>
+                                                                                );
+                                                                            })}
+                                                                        </SortableContext>
+
+                                                                        <div style={{
+                                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                            position: 'sticky',
+                                                                            right: 0,
+                                                                            background: 'var(--bg-secondary)', // Matches header
+                                                                            zIndex: 20,
+                                                                            width: '40px',
+                                                                            padding: 0
+                                                                        }}>
+                                                                            <button
+                                                                                onClick={() => setIsAdjustListOpen(true)}
+                                                                                style={{
+                                                                                    background: 'transparent',
+                                                                                    border: 'none',
+                                                                                    cursor: 'pointer',
+                                                                                    color: 'var(--text-muted)',
+                                                                                    padding: '6px',
+                                                                                    transition: 'all 0.2s',
+                                                                                    display: 'flex',
+                                                                                    alignItems: 'center',
+                                                                                    justifyContent: 'center',
+                                                                                    opacity: 0.8,
+                                                                                    borderRadius: '4px'
+                                                                                }}
+                                                                                onMouseEnter={(e) => {
+                                                                                    e.currentTarget.style.color = 'var(--text-primary)';
+                                                                                    e.currentTarget.style.background = 'rgba(0,0,0,0.05)';
+                                                                                }}
+                                                                                onMouseLeave={(e) => {
+                                                                                    e.currentTarget.style.color = 'var(--text-muted)';
+                                                                                    e.currentTarget.style.background = 'transparent';
+                                                                                }}
+                                                                                title="Adjust Columns"
+                                                                            >
+                                                                                <Settings size={18} />
+                                                                            </button>
+                                                                        </div>
+
+                                                                        {/* Column Adjustment Modal */}
+                                                                        {isAdjustListOpen && createPortal(
+                                                                            <div style={{
+                                                                                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                                                                                background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+                                                                                zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+                                                                            }} onClick={() => setIsAdjustListOpen(false)}>
+                                                                                <div style={{
+                                                                                    background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)',
+                                                                                    width: '100%', maxWidth: '400px', boxShadow: 'var(--shadow-lg)', padding: '1.5rem', maxHeight: '85vh', display: 'flex', flexDirection: 'column'
+                                                                                }} onClick={e => e.stopPropagation()}>
+                                                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexShrink: 0 }}>
+                                                                                        <div>
+                                                                                            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em' }}>{t('table_columns')}</h3>
+                                                                                            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Drag items to show/hide columns.</p>
+                                                                                        </div>
+                                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                                            <button
+                                                                                                onClick={() => setActiveColumns(translatedColumns.filter(c => c.isDefault).map(c => c.id))}
+                                                                                                style={{
+                                                                                                    background: 'var(--bg-secondary)', border: 'none', color: 'var(--text-muted)',
+                                                                                                    padding: '0 0.8rem', height: '30px', borderRadius: '15px', cursor: 'pointer',
+                                                                                                    fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', transition: 'all 0.2s'
+                                                                                                }}
+                                                                                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'rgba(0,0,0,0.05)'; }}
+                                                                                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--bg-secondary)'; }}
+                                                                                            >
+                                                                                                Reset
+                                                                                            </button>
+                                                                                            <button onClick={() => setIsAdjustListOpen(false)} style={{ background: 'var(--bg-secondary)', border: 'none', color: 'var(--text-primary)', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', paddingRight: '0.5rem' }}>
+                                                                                        <DndContext
+                                                                                            collisionDetection={closestCenter}
+                                                                                            sensors={sensors}
+                                                                                            onDragStart={(event) => setActiveDragId(event.active.id as string)}
+                                                                                            onDragCancel={() => setActiveDragId(null)}
+                                                                                            onDragEnd={(event) => {
+                                                                                                const { active, over } = event;
+                                                                                                setActiveDragId(null);
+
+                                                                                                if (over) {
+                                                                                                    const activeId = active.id as ColumnId;
+                                                                                                    const overId = over.id as string;
+                                                                                                    const isActiveInActive = activeColumns.includes(activeId);
+
+                                                                                                    // Check if dropped into Hidden Container directly
+                                                                                                    if (overId === 'hidden-columns-container' && isActiveInActive) {
+                                                                                                        if (activeColumns.length > 1) {
+                                                                                                            setActiveColumns(activeColumns.filter(c => c !== activeId));
+                                                                                                        }
+                                                                                                        return;
+                                                                                                    }
+
+                                                                                                    const isOverInActive = activeColumns.includes(overId as ColumnId);
+
+                                                                                                    if (isActiveInActive && isOverInActive) {
+                                                                                                        // Active -> Active: Reorder
+                                                                                                        setActiveColumns((items) => {
+                                                                                                            const oldIndex = items.indexOf(activeId);
+                                                                                                            const newIndex = items.indexOf(overId as ColumnId);
+                                                                                                            return arrayMove(items, oldIndex, newIndex);
+                                                                                                        });
+                                                                                                    } else if (!isActiveInActive && isOverInActive) {
+                                                                                                        // Hidden -> Active: Insert
+                                                                                                        const overIndex = activeColumns.indexOf(overId as ColumnId);
+                                                                                                        const newActive = [...activeColumns];
+                                                                                                        if (overIndex !== -1) newActive.splice(overIndex, 0, activeId);
+                                                                                                        else newActive.push(activeId);
+                                                                                                        setActiveColumns(newActive);
+                                                                                                    } else if (isActiveInActive && !isOverInActive) {
+                                                                                                        // Active -> Hidden: Remove (when dropped on an item in hidden list)
+                                                                                                        if (activeColumns.length > 1) {
+                                                                                                            setActiveColumns(activeColumns.filter(c => c !== activeId));
+                                                                                                        }
+                                                                                                    }
+                                                                                                }
+                                                                                            }}
+                                                                                        >
+                                                                                            {/* Active Columns */}
+                                                                                            <div>
+                                                                                                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Active Columns</div>
+                                                                                                <SortableContext items={activeColumns} strategy={verticalListSortingStrategy}>
+                                                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minHeight: '50px' }}>
+                                                                                                        {activeColumns.map((colId) => {
+                                                                                                            const colDef = translatedColumns.find(c => c.id === colId);
+                                                                                                            return (
+                                                                                                                <SortableColumnItem
+                                                                                                                    key={colId}
+                                                                                                                    id={colId}
+                                                                                                                    label={colDef?.label || colId}
+                                                                                                                    type="active"
+                                                                                                                />
+                                                                                                            );
+                                                                                                        })}
+                                                                                                    </div>
+                                                                                                </SortableContext>
+                                                                                            </div>
+
+                                                                                            {/* Available Columns */}
+                                                                                            <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                                                                                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Hidden Columns</div>
+                                                                                                <DroppableArea id="hidden-columns-container" style={{
+                                                                                                    display: 'flex', flexDirection: 'column', gap: '0.5rem',
+                                                                                                    minHeight: '100px', flex: 1,
+                                                                                                    background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', padding: '0.5rem',
+                                                                                                    border: activeDragId && activeColumns.includes(activeDragId as any) ? '1px dashed var(--accent)' : '1px dashed transparent',
+                                                                                                    transition: 'border-color 0.2s'
+                                                                                                }}>
+                                                                                                    <SortableContext items={translatedColumns.filter(c => !activeColumns.includes(c.id)).map(c => c.id)} strategy={verticalListSortingStrategy}>
+                                                                                                        {translatedColumns.filter(c => !activeColumns.includes(c.id)).length === 0 ? (
+                                                                                                            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                                                                                                                Drag columns here to hide
+                                                                                                            </div>
+                                                                                                        ) : (
+                                                                                                            translatedColumns.filter(c => !activeColumns.includes(c.id)).map(col => (
+                                                                                                                <SortableColumnItem
+                                                                                                                    key={col.id}
+                                                                                                                    id={col.id}
+                                                                                                                    label={col.label}
+                                                                                                                    type="passive"
+                                                                                                                />
+                                                                                                            ))
+                                                                                                        )}
+                                                                                                    </SortableContext>
+                                                                                                </DroppableArea>
+                                                                                            </div>
+
+                                                                                            <DragOverlay>
+                                                                                                {activeDragId ? (() => {
+                                                                                                    const col = translatedColumns.find(c => c.id === activeDragId);
+                                                                                                    if (!col) return null;
+                                                                                                    const isActive = activeColumns.includes(activeDragId as any);
+                                                                                                    return (
+                                                                                                        <ColumnItem
+                                                                                                            label={col.label}
+                                                                                                            type={isActive ? 'active' : 'passive'}
+                                                                                                            isOverlay={true}
+                                                                                                        />
+                                                                                                    );
+                                                                                                })() : null}
+                                                                                            </DragOverlay>
+                                                                                        </DndContext>
+                                                                                    </div>
+
+                                                                                    <button
+                                                                                        onClick={() => setIsAdjustListOpen(false)}
+                                                                                        style={{
+                                                                                            width: '100%', marginTop: '1rem', padding: '0.8rem', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px var(--accent-glow)', flexShrink: 0
+                                                                                        }}
+                                                                                    >
+                                                                                        Done
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>,
+                                                                            document.body
+                                                                        )}
+                                                                    </div>
+                                                                )}
+
+                                                                {groupingKey !== 'none' ? (
+                                                                    <SortableContext items={orderedGroups.filter(g => groupedAssets[g]).map(g => `group:${g}`)} strategy={verticalListSortingStrategy}>
+                                                                        {orderedGroups.filter(type => groupedAssets[type]).map(type => (
+                                                                            <SortableGroup key={type} id={`group:${type}`} disabled={isGlobalEditMode}>
+                                                                                <AssetGroup
+                                                                                    type={type}
+                                                                                    assets={groupedAssets[type]}
+                                                                                    totalEUR={groupTotals[type]}
+                                                                                    positionsViewCurrency={positionsViewCurrency}
+                                                                                    totalPortfolioValueEUR={totalValueEUR}
+                                                                                    isOwner={isOwner}
+                                                                                    onDelete={handleDelete}
+                                                                                    timeFactor={getTimeFactor()}
+                                                                                    columns={activeColumns}
+                                                                                    timePeriod={timePeriod}
+                                                                                    exchangeRates={exchangeRates}
+                                                                                    isGlobalEditMode={isGlobalEditMode}
+                                                                                    onAssetClick={setEditingAsset}
+                                                                                />
+                                                                            </SortableGroup>
+                                                                        ))}
+                                                                    </SortableContext>
+                                                                ) : (
+                                                                    <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                                                                        {filteredAssets.map((asset, index) => (
+                                                                            <SortableAssetRow key={asset.id} id={asset.id} disabled={isGlobalEditMode}>
+                                                                                <AssetTableRow
+                                                                                    asset={asset}
+                                                                                    positionsViewCurrency={positionsViewCurrency}
+                                                                                    totalPortfolioValueEUR={totalValueEUR}
+                                                                                    isOwner={isOwner}
+                                                                                    onDelete={handleDelete}
+                                                                                    timeFactor={getTimeFactor()}
+                                                                                    rowIndex={index}
+                                                                                    columns={activeColumns}
+                                                                                    timePeriod={timePeriod}
+                                                                                    exchangeRates={exchangeRates}
+                                                                                    isGlobalEditMode={isGlobalEditMode}
+                                                                                    onAssetClick={setEditingAsset}
+                                                                                />
+                                                                            </SortableAssetRow>
+                                                                        ))}
+                                                                    </SortableContext>
+                                                                )}
+
+                                                                {filteredAssets.length === 0 && (
+                                                                    <EmptyPlaceholder
+                                                                        title="No Assets Found"
+                                                                        description="We couldn't find any assets matching your current filters. Try generating a new asset or adjusting your search."
+                                                                        icon={Inbox}
+                                                                        height="300px"
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                                                {isGroupingEnabled ? (
+                                                                    <SortableContext items={orderedGroups.map(g => `group:${g}`)} strategy={verticalListSortingStrategy}>
+                                                                        {orderedGroups.map(type => {
+                                                                            const groupAssets = groupedAssets[type];
+                                                                            if (!groupAssets) return null;
+                                                                            const groupTotal = groupTotals[type] || 0;
+
+                                                                            return (
+                                                                                <SortableGroup key={type} id={`group:${type}`} disabled={isGlobalEditMode}>
+                                                                                    <AssetGroupGrid
+                                                                                        type={type}
+                                                                                        assets={groupAssets}
+                                                                                        groupTotal={groupTotal}
+                                                                                        totalPortfolioValueEUR={totalValueEUR}
+                                                                                        positionsViewCurrency={positionsViewCurrency}
+                                                                                        viewMode={viewMode}
+                                                                                        gridColumns={gridColumns}
+                                                                                        isBlurred={isBlurred}
+                                                                                        isOwner={isOwner}
+                                                                                        onDelete={handleDelete}
+                                                                                        timeFactor={getTimeFactor()}
+                                                                                        timePeriod={timePeriod}
+                                                                                        exchangeRates={exchangeRates}
+                                                                                        isGlobalEditMode={isGlobalEditMode}
+                                                                                        onAssetClick={setEditingAsset}
+                                                                                    />
+                                                                                </SortableGroup>
+                                                                            );
+                                                                        })}
+                                                                    </SortableContext>
+                                                                ) : (
+                                                                    <div style={{
+                                                                        display: 'grid',
+                                                                        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                                                                        gap: '1rem',
+                                                                        transition: 'all 0.3s ease'
+                                                                    }}>
+                                                                        <SortableContext items={items.map(i => i.id)} strategy={rectSortingStrategy}>
+                                                                            {filteredAssets.map((asset, index) => {
+                                                                                return (
+                                                                                    <SortableAssetCard key={asset.id} id={asset.id} disabled={isGlobalEditMode}>
+                                                                                        {viewMode === 'detailed' ? (
+                                                                                            <DetailedAssetCard
+                                                                                                asset={asset}
+                                                                                                positionsViewCurrency={positionsViewCurrency}
+                                                                                                totalPortfolioValueEUR={totalValueEUR}
+                                                                                                isBlurred={isBlurred}
+                                                                                                isOwner={isOwner}
+                                                                                                onDelete={handleDelete}
+                                                                                                timeFactor={getTimeFactor()}
+                                                                                                timePeriod={timePeriod}
+                                                                                                exchangeRates={exchangeRates}
+                                                                                            />
+                                                                                        ) : (
+                                                                                            <AssetCard
+                                                                                                asset={asset}
+                                                                                                positionsViewCurrency={positionsViewCurrency}
+                                                                                                totalPortfolioValueEUR={totalValueEUR}
+                                                                                                isBlurred={isBlurred}
+                                                                                                isOwner={isOwner}
+                                                                                                onDelete={handleDelete}
+                                                                                                timeFactor={getTimeFactor()}
+                                                                                                timePeriod={timePeriod}
+                                                                                                exchangeRates={exchangeRates}
+                                                                                                isGlobalEditMode={isGlobalEditMode}
+                                                                                                onAssetClick={setEditingAsset}
+                                                                                            />
+                                                                                        )}
+                                                                                    </SortableAssetCard>
+                                                                                );
+                                                                            })}
+                                                                        </SortableContext>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+
+
+                                    ) : (
+                                        <div style={{ padding: '1rem' }}>
+                                            <ClosedPositions />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     {/* RIGHT COLUMN: Sidebar (Summary) - Fixed Width */}
-                    <div className="dashboard-sidebar">
+                    <div className="dashboard-sidebar" style={{ marginTop: '39px' }}>
                         {assets.length > 0 && (
                             <>
                                 <AllocationCard
@@ -2786,7 +2657,8 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                             </>
                         )}
                     </div>
-                </div >
+                </div>
+
 
             </div >
 
@@ -2892,6 +2764,12 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                         </div>
                     </div>,
                     document.body
+                )
+            }
+            {/* Import Modal */}
+            {
+                showImportModal && (
+                    <ImportModal onClose={() => setShowImportModal(false)} />
                 )
             }
         </DndContext >

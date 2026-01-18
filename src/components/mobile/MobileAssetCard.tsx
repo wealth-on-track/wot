@@ -6,6 +6,7 @@ import {
     motion,
     useMotionValue,
     useTransform,
+    useAnimationControls,
     PanInfo,
     AnimatePresence
 } from "framer-motion";
@@ -36,16 +37,24 @@ export const MobileAssetCard = memo(function MobileAssetCard({
 }: MobileAssetCardProps) {
     // --- State & Motion ---
     const x = useMotionValue(0);
+    const controls = useAnimationControls();
     const [isExpanded, setIsExpanded] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
 
     const isHighlighted = highlightId === asset.symbol;
 
-    // Background Opacity/Scale based on drag
-    const leftOpacity = useTransform(x, [0, 50], [0, 1]);
-    const rightOpacity = useTransform(x, [-50, 0], [1, 0]);
+    // Swipe limits
+    const SWIPE_MAX = 80; // Maximum swipe distance
+    const SWIPE_THRESHOLD = 60; // Threshold to trigger action
 
-    const SWIPE_THRESHOLD = 80;
+    // Background button opacity based on drag
+    const leftOpacity = useTransform(x, [0, SWIPE_MAX], [0, 1]);
+    const rightOpacity = useTransform(x, [-SWIPE_MAX, 0], [1, 0]);
+
+    // Background button scale for nice feedback
+    const leftScale = useTransform(x, [0, SWIPE_MAX], [0.5, 1]);
+    const rightScale = useTransform(x, [-SWIPE_MAX, 0], [1, 0.5]);
 
     // --- Currency Conversion ---
     const rates: Record<string, number> = { EUR: 1, USD: 1.05, TRY: 38.5 };
@@ -132,15 +141,32 @@ export const MobileAssetCard = memo(function MobileAssetCard({
         }
     };
 
+    const handleDrag = (event: any, info: PanInfo) => {
+        // Track direction for background color
+        if (info.offset.x > 10) {
+            setSwipeDirection('right');
+        } else if (info.offset.x < -10) {
+            setSwipeDirection('left');
+        } else {
+            setSwipeDirection(null);
+        }
+    };
+
     const handleDragEnd = (event: any, info: PanInfo) => {
         setIsDragging(false);
+        setSwipeDirection(null);
         const offset = info.offset.x;
+
+        // Always animate back to center
+        controls.start({ x: 0, transition: { type: "spring", stiffness: 500, damping: 30 } });
 
         if (offset > SWIPE_THRESHOLD) {
             navVibrate();
-            onEdit(asset);
+            onEdit(asset); // Right swipe = Edit
         } else if (offset < -SWIPE_THRESHOLD) {
             navVibrate();
+            // Left swipe = Delete (could trigger delete confirmation)
+            // For now just vibrate, you can add delete logic here
         }
     };
 
@@ -152,68 +178,96 @@ export const MobileAssetCard = memo(function MobileAssetCard({
     const logoUrl = asset.logoUrl || `https://logo.clearbit.com/${asset.symbol.toLowerCase()}.com`;
 
     return (
-        <div style={{ position: 'relative', overflow: 'visible', marginBottom: isCompactMode ? '0' : '8px' }}>
+        <div style={{ position: 'relative', overflow: 'hidden', marginBottom: isCompactMode ? '0' : '8px' }}>
 
-            {/* Background Actions Layer */}
+            {/* Background Actions Layer - Fixed position, revealed by card swipe */}
             <div style={{
                 position: 'absolute',
                 inset: 0,
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '0 20px',
-                background: x.get() > 0 ? 'var(--success)' : 'var(--danger)',
                 borderRadius: '16px',
                 zIndex: 0,
-                opacity: isDragging ? 1 : 0
+                overflow: 'hidden'
             }}>
-                <motion.div style={{ opacity: leftOpacity, color: '#fff' }}>
-                    <Plus size={24} strokeWidth={3} />
-                </motion.div>
-                <motion.div style={{ opacity: rightOpacity, marginLeft: 'auto', color: '#fff' }}>
-                    <Trash2 size={24} strokeWidth={3} />
-                </motion.div>
+                {/* Left side - Edit (green) - shown when swiping RIGHT */}
+                <div style={{
+                    width: SWIPE_MAX + 20,
+                    height: '100%',
+                    background: 'var(--success)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingLeft: '20px'
+                }}>
+                    <motion.div style={{ opacity: leftOpacity, scale: leftScale, color: '#fff' }}>
+                        <Edit2 size={22} strokeWidth={2.5} />
+                    </motion.div>
+                </div>
+
+                {/* Right side - Delete (red) - shown when swiping LEFT */}
+                <div style={{
+                    width: SWIPE_MAX + 20,
+                    height: '100%',
+                    background: 'var(--danger)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingRight: '20px'
+                }}>
+                    <motion.div style={{ opacity: rightOpacity, scale: rightScale, color: '#fff' }}>
+                        <Trash2 size={22} strokeWidth={2.5} />
+                    </motion.div>
+                </div>
             </div>
 
-            {/* Foreground Card */}
+            {/* Foreground Card - Draggable with constraints */}
             <motion.div
                 drag={isExpanded ? false : "x"}
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.2}
+                dragConstraints={{ left: -SWIPE_MAX, right: SWIPE_MAX }}
+                dragElastic={0.1}
                 onDragStart={() => setIsDragging(true)}
+                onDrag={handleDrag}
                 onDragEnd={handleDragEnd}
-                onClick={() => setIsExpanded(!isExpanded)}
+                animate={controls}
+                onClick={() => !isDragging && setIsExpanded(!isExpanded)}
                 initial={false}
-                animate={{
-                    height: 'auto',
-                    marginBottom: isExpanded ? 16 : 0,
-                    // Highlight Animation Sequence
-                    borderColor: isHighlighted
-                        ? ["var(--border)", "var(--accent)", "var(--border)", "var(--accent)", "var(--border)", "var(--accent)", "var(--border)"]
-                        : "var(--border)",
-                    boxShadow: isHighlighted
-                        ? ["none", "0 0 0 4px rgba(99, 102, 241, 0.3)", "none", "0 0 0 4px rgba(99, 102, 241, 0.3)", "none", "0 0 0 4px rgba(99, 102, 241, 0.3)", "none"]
-                        : "none",
-                    backgroundColor: isExpanded ? "var(--bg-secondary)" : "var(--surface)"
-                }}
-                transition={{
-                    duration: isHighlighted ? 1.5 : 0.2, // Longer duration for the 3 flashes
-                    ease: "easeInOut",
-                    times: isHighlighted ? [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1] : undefined // Evenly timed flashes
-                }}
                 style={{
                     x,
                     padding: isCompactMode ? '10px 14px' : '16px',
                     borderRadius: '16px',
-                    border: '1px solid var(--border)', // Default, overridden by animate
+                    border: '1px solid var(--border)',
+                    background: isExpanded ? 'var(--bg-secondary)' : 'var(--surface)',
                     position: 'relative',
-                    zIndex: isExpanded ? 20 : 10,
+                    zIndex: 10,
                     cursor: 'pointer',
-                    touchAction: 'pan-y',
-                    overflow: 'hidden'
+                    touchAction: 'pan-y'
                 }}
-                whileTap={{ scale: 0.995 }}
+                whileTap={!isDragging ? { scale: 0.995 } : undefined}
             >
+                {/* Highlight animation overlay */}
+                {isHighlighted && (
+                    <motion.div
+                        style={{
+                            position: 'absolute',
+                            inset: -1,
+                            borderRadius: '16px',
+                            pointerEvents: 'none',
+                            zIndex: 100
+                        }}
+                        animate={{
+                            boxShadow: [
+                                "0 0 0 0px rgba(99, 102, 241, 0)",
+                                "0 0 0 4px rgba(99, 102, 241, 0.4)",
+                                "0 0 0 0px rgba(99, 102, 241, 0)",
+                                "0 0 0 4px rgba(99, 102, 241, 0.4)",
+                                "0 0 0 0px rgba(99, 102, 241, 0)"
+                            ]
+                        }}
+                        transition={{ duration: 1.5, ease: "easeInOut" }}
+                    />
+                )}
                 {/* Main Content Row */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: isCompactMode ? '12px' : '16px', justifyContent: 'space-between' }}>
 

@@ -20,6 +20,7 @@ import type { Goal } from "@prisma/client";
 import { PortfolioPerformanceChart } from "../PortfolioPerformanceChart";
 import { Plus, ArrowLeft, Rocket, TrendingDown } from "lucide-react";
 import { getMarketPriceAction } from "@/app/actions/marketData";
+import { MobileClosedPositions } from "./MobileClosedPositions";
 
 interface MobileDashboardProps {
     username: string;
@@ -356,6 +357,8 @@ export function MobileDashboard({
                                         onAdd={() => setDashboardView('add')} // Crucial: Only changes view, keeps activeTab 'positions'
                                         totalValueEUR={totalValueEUR}
                                     />
+
+                                    <MobileClosedPositions />
                                 </motion.div>
                             )}
 
@@ -420,8 +423,9 @@ export function MobileDashboard({
                         setSelectedAsset(null);
                     }}
                     onAssetAdded={(newAsset) => {
-                        // Switch to positions tab
+                        // Switch to positions tab and reset view
                         setActiveTab('positions');
+                        setDashboardView('home'); // Reset from 'add' view back to normal
                         setShowAssetModal(false);
                         setSelectedAsset(null);
 

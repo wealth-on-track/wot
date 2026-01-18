@@ -1,6 +1,30 @@
 export const cleanAssetName = (name: string): string => {
     let cleaned = name.trim();
 
+    // 1. Clean British stock nominal value patterns FIRST (e.g., "ORD 28 101/108P", "ORD 25P", "ORD GBP0.10")
+    // These appear in LSE stock names like "DIAGEO PLC ORD 28 101/108P"
+    const britishPatterns = [
+        / ORD \d+[\s\/]*\d*P?$/i,           // "ORD 28 101/108P", "ORD 25P"
+        / ORD [\d\.\/]+P$/i,                 // "ORD 0.25P"
+        / ORD GBP[\d\.]+$/i,                 // "ORD GBP0.10"
+        / ORD USD[\d\.]+$/i,                 // "ORD USD0.01"
+        / ORD EUR[\d\.]+$/i,                 // "ORD EUR0.01"
+        / ORD \$[\d\.]+$/i,                  // "ORD $0.01"
+        / ORD £[\d\.]+$/i,                   // "ORD £0.10"
+        / ORD€[\d\.]+$/i,                    // "ORD€0.01"
+        / ORD$/i,                            // Just "ORD" at the end
+        / ORDINARY SHARES?$/i,               // "ORDINARY SHARES"
+        / COM(MON)?$/i,                      // "COM" or "COMMON"
+        / CL(ASS)? [A-Z]$/i,                 // "CLASS A", "CL A"
+        / ADR$/i,                            // American Depositary Receipt
+        / ADS$/i,                            // American Depositary Shares
+        / REIT$/i,                           // Real Estate Investment Trust
+    ];
+
+    britishPatterns.forEach(pattern => {
+        cleaned = cleaned.replace(pattern, '').trim();
+    });
+
     // 2. Clean common formal suffixes
     // We remove these disregarding case, allowing for optional trailing whitespace/dots
     const suffixes = [
@@ -8,6 +32,7 @@ export const cleanAssetName = (name: string): string => {
         / Corp\.?$/i,
         / Corporation$/i,
         / Ltd\.?$/i,
+        / Limited$/i,
         / A\.S\.?$/i,
         / A\.Ş\.?$/i,
         / AS$/i,
@@ -34,6 +59,9 @@ export const cleanAssetName = (name: string): string => {
         / Abp$/i,
         / ASA$/i,
         / AB$/i,
+        / Co\.?$/i,
+        / Company$/i,
+        / \& Co\.?$/i,
         // Crypto/Currency Suffixes (e.g. "Bitcoin EUR", "Apple USD")
         / EUR$/i,
         / USD$/i,

@@ -7,10 +7,11 @@ import { getMarketPriceAction } from "@/app/actions/marketData";
 import { PriceResult } from "@/services/marketData";
 import { addAsset, trackLogoRequest, getAutocompleteSuggestions } from "@/lib/actions";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Command, X, Save, Lock } from "lucide-react"; // Icons
+import { Plus, Search, Command, X, Save, Lock, Upload } from "lucide-react"; // Icons
 import { createPortal } from "react-dom";
 import { useLanguage } from "@/context/LanguageContext";
 import { ManualAssetModal } from "./ManualAssetModal";
+
 import { getLogoUrl, getLogoProvider } from "@/lib/logos";
 import { AutocompleteInput } from "./AutocompleteInput";
 import { AssetCategory, CATEGORY_COLORS } from "@/lib/assetCategories";
@@ -96,6 +97,7 @@ export function InlineAssetSearch() {
     const [totalValue, setTotalValue] = useState(""); // For Funds
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [showManualModal, setShowManualModal] = useState(false);
+
     const [isFocused, setIsFocused] = useState(false);
     const [isPriceLoading, setIsPriceLoading] = useState(false);  // Track price loading state
     const [suggestions, setSuggestions] = useState<{ portfolios: string[], platforms: string[] }>({ portfolios: [], platforms: [] });
@@ -372,9 +374,12 @@ export function InlineAssetSearch() {
         <div style={{
             position: 'relative',
             width: '100%',
-            zIndex: 9999
+            zIndex: 9999,
+            display: 'flex',
+            gap: '0.5rem',
+            alignItems: 'center'
         }} ref={dropdownRef}>
-            <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
                 {/* Search Icon */}
                 <div style={{ position: 'absolute', left: '1rem', color: isFocused ? '#6366F1' : 'var(--text-muted)', transition: 'color 0.3s', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
                     <Search size={18} />
@@ -391,7 +396,7 @@ export function InlineAssetSearch() {
                     onBlur={() => {
                         setIsFocused(false);
                     }}
-                    placeholder={t('search_placeholder')}
+                    placeholder="To add your asset, start searching..."
                     className="placeholder:text-slate-600"
                     style={{
                         width: '100%',
@@ -428,6 +433,9 @@ export function InlineAssetSearch() {
                     <span>K</span>
                 </div>
             </div>
+
+            {/* Import Button REMOVED - Moved to Dashboard Header */}
+
 
             {showDropdown && !selectedSymbol && (
                 <div style={{
@@ -882,6 +890,8 @@ export function InlineAssetSearch() {
                 </div>,
                 document.body
             )}
+
+
         </div>
     );
 }

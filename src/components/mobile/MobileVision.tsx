@@ -392,6 +392,7 @@ export function MobileVision({ totalValueEUR }: MobileVisionProps) {
                     </div>
 
                     {/* Scenario Selector Card */}
+                    {/* Scenario Selector Card */}
                     <div style={{
                         background: 'var(--bg-secondary)',
                         borderRadius: '12px',
@@ -402,9 +403,9 @@ export function MobileVision({ totalValueEUR }: MobileVisionProps) {
                         gap: '4px'
                     }}>
                         {[
-                            { id: 'BEAR', icon: TrendingDown, color: '#ef4444', label: 'Bear' },
-                            { id: 'EXPECTED', icon: Target, color: 'var(--accent)', label: 'Exp.' },
-                            { id: 'BULL', icon: TrendingUp, color: '#10b981', label: 'Bull' }
+                            { id: 'BEAR', icon: TrendingDown, color: '#ef4444', label: 'Bear', rate: '4%' },
+                            { id: 'EXPECTED', icon: Target, color: 'var(--accent)', label: 'Exp.', rate: '8%' },
+                            { id: 'BULL', icon: TrendingUp, color: '#10b981', label: 'Bull', rate: '12%' }
                         ].map(s => {
                             const isSelected = scenario === s.id;
                             const Icon = s.icon;
@@ -434,7 +435,12 @@ export function MobileVision({ totalValueEUR }: MobileVisionProps) {
                                     }}
                                 >
                                     <Icon size={16} strokeWidth={2.5} style={{ opacity: isSelected ? 1 : 0.5 }} />
-                                    {isSelected && <div style={{ fontSize: '0.6rem', fontWeight: 800 }}>{s.label}</div>}
+                                    {isSelected && (
+                                        <div style={{ fontSize: '0.6rem', fontWeight: 800, display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+                                            <span>{s.label}</span>
+                                            <span style={{ fontSize: '0.55rem', opacity: 0.8 }}>{s.rate}</span>
+                                        </div>
+                                    )}
                                 </button>
                             )
                         })}
@@ -470,28 +476,45 @@ export function MobileVision({ totalValueEUR }: MobileVisionProps) {
                     />
 
                     {/* Custom Tick Labels */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-                        {yearSteps.map((y, i) => (
-                            <div
-                                key={y}
-                                onClick={() => { setSliderStep(i); vibrate(5); }}
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '2px',
-                                    cursor: 'pointer',
-                                    opacity: i === sliderStep ? 1 : 0.5
-                                }}
-                            >
-                                <div style={{
-                                    width: '1px',
-                                    height: '6px',
-                                    background: 'var(--text-primary)'
-                                }} />
-                                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-primary)' }}>{y}</span>
-                            </div>
-                        ))}
+                    {/* Custom Tick Labels */}
+                    <div style={{
+                        position: 'relative',
+                        marginTop: '8px',
+                        height: '30px',
+                        width: '100%'
+                    }}>
+                        {yearSteps.map((y, i) => {
+                            const p = i / (yearSteps.length - 1);
+                            // Calculate position to match slider thumb center (thumb width 24px)
+                            const offset = 12 - (p * 24);
+
+                            return (
+                                <div
+                                    key={y}
+                                    onClick={() => { setSliderStep(i); vibrate(5); }}
+                                    style={{
+                                        position: 'absolute',
+                                        left: `calc(${p * 100}% + ${offset}px)`,
+                                        transform: 'translateX(-50%)',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        gap: '2px',
+                                        cursor: 'pointer',
+                                        opacity: i === sliderStep ? 1 : 0.5,
+                                        top: 0,
+                                        transition: 'opacity 0.2s'
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '1px',
+                                        height: '6px',
+                                        background: 'var(--text-primary)'
+                                    }} />
+                                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-primary)' }}>{y}</span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
 
