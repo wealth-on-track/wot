@@ -143,7 +143,7 @@ export default function TopPerformers(props: TopPerformersProps) {
                         name: top3[0].name,
                         symbol: top3[0].symbol,
                         changePercent: top3[0].performance[`changePercent${period}`],
-                        value: 0
+                        currentValue: 0
                     } : undefined
                 }} />}
 
