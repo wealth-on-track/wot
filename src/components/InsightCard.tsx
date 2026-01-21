@@ -169,7 +169,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                                                 dataKey="value"
                                                 stroke="none"
                                             >
-                                                {graphData.map((entry, index) => (
+                                                {graphData?.map((entry, index) => (
                                                     <Cell key={`cell-${index}`} fill={entry.fill} />
                                                 ))}
                                             </Pie>
