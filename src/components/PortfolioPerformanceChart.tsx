@@ -11,7 +11,7 @@ import {
     ResponsiveContainer,
     Line
 } from 'recharts';
-import { LineChart as LineChartIcon, Eye, EyeOff, ChevronDown, TrendingDown, Activity, TrendingUp, Settings, Edit2, Share2 } from 'lucide-react';
+import { LineChart as LineChartIcon, Eye, EyeOff, ChevronDown, TrendingDown, Activity, TrendingUp, Settings, Edit2, Share2, Target } from 'lucide-react';
 import { ShareHub } from './share/ShareHub';
 import { ShareData } from './share/Templates';
 import { BENCHMARK_ASSETS, fetchBenchmarkData, normalizeToPercentage, BenchmarkDataPoint } from '@/lib/benchmarkApi';
@@ -38,7 +38,10 @@ interface PortfolioPerformanceChartProps {
     showHistoryList?: boolean;
     showPortfolioValue?: boolean; // New prop to control portfolio value display
     showPeriodSelector?: boolean; // New prop to control period selector display
+    showTabs?: boolean; // New prop to control tabs visibility
     onShare?: (data: any) => void;
+    layoutMode?: 'default' | 'fullscreen'; // Controls layout of header elements
+    initialView?: 'performance' | 'insights' | 'vision' | 'share'; // Initial active view
 }
 
 type TimePeriod = '1D' | '1W' | '1M' | 'YTD' | '1Y' | 'ALL';
@@ -72,14 +75,17 @@ export function PortfolioPerformanceChart({
     showHistoryList = false,
     showPortfolioValue = true,
     showPeriodSelector = true,
-    onShare
+    showTabs = true,
+    onShare,
+    layoutMode = 'default',
+    initialView = 'performance'
 }: PortfolioPerformanceChartProps) {
     const { currency } = useCurrency();
     const { t } = useLanguage();
     const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>((defaultRange as TimePeriod) || '1Y');
 
     // Tab State: 'performance' | 'insights' | 'vision' | 'share'
-    const [activeView, setActiveView] = useState<'performance' | 'insights' | 'vision' | 'share'>('performance');
+    const [activeView, setActiveView] = useState<'performance' | 'insights' | 'vision' | 'share'>(initialView);
     const [shareData, setShareData] = useState<ShareData | undefined>(undefined);
     const [visionYears, setVisionYears] = useState(10); // Default 10 years
     const [monthlyAdd, setMonthlyAdd] = useState(0); // Monthly contribution
@@ -763,6 +769,42 @@ export function PortfolioPerformanceChart({
         </div>
     );
 
+    // Fix for broken Y-Axis ticks in Vision Mode
+    const visionTicks = useMemo(() => {
+        if (activeView !== 'vision' || zoomedData.length === 0) return undefined;
+
+        let maxVal = 0;
+        zoomedData.forEach(d => {
+            if (typeof d.projectedValue === 'number' && d.projectedValue > maxVal) maxVal = d.projectedValue;
+            if (typeof d.impactValue === 'number' && d.impactValue > maxVal) maxVal = d.impactValue;
+        });
+
+        // Ensure minimal positive range
+        if (maxVal <= 0) maxVal = 1;
+
+        const count = 5;
+        const roughStep = maxVal / count;
+
+        // Calculate magnitude (power of 10)
+        const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+        const normalizedStep = roughStep / magnitude;
+
+        let cleanStep;
+        if (normalizedStep <= 1) cleanStep = 1;
+        else if (normalizedStep <= 2) cleanStep = 2;
+        else if (normalizedStep <= 5) cleanStep = 5;
+        else cleanStep = 10;
+
+        const step = cleanStep * magnitude;
+
+        const ticks = [];
+        // Generate exactly count+1 ticks to cover the range (0 to 5 steps)
+        for (let i = 0; i <= count; i++) {
+            ticks.push(i * step);
+        }
+        return ticks;
+    }, [activeView, zoomedData]);
+
     if (controlsPosition === 'bottom') {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', height: 'auto', width: '100%' }}>
@@ -792,11 +834,20 @@ export function PortfolioPerformanceChart({
                 {/* 2. Chart Card */}
                 <div className="neo-card" style={{ padding: '0.5rem 0.5rem 0.2rem 0.5rem', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 20, overflow: 'visible' }}>
                     {/* Controls */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '0.2rem', padding: '0 0.5rem', zIndex: 10 }}>
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: layoutMode === 'fullscreen' ? 'space-between' : 'flex-end',
+                        alignItems: 'center',
+                        marginBottom: '0.2rem',
+                        padding: '0 0.5rem',
+                        zIndex: 10
+                    }}>
+                        {/* Benchmark Selector (Left side for Fullscreen) */}
+                        {layoutMode === 'fullscreen' && <BenchmarkSelector />}
 
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                            {/* Benchmark Selector */}
-                            <BenchmarkSelector />
+                            {/* Benchmark Selector (Right side for Default) */}
+                            {layoutMode !== 'fullscreen' && <BenchmarkSelector />}
 
                             {showPeriodSelector && (
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
@@ -934,27 +985,29 @@ export function PortfolioPerformanceChart({
     // --- DESKTOP LAYOUT ---
     return (
         <div style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
-            {/* 1. Integrated Tabs Area (WOT Unified Tab System) */}
-            <div style={{
-                display: 'flex',
-                justifyContent: 'flex-start',
-                alignItems: 'flex-end',
-                paddingLeft: '0',
-                paddingRight: '0.8rem',
-                marginBottom: '-1px',
-                zIndex: 10,
-            }}>
-                <WotTabs
-                    tabs={[
-                        { id: 'performance', label: 'Performance' },
-                        { id: 'insights', label: 'Insights' },
-                        { id: 'vision', label: 'Vision' },
-                        { id: 'share', label: <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>Share <Share2 size={13} strokeWidth={2.5} /></span> }
-                    ]}
-                    activeTabId={activeView}
-                    onTabChange={(id) => setActiveView(id as 'performance' | 'insights' | 'vision' | 'share')}
-                />
-            </div>
+            {/* 1. Tabs - Only show if showTabs is true */}
+            {showTabs && (
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'flex-start',
+                    alignItems: 'flex-end',
+                    paddingLeft: '0',
+                    paddingRight: '0.8rem',
+                    marginBottom: '-1px',
+                    zIndex: 10,
+                }}>
+                    <WotTabs
+                        tabs={[
+                            { id: 'performance', label: 'Performance' },
+                            { id: 'insights', label: 'Insights' },
+                            { id: 'vision', label: 'Vision' },
+                            { id: 'share', label: <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>Share <Share2 size={13} strokeWidth={2.5} /></span> }
+                        ]}
+                        activeTabId={activeView}
+                        onTabChange={(id) => setActiveView(id as 'performance' | 'insights' | 'vision' | 'share')}
+                    />
+                </div>
+            )}
 
             {/* 2. Main Card Content */}
             <div className="neo-card" style={{
@@ -964,7 +1017,7 @@ export function PortfolioPerformanceChart({
                 gap: '0.5rem',
                 position: 'relative',
                 overflow: 'visible',
-                borderTopLeftRadius: '0px',
+                borderTopLeftRadius: showTabs ? '0px' : '12px',
                 borderTopRightRadius: '12px',
                 borderBottomLeftRadius: '12px',
                 borderBottomRightRadius: '12px',
@@ -992,7 +1045,7 @@ export function PortfolioPerformanceChart({
                 {/* SHARE HUB VIEW */}
                 {activeView === 'share' && (
                     <div style={{ minHeight: '400px' }}>
-                        <ShareHub initialData={shareData} initialTemplate="journey" />
+                        <ShareHub initialData={shareData} initialTemplate="performance" />
                     </div>
                 )}
 
@@ -1008,37 +1061,48 @@ export function PortfolioPerformanceChart({
                             paddingBottom: '0.5rem',
                             borderBottom: '1px solid var(--border)' // Subtle separation line
                         }}>
-                            {/* LEFT: Portfolio Info */}
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '1.5rem' }}>
-                                {/* 1. Main Amount */}
-                                <div style={{
-                                    fontSize: '2rem', // Big Impact
-                                    fontWeight: 800,
-                                    color: 'var(--text-primary)',
-                                    lineHeight: 1,
-                                    fontVariantNumeric: 'tabular-nums',
-                                    letterSpacing: '-0.03em'
-                                }}>
-                                    {currencySym}{fmtCurrency(Number(activeView === 'vision' ? (chartData[chartData.length - 1]?._actualValue || displayedTotalValue) : displayedTotalValue))}
-                                </div>
+                            {/* LEFT: Portfolio Info OR Benchmark (Fullscreen) */}
+                            {layoutMode === 'fullscreen' ? (
+                                activeView === 'vision' ? (
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#2DBC8E', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Target size={20} />
+                                        <span>My Vision ({visionYears + new Date().getFullYear()})</span>
+                                    </div>
+                                ) : (
+                                    <BenchmarkSelector />
+                                )
+                            ) : (
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '1.5rem' }}>
+                                    {/* 1. Main Amount */}
+                                    <div style={{
+                                        fontSize: '2rem', // Big Impact
+                                        fontWeight: 800,
+                                        color: 'var(--text-primary)',
+                                        lineHeight: 1,
+                                        fontVariantNumeric: 'tabular-nums',
+                                        letterSpacing: '-0.03em'
+                                    }}>
+                                        {currencySym}{fmtCurrency(Number(activeView === 'vision' ? (chartData[chartData.length - 1]?._actualValue || displayedTotalValue) : displayedTotalValue))}
+                                    </div>
 
-                                {/* 2. Changes */}
-                                {activeView !== 'vision' && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                                        <span style={{ fontSize: '1rem', fontWeight: 600, color: isPositive ? 'var(--success)' : 'var(--danger)', display: 'flex', alignItems: 'center' }}>
-                                            {isPositive ? '▲' : '▼'}{Math.abs(portfolioStats.changePercent).toFixed(2)}%
-                                        </span>
-                                        <span style={{ fontSize: '1rem', fontWeight: 500, color: isPositive ? 'var(--success)' : 'var(--danger)', opacity: 0.9 }}>
-                                            {isPositive ? '+' : '-'}{currencySym}{fmtCurrency(Math.abs(displayedChange))}
-                                        </span>
-                                    </div>
-                                )}
-                                {activeView === 'vision' && (
-                                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#2DBC8E' }}>
-                                        Projected ({visionYears + 2026})
-                                    </div>
-                                )}
-                            </div>
+                                    {/* 2. Changes */}
+                                    {activeView !== 'vision' && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                            <span style={{ fontSize: '1rem', fontWeight: 600, color: isPositive ? 'var(--success)' : 'var(--danger)', display: 'flex', alignItems: 'center' }}>
+                                                {isPositive ? '▲' : '▼'}{Math.abs(portfolioStats.changePercent).toFixed(2)}%
+                                            </span>
+                                            <span style={{ fontSize: '1rem', fontWeight: 500, color: isPositive ? 'var(--success)' : 'var(--danger)', opacity: 0.9 }}>
+                                                {isPositive ? '+' : '-'}{currencySym}{fmtCurrency(Math.abs(displayedChange))}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {activeView === 'vision' && (
+                                        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#2DBC8E' }}>
+                                            Projected ({visionYears + 2026})
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* RIGHT: Time Selectors + Benchmarks */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
@@ -1094,117 +1158,190 @@ export function PortfolioPerformanceChart({
                                 )}
 
                                 {/* Benchmarks Selector */}
-                                {activeView !== 'vision' && <BenchmarkSelector />}
+                                {activeView !== 'vision' && layoutMode !== 'fullscreen' && <BenchmarkSelector />}
                             </div>
                         </div>
 
-                        {/* Chart Container */}
-                        <div style={{ width: '100%', height: '280px', position: 'relative' }} // Reduced height to 280px
-                            onMouseEnter={() => setIsChartHovered(true)}
-                            onMouseLeave={() => setIsChartHovered(false)}
-                            onWheel={handleWheel}
-                        >
-                            {isLoading && (
-                                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(2px)', zIndex: 20 }}>
-                                    <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Loading...</span>
+                        {/* Chart Area Wrapper */}
+                        <div style={{ display: 'flex', gap: '24px', alignItems: 'stretch' }}>
+                            {/* Chart Container */}
+                            <div style={{
+                                flex: 1,
+                                minWidth: 0,
+                                height: layoutMode === 'fullscreen' ? '340px' : '280px',
+                                position: 'relative',
+                                ...(layoutMode === 'fullscreen' ? {
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '12px',
+                                    background: 'var(--surface)',
+                                    padding: '16px'
+                                } : {})
+                            }} // Modified height and style
+                                onMouseEnter={() => setIsChartHovered(true)}
+                                onMouseLeave={() => setIsChartHovered(false)}
+                                onWheel={handleWheel}
+                            >
+                                {isLoading && (
+                                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(2px)', zIndex: 20 }}>
+                                        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Loading...</span>
+                                    </div>
+                                )}
+
+                                {isMounted && (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={zoomedData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}> {/* negative left margin to pull y-axis in */}
+                                            <defs>
+                                                <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                                </linearGradient>
+                                                <linearGradient id="colorVision" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#2DBC8E" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#2DBC8E" stopOpacity={0} />
+                                                </linearGradient>
+                                                <linearGradient id="ghostGradient" x1="0" y1="0" x2="1" y2="0">
+                                                    <stop offset="0%" stopColor="#2DBC8E" stopOpacity={0.1} />
+                                                    <stop offset="100%" stopColor="#2DBC8E" stopOpacity={0.4} />
+                                                </linearGradient>
+                                            </defs>
+
+                                            <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={true} stroke="rgba(0,0,0,0.05)" />
+
+                                            <XAxis
+                                                dataKey="date"
+                                                tickFormatter={formatXAxis}
+                                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                                axisLine={false}
+                                                tickLine={false}
+                                                minTickGap={50}
+                                                dy={10}
+                                            />
+
+                                            {/* Restore Y Axis Visibility */}
+                                            <YAxis
+                                                width={60}
+                                                allowDecimals={false}
+                                                ticks={activeView === 'vision' ? visionTicks : undefined}
+                                                domain={activeView === 'vision' ? [0, 'dataMax'] : ['auto', 'auto']}
+                                                tickFormatter={(val) => `${val}%`}
+                                                tick={{ fontSize: 10, fill: '#94a3b8' }}
+                                                axisLine={false}
+                                                tickLine={false}
+                                            />
+
+                                            <Tooltip
+                                                content={<CustomTooltip />}
+                                                cursor={{ stroke: activeView === 'vision' ? '#2DBC8E' : '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                                wrapperStyle={{ outline: 'none' }}
+                                            />
+
+                                            {/* Standard Portfolio Line */}
+                                            {activeView !== 'vision' && (
+                                                <Area
+                                                    type="monotone"
+                                                    dataKey="portfolio"
+                                                    stroke="#6366f1"
+                                                    strokeWidth={3}
+                                                    fill="url(#colorPortfolio)"
+                                                    animationDuration={800}
+                                                    activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }}
+                                                />
+                                            )}
+
+                                            {/* Vision Mode Lines */}
+                                            {activeView === 'vision' && (
+                                                <>
+                                                    {/* Main Projection */}
+                                                    <Area
+                                                        type="monotone"
+                                                        dataKey="projectedValue"
+                                                        stroke="#2DBC8E"
+                                                        strokeWidth={3}
+                                                        fill="url(#colorVision)"
+                                                        animationDuration={800}
+                                                        activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }}
+                                                        name="Projected"
+                                                    />
+
+                                                    {/* Ghost Line (Impact) - Only if simulatedImpact/Active Scenario differs */}
+                                                    <Area
+                                                        type="monotone"
+                                                        dataKey="impactValue"
+                                                        stroke="url(#ghostGradient)"
+                                                        strokeWidth={2}
+                                                        strokeDasharray="5 5"
+                                                        fill="none"
+                                                        animationDuration={1000}
+                                                        name="Potential"
+                                                    />
+                                                </>
+                                            )}
+
+                                            {/* Benchmarks (Only in Performance Mode) */}
+                                            {activeView !== 'vision' && selectedBenchmarks.map(id => {
+                                                const b = BENCHMARK_ASSETS.find(a => a.id === id);
+                                                return <Line key={id} type="monotone" dataKey={id} stroke={b?.color} strokeWidth={2} dot={false} connectNulls animationDuration={800} />;
+                                            })}
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </div>
+
+                            {/* Side Table (Fullscreen Only) */}
+                            {layoutMode === 'fullscreen' && activeView !== 'vision' && zoomedData.length > 0 && (
+                                <div style={{
+                                    width: '260px',
+                                    flexShrink: 0,
+                                    background: 'var(--surface)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '12px',
+                                    padding: '16px',
+                                    display: 'flex',
+                                    flexDirection: 'column'
+                                }}>
+                                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid var(--border)', textTransform: 'uppercase' }}>
+                                        Performance ({selectedPeriod})
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto' }}>
+                                        {(() => {
+                                            const lastPoint = zoomedData[zoomedData.length - 1];
+                                            const items = [];
+                                            if (isPortfolioVisible) items.push({ name: 'My Portfolio', value: Number(lastPoint.portfolio), color: '#6366f1' });
+                                            selectedBenchmarks.forEach(id => {
+                                                const b = BENCHMARK_ASSETS.find(a => a.id === id);
+                                                items.push({ name: b?.name || id, value: Number(lastPoint[id]), color: b?.color || '#ccc' });
+                                            });
+                                            return items.sort((a, b) => b.value - a.value).map(item => (
+                                                <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                                        <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: item.color, flexShrink: 0 }} />
+                                                        <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
+                                                    </div>
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: item.value >= 0 ? 'var(--success)' : 'var(--danger)', fontVariantNumeric: 'tabular-nums' }}>
+                                                        {item.value > 0 ? '+' : ''}{item.value.toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                            ));
+                                        })()}
+                                    </div>
                                 </div>
                             )}
 
-                            {isMounted && (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={zoomedData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}> {/* negative left margin to pull y-axis in */}
-                                        <defs>
-                                            <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                            </linearGradient>
-                                            <linearGradient id="colorVision" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#2DBC8E" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#2DBC8E" stopOpacity={0} />
-                                            </linearGradient>
-                                            <linearGradient id="ghostGradient" x1="0" y1="0" x2="1" y2="0">
-                                                <stop offset="0%" stopColor="#2DBC8E" stopOpacity={0.1} />
-                                                <stop offset="100%" stopColor="#2DBC8E" stopOpacity={0.4} />
-                                            </linearGradient>
-                                        </defs>
-
-                                        <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={true} stroke="rgba(0,0,0,0.05)" />
-
-                                        <XAxis
-                                            dataKey="date"
-                                            tickFormatter={formatXAxis}
-                                            tick={{ fontSize: 11, fill: '#64748b' }}
-                                            axisLine={false}
-                                            tickLine={false}
-                                            minTickGap={50}
-                                            dy={10}
-                                        />
-
-                                        {/* Restore Y Axis Visibility */}
-                                        <YAxis
-                                            width={45}
-                                            domain={['auto', 'auto']}
-                                            tickFormatter={(val) => `${val}%`}
-                                            tick={{ fontSize: 10, fill: '#94a3b8' }}
-                                            axisLine={false}
-                                            tickLine={false}
-                                        />
-
-                                        <Tooltip
-                                            content={<CustomTooltip />}
-                                            cursor={{ stroke: activeView === 'vision' ? '#2DBC8E' : '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }}
-                                            wrapperStyle={{ outline: 'none' }}
-                                        />
-
-                                        {/* Standard Portfolio Line */}
-                                        {activeView !== 'vision' && (
-                                            <Area
-                                                type="monotone"
-                                                dataKey="portfolio"
-                                                stroke="#6366f1"
-                                                strokeWidth={3}
-                                                fill="url(#colorPortfolio)"
-                                                animationDuration={800}
-                                                activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }}
-                                            />
-                                        )}
-
-                                        {/* Vision Mode Lines */}
-                                        {activeView === 'vision' && (
-                                            <>
-                                                {/* Main Projection */}
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="projectedValue"
-                                                    stroke="#2DBC8E"
-                                                    strokeWidth={3}
-                                                    fill="url(#colorVision)"
-                                                    animationDuration={800}
-                                                    activeDot={{ r: 6, strokeWidth: 0, fill: '#fff' }}
-                                                    name="Projected"
-                                                />
-
-                                                {/* Ghost Line (Impact) - Only if simulatedImpact/Active Scenario differs */}
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="impactValue"
-                                                    stroke="url(#ghostGradient)"
-                                                    strokeWidth={2}
-                                                    strokeDasharray="5 5"
-                                                    fill="none"
-                                                    animationDuration={1000}
-                                                    name="Potential"
-                                                />
-                                            </>
-                                        )}
-
-                                        {/* Benchmarks (Only in Performance Mode) */}
-                                        {activeView !== 'vision' && selectedBenchmarks.map(id => {
-                                            const b = BENCHMARK_ASSETS.find(a => a.id === id);
-                                            return <Line key={id} type="monotone" dataKey={id} stroke={b?.color} strokeWidth={2} dot={false} connectNulls animationDuration={800} />;
-                                        })}
-                                    </AreaChart>
-                                </ResponsiveContainer>
+                            {/* Vision Settings (Fullscreen Side Panel) */}
+                            {layoutMode === 'fullscreen' && activeView === 'vision' && (
+                                <div style={{ width: '380px', flexShrink: 0 }}>
+                                    <VisionSettings
+                                        visionYears={visionYears}
+                                        setVisionYears={setVisionYears}
+                                        monthlyAdd={monthlyAdd}
+                                        setMonthlyAdd={setMonthlyAdd}
+                                        scenario={activeScenario}
+                                        setScenario={setActiveScenario}
+                                        customRate={customRate}
+                                        setCustomRate={setCustomRate}
+                                    />
+                                </div>
                             )}
                         </div>
                     </>
@@ -1264,7 +1401,7 @@ export function PortfolioPerformanceChart({
             }
             {/* 5. Vision Controls (New Design) */}
             {
-                activeView === 'vision' && (
+                activeView === 'vision' && layoutMode !== 'fullscreen' && (
                     <VisionSettings
                         visionYears={visionYears}
                         setVisionYears={setVisionYears}

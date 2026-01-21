@@ -20,6 +20,10 @@ const COLUMN_ALIASES: Record<string, string[]> = {
     localValue: ['local value', 'localvalue', 'value', 'total', 'wert', 'betrag', 'gesamtwert', 'tutar'],
     valueEur: ['value eur', 'valueeur', 'total eur', 'totaleur'],
     date: ['date', 'tarih', 'transaction date'],
+    description: ['description', 'omschrijving', 'beschreibung'],
+    change: ['change', 'mutatie', 'veraenderung', 'veränderung'],
+    balance: ['balance', 'saldo', 'bestand'],
+    orderid: ['orderid', 'order id', 'order-id', 'auftragsnummer'],
 };
 
 // ISIN to Symbol mapping for common securities
@@ -71,7 +75,7 @@ const ISIN_TO_SYMBOL: Record<string, { symbol: string; name: string; type: strin
 export interface ParsedTransaction {
     symbol: string;
     name?: string;
-    type: 'BUY' | 'SELL';
+    type: TransactionType;
     quantity: number;
     price: number;
     currency: string;
@@ -82,6 +86,8 @@ export interface ParsedTransaction {
     externalId?: string;
     fee: number;
 }
+
+export type TransactionType = 'BUY' | 'SELL' | 'DEPOSIT' | 'WITHDRAWAL' | 'DIVIDEND' | 'COUPON' | 'INTEREST' | 'FEE' | 'FX';
 
 export interface ParsedRow {
     symbol: string;
@@ -123,6 +129,14 @@ function normalize(str: string): string {
         .replace(/[öÖ]/g, 'o')
         .replace(/[çÇ]/g, 'c')
         .replace(/[ğĞ]/g, 'g');
+}
+
+/**
+ * Clean and unique headers for PapaParse
+ */
+function uniqueHeaders(header: string, index: number): string {
+    const clean = header.trim();
+    return clean || `__EMPTY_${index}`;
 }
 
 /**
@@ -188,6 +202,23 @@ function isDeGiroFormat(columns: string[]): boolean {
     return normalized.includes('isin') &&
         normalized.includes('product') &&
         (normalized.includes('referenceexchange') || normalized.includes('venue'));
+}
+
+/**
+ * Detect if this is a DeGiro Account Statement (Cash Report)
+ * Characterized by: Description, Change, Balance, and missing 'Venue' usually
+ */
+function isDeGiroAccountStatementFormat(columns: string[]): boolean {
+    const normalized = columns.map(c => normalize(c));
+    // Must have Description, Change, Balance, Order Id (or their Dutch/German equivalents)
+    // We can use findBestMatch to check existence efficiently against aliases
+
+    const hasDescription = findBestMatch(normalized, 'description');
+    const hasChange = findBestMatch(normalized, 'change');
+    const hasBalance = findBestMatch(normalized, 'balance');
+    const hasOrderId = findBestMatch(normalized, 'orderid');
+
+    return !!(hasDescription && hasChange && hasBalance && hasOrderId);
 }
 
 /**
@@ -443,11 +474,14 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
         const totalSold = data.sells.reduce((sum, t) => sum + t.quantity, 0);
         const netQuantity = totalBought - totalSold;
 
-        // Skip if position is closed (net quantity <= 0)
+        // Check if position is closed (net quantity <= 0)
         // Ensure we handle floating point errors
-        if (netQuantity <= 0.000001) {
+        const isClosed = netQuantity <= 0.000001;
+
+        if (isClosed) {
             closedPositionCount++;
-            continue;
+            // We DO want to return closed positions as rows now, so they can be reviewed and imported as history
+            // continue; <--- REMOVED THIS SKIP
         }
 
         // Calculate weighted average buy price
@@ -455,6 +489,7 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
         // For net position, we often just use avg buy price of *remaining* units, 
         // but simple Avg Buy Cost of all buys is often used for simplicity in imports if not tracking lots.
         // Let's stick to Weighted Avg of ALL buys for now as a safe proxy.
+        // For closed positions, avgBuyPrice is still relevant for historical analysis
         const totalBuyCost = data.buys.reduce((sum, t) => sum + (t.quantity * t.price), 0);
         const avgBuyPrice = totalBought > 0 ? totalBuyCost / totalBought : 0;
 
@@ -485,6 +520,378 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
         rows.push({
             symbol,
             name: resolvedName,
+            quantity: netQuantity,
+            buyPrice: avgBuyPrice,
+            currency: data.currency,
+            type,
+            platform: 'DeGiro',
+            isin,
+            rawRow: { isin, transactions: data.buys.length + data.sells.length },
+            confidence,
+            warnings
+        });
+    }
+
+    return { rows, transactions, processedCount, closedPositionCount };
+}
+
+/**
+ * Parse DeGiro Account Statement (Cash Report)
+ * Extracts transaction info from "Description" column e.g. "Koop 10 @ 100 EUR"
+ */
+function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Record<string, string>, columns: string[]): { rows: ParsedRow[], transactions: ParsedTransaction[], processedCount: number, closedPositionCount: number } {
+    // 1. Identify specific columns for Value/Amount
+    // In this format, "Change" is the currency column, and the column AFTER it is the value
+    // "Balance" is currency, column AFTER is balance value
+    // We renamed empty columns to __EMPTY_${index}
+
+    // Find index of 'Change' column
+    const headerRow = columns; // Assuming data keys match these if processed correctly? 
+    // PapaParse keys come from the transformHeader.
+    // We need to find the key that corresponds to the empty column after Change.
+
+    // Actually, `mappings` contains our standard fields mapping. 
+    // But 'Change' isn't a standard field in our generic map. 
+    // Let's rely on the specific keys generated.
+
+    // Find the key for "Change" (Currency) if not mapped yet (though we use findBestMatch below)
+    // We need to identify the VALUE column associated with Change.
+    // In DeGiro CSVs, often: "Mutatie" (header) -> "EUR" (value in row? No, "Mutatie" column contains currency? Wait)
+    // Actually, in the supplied CSV structure (implied):
+    // Header: ..., Mutatie, ...
+    // Row: ..., "EUR", -100.00 (in NEXT column)
+    // OR: Row: ..., -100.00, ... (if Mutatie is value)
+
+    // Let's assume the passed data uses the header name as key.
+    // If "Mutatie" is the key, `row['Mutatie']` gives the value.
+    // However, the prompt/comments suggest "Change" is Currency and next col is val?
+    // Let's look at `uniqueHeaders`. Empty headers become `__EMPTY_X`.
+
+    // Strategy: Find the 'Change' column. If its value is 'EUR'/'USD', then look at next column.
+    // If its value is numeric, then it IS the value.
+
+    const keys = Object.keys(data[0] || {});
+
+    const transactionsByIsin: Record<string, {
+        isin: string;
+        name: string;
+        buys: { quantity: number; price: number; value: number }[];
+        sells: { quantity: number; price: number; value: number }[];
+        currency: string;
+    }> = {};
+
+    const transactions: ParsedTransaction[] = [];
+    let processedCount = 0;
+
+    const isinCol = mappings['isin'] || findBestMatch(keys, 'isin');
+
+    // Explicitly look for Statement columns using our new aliases
+    const descCol = mappings['description'] || findBestMatch(keys, 'description');
+    const orderIdCol = mappings['orderid'] || findBestMatch(keys, 'orderid');
+    const productCol = mappings['product'] || findBestMatch(keys, 'product') || mappings['name']; // Product is Name
+    const dateCol = mappings['date'] || findBestMatch(keys, 'date');
+    const changeColKey = mappings['change'] || findBestMatch(keys, 'change');
+    const balanceColKey = mappings['balance'] || findBestMatch(keys, 'balance');
+
+    // Regex for parsing Description
+    const tradeRegex = /(Koop|Buy|Verkauf|Kauf|Verkoop|Sell)\s+([\d.,]+)\s+(@|at)\s+([\d.,]+)\s+([A-Z]{3})/i;
+    const dividendRegex = /(Dividend|Coupon|Kupon|Temettü)/i;
+    const interestRegex = /(Rente|Interest)/i;
+    const feeRegex = /(Transactiekosten|Aansluitingskosten|Kosten|Fee|Tax|Belasting)/i; // Aansluitingskosten = Connection fee
+    const depositRegex = /(Deposit|Storting|Einzahlung)/i;
+    const withdrawalRegex = /(Withdrawal|Terugstorting|Auszahlung)/i;
+    const transferRegex = /(Overboeking|Transfer|Überweisung)/i; // Ambiguous, check sign
+    const fxRegex = /(Valuta|FX)/i;
+    const reservationRegex = /(Reservation|Reservering)/i; // Ignore these usually? User said ignore/categorize but don't show.
+
+    for (const row of data) {
+        const isin = isinCol ? String(row[isinCol] || '').trim() : '';
+        const description = descCol ? String(row[descCol] || '').trim() : '';
+        const dateStr = dateCol ? String(row[dateCol] || '') : '';
+        const date = parseDate(dateStr);
+        const orderId = orderIdCol ? String(row[orderIdCol] || '').trim() : '';
+        const product = productCol ? String(row[productCol] || '').trim() : '';
+
+        // Value/Amount parsing
+        // Value/Amount parsing
+        // Check if changeColKey holds a currency string (EUR/USD) or a number
+        let changeAmount = 0;
+        let changeCurrency = 'EUR'; // Default
+
+        if (changeColKey) {
+            const val = row[changeColKey];
+            const isCurrency = val && (val === 'EUR' || val === 'USD' || val === 'TRY' || val.length === 3);
+
+            if (isCurrency) {
+                // The 'Change' column is the Currency column
+                changeCurrency = val;
+                // The amount is in the NEXT header (which might be __EMPTY_X)
+                // We need to find the key that corresponds to the index of changeColKey + 1
+                const idx = keys.indexOf(changeColKey);
+                if (idx !== -1 && idx + 1 < keys.length) {
+                    const amtKey = keys[idx + 1];
+                    changeAmount = parseEuropeanNumber(row[amtKey]);
+                }
+            } else {
+                // The 'Change' column IS the amount (e.g. Dutch 'Mutatie' often has the amount directly if currency is elsewhere, OR it behaves as above)
+                // Let's check if there is an empty column next to it that looks numeric?
+                // Actually, standard behavior: 
+                // Col matches 'Mutatie'. Row value: '-100,00'.
+                changeAmount = parseEuropeanNumber(val);
+
+                // Try to find currency elsewhere?
+                // Often 'Mutatie' is amount, and there isn't a specific currency col for it, 
+                // but the Account has a base currency (EUR).
+                // Or looking at 'Saldo' (Balance) column logic?
+                // Let's stick to EUR default if not found.
+            }
+        }
+
+        // --- Categorization ---
+
+        // 0. Skip Reservations / Cash Sweep (intermediate)
+        if (reservationRegex.test(description)) continue;
+        // Cash Sweep is usually internal noise, unless user wants it. 
+        // "Degiro Cash Sweep Transfer" -> usually we ignore, we care about "Deposit" or "Withdrawal" or "Overboeking"
+        // But "Overboeking van/naar" matches Transfer.
+        // Let's filter strictly.
+        if (description.includes('Degiro Cash Sweep')) continue;
+
+        // 1. TRADES (Buy/Sell)
+        const tradeMatch = description.match(tradeRegex);
+        if (tradeMatch && isin) {
+            processedCount++;
+            const actionStr = tradeMatch[1].toLowerCase();
+            const isSell = actionStr.startsWith('v') || actionStr.startsWith('s');
+
+            const quantity = parseEuropeanNumber(tradeMatch[2]);
+            const price = parseEuropeanNumber(tradeMatch[4]); // Group 4 is Price
+            const currency = tradeMatch[5].toUpperCase(); // Group 5 is Currency
+
+            // Resolve Symbol
+            const resolved = resolveISIN(isin);
+            const symbol = resolved?.symbol || isin;
+            const name = resolved?.name || product || isin;
+
+            transactions.push({
+                symbol,
+                name,
+                type: isSell ? 'SELL' : 'BUY',
+                quantity,
+                price,
+                currency,
+                date,
+                originalDateStr: dateStr,
+                platform: 'DeGiro',
+                externalId: orderId,
+                fee: 0
+            });
+
+            // Add to Aggregation (Snapshot/Open Positions)
+            if (!transactionsByIsin[isin]) {
+                transactionsByIsin[isin] = { isin, name, buys: [], sells: [], currency };
+            }
+            if (isSell) transactionsByIsin[isin].sells.push({ quantity, price, value: quantity * price });
+            else transactionsByIsin[isin].buys.push({ quantity, price, value: quantity * price });
+
+            continue; // Done with this row
+        }
+
+        // 2. FEES (Moved before Income to catch "Dividend Tax")
+        if (feeRegex.test(description)) {
+            processedCount++;
+            transactions.push({
+                symbol: 'FEES',
+                name: 'Trading Fees',
+                type: 'FEE' as any,
+                quantity: 0,
+                price: changeAmount, // usually negative
+                currency: changeCurrency,
+                date,
+                originalDateStr: dateStr,
+                platform: 'DeGiro',
+                externalId: orderId || `FEE-${dateStr}-${changeAmount}`,
+                fee: Math.abs(changeAmount)
+            });
+            continue;
+        }
+
+        // 3. INCOME (Dividends/Coupons/Interest)
+        // Check for Dividend/Coupon
+        if (dividendRegex.test(description)) {
+            processedCount++;
+            const isCoupon = /Coupon/i.test(description);
+
+            // Resolve Asset
+            let symbol = 'UNKNOWN';
+            let name = 'Unknown Asset';
+            if (isin) {
+                const resolved = resolveISIN(isin);
+                symbol = resolved?.symbol || isin;
+                name = resolved?.name || product || isin;
+            }
+
+            transactions.push({
+                symbol,
+                name,
+                type: isCoupon ? 'COUPON' : 'DIVIDEND' as any, // Cast to any if strict typing complains, but we added type above
+                quantity: 0, // No qty change
+                price: Math.abs(changeAmount), // Value
+                currency: changeCurrency,
+                date,
+                originalDateStr: dateStr,
+                platform: 'DeGiro',
+                externalId: orderId || `DIV-${dateStr}-${Math.abs(changeAmount)}`,
+                fee: 0
+            });
+            continue;
+        }
+
+        // Check for Interest
+        if (interestRegex.test(description)) {
+            processedCount++;
+            transactions.push({
+                symbol: 'EUR', // Linked to Cash
+                name: 'Interest Income',
+                type: 'INTEREST' as any,
+                quantity: 0,
+                price: changeAmount,
+                currency: changeCurrency,
+                date,
+                originalDateStr: dateStr,
+                platform: 'DeGiro',
+                externalId: `INT-${dateStr}-${changeAmount}`,
+                fee: 0
+            });
+            continue;
+        }
+
+        // 4. CASH (Deposits/Withdrawals)
+        if (depositRegex.test(description) || (transferRegex.test(description) && changeAmount > 0)) {
+            processedCount++;
+            transactions.push({
+                symbol: 'EUR',
+                name: 'Cash Deposit',
+                type: 'DEPOSIT' as any,
+                quantity: Math.abs(changeAmount),
+                price: 1, // 1:1
+                currency: changeCurrency,
+                date,
+                originalDateStr: dateStr,
+                platform: 'DeGiro',
+                externalId: `DEP-${dateStr}-${changeAmount}`,
+                fee: 0
+            });
+            continue;
+        }
+
+        if (withdrawalRegex.test(description) || (transferRegex.test(description) && changeAmount < 0)) {
+            processedCount++;
+            transactions.push({
+                symbol: 'EUR',
+                name: 'Cash Withdrawal',
+                type: 'WITHDRAWAL' as any,
+                quantity: Math.abs(changeAmount),
+                price: 1,
+                currency: changeCurrency,
+                date,
+                originalDateStr: dateStr,
+                platform: 'DeGiro',
+                externalId: `WTH-${dateStr}-${changeAmount}`,
+                fee: 0
+            });
+            continue;
+        }
+
+        // 5. FX (Valuta) - Import but maybe hide? User said "categorize import but dont show"
+        if (fxRegex.test(description)) {
+            // We skip adding to main transactions list to avoid clutter? 
+            // Or add with type 'FX' so backend handles it?
+            transactions.push({
+                symbol: isin ? (resolveISIN(isin)?.symbol || isin) : 'FX',
+                name: 'FX Conversion',
+                type: 'FX' as any,
+                quantity: 0,
+                price: changeAmount,
+                currency: changeCurrency,
+                date,
+                originalDateStr: dateStr,
+                platform: 'DeGiro',
+                externalId: orderId,
+                fee: 0
+            });
+            continue;
+        }
+    }
+
+    // Aggregate to Rows (Snapshot)
+    // Only trades affect "Rows" (Open/Closed Positions) logic significantly for the preview table
+    // However, the user wants CASH and FEES as closed positions.
+
+    // Sort transactions by date (Oldest first)
+    transactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    const rows: ParsedRow[] = [];
+    let closedPositionCount = 0;
+
+    // Add Cash Position Check
+    const cashTx = transactions.filter(t => t.type === 'DEPOSIT' || t.type === 'WITHDRAWAL' || t.type === 'INTEREST');
+    if (cashTx.length > 0) {
+        // Calculate net cash input (Deposits - Withdrawals + Interest)
+        const netCash = cashTx.reduce((sum, t) => {
+            if (t.type === 'DEPOSIT') return sum + t.quantity;
+            if (t.type === 'INTEREST') return sum + t.price; // Interest amount is stored in price
+            if (t.type === 'WITHDRAWAL') return sum - t.quantity;
+            return sum;
+        }, 0);
+
+        if (Math.abs(netCash) > 0.01) {
+            rows.push({
+                symbol: 'EUR',
+                name: 'Cash (EUR)',
+                quantity: netCash,
+                buyPrice: 1,
+                currency: 'EUR',
+                type: 'CASH',
+                platform: 'DeGiro',
+                isin: 'EUR-CASH',
+                rawRow: { isin: 'EUR-CASH', transactions: cashTx.length },
+                confidence: 100,
+                warnings: []
+            });
+        }
+    }
+
+    // ... existing Trade Aggregation loop ...
+
+
+    for (const [isin, data] of Object.entries(transactionsByIsin)) {
+        const totalBought = data.buys.reduce((sum, t) => sum + t.quantity, 0);
+        const totalSold = data.sells.reduce((sum, t) => sum + t.quantity, 0);
+        const netQuantity = totalBought - totalSold;
+
+        if (netQuantity <= 0.000001) {
+            closedPositionCount++;
+            continue;
+        }
+
+        const totalBuyCost = data.buys.reduce((sum, t) => sum + (t.quantity * t.price), 0);
+        const avgBuyPrice = totalBought > 0 ? totalBuyCost / totalBought : 0;
+
+        const resolved = resolveISIN(isin);
+        const symbol = resolved?.symbol || isin;
+        const type = resolved?.type || inferTypeFromName(data.name);
+
+        let confidence = resolved ? 100 : 85;
+        const warnings: string[] = [];
+
+        if (totalSold > 0) {
+            warnings.push(`Calculated from history: ${totalBought.toFixed(4)} bought, ${totalSold.toFixed(4)} sold`);
+        }
+
+        rows.push({
+            symbol,
+            name: data.name,
             quantity: netQuantity,
             buyPrice: avgBuyPrice,
             currency: data.currency,
@@ -638,8 +1045,8 @@ export function parseCSV(content: string): ParseResult {
 
     const parseResult = Papa.parse(content, {
         header: true,
-        skipEmptyLines: true,
-        transformHeader: (header) => header.trim(),
+        skipEmptyLines: 'greedy', // Handle lines with only delimiters
+        transformHeader: uniqueHeaders, // Ensure unique headers for empty columns
     });
 
     if (parseResult.errors.length > 0) {
@@ -663,10 +1070,27 @@ export function parseCSV(content: string): ParseResult {
     // Detect columns from first row
     const columns = Object.keys(data[0]);
     const isDeGiro = isDeGiroFormat(columns);
-    const mappings = detectColumnMappings(columns, isDeGiro);
+    const isDeGiroStatement = isDeGiroAccountStatementFormat(columns);
+    const mappings = detectColumnMappings(columns, isDeGiro || isDeGiroStatement);
 
-    // For DeGiro, we need ISIN instead of symbol
-    if (isDeGiro) {
+    // DEGIRO Handlers
+    if (isDeGiro || isDeGiroStatement) {
+        if (isDeGiroStatement) {
+            const { rows, transactions, processedCount, closedPositionCount } = parseDeGiroAccountStatement(data, mappings, columns);
+            return {
+                success: true,
+                rows,
+                transactions,
+                closedPositionCount,
+                detectedColumns: mappings,
+                unmappedColumns: [],
+                errors,
+                totalRows: data.length,
+                skippedRows: data.length - processedCount,
+                detectedFormat: 'degiro' // Same UI treatment
+            };
+        }
+
         if (!mappings['isin']) {
             return {
                 success: false,

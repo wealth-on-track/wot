@@ -295,6 +295,40 @@ export async function deleteAsset(assetId: string) {
     }
 }
 
+/**
+ * Get all open positions (assets) for the current user with current prices
+ */
+export async function getOpenPositions() {
+    const session = await auth();
+    if (!session?.user?.email) return [];
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            include: {
+                portfolio: {
+                    include: {
+                        assets: {
+                            orderBy: { sortOrder: 'asc' }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!user?.portfolio) return [];
+
+        // Process assets through getPortfolioMetrics to get current prices and values
+        const { getPortfolioMetrics } = await import('@/lib/portfolio');
+        const { assetsWithValues } = await getPortfolioMetrics(user.portfolio.assets, undefined, false, user.id);
+
+        return assetsWithValues;
+    } catch (error) {
+        console.error('[getOpenPositions] Error:', error);
+        return [];
+    }
+}
+
 const UpdateAssetSchema = z.object({
     quantity: z.coerce.number().positive(),
     buyPrice: z.coerce.number().nonnegative(),
@@ -335,11 +369,14 @@ export async function updateAsset(assetId: string, data: { quantity: number; buy
         const updateData: any = {
             quantity: validated.data.quantity,
             buyPrice: validated.data.buyPrice,
-            ...(validated.data.type && { type: validated.data.type }),
-            ...(validated.data.currency && { currency: validated.data.currency }),
-            ...(validated.data.exchange !== undefined && { exchange: validated.data.exchange || undefined }),
-            ...(validated.data.sector !== undefined && { sector: validated.data.sector || undefined }),
-            ...(validated.data.country !== undefined && { country: validated.data.country || undefined }),
+            // Strict Separation: API Data (type/currency/exchange) vs User Overrides (custom...)
+            // When user edits in UI, they are setting their PREFERENCE.
+            ...(validated.data.type && { customType: validated.data.type }),
+            ...(validated.data.currency && { customCurrency: validated.data.currency }),
+            ...(validated.data.exchange !== undefined && { customExchange: validated.data.exchange || undefined }),
+            // Map sector/country input to CUSTOM fields for user overrides
+            ...(validated.data.sector !== undefined && { customSector: validated.data.sector || null }),
+            ...(validated.data.country !== undefined && { customCountry: validated.data.country || null }),
             ...(validated.data.platform !== undefined && { platform: validated.data.platform || undefined }),
             ...(validated.data.customGroup !== undefined && { customGroup: validated.data.customGroup }),
         };

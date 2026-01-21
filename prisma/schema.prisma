@@ -88,6 +88,11 @@ model Asset {
   exchange     String
   sector       String
   country      String
+  customSector String?     // User manual override
+  customCountry String?    // User manual override
+  customCurrency String?   // User manual override (e.g. Force EUR view for USD asset)
+  customType   String?     // User manual override
+  customExchange String?   // User manual override
   platform     String?
   logoUrl      String?
   sortOrder    Int?

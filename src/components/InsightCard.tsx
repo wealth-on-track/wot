@@ -17,6 +17,7 @@ interface InsightCardProps {
     graphData?: any[];
     shareData?: ShareData;
     onShare?: (data: any) => void;
+    children?: React.ReactNode;
 }
 
 const IMPACT_CONFIG = {
@@ -61,6 +62,7 @@ export const InsightCard: React.FC<InsightCardProps> = ({
     value,
     graphType,
     graphData,
+    children,
 }) => {
     const config = IMPACT_CONFIG[impact_level];
     const Icon = config.icon;
@@ -148,52 +150,54 @@ export const InsightCard: React.FC<InsightCardProps> = ({
                 </p>
 
                 {/* Footer: Chart - SMALLER */}
-                {graphData && (
+                {(graphData || children) && (
                     <div style={{
                         marginTop: 'auto',
                         paddingTop: '10px',
                         borderTop: '1px solid rgba(0, 0, 0, 0.04)'
                     }}>
-                        {graphType === 'pie' ? (
-                            <div style={{ height: '40px', width: '40px', opacity: 0.7 }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={graphData}
-                                            innerRadius={12}
-                                            outerRadius={20}
-                                            paddingAngle={2}
-                                            dataKey="value"
-                                            stroke="none"
-                                        >
-                                            {graphData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.fill} />
-                                            ))}
-                                        </Pie>
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                        ) : graphType === 'area' ? (
-                            <div style={{ height: '40px', width: '120px', opacity: 0.6 }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={graphData}>
-                                        <defs>
-                                            <linearGradient id={`grad-${title}`} x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor={impact_level === 'danger' ? '#EF4444' : '#10B981'} stopOpacity={0.4} />
-                                                <stop offset="95%" stopColor={impact_level === 'danger' ? '#EF4444' : '#10B981'} stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <Area
-                                            type="monotone"
-                                            dataKey="value"
-                                            stroke={impact_level === 'danger' ? '#EF4444' : '#10B981'}
-                                            fill={`url(#grad-${title})`}
-                                            strokeWidth={2}
-                                        />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            </div>
-                        ) : null}
+                        {children ? children : (
+                            graphType === 'pie' ? (
+                                <div style={{ height: '40px', width: '40px', opacity: 0.7 }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={graphData}
+                                                innerRadius={12}
+                                                outerRadius={20}
+                                                paddingAngle={2}
+                                                dataKey="value"
+                                                stroke="none"
+                                            >
+                                                {graphData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                ))}
+                                            </Pie>
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : graphType === 'area' ? (
+                                <div style={{ height: '40px', width: '120px', opacity: 0.6 }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={graphData}>
+                                            <defs>
+                                                <linearGradient id={`grad-${title}`} x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor={impact_level === 'danger' ? '#EF4444' : '#10B981'} stopOpacity={0.4} />
+                                                    <stop offset="95%" stopColor={impact_level === 'danger' ? '#EF4444' : '#10B981'} stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <Area
+                                                type="monotone"
+                                                dataKey="value"
+                                                stroke={impact_level === 'danger' ? '#EF4444' : '#10B981'}
+                                                fill={`url(#grad-${title})`}
+                                                strokeWidth={2}
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : null
+                        )}
                     </div>
                 )}
             </div>

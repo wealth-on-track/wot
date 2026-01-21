@@ -476,8 +476,29 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
             // Multi-Tier Profile Fetching System (%100 Coverage)
             let profileData: { country?: string; sector?: string; industry?: string } | null = null;
 
-            if (type === 'STOCK' || type === 'ETF' || type === 'FUND') {
-                // TIER 1: Yahoo Finance (Best coverage, especially for international stocks)
+            // OPTIMIZATION: Check DB first to avoid expensive API calls.
+            // Rule: If we have ANY metadata (even 'Unknown' or 'N/A'), we consider it "fetched" and do not retry.
+            // This strictly follows "Only fetch when new/missing".
+            const existingMetadata = await prisma.priceCache.findUnique({
+                where: { symbol },
+                select: { sector: true, country: true }
+            });
+
+            // If sector is not null, we assume we have touched this asset's metadata before.
+            const hasMetadataHistory = existingMetadata && existingMetadata.sector !== null;
+
+            if (hasMetadataHistory) {
+                // Use existing metadata from DB (Persistence)
+                profileData = {
+                    sector: existingMetadata!.sector!,
+                    country: existingMetadata!.country!
+                };
+                // console.log(`[MarketData] Using cached metadata for ${symbol}`);
+            }
+            else if (type === 'STOCK' || type === 'ETF' || type === 'FUND') {
+                // METADATA FETCHING (Only runs if we have NO previous record of metadata)
+
+                // TIER 1: Yahoo Finance
                 try {
                     const { getYahooAssetProfile } = await import('./yahooApi');
                     profileData = await getYahooAssetProfile(searchSymbol);
@@ -488,7 +509,7 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                     console.warn('[MarketData] Yahoo profile failed:', e);
                 }
 
-                // TIER 2: Alpha Vantage (Good for US stocks, if Yahoo failed or incomplete)
+                // TIER 2: Alpha Vantage
                 if (!profileData || (!profileData.sector && !profileData.country)) {
                     try {
                         const { getCompanyOverview } = await import('./alphaVantageApi');
@@ -506,7 +527,7 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                     }
                 }
 
-                // TIER 3: Finnhub (Backup for global stocks, if still missing data)
+                // TIER 3: Finnhub
                 if (!profileData || (!profileData.sector && !profileData.country)) {
                     try {
                         const { getCompanyProfile } = await import('./finnhubApi');
@@ -524,7 +545,7 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                     }
                 }
 
-                // TIER 4: Manual Mapping (Guaranteed fallback for known symbols)
+                // TIER 4: Manual Mapping
                 if (!profileData || (!profileData.sector && !profileData.country)) {
                     try {
                         const { getManualMapping } = await import('@/lib/symbolMapping');
@@ -541,10 +562,16 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                         console.warn('[MarketData] Manual mapping failed:', e);
                     }
                 }
+
+                // FINAL FALLBACK: If we still have no data, set to 'Unknown' to prevent future retries.
+                // This marks the asset as "Processed" in the DB.
+                if (!profileData) profileData = {};
+                if (!profileData.sector) profileData.sector = 'Unknown';
+                if (!profileData.country) profileData.country = 'Unknown';
             }
 
-            // FALLBACK: Derive country from exchange if all API calls failed
-            if (!profileData?.country || profileData.country.trim() === '') {
+            // FALLBACK: Derive country from exchange if all API calls failed (and we are in the fetch block)
+            if ((!profileData?.country || profileData.country === 'Unknown') && !hasMetadataHistory) {
                 const { getCountryFromExchange } = await import('@/lib/exchangeToCountry');
                 const exchange = (quote as any)?.exchange || (quote as any)?.fullExchangeName || "";
                 const derivedCountry = getCountryFromExchange(exchange, searchSymbol);
@@ -574,8 +601,8 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                     symbol,
                     previousClose: price || 0,
                     currency: finalCurrency,
-                    sector: profileData?.sector,
-                    country: profileData?.country,
+                    sector: profileData?.sector || 'Unknown',
+                    country: profileData?.country || 'Unknown',
                     tradeTime: quote.regularMarketTime ? new Date(quote.regularMarketTime) : new Date(),
                     updatedAt: new Date(),
                     source: derivedQuote ? 'YAHOO_SYNTHETIC' : 'YAHOO',
@@ -584,7 +611,7 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                 update: {
                     previousClose: price || 0,
                     currency: finalCurrency,
-                    sector: profileData?.sector,
+                    sector: profileData?.sector, // Takes from profileData (Unknown or Valid)
                     country: profileData?.country,
                     tradeTime: quote.regularMarketTime ? new Date(quote.regularMarketTime) : new Date(),
                     updatedAt: new Date(),

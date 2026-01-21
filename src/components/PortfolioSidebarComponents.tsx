@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { usePrivacy } from "@/context/PrivacyContext";
 import { PortfolioChart } from "./PortfolioChart";
 import { ASSET_COLORS } from "@/lib/constants";
 import { ALLOCATION_VIEWS, TABS } from "@/lib/portfolioConstants";
@@ -234,6 +235,8 @@ export interface AllocationCardProps {
     onFilterSelect?: (view: string, value: string) => void;
     activeFilters?: Record<string, string | null>;
     onShare?: (data: any) => void;
+    selectedView?: string;
+    isFullScreen?: boolean;
 }
 
 export interface GoalsCardProps {
@@ -255,14 +258,22 @@ const ALL_ALLOCATION_VIEWS = [
     { id: 'Platform', label: 'Platform' }
 ];
 
-export function AllocationCard({ assets, totalValueEUR, isBlurred = false, exchangeRates, onFilterSelect, activeFilters, variant = 'default' }: AllocationCardProps) {
+export function AllocationCard({ assets, totalValueEUR, isBlurred = false, exchangeRates, onFilterSelect, activeFilters, variant = 'default', selectedView, isFullScreen = false }: AllocationCardProps) {
     const [hoveredSlice, setHoveredSlice] = useState<string | null>(null);
-    const [allocationView, setAllocationView] = useState("Portfolio");
+    const [allocationView, setAllocationView] = useState(selectedView || "Portfolio");
+
+    useEffect(() => {
+        if (selectedView) {
+            setAllocationView(selectedView);
+        }
+    }, [selectedView]);
+
     const [viewOrder, setViewOrder] = useState(['Portfolio', 'Type', 'Exchange', 'Currency', 'Country', 'Sector', 'Platform', 'Positions']);
     const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
     const [allocationPage, setAllocationPage] = useState(0); // 0 = First 5, 1 = Rest
     const { currency } = useCurrency();
     const { t } = useLanguage();
+    const { showAmounts: showAmountsPrivacy } = usePrivacy();
 
     // Sensors for drag and drop
     const sensors = useSensors(
@@ -656,6 +667,58 @@ export function AllocationCard({ assets, totalValueEUR, isBlurred = false, excha
                         </div>
                     </div>
                 </div>
+            </div>
+        );
+    }
+
+    if (isFullScreen) {
+        return (
+            <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {chartData.length > 0 ? (
+                    <>
+                        <PortfolioChart
+                            assets={chartData}
+                            totalValueEUR={totalValueEUR}
+                            showLegend={false}
+                            onHover={setHoveredSlice}
+                            onClick={(name) => onFilterSelect?.(allocationView, name)}
+                            activeSliceName={hoveredSlice}
+                        />
+                        <div style={{
+                            position: 'absolute',
+                            inset: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            pointerEvents: 'none',
+                            textAlign: 'center',
+                            gap: '4px'
+                        }}>
+                            <span style={{ fontSize: '15px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                {hoveredSlice || 'Net Worth'}
+                            </span>
+                            <span style={{ fontSize: '32px', fontWeight: 900, color: 'var(--text-primary)', filter: isBlurred ? 'blur(12px)' : 'none', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                                {hoveredPct !== null
+                                    ? `${Math.round(hoveredPct)}%`
+                                    : (showAmountsPrivacy
+                                        ? `${sym}${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(displayBalance)}`
+                                        : '***')}
+                            </span>
+                        </div>
+                    </>
+                ) : (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        color: 'var(--text-muted)',
+                        fontSize: '14px'
+                    }}>
+                        No data available
+                    </div>
+                )}
             </div>
         );
     }

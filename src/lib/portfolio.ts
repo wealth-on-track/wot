@@ -87,147 +87,156 @@ async function processAsset(asset: any, customRates: Record<string, number> | un
 
     const previousClose = (asset.type === 'CASH' || asset.symbol === 'EUR') ? 1 : (priceData ? priceData.price : asset.buyPrice);
 
-    // 1b. Check & Fix Currency Mismatch
-    let activeCurrency = asset.currency;
+    // ------------------------------------------------------------------
+    // 1. DATA RECONCILLIATION (System vs User)
+    // ------------------------------------------------------------------
+    // We now have strict separation:
+    // - asset.currency/type/exchange -> SYSTEM TRUTH (matches API/Price Source)
+    // - asset.customCurrency etc. -> USER PREFERENCE (matches Display)
 
-    // AUTO-REPAIR CASH CURRENCY
-    if (asset.type === 'CASH') {
-        const validCurrencies = ["USD", "EUR", "TRY", "GBP", "JPY", "AUD", "CAD", "CHF", "CNY"];
-        if (validCurrencies.includes(asset.symbol) && asset.currency !== asset.symbol) {
-            console.log(`[Portfolio] Auto-repairing CASH currency for ${asset.symbol}: ${asset.currency} -> ${asset.symbol}`);
-            activeCurrency = asset.symbol;
-            await prisma.asset.update({
-                where: { id: asset.id },
-                data: { currency: activeCurrency }
-            }).catch(err => console.warn('[Portfolio] CASH currency auto-fix failed:', err));
-        }
-    }
+    const systemCurrency = asset.currency; // The currency the PRICE is in
+    const systemType = asset.type;
+    const systemExchange = asset.exchange;
 
-    // AUTO-REPAIR CRYPTO/FOREX CURRENCY (Suffix Rule)
-    // Fixes issue where BTC-EUR is saved as USD because of API default
-    if (asset.symbol.endsWith('-EUR') && asset.currency !== 'EUR') {
-        console.log(`[Portfolio] Auto-repairing CRYPTO currency for ${asset.symbol}: ${asset.currency} -> EUR`);
-        activeCurrency = 'EUR';
-        await prisma.asset.update({
-            where: { id: asset.id },
-            data: { currency: 'EUR' }
-        }).catch(err => console.warn('[Portfolio] Crypto EUR auto-fix failed:', err));
-    }
-    if (asset.symbol.endsWith('-USD') && asset.currency !== 'USD') {
-        console.log(`[Portfolio] Auto-repairing CRYPTO currency for ${asset.symbol}: ${asset.currency} -> USD`);
-        activeCurrency = 'USD';
-        await prisma.asset.update({
-            where: { id: asset.id },
-            data: { currency: 'USD' }
-        }).catch(err => console.warn('[Portfolio] Crypto USD auto-fix failed:', err));
-    }
-    if (asset.symbol.endsWith('-TRY') && asset.currency !== 'TRY') {
-        console.log(`[Portfolio] Auto-repairing CRYPTO currency for ${asset.symbol}: ${asset.currency} -> TRY`);
-        activeCurrency = 'TRY';
-        await prisma.asset.update({
-            where: { id: asset.id },
-            data: { currency: 'TRY' }
-        }).catch(err => console.warn('[Portfolio] Crypto TRY auto-fix failed:', err));
-    }
-    // AUTO-REPAIR COMMODITY (Gram Gold/Silver/AET)
-    if ((asset.symbol === 'GAUTRY' || asset.symbol === 'XAGTRY' || asset.symbol === 'AET') && asset.currency !== 'TRY') {
-        console.log(`[Portfolio] Auto-repairing SPECIAL currency for ${asset.symbol}: ${asset.currency} -> TRY`);
-        activeCurrency = 'TRY';
-        await prisma.asset.update({
-            where: { id: asset.id },
-            data: { currency: 'TRY' }
-        }).catch(err => console.warn('[Portfolio] Special TRY auto-fix failed:', err));
-    }
-
-    if (priceData?.currency && priceData.currency !== activeCurrency) {
-        // GUARD: Never allow converting TEFAS funds (which must be TRY) to USD.
-        // ALSO GUARD: CASH assets should never have their currency changed by external price data
-        // NEW GUARD: If asset has explicit suffix (-EUR, -USD, -TRY), DO NOT allow external data to change it.
-        const isTefasAsset = asset.type === 'TEFAS' || asset.type === 'FON' || asset.type === 'FUND' || asset.exchange === 'TEFAS';
-        const isCashAsset = asset.type === 'CASH';
-        const isTryingToConvertToUSD = priceData.currency === 'USD';
-        const isLockedBySuffix = asset.symbol.endsWith('-EUR') || asset.symbol.endsWith('-USD') || asset.symbol.endsWith('-TRY');
-        const isCommodityPair = asset.symbol === 'GAUTRY' || asset.symbol === 'XAGTRY' || asset.symbol === 'AET';
-
-        // Strict protection for TEFAS, CASH, Suffixed Cryptos, and Known Commodities
-        if ((isTefasAsset && isTryingToConvertToUSD && activeCurrency === 'TRY') || isCashAsset || isLockedBySuffix || isCommodityPair) {
-            if (isCashAsset) {
-                console.warn(`[Portfolio] Blocked erroneous currency update for CASH asset ${asset.symbol}. Keeping ${activeCurrency}.`);
-            } else if (isLockedBySuffix || isCommodityPair) {
-                console.warn(`[Portfolio] Blocked erroneous currency update for Protected Asset ${asset.symbol}. Keeping ${activeCurrency}.`);
-            } else {
-                console.warn(`[Portfolio] Blocked erroneous currency switch for TEFAS asset ${asset.symbol} (TRY -> USD). Keeping TRY.`);
-            }
-            // Do NOT update activeCurrency
-        } else {
-            activeCurrency = priceData.currency;
+    // Detect if API has better data for System fields (Non-destructive update)
+    if (priceData) {
+        // Update Metadata (Sector/Country) only if missing
+        if ((!asset.sector && priceData.sector) || (!asset.country && priceData.country)) {
             prisma.asset.update({
                 where: { id: asset.id },
-                data: { currency: activeCurrency }
-            }).catch(err => console.warn('[Portfolio] Currency auto-fix failed:', err));
+                data: {
+                    sector: asset.sector || priceData.sector,
+                    country: asset.country || priceData.country
+                }
+            }).catch(e => console.warn('[Portfolio] Metadata enrich failed', e));
+        }
+
+        // Update Currency safely?
+        // Only valid if we trust the API 100%. For now, let's stick to the "Suffix Rules" 
+        // we implemented before, or rely on the user having set the correct System Currency initially.
+        // Actually, with customCurrency available, we CAN allow the system to self-correct 
+        // the `currency` field to match the API, because the User's preference is safe in `customCurrency`.
+
+        // AUTO-CORRECT SYSTEM CURRENCY (Now safe to do!)
+        if (priceData.currency && priceData.currency !== systemCurrency) {
+            // Exceptions: TEFAS (Must be TRY), CASH (Self)
+            const isTefas = asset.type === 'TEFAS' || asset.type === 'FON';
+            const isCash = asset.type === 'CASH';
+
+            if (!isTefas && !isCash) {
+                console.log(`[Portfolio] Auto-aligning System Currency for ${asset.symbol}: ${systemCurrency} -> ${priceData.currency}`);
+                // We update the DB so next fetch is accurate, but for THIS render we use the new data
+                prisma.asset.update({
+                    where: { id: asset.id },
+                    data: { currency: priceData.currency }
+                }).catch(e => console.warn('[Portfolio] Currency align failed', e));
+                // (Note: We continue using 'activeCurrency' derived below for calculations)
+            }
         }
     }
 
-    // 1c. Auto-enrich Metadata (Sector, Country)
-    if ((!asset.sector && priceData?.sector) || (!asset.country && priceData?.country)) {
-        prisma.asset.update({
-            where: { id: asset.id },
-            data: {
-                sector: asset.sector || priceData.sector,
-                country: asset.country || priceData.country
-            }
-        }).catch(err => console.warn('[Portfolio] Metadata auto-enrich failed:', err));
-    }
+    // ------------------------------------------------------------------
+    // 2. DETERMINE DISPLAY VALUES (User Overrides)
+    // ------------------------------------------------------------------
+    const displayType = asset.customType || systemType;
+    const displayExchange = asset.customExchange || systemExchange;
 
-    // 1d. Auto-Persist Logo URL
+    // Currency is special: It affects Value Calculation
+    const displayCurrency = asset.customCurrency || systemCurrency;
+    // Effect: We have a Price in systemCurrency. We want to show Value in displayCurrency.
+
+    // ------------------------------------------------------------------
+    // 3. PERSIST LOGO URL (If missing)
+    // ------------------------------------------------------------------
     let resolvedLogoUrl = asset.logoUrl;
     if (!resolvedLogoUrl) {
         try {
-            // Dynamically import to avoid circular dep issues if any, though likely fine static
             const { getLogoUrl } = await import('@/lib/logos');
-            const generatedUrl = getLogoUrl(asset.symbol, asset.type, asset.exchange, asset.country || priceData?.country);
-
+            const generatedUrl = getLogoUrl(asset.symbol, displayType, displayExchange, asset.customCountry || asset.country);
             if (generatedUrl) {
                 resolvedLogoUrl = generatedUrl;
-                console.log(`[Portfolio] Persisting logo for ${asset.symbol}`);
-                prisma.asset.update({
-                    where: { id: asset.id },
-                    data: { logoUrl: generatedUrl }
-                }).catch(err => console.warn('[Portfolio] Logo persistence failed:', err));
+                prisma.asset.update({ where: { id: asset.id }, data: { logoUrl: generatedUrl } }).catch(() => { });
             }
-        } catch (e) {
-            console.warn('[Portfolio] Logo generation failed:', e);
-        }
+        } catch (e) { }
     }
 
-    // 2. Calculate Total Value using previous close
-    const totalValueNative = previousClose * asset.quantity;
+    // ------------------------------------------------------------------
+    // 4. CALCULATE VALUES
+    // ------------------------------------------------------------------
+    const currentPriceNative = previousClose; // This is in systemCurrency (e.g. USD)
+    const quantity = asset.quantity;
 
-    // 3. Convert to EUR
-    const totalValueEUR = await convertCurrency(totalValueNative, activeCurrency, "EUR", customRates);
+    // Step A: Calculate Native Value (in systemCurrency)
+    const totalValueNative = currentPriceNative * quantity;
 
-    // 4. Calculate P/L
-    const costBasisNative = asset.buyPrice * asset.quantity;
-    const plPercentage = costBasisNative !== 0
-        ? ((totalValueNative - costBasisNative) / costBasisNative) * 100
+    // Step B: Convert to Display Currency (if different)
+    // Example: Asset is USD (System). User wants EUR (Display). 
+    // We convert USD Value -> EUR Value.
+
+    // However, the requested output format assumes "totalValueEUR" is the standard.
+    // AND the UI expects "currency" field to imply the currency of `previousClose`.
+    // If we return `currency: EUR` (Display), but `previousClose` is 150 (USD), 
+    // the UI will show "€150" which is WRONG.
+
+    // CRITICAL DECISION: 
+    // The `AssetDisplay` object is strictly "How it looks in the table".
+    // If we change the currency to Display Currency, we MUST convert the Price too.
+
+    let finalDisplayPrice = currentPriceNative;
+    let finalDisplayValue = totalValueNative;
+
+    // Only convert if display differs from system AND we have specific prices
+    if (displayCurrency !== (priceData?.currency || systemCurrency)) {
+        // Convert System Currency -> Display Currency
+        // We need a helper for straight conversion without "EUR" anchoring if possible,
+        // but `convertCurrency` converts TO target.
+
+        const conversionRate = await convertCurrency(1, priceData?.currency || systemCurrency, displayCurrency, customRates);
+        finalDisplayPrice = currentPriceNative * conversionRate;
+        finalDisplayValue = totalValueNative * conversionRate;
+    }
+
+    // Step C: Calculate Total Value in EUR (Global Base) for Portfolio Sum
+    // We can convert from Display Currency -> EUR
+    const totalValueEUR = await convertCurrency(finalDisplayValue, displayCurrency, "EUR", customRates);
+
+    // Step D: P/L Calculation
+    // Cost Basis is historically in... System or User currency?
+    // `buyPrice` is usually entered in the currency of the asset (System).
+    // If User overrides currency to EUR, did they enter `buyPrice` in EUR? 
+    // Assumption: User inputs match the Metadata they set. 
+    // If they set Custom Currency = EUR, they likely entered Buy Price in EUR.
+    // If Custom Currency is NULL, they entered in System Currency (USD).
+
+    // So:
+    // If customCurrency exists -> buyPrice is in customCurrency. compare with finalDisplayPrice (EUR).
+    // If customCurrency is null -> buyPrice is in systemCurrency. compare with currentPriceNative (USD).
+
+    const relevantBuyPrice = asset.buyPrice; // Assumed to match the active logic
+    const relevantCurrentPrice = asset.customCurrency ? finalDisplayPrice : currentPriceNative;
+
+    const costBasis = relevantBuyPrice * quantity;
+    const currentVal = relevantCurrentPrice * quantity;
+
+    const plPercentage = costBasis !== 0
+        ? ((currentVal - costBasis) / costBasis) * 100
         : 0;
 
     return {
         id: asset.id,
         symbol: asset.symbol,
-        name: assetName, // Use resolved name
-        type: asset.type,
-        quantity: asset.quantity,
-        buyPrice: asset.buyPrice,
-        currency: activeCurrency, // Return corrected currency
-        previousClose,
+        name: assetName,
+        type: displayType,
+        quantity: quantity,
+        buyPrice: relevantBuyPrice,
+        currency: displayCurrency, // UI will show this symbol (e.g. €)
+        previousClose: finalDisplayPrice, // UI will show this number
         totalValueEUR,
         plPercentage,
-        exchange: asset.exchange,
-        // SYSTEMATIC RULE: Use database metadata as source of truth, NOT price data
-        // Price data is for prices only, metadata comes from search/database
-        sector: asset.sector || priceData?.sector,
-        country: asset.country || priceData?.country,
+        exchange: displayExchange,
+        // SYSTEMATIC RULE: Prioritize user-defined (custom) metadata, then fallback to API
+        sector: asset.customSector || asset.sector || priceData?.sector || '',
+        country: asset.customCountry || asset.country || priceData?.country || '',
         originalName: asset.originalName || undefined,
         logoUrl: resolvedLogoUrl,
         platform: asset.platform || undefined,

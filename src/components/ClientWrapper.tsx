@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, ReactNode } from "react";
+import { useEffect, ReactNode, useState } from "react";
+import { createPortal } from "react-dom";
 import Dashboard from "@/components/DashboardV2";
 import { CurrencyProvider, useCurrency } from "@/context/CurrencyContext";
+import { PrivacyProvider } from "@/context/PrivacyContext";
 import { DeploymentFooter } from "./DeploymentFooter";
 import { PreferencesSync } from "./PreferencesSync";
+import { ViewModeToggle } from "./ViewModeToggle";
+import { FullScreenLayout } from "./FullScreenLayout";
 
 interface ClientWrapperProps {
     username: string;
@@ -48,6 +52,17 @@ function DashboardWrapper({ username, isOwner, totalValueEUR, assets, goals, sho
 }
 
 export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals = [], navbar, exchangeRates, preferences }: ClientWrapperProps) {
+    // Initialize view mode from user preferences, default to 'fullscreen'
+    const [viewMode, setViewMode] = useState<'card' | 'fullscreen'>(
+        (preferences?.defaultViewMode as 'card' | 'fullscreen') || 'fullscreen'
+    );
+    const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+    // Find portal target for view mode toggle
+    useEffect(() => {
+        const target = document.getElementById('navbar-view-mode-toggle');
+        setPortalTarget(target);
+    }, []);
 
     // Force cleanup of any potential scroll locks
     useEffect(() => {
@@ -106,30 +121,68 @@ export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals 
         return () => clearInterval(interval);
     }, [isOwner]);
 
+    // Save view mode preference when it changes
+    useEffect(() => {
+        if (!isOwner) return;
+
+        const saveViewMode = async () => {
+            try {
+                const { updateUserPreferences } = await import('@/lib/actions');
+                await updateUserPreferences({ defaultViewMode: viewMode });
+            } catch (error) {
+                console.error('Failed to save view mode preference:', error);
+            }
+        };
+
+        saveViewMode();
+    }, [viewMode, isOwner]);
+
     return (
         <CurrencyProvider>
-            <PreferencesSync preferences={preferences} />
-            {navbar}
+            <PrivacyProvider>
+                <PreferencesSync preferences={preferences} />
+                {navbar}
 
-            <div style={{ paddingTop: '6.5rem' }}>
-                <div style={{
-                    maxWidth: '80rem',
-                    margin: '0 auto',
-                    padding: '0 1.5rem'
-                }}>
-                    <DashboardWrapper
+                {/* Portal: Render ViewModeToggle in navbar only for Owner */}
+                {isOwner && portalTarget && createPortal(
+                    <ViewModeToggle viewMode={viewMode} onToggle={setViewMode} />,
+                    portalTarget
+                )}
+
+                {viewMode === 'card' ? (
+                    <div style={{ paddingTop: '6.5rem' }}>
+                        <div style={{
+                            maxWidth: '80rem',
+                            margin: '0 auto',
+                            padding: '0 1.5rem'
+                        }}>
+                            <DashboardWrapper
+                                username={username}
+                                isOwner={isOwner}
+                                totalValueEUR={totalValueEUR}
+                                assets={assets}
+                                goals={goals}
+                                showChangelog={false}
+                                exchangeRates={exchangeRates}
+                                preferences={preferences}
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <FullScreenLayout
                         username={username}
                         isOwner={isOwner}
                         totalValueEUR={totalValueEUR}
                         assets={assets}
                         goals={goals}
-                        showChangelog={false}
                         exchangeRates={exchangeRates}
                         preferences={preferences}
                     />
-                </div>
-            </div>
-            <DeploymentFooter />
+                )}
+
+                <DeploymentFooter />
+            </PrivacyProvider>
         </CurrencyProvider>
     );
 }
+

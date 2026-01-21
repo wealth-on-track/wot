@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { InlineAssetSearch } from "./InlineAssetSearch";
 
 import { ThemeToggle } from "./ThemeToggle";
+import { PrivacyToggle } from "./PrivacyToggle";
 
 import { NavbarActions } from "./NavbarActions";
 import { User, ShieldCheck } from "lucide-react";
@@ -40,8 +41,8 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
 
             <div className="navbar-inner-container" style={{
                 width: '100%',
-                maxWidth: '80rem',
-                padding: '0 3rem',
+                maxWidth: '1200px',
+                padding: '0 40px',
                 margin: '0 auto',
                 position: 'relative',
                 display: 'flex',
@@ -207,24 +208,17 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
 
                         {/* Global Toggles (Always Visible) */}
 
+                        {/* View Mode Toggle (Portal Target) */}
+                        <div id="navbar-view-mode-toggle" style={{ display: 'flex', alignItems: 'center' }}></div>
+
+                        <PrivacyToggle />
+
                         <ThemeToggle />
 
                         {session?.user ? (
                             <>
                                 {/* Filter (Portal Target) */}
                                 <div id="navbar-extra-actions" style={{ display: 'flex', alignItems: 'center' }}></div>
-
-                                {/* User Settings */}
-                                <Link
-                                    href="/settings"
-                                    className="navbar-btn"
-                                    style={{
-                                        textDecoration: 'none',
-                                    }}
-                                    title="Settings"
-                                >
-                                    <User size={20} />
-                                </Link>
 
                                 {/* Logout with Separator */}
                                 <NavbarActions />

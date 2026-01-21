@@ -18,6 +18,7 @@ export interface ClosedPosition {
     platform?: string;
     transactionCount: number;
     transactions: Array<{
+        id: string;
         type: 'BUY' | 'SELL';
         quantity: number;
         price: number;
@@ -67,8 +68,8 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
     const grouped = new Map<string, {
         symbol: string;
         name: string;
-        buys: { qty: number; price: number; date: Date }[];
-        sells: { qty: number; price: number; date: Date }[];
+        buys: { id: string; qty: number; price: number; date: Date }[];
+        sells: { id: string; qty: number; price: number; date: Date }[];
         currency: string;
         lastDate: Date;
         exchange?: string;
@@ -94,9 +95,9 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
         if (tx.name) group.name = tx.name; // Update to latest name
 
         if (tx.type === 'BUY') {
-            group.buys.push({ qty: tx.quantity, price: tx.price, date: tx.date });
+            group.buys.push({ id: tx.id, qty: tx.quantity, price: tx.price, date: tx.date });
         } else if (tx.type === 'SELL') {
-            group.sells.push({ qty: tx.quantity, price: tx.price, date: tx.date });
+            group.sells.push({ id: tx.id, qty: tx.quantity, price: tx.price, date: tx.date });
         }
     }
 
@@ -127,8 +128,8 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
                 platform: data.platform,
                 transactionCount: data.buys.length + data.sells.length,
                 transactions: [
-                    ...data.buys.map(t => ({ type: 'BUY' as const, quantity: t.qty, price: t.price, date: t.date, currency: data.currency })),
-                    ...data.sells.map(t => ({ type: 'SELL' as const, quantity: t.qty, price: t.price, date: t.date, currency: data.currency }))
+                    ...data.buys.map(t => ({ id: t.id, type: 'BUY' as const, quantity: t.qty, price: t.price, date: t.date, currency: data.currency })),
+                    ...data.sells.map(t => ({ id: t.id, type: 'SELL' as const, quantity: t.qty, price: t.price, date: t.date, currency: data.currency }))
                 ].sort((a, b) => a.date.getTime() - b.date.getTime())
             });
         }
@@ -164,4 +165,70 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
 
     // Sort by last trade date desc
     return closedPositions.sort((a, b) => b.lastTradeDate.getTime() - a.lastTradeDate.getTime());
+}
+
+/**
+ * Delete a single transaction by ID
+ */
+export async function deleteTransaction(transactionId: string) {
+    const session = await auth();
+    if (!session?.user?.email) return { error: "Not authenticated" };
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            include: { portfolio: true }
+        });
+
+        if (!user?.portfolio) return { error: "Portfolio not found" };
+
+        // Verify ownership
+        const transaction = await prisma.assetTransaction.findUnique({
+            where: { id: transactionId }
+        });
+
+        if (!transaction || transaction.portfolioId !== user.portfolio.id) {
+            return { error: "Unauthorized" };
+        }
+
+        // Delete the transaction
+        await prisma.assetTransaction.delete({
+            where: { id: transactionId }
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('[deleteTransaction] Error:', error);
+        return { error: "Failed to delete transaction" };
+    }
+}
+
+/**
+ * Delete all transactions for a specific symbol (entire position)
+ */
+export async function deleteAllTransactionsForSymbol(symbol: string) {
+    const session = await auth();
+    if (!session?.user?.email) return { error: "Not authenticated" };
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            include: { portfolio: true }
+        });
+
+        if (!user?.portfolio) return { error: "Portfolio not found" };
+
+        // Delete all transactions for this symbol in the user's portfolio
+        await prisma.assetTransaction.deleteMany({
+            where: {
+                portfolioId: user.portfolio.id,
+                symbol: symbol
+            }
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('[deleteAllTransactionsForSymbol] Error:', error);
+        return { error: "Failed to delete transactions" };
+    }
 }

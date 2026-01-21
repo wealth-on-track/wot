@@ -84,7 +84,13 @@ export function ImportModal({ onClose }: ImportModalProps) {
         setError(null);
 
         try {
-            // 1. Get Open Positions from Rows
+            // Check if this is a DeGiro Account Statement (detectedFormat === 'degiro')
+            // Note: Parser returns 'degiro' for both, but we can check if rows contain non-trade types like DEPOSIT
+            const isAccountStatement = transactions.some(t =>
+                ['DEPOSIT', 'WITHDRAWAL', 'DIVIDEND', 'INTEREST', 'FEE'].includes(t.type as string)
+            );
+
+            // 1. Get Open Positions from Rows (Trades aggregation)
             const importAssets: ImportAsset[] = (parseResult?.rows || []).map(row => ({
                 symbol: row.symbol,
                 name: row.name,
@@ -95,22 +101,33 @@ export function ImportModal({ onClose }: ImportModalProps) {
                 platform: row.platform
             }));
 
-            // 2. Add Closed Positions from Transactions (missing in rows)
-            // This ensures we resolve symbols for closed positions too, so history is accurate
+            // 2. Add Closed Positions and Special Items from Transactions
             const existingSymbols = new Set(importAssets.map(a => a.symbol));
+
             if (transactions) {
                 transactions.forEach(tx => {
-                    if (!existingSymbols.has(tx.symbol)) {
-                        importAssets.push({
-                            symbol: tx.symbol,
-                            name: tx.name || tx.symbol,
-                            quantity: 0,
-                            buyPrice: 0,
-                            currency: tx.currency as any,
-                            type: undefined,
-                            platform: tx.platform
-                        });
-                        existingSymbols.add(tx.symbol);
+                    const isSpecialType = ['DEPOSIT', 'WITHDRAWAL', 'DIVIDEND', 'INTEREST', 'FEE', 'FX'].includes(tx.type as string);
+
+                    if (isSpecialType || !existingSymbols.has(tx.symbol)) {
+                        // For special types, we might want unique entries if symbol is generic (like EUR or FEES)
+                        // But importing multiple "EUR" assets isn't right. We just need one "EUR" asset to attach history to.
+                        // However, user said "show in closed positions". 
+                        // Actually, for Cash/Fees, we usually attach to a 'CASH' or system asset. 
+                        // But here we just ensure the symbol is in the list so it passes to `executeImport`.
+
+                        // Prevent duplicates in `importAssets` list
+                        if (!existingSymbols.has(tx.symbol)) {
+                            importAssets.push({
+                                symbol: tx.symbol, // EUR, FEES, or Asset Symbol
+                                name: tx.name || tx.symbol,
+                                quantity: 0, // Closed/History only
+                                buyPrice: 0,
+                                currency: tx.currency as any,
+                                type: isSpecialType ? 'CASH' : undefined,
+                                platform: tx.platform
+                            });
+                            existingSymbols.add(tx.symbol);
+                        }
                     }
                 });
             }
@@ -118,11 +135,18 @@ export function ImportModal({ onClose }: ImportModalProps) {
             const result = await resolveImportSymbols(importAssets);
 
             if (result.success) {
-                // Determine action: Skip closed positions (qty 0 & new) by default
-                // But they are still in the list so executeImport will map their transactions correctly
+                // Determine action
                 const processed = result.resolved.map(a => {
-                    const isClosed = a.quantity === 0 && !a.existingAsset;
-                    if (isClosed) {
+                    // Logic:
+                    // 1. If Quantity > 0 -> Add/Update (Open Position)
+                    // 2. If Quantity = 0 -> Skip (Closed Position / History Only)
+                    //    BUT for Account Statement, user wants to ensuring they are "imported". 
+                    //    Our system interprets "skip" as "don't create Asset record if not exists", 
+                    //    BUT "executeImport" WILL process transactions for skipped assets.
+                    //    So "skip" is the correct action for history-only items.
+
+                    const isClosedOrHistory = a.quantity === 0 && !a.existingAsset;
+                    if (isClosedOrHistory) {
                         return { ...a, action: 'skip' as const };
                     }
                     return a;
@@ -578,6 +602,9 @@ export function ImportModal({ onClose }: ImportModalProps) {
                         <div style={{ textAlign: 'center', padding: '4rem' }}>
                             <div className="animate-spin" style={{ width: '60px', height: '60px', borderRadius: '50%', border: '4px solid rgba(255,255,255,0.1)', borderTopColor: '#60A5FA', margin: '0 auto 2rem' }} />
                             <h3 style={{ fontSize: '1.5rem', color: 'white' }}>Importing your wealth...</h3>
+                            <p style={{ color: 'rgba(255,255,255,0.5)', marginTop: '1rem' }}>
+                                Processing transactions for trades, dividends, and cash flow...
+                            </p>
                         </div>
                     )}
 
