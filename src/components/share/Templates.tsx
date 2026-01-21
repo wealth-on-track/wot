@@ -20,6 +20,13 @@ export interface ShareData {
         progress: number;
         percent: number;
     };
+    // For Top Performer template
+    favouriteAsset?: {
+        name: string;
+        symbol: string;
+        changePercent: number;
+        currentValue?: number;
+    };
 }
 
 interface TemplateProps {
