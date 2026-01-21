@@ -1287,6 +1287,7 @@ function GoalItem({ goal, isOwner, exchangeRates, onClick, onShare }: { goal: Go
                                 name: goal.name,
                                 target: goal.targetAmount,
                                 current: goal.currentAmount,
+                                progress: progress,
                                 percent: progress
                             }
                         }} />
