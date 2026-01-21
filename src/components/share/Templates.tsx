@@ -12,6 +12,13 @@ export interface ShareData {
     // For Performance template
     performance?: { date: string; value: number }[];
     benchmarkPerformance?: { date: string; value: number }[];
+    // For Goal template
+    goal?: {
+        name: string;
+        target: number;
+        current: number;
+        progress: number;
+    };
 }
 
 interface TemplateProps {
