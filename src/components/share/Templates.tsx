@@ -18,6 +18,7 @@ export interface ShareData {
         target: number;
         current: number;
         progress: number;
+        percent: number;
     };
 }
 
