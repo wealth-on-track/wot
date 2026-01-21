@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Globe, Zap, DollarSign, TrendingUp, Target, Award, Download, Share2, Smartphone, Monitor } from 'lucide-react';
-import { GlobalStrategist, SectorMaster, CurrencyGuard, HeavyHitter, TheJourney, TheMilestone, ShareData } from './Templates';
+import { ShareData } from './Templates';
 import { generateImage } from './utils';
 
 type TemplateType = 'global' | 'sector' | 'currency' | 'heavy_hitter' | 'journey' | 'milestone';
@@ -81,15 +81,15 @@ export function ShareHubModal({ isOpen, onClose, initialTemplate = 'journey', da
 
     const renderTemplate = () => {
         const props = { data, isMasked: maskAmounts, showName, aspectRatio };
-        switch (selectedTemplate) {
-            case 'global': return <GlobalStrategist {...props} />;
-            case 'sector': return <SectorMaster {...props} />;
-            case 'currency': return <CurrencyGuard {...props} />;
-            case 'heavy_hitter': return <HeavyHitter {...props} />;
-            case 'journey': return <TheJourney {...props} />;
-            case 'milestone': return <TheMilestone {...props} />;
-            default: return <TheJourney {...props} />;
+        // Use existing templates from Templates.tsx
+        const { DistributionTemplate, PerformanceTemplate } = require('./Templates');
+
+        // Map template types to actual templates
+        if (selectedTemplate === 'journey') {
+            return <PerformanceTemplate {...props} timePeriod="1Y" benchmark="GOLD" />;
         }
+        // Default to distribution template for all other cases
+        return <DistributionTemplate {...props} breakdownType="portfolio" />;
     };
 
     return createPortal(
