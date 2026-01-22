@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Globe, Zap, DollarSign, TrendingUp, Target, Award, Download, Share2, Smartphone, Monitor } from 'lucide-react';
-import { ShareData } from './Templates';
+import { ShareData, DistributionTemplate, PerformanceTemplate } from './Templates';
 import { generateImage } from './utils';
 
 type TemplateType = 'global' | 'sector' | 'currency' | 'heavy_hitter' | 'journey' | 'milestone';
@@ -81,8 +81,6 @@ export function ShareHubModal({ isOpen, onClose, initialTemplate = 'journey', da
 
     const renderTemplate = () => {
         const props = { data, isMasked: maskAmounts, showName, aspectRatio };
-        // Use existing templates from Templates.tsx
-        const { DistributionTemplate, PerformanceTemplate } = require('./Templates');
 
         // Map template types to actual templates
         if (selectedTemplate === 'journey') {
