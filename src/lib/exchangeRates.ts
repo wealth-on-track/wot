@@ -32,7 +32,8 @@ export async function getExchangeRates(): Promise<RatesMap> {
     // RULE 2: Quiet Hours (00:00 - 08:00 CET). Do not update during night.
     const isStale = (lastUpdateUTC: Date) => {
         const now = new Date();
-        const currentHour = now.getHours();
+        const cetHour = now.getUTCHours() + 1;
+        const currentHour = cetHour >= 24 ? cetHour - 24 : (cetHour < 0 ? cetHour + 24 : cetHour);
 
         // Quiet Hours Check
         if (currentHour >= 0 && currentHour < 8) return false;

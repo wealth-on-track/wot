@@ -4,13 +4,13 @@
 
 | # | Category | Price API | Update Schedule | Metadata API | Metadata Update | Logo API | Currency |
 |---|----------|-----------|-----------------|--------------|-----------------|----------|----------|
-| 1 | BIST | Yahoo (.IS) | Hourly (skip 00:00-08:00) | Yahoo→Alpha→Finnhub | Import only | Logodev→GitHub CDN | TRY |
-| 2 | TEFAS | TEFAS API (exclusive) | Hourly (skip 00:00-08:00) | TEFAS API | Import only | Letter placeholder | TRY |
-| 3 | US_MARKETS | Yahoo | Hourly (skip 00:00-08:00) | Yahoo→Alpha→Finnhub | Import only | Logodev→Clearbit→Icons8 | USD |
-| 4 | EU_MARKETS | Yahoo (suffix) | Hourly (skip 00:00-08:00) | Yahoo→Finnhub | Import only | Logodev→Clearbit→Icons8 | EUR/GBP/CHF |
-| 5 | CRYPTO | Yahoo (24/7) | Hourly (skip 00:00-08:00) | Yahoo | Import only | CryptoCompare→Icons8 | Pair-based |
-| 6 | COMMODITIES | Synthetic/Yahoo | Hourly (skip 00:00-08:00) | Manual | Import only | Icons8 | TRY/USD |
-| 7 | FX | Yahoo (=X) | Hourly (skip 00:00-08:00) | Manual | Import only | Country flags | Pair-based |
+| 1 | BIST | Yahoo (.IS) | Hourly (skip 00:00-08:00 CET) | Yahoo→Alpha→Finnhub | Import only | Logodev→GitHub CDN | TRY |
+| 2 | TEFAS | TEFAS API (exclusive) | Hourly (skip 00:00-08:00 CET) | TEFAS API | Import only | Letter placeholder | TRY |
+| 3 | US_MARKETS | Yahoo | Hourly (skip 00:00-08:00 CET) | Yahoo→Alpha→Finnhub | Import only | Logodev→Clearbit→Icons8 | USD |
+| 4 | EU_MARKETS | Yahoo (suffix) | Hourly (skip 00:00-08:00 CET) | Yahoo→Finnhub | Import only | Logodev→Clearbit→Icons8 | EUR/GBP/CHF |
+| 5 | CRYPTO | Yahoo (24/7) | Hourly (skip 00:00-08:00 CET) | Yahoo | Import only | CryptoCompare→Icons8 | Pair-based |
+| 6 | COMMODITIES | Synthetic/Yahoo | Hourly (skip 00:00-08:00 CET) | Manual | Import only | Icons8 | TRY/USD |
+| 7 | FX | Yahoo (=X) | Hourly (skip 00:00-08:00 CET) | Manual | Import only | Country flags | Pair-based |
 | 8 | CASH | Fixed (1.0) | No update | Manual | Import only | Currency symbols | Symbol |
 
 ## Implementation Details
@@ -44,13 +44,13 @@ const assetsToUpdate = assets.filter(a =>
 
 **Time-Based Skip Logic:**
 ```typescript
-// Skip updates between 00:00-08:00 UTC+3 (Istanbul time)
+// Skip updates between 00:00-08:00 CET
 const now = new Date();
-const istanbulHour = now.getUTCHours() + 3; // UTC+3 for Istanbul
-const normalizedHour = istanbulHour >= 24 ? istanbulHour - 24 : istanbulHour;
+const cetHour = now.getUTCHours() + 1; // UTC+1 for CET
+const normalizedHour = cetHour >= 24 ? cetHour - 24 : (cetHour < 0 ? cetHour + 24 : cetHour);
 
 if (normalizedHour >= 0 && normalizedHour < 8) {
-  return { skipped: true, message: "Night hours (00:00-08:00)" };
+  return { skipped: true, message: "Night hours (00:00-08:00 CET)" };
 }
 ```
 
@@ -223,7 +223,7 @@ ORDER BY updatedAt DESC;
 - **Solution**: TEFAS uses on-demand updates, not hourly. Prices refresh when user views portfolio.
 
 ### Issue: Night-time API errors
-- **Solution**: Updates skip 00:00-08:00 Istanbul time. Check cron response for `skipped: true`.
+- **Solution**: Updates skip 00:00-08:00 CET. Check cron response for `skipped: true`.
 
 ### Issue: Missing sector/country
 - **Solution**: Metadata is import-time only. Use `/api/admin/refresh-metadata` to backfill.

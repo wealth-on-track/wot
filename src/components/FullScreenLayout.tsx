@@ -593,9 +593,28 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                             // Apply edits to assets
                             const updatedAssets = assets.map(asset => {
                                 if (editedAssets[asset.id]) {
+                                    const edits = editedAssets[asset.id];
                                     return {
                                         ...asset,
-                                        ...editedAssets[asset.id]
+                                        ...edits,
+                                        // Explicitly overwrite key fields to ensure UI updates immediately
+                                        // Update ALL possible aliases for cost/price
+                                        buyPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.buyPrice,
+                                        averageBuyPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.averageBuyPrice,
+                                        avgPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.avgPrice,
+
+                                        // Update portfolio/group fields
+                                        customGroup: edits.portfolio !== undefined ? edits.portfolio : asset.customGroup,
+                                        portfolio: edits.portfolio !== undefined ? edits.portfolio : asset.portfolio,
+
+                                        // Update quantity
+                                        quantity: edits.quantity !== undefined ? Number(edits.quantity) : asset.quantity,
+
+                                        // Update name
+                                        name: edits.name !== undefined ? edits.name : asset.name,
+
+                                        // Update platform
+                                        platform: edits.platform !== undefined ? edits.platform : asset.platform
                                     };
                                 }
                                 return asset;
@@ -1886,7 +1905,18 @@ function TopPerformersFullScreen({ assets }: { assets: any[] }) {
         }
     };
 
-    const sortedAssets = [...assets]
+    // Deduplicate assets by symbol
+    const uniqueAssets = React.useMemo(() => {
+        const seen = new Set();
+        return assets.filter(asset => {
+            const key = asset.symbol;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }, [assets]);
+
+    const sortedAssets = [...uniqueAssets]
         .sort((a, b) => {
             const perfA = getPerformance(a, sortBy);
             const perfB = getPerformance(b, sortBy);

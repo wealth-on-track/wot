@@ -1510,6 +1510,25 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
 
     const [gridColumns, setGridColumns] = useState<1 | 2>(2);
 
+    // Recalculate total value dynamically based on current prices and rates to match FullScreenLayout logic
+    const calculatedTotalValueEUR = useMemo(() => {
+        return items.reduce((sum, asset) => {
+            const price = asset.currentPrice || asset.previousClose || 0;
+            const quantity = asset.quantity || 0;
+            const value = price * quantity;
+            const currency = asset.currency || 'EUR';
+
+            let rateToEur = 1;
+            if (currency !== 'EUR') {
+                if (exchangeRates && exchangeRates[currency]) {
+                    rateToEur = exchangeRates[currency];
+                }
+            }
+            const valueEur = value / rateToEur;
+            return sum + valueEur;
+        }, 0);
+    }, [items, exchangeRates]);
+
     // New Header States
     const [activeTab, setActiveTab] = useState<'open' | 'closed'>('open');
     const [showImportModal, setShowImportModal] = useState(false);
@@ -2570,7 +2589,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                                     assets={groupedAssets[type]}
                                                                                     totalEUR={groupTotals[type]}
                                                                                     positionsViewCurrency={positionsViewCurrency}
-                                                                                    totalPortfolioValueEUR={totalValueEUR}
+                                                                                    totalPortfolioValueEUR={calculatedTotalValueEUR}
                                                                                     isOwner={isOwner}
                                                                                     onDelete={handleDelete}
                                                                                     timeFactor={getTimeFactor()}
@@ -2601,7 +2620,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                                     <AssetTableRow
                                                                                         asset={asset}
                                                                                         positionsViewCurrency={positionsViewCurrency}
-                                                                                        totalPortfolioValueEUR={totalValueEUR}
+                                                                                        totalPortfolioValueEUR={calculatedTotalValueEUR}
                                                                                         isOwner={isOwner}
                                                                                         onDelete={handleDelete}
                                                                                         timeFactor={getTimeFactor()}
@@ -2642,7 +2661,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                                         type={type}
                                                                                         assets={groupAssets}
                                                                                         groupTotal={groupTotal}
-                                                                                        totalPortfolioValueEUR={totalValueEUR}
+                                                                                        totalPortfolioValueEUR={calculatedTotalValueEUR}
                                                                                         positionsViewCurrency={positionsViewCurrency}
                                                                                         viewMode={viewMode}
                                                                                         gridColumns={gridColumns}
@@ -2674,7 +2693,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                                             <DetailedAssetCard
                                                                                                 asset={asset}
                                                                                                 positionsViewCurrency={positionsViewCurrency}
-                                                                                                totalPortfolioValueEUR={totalValueEUR}
+                                                                                                totalPortfolioValueEUR={calculatedTotalValueEUR}
                                                                                                 isBlurred={isBlurred}
                                                                                                 isOwner={isOwner}
                                                                                                 onDelete={handleDelete}
@@ -2686,7 +2705,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                                             <AssetCard
                                                                                                 asset={asset}
                                                                                                 positionsViewCurrency={positionsViewCurrency}
-                                                                                                totalPortfolioValueEUR={totalValueEUR}
+                                                                                                totalPortfolioValueEUR={calculatedTotalValueEUR}
                                                                                                 isBlurred={isBlurred}
                                                                                                 isOwner={isOwner}
                                                                                                 onDelete={handleDelete}
@@ -2727,7 +2746,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                             <>
                                 <AllocationCard
                                     assets={assets}
-                                    totalValueEUR={totalValueEUR}
+                                    totalValueEUR={calculatedTotalValueEUR}
                                     isBlurred={isBlurredState}
                                     exchangeRates={exchangeRates}
                                     activeFilters={{
@@ -2758,7 +2777,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                         goals={goals || []}
                                         isOwner={isOwner}
                                         exchangeRates={exchangeRates}
-                                        totalValueEUR={totalValueEUR}
+                                        totalValueEUR={calculatedTotalValueEUR}
                                         onShare={(data: any) => handleShareIntent(data, 'milestone')}
                                     />
                                 )}

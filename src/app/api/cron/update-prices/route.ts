@@ -10,17 +10,17 @@ export async function GET(request: Request) {
     try {
         console.log("[Cron] Starting Manual/Scheduled Price Update...");
 
-        // Skip updates between 00:00-08:00 UTC+3 (Istanbul time)
+        // Skip updates between 00:00-08:00 CET
         // Markets are closed, no need to waste API quota
         const now = new Date();
-        const istanbulHour = now.getUTCHours() + 3; // UTC+3 for Istanbul
-        const normalizedHour = istanbulHour >= 24 ? istanbulHour - 24 : istanbulHour;
+        const cetHour = now.getUTCHours() + 1; // UTC+1 for CET
+        const normalizedHour = cetHour >= 24 ? cetHour - 24 : (cetHour < 0 ? cetHour + 24 : cetHour);
 
         if (normalizedHour >= 0 && normalizedHour < 8) {
-            console.log(`[Cron] Skipping update at ${normalizedHour}:00 Istanbul time (night hours 00:00-08:00)`);
+            console.log(`[Cron] Skipping update at ${normalizedHour}:00 CET time (night hours 00:00-08:00)`);
             return NextResponse.json({
                 success: true,
-                message: "Skipped: Night hours (00:00-08:00 Istanbul time)",
+                message: "Skipped: Night hours (00:00-08:00 CET time)",
                 skipped: true,
                 hour: normalizedHour
             });
