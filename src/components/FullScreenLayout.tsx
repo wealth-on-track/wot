@@ -397,7 +397,22 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         fetchAssets();
     }, []); // Only run on mount
 
-    const totalPortfolioValue = assets.reduce((sum, asset) => sum + (asset.totalValueEUR || 0), 0);
+    // Recalculate total value dynamically based on current prices and rates
+    const totalPortfolioValue = assets.reduce((sum, asset) => {
+        const price = asset.currentPrice || asset.price || asset.previousClose || 0;
+        const quantity = asset.quantity || 0;
+        const value = price * quantity;
+        const currency = asset.currency || 'EUR';
+
+        let rateToEur = 1;
+        if (currency !== 'EUR') {
+            if (exchangeRates && exchangeRates[currency]) {
+                rateToEur = exchangeRates[currency];
+            }
+        }
+        const valueEur = value / rateToEur;
+        return sum + valueEur;
+    }, 0);
 
     // Helper function to get current value (edited or original)
     const getCurrentValue = (assetId: string, field: string, originalValue: any) => {
