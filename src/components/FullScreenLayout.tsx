@@ -127,7 +127,7 @@ export function FullScreenLayout({
     const renderContent = () => {
         switch (activeSection) {
             case 'open-positions':
-                return <OpenPositionsFullScreen key={`open-${sectionKey}`} assets={assets} exchangeRates={exchangeRates} onOpenImport={() => setShowImportModal(true)} onCountChange={refreshCounts} />;
+                return <OpenPositionsFullScreen key={`open-${sectionKey}`} assets={assets} exchangeRates={exchangeRates} globalCurrency={preferences?.currency || 'EUR'} onOpenImport={() => setShowImportModal(true)} onCountChange={refreshCounts} />;
             case 'allocations':
                 return <AllocationsFullScreen assets={assets} exchangeRates={exchangeRates} />;
             case 'performance':
@@ -276,7 +276,7 @@ export function FullScreenLayout({
 // Full Screen Section Components
 
 // 1. Open Positions - Table Only, No Tabs
-function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, onOpenImport, onCountChange }: { assets: any[], exchangeRates?: Record<string, number>, onOpenImport: () => void, onCountChange: () => void }) {
+function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalCurrency = 'EUR', onOpenImport, onCountChange }: { assets: any[], exchangeRates?: Record<string, number>, globalCurrency?: string, onOpenImport: () => void, onCountChange: () => void }) {
     const [isBatchEditMode, setIsBatchEditMode] = React.useState(false);
     const [editedAssets, setEditedAssets] = React.useState<Record<string, any>>({});
     const [assets, setAssets] = React.useState(initialAssets);
@@ -669,10 +669,10 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, onOpenI
                                 <div>Value</div>
                                 <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost</div>
                             </th>
-                            {/* Total Value EUR */}
+                            {/* Total Value Global */}
                             <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
-                                <div>Value (€)</div>
-                                <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost (€)</div>
+                                <div>Value ({getCurrencySymbol(globalCurrency)})</div>
+                                <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost ({getCurrencySymbol(globalCurrency)})</div>
                             </th>
                             {/* Weight */}
                             <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
@@ -707,22 +707,34 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, onOpenI
                                 const costValue = cost * quantity;
 
                                 const currency = asset.currency || 'EUR';
-                                let rate = 1;
+
+                                // Calculate values in EUR first (Base)
+                                let rateToEur = 1;
                                 if (currency !== 'EUR') {
                                     if (exchangeRates && exchangeRates[currency]) {
-                                        rate = exchangeRates[currency];
+                                        rateToEur = exchangeRates[currency];
+                                    }
+                                }
+                                const valueEur = value / rateToEur;
+                                const costEur = costValue / rateToEur;
+
+                                // Convert to Global Currency (e.g. USD) if needed
+                                let globalRate = 1;
+                                if (globalCurrency !== 'EUR') {
+                                    if (exchangeRates && exchangeRates[globalCurrency]) {
+                                        globalRate = exchangeRates[globalCurrency];
                                     }
                                 }
 
-                                const valueEur = value / rate;
-                                const costEur = costValue / rate;
-                                const plAmount = valueEur - costEur;
+                                const valueGlobal = valueEur * globalRate;
+                                const costGlobal = costEur * globalRate;
+                                const plAmount = valueGlobal - costGlobal;
                                 const weight = totalPortfolioValue > 0 ? (valueEur / totalPortfolioValue) * 100 : 0;
 
-                                return { value, costValue, valueEur, costEur, plAmount, weight, currency, price, cost };
+                                return { value, costValue, valueGlobal, costGlobal, plAmount, weight, currency, price, cost };
                             };
 
-                            const { value, costValue, valueEur, costEur, plAmount, weight, currency, price, cost } = calculateValues();
+                            const { value, costValue, valueGlobal, costGlobal, plAmount, weight, currency, price, cost } = calculateValues();
 
                             return (
                                 <tr
@@ -945,19 +957,19 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, onOpenI
                                     {/* Value / Cost (Local) */}
                                     <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
                                         <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                            {value > 0 ? `${getCurrencySymbol(currency)}${formatNumber(value, 0)}` : '-'}
+                                            {currency !== globalCurrency && value > 0 ? `${getCurrencySymbol(currency)}${formatNumber(value, 0)}` : '-'}
                                         </div>
                                         <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
-                                            {costValue > 0 ? `${getCurrencySymbol(currency)}${formatNumber(costValue, 0)}` : '-'}
+                                            {currency !== globalCurrency && costValue > 0 ? `${getCurrencySymbol(currency)}${formatNumber(costValue, 0)}` : '-'}
                                         </div>
                                     </td>
-                                    {/* Value / Cost (EUR) */}
+                                    {/* Value / Cost (Global) */}
                                     <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
                                         <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                            {valueEur > 0 ? `€${formatNumber(valueEur, 0)}` : '-'}
+                                            {valueGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(valueGlobal, 0)}` : '-'}
                                         </div>
                                         <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
-                                            {costEur > 0 ? `€${formatNumber(costEur, 0)}` : '-'}
+                                            {costGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(costGlobal, 0)}` : '-'}
                                         </div>
                                     </td>
                                     {/* Weight */}
@@ -972,7 +984,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, onOpenI
                                             {(asset.plPercentage || 0) >= 0 ? '+' : ''}{Math.round(asset.plPercentage || 0)}%
                                         </div>
                                         <div style={{ fontSize: sizing.smallNumberSize, color: plAmount >= 0 ? '#34d399' : '#f87171', marginTop: '2px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                                            {plAmount >= 0 ? '+' : ''}€{formatNumber(plAmount, 0)}
+                                            {plAmount >= 0 ? '+' : ''}{getCurrencySymbol(globalCurrency)}{formatNumber(plAmount, 0)}
                                         </div>
                                     </td>
                                     {/* Delete Action Button */}
@@ -2487,6 +2499,7 @@ function SettingsFullScreen({ preferences }: { preferences?: any }) {
         marketNews: preferences?.marketNews === true
     });
     const [saving, setSaving] = React.useState(false);
+    const [showSuccess, setShowSuccess] = React.useState(false);
 
     const savePreference = async (key: string, value: any) => {
         setSaving(true);
@@ -2495,6 +2508,12 @@ function SettingsFullScreen({ preferences }: { preferences?: any }) {
             await updateUserPreferences({ [key]: value });
             setLocalPrefs(prev => ({ ...prev, [key]: value }));
             console.log(`Saved ${key}:`, value);
+
+            // Show success notification
+            setShowSuccess(true);
+            setTimeout(() => {
+                setShowSuccess(false);
+            }, 2000);
         } catch (error) {
             console.error('Failed to save preference:', error);
             alert('Failed to save setting. Please try again.');
@@ -2505,13 +2524,34 @@ function SettingsFullScreen({ preferences }: { preferences?: any }) {
 
     return (
         <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '32px' }}>
-                <h1 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '8px', color: 'var(--text-primary)' }}>
-                    Settings
-                </h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                    Customize your portfolio preferences and account settings
-                </p>
+            <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div>
+                    <h1 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '8px', color: 'var(--text-primary)' }}>
+                        Settings
+                    </h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                        Customize your portfolio preferences and account settings
+                    </p>
+                </div>
+                {/* Success Notification */}
+                {showSuccess && (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 16px',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: '#fff',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                        animation: 'fadeIn 0.3s ease-out'
+                    }}>
+                        <Save size={16} />
+                        <span>Changes Saved</span>
+                    </div>
+                )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
