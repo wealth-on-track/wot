@@ -111,17 +111,17 @@ export async function getExchangeRates(): Promise<RatesMap> {
             console.log("Exchange rates updated successfully from Yahoo.");
         } catch (e) {
             console.error("Error updating rates from Yahoo:", e);
-            // Fallback to existing rates or hardcoded defaults if DB empty
-            if (Object.keys(rates).length <= 1) {
-                // Emergency fallbacks
-                console.warn("Using emergency fallback rates");
-                rates['USD'] = 1.09;
-                rates['TRY'] = 37.5;
-                rates['GBP'] = 0.85;
-                rates['JPY'] = 160;
-                rates['CHF'] = 0.95;
-            }
         }
+    }
+
+    // FINAL SAFETY CHECK: Ensure we absolutely have USD and TRY rates
+    if (!rates['USD']) {
+        console.warn("Using emergency fallback rate for USD");
+        rates['USD'] = 1.09;
+    }
+    if (!rates['TRY']) {
+        console.warn("Using emergency fallback rate for TRY");
+        rates['TRY'] = 37.5;
     }
 
     return rates;

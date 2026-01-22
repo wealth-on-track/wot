@@ -493,8 +493,24 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, onOpenI
                             });
 
                             setAssets(updatedAssets);
-                            console.log('Batch edit saved:', editedAssets);
-                            console.log('Updated assets:', updatedAssets);
+
+                            // Persist changes to database
+                            const saveChanges = async () => {
+                                const { updateAsset } = await import('@/lib/actions');
+                                const promises = Object.entries(editedAssets).map(([id, data]) => {
+                                    // Map form fields to API fields
+                                    return updateAsset(id, {
+                                        quantity: data.quantity,
+                                        buyPrice: data.averageBuyPrice, // Map back to buyPrice
+                                        name: data.name,
+                                        platform: data.platform,
+                                        customGroup: data.portfolio
+                                    });
+                                });
+                                await Promise.all(promises);
+                                onCountChange();
+                            };
+                            saveChanges().catch(err => console.error("Batch save failed:", err));
 
                             // Show success notification
                             setShowSuccessNotification(true);
@@ -504,9 +520,6 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, onOpenI
 
                             setEditedAssets({});
                             setIsBatchEditMode(false);
-
-                            // Refresh counts in parent component
-                            onCountChange();
                         } else {
                             // Initialize editedAssets with current values when entering batch mode
                             const initialEdits: Record<string, any> = {};
@@ -516,7 +529,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, onOpenI
                                     platform: asset.platform || 'Interactive Brokers',
                                     name: asset.name || asset.symbol,
                                     quantity: asset.quantity,
-                                    averageBuyPrice: asset.averageBuyPrice || asset.avgPrice || 0
+                                    averageBuyPrice: asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0
                                 };
                             });
                             setEditedAssets(initialEdits);
@@ -687,8 +700,8 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, onOpenI
 
                             // Calculations per row for consistent display
                             const calculateValues = () => {
-                                const price = asset.currentPrice || asset.price || 0;
-                                const cost = asset.averageBuyPrice || asset.avgPrice || 0;
+                                const price = asset.currentPrice || asset.price || asset.previousClose || 0;
+                                const cost = asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0;
                                 const quantity = asset.quantity || 0;
                                 const value = price * quantity;
                                 const costValue = cost * quantity;
