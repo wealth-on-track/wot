@@ -16,4 +16,4 @@ jobs:
           echo "Triggering price update..."
           # Replace with your actual production URL
           # Use a secret if possible, but public endpoint is fine for now as per plan
-          curl -X GET "https://mpt1.vercel.app/api/cron/update-prices"
+          curl -X GET "https://wot.money/api/cron/update-prices"
