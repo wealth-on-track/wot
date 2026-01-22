@@ -50,7 +50,7 @@ export function ShareHub({ initialData, initialTemplate = 'distribution', assets
     const [isGenerating, setIsGenerating] = useState(false);
 
     // Generate distribution data based on breakdown type
-    const generateDistribution = (type: BreakdownType): { name: string; value: number; color?: string }[] => {
+    const generateDistribution = React.useCallback((type: BreakdownType): { name: string; value: number; color?: string }[] => {
         if (!assets || assets.length === 0) {
             // Fallback to dummy data
             return [
@@ -110,7 +110,7 @@ export function ShareHub({ initialData, initialTemplate = 'distribution', assets
             ...item,
             color: colors[i % colors.length]
         }));
-    };
+    }, [assets]);
 
     // Recalculate data when breakdownType changes
     const data: ShareData = React.useMemo(() => {
@@ -128,7 +128,7 @@ export function ShareHub({ initialData, initialTemplate = 'distribution', assets
                 value: 100 + i * 1.5 + Math.random() * 3
             }))
         };
-    }, [breakdownType, initialData, username, totalValueEUR, assets]);
+    }, [breakdownType, initialData, username, totalValueEUR, generateDistribution]);
 
     useEffect(() => {
         if (initialTemplate) setTemplateType(initialTemplate);
