@@ -19,6 +19,7 @@ interface ClientWrapperProps {
     navbar: ReactNode;
     exchangeRates?: Record<string, number>;
     preferences?: any;
+    userEmail?: string;
 }
 
 // Inner component that uses currency context
@@ -51,7 +52,7 @@ function DashboardWrapper({ username, isOwner, totalValueEUR, assets, goals, sho
     );
 }
 
-export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals = [], navbar, exchangeRates, preferences }: ClientWrapperProps) {
+export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals = [], navbar, exchangeRates, preferences, userEmail }: ClientWrapperProps) {
     // Initialize view mode from user preferences, default to 'fullscreen'
     const [viewMode, setViewMode] = useState<'card' | 'fullscreen'>(
         (preferences?.defaultViewMode as 'card' | 'fullscreen') || 'fullscreen'
@@ -177,6 +178,7 @@ export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals 
                         goals={goals}
                         exchangeRates={exchangeRates}
                         preferences={preferences}
+                        userEmail={userEmail}
                     />
                 )}
 

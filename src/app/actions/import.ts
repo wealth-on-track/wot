@@ -212,7 +212,8 @@ export interface ImportResult {
  */
 export async function executeImport(
     assets: ResolvedAsset[],
-    transactions: any[] = [] // Using any[] to avoid strict type dependency circularity if needed, but preferably specific type
+    transactions: any[] = [], // Using any[] to avoid strict type dependency circularity if needed, but preferably specific type
+    portfolioId?: string // Optional portfolioId - if not provided, use user's default portfolio
 ): Promise<ImportResult> {
     const session = await auth();
     if (!session?.user?.email) {
@@ -224,7 +225,14 @@ export async function executeImport(
         include: { portfolio: true }
     });
 
-    if (!user?.portfolio) {
+    if (!user) {
+        return { success: false, added: 0, updated: 0, skipped: 0, errors: ['User not found'] };
+    }
+
+    // Use provided portfolioId or fall back to user's default portfolio
+    const targetPortfolioId = portfolioId || user.portfolio?.id;
+
+    if (!targetPortfolioId) {
         return { success: false, added: 0, updated: 0, skipped: 0, errors: ['Portfolio not found'] };
     }
 
@@ -245,7 +253,7 @@ export async function executeImport(
 
     // Get minimum sortOrder for new assets
     const minSortOrder = await prisma.asset.findFirst({
-        where: { portfolioId: user.portfolio.id },
+        where: { portfolioId: targetPortfolioId },
         orderBy: { sortOrder: 'asc' },
         select: { sortOrder: true }
     });
@@ -270,7 +278,7 @@ export async function executeImport(
                 // Create new asset
                 await prisma.asset.create({
                     data: {
-                        portfolioId: user.portfolio!.id,
+                        portfolioId: targetPortfolioId,
                         symbol: asset.resolvedSymbol,
                         name: asset.resolvedName,
                         originalName: asset.resolvedName,
@@ -330,7 +338,7 @@ export async function executeImport(
                     await prisma.assetTransaction.upsert({
                         where: {
                             portfolioId_externalId: {
-                                portfolioId: user.portfolio.id,
+                                portfolioId: targetPortfolioId,
                                 externalId: tx.externalId
                             }
                         },
@@ -343,7 +351,7 @@ export async function executeImport(
                             type: tx.type
                         },
                         create: {
-                            portfolioId: user.portfolio.id,
+                            portfolioId: targetPortfolioId,
                             symbol: resolvedSymbol,
                             name: tx.name,
                             type: tx.type,
@@ -361,7 +369,7 @@ export async function executeImport(
                     // TODO: Implement fuzzy duplicate detection
                     await prisma.assetTransaction.create({
                         data: {
-                            portfolioId: user.portfolio.id,
+                            portfolioId: targetPortfolioId,
                             symbol: resolvedSymbol,
                             name: tx.name,
                             type: tx.type,

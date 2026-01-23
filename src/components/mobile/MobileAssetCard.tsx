@@ -67,17 +67,31 @@ export const MobileAssetCard = memo(function MobileAssetCard({
         return (amount / fromRate) * toRate;
     };
 
+    // When user selects EUR (or any specific currency), always show that currency
+    // Only use original currency when 'ORG' is selected
     const displayCurrency = currency === 'ORG' ? (asset.currency || 'EUR') : currency;
-    const displaySymbol = symbols[displayCurrency] || displayCurrency;
+    const displaySymbol = currency === 'ORG' ? (symbols[asset.currency] || asset.currency) : (symbols[currency] || '€');
+
+    // For Value/P&L column, ALWAYS use the user's selected currency (EUR if EUR is selected)
+    // Never show ORG currency in this column
+    const displaySymbolValuePL = symbols[currency] || '€';
 
     // --- Values & Calcs ---
     const currentPrice = asset.currentPrice || asset.buyPrice || 0;
     const totalCost = asset.buyPrice * asset.quantity;
 
-    const displayTotalValue = convert(asset.totalValueEUR, 'EUR');
-    const displayTotalCost = convert(totalCost, asset.currency);
-    const displayBuyPrice = convert(asset.buyPrice, asset.currency);
-    const displayCurrentPrice = convert(currentPrice, asset.currency);
+    // When user selects EUR, use totalValueEUR directly (already in EUR)
+    // Only convert when a different currency is selected
+    const displayTotalValue = currency === 'EUR' ? asset.totalValueEUR : convert(asset.totalValueEUR, 'EUR');
+
+    // For cost, we need to convert from asset's original currency to display currency
+    const displayTotalCost = currency === 'ORG'
+        ? totalCost
+        : convert(totalCost * (rates[asset.currency] || 1), asset.currency);
+
+    // These are used in the expandable panel and should show in original currency for reference
+    const displayBuyPrice = asset.buyPrice;
+    const displayCurrentPrice = currentPrice;
 
     // Smart Format Helper
     const smartFmt = (val: number) => {
@@ -100,30 +114,21 @@ export const MobileAssetCard = memo(function MobileAssetCard({
         const totalPL = displayTotalValue - displayTotalCost;
         const totalPLPct = displayTotalCost > 0 ? (totalPL / displayTotalCost) * 100 : 0;
 
-        // Simulation/Hashing for stable demo values for other periods
-        const seed = asset.symbol.length + asset.quantity;
-        const randomFactor = (seed % 10) / 10; // 0.0 - 0.9
+        // Real Logic applied for 1D and ALL.
+        // Fallback for others to avoid fake data.
 
         let pct = 0;
-        let val = 0; // Value change is harder to calc without history price, but we focus on % display request
 
         switch (timeHorizon) {
             case '1D':
+            case '1W': // Fallback to 1D
+            case '1M': // Fallback to 1D
                 pct = p_1d;
                 break;
             case 'ALL':
+            case 'YTD': // Fallback to ALL
+            case '1Y':  // Fallback to ALL
                 pct = totalPLPct;
-                break;
-            case '1W':
-                // Sim: usually a bit more than 1D
-                pct = p_1d * (1 + randomFactor);
-                break;
-            case '1M':
-                pct = p_1d * (2 + randomFactor); // Demo
-                break;
-            case 'YTD':
-            case '1Y':
-                pct = totalPLPct * 0.8; // Assume some accumulation
                 break;
             default:
                 pct = p_1d;
@@ -268,129 +273,151 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                         transition={{ duration: 1.5, ease: "easeInOut" }}
                     />
                 )}
-                {/* Main Content Row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: isCompactMode ? '10px' : '14px', justifyContent: 'space-between' }}>
 
-                    {/* LEFT SECTION */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: isCompactMode ? '10px' : '14px', flex: 1, minWidth: 0 }}>
-                        {/* Logo */}
+                {/* Main Content Row: 3 Columns */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'space-between' }}>
+
+                    {/* COL 1: Logo */}
+                    <div style={{
+                        width: isCompactMode ? '32px' : '42px',
+                        height: isCompactMode ? '32px' : '42px',
+                        borderRadius: '12px', // Slightly rounder
+                        background: 'var(--bg-secondary)',
+                        overflow: 'hidden',
+                        border: '1px solid rgba(0,0,0,0.05)',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        {asset.logoUrl ? (
+                            <img
+                                src={logoUrl}
+                                alt={asset.symbol}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.parentElement!.textContent = asset.symbol.slice(0, 1);
+                                }}
+                            />
+                        ) : (
+                            <span style={{ fontWeight: 800, fontSize: isCompactMode ? '0.8rem' : '1rem' }}>{asset.symbol[0]}</span>
+                        )}
+                    </div>
+
+                    {/* COL 2: Name & Ticker */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: 0 }}>
+                        {/* Row 1: Asset Name */}
                         <div style={{
-                            width: isCompactMode ? '32px' : '42px',
-                            height: isCompactMode ? '32px' : '42px',
-                            borderRadius: '10px',
-                            background: 'var(--bg-secondary)',
+                            fontSize: isCompactMode ? '0.85rem' : '0.9rem',
+                            fontWeight: 700,
+                            color: 'var(--text-primary)',
+                            whiteSpace: 'nowrap',
                             overflow: 'hidden',
-                            border: '1px solid rgba(0,0,0,0.05)',
-                            flexShrink: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
+                            textOverflow: 'ellipsis',
+                            maxWidth: '100%',
+                            lineHeight: 1.2
                         }}>
-                            {asset.logoUrl ? (
-                                <img
-                                    src={logoUrl}
-                                    alt={asset.symbol}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                    onError={(e) => {
-                                        e.currentTarget.style.display = 'none';
-                                        e.currentTarget.parentElement!.textContent = asset.symbol.slice(0, 1);
-                                    }}
-                                />
-                            ) : (
-                                <span style={{ fontWeight: 800, fontSize: isCompactMode ? '0.8rem' : '1rem' }}>{asset.symbol[0]}</span>
-                            )}
+                            {asset.name || asset.symbol}
                         </div>
 
-                        {/* Text Info - Updated Order: Name Top, Ticker+Price Bottom */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: isCompactMode ? '0px' : '2px', minWidth: 0 }}>
-                            {/* Row 1: Asset Name */}
-                            <div style={{
-                                fontSize: isCompactMode ? '0.85rem' : '0.95rem',
-                                fontWeight: 700,
-                                color: 'var(--text-primary)',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                maxWidth: '100%', // Allow flex to handle width
-                                lineHeight: 1.2
-                            }}>
-                                {asset.name}
-                            </div>
-
-                            {/* Row 2: Ticker & Price */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{
-                                    fontSize: isCompactMode ? '0.7rem' : '0.8rem',
-                                    color: 'var(--text-muted)',
-                                    fontWeight: 600
-                                }}>
-                                    {asset.symbol}
-                                </span>
-
-                                {/* Separator */}
-                                <span style={{ color: 'var(--border)', fontSize: '0.7rem' }}>|</span>
-
-                                {/* Current Price */}
-                                <span style={{
-                                    fontSize: isCompactMode ? '0.7rem' : '0.8rem',
-                                    color: 'var(--text-muted)', // Match ticker color
-                                    fontWeight: 600
-                                }}>
-                                    {`${displaySymbol}${smartFmt(displayCurrentPrice)}`}
-                                </span>
-                            </div>
+                        {/* Row 2: Ticker Symbol */}
+                        <div style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--text-muted)',
+                            fontWeight: 500,
+                        }}>
+                            {asset.symbol}
                         </div>
                     </div>
 
-
-                    {/* RIGHT SECTION: Price & Change */}
-                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: isCompactMode ? '0px' : '2px' }}>
-
-                        {/* Value - Applied smartFmt here as well for consistency */}
+                    {/* COL 3: Price / Cost (Original Currency) - Stacked */}
+                    {asset.type !== 'CASH' && (
                         <div style={{
-                            fontSize: isCompactMode ? '0.9rem' : '1.05rem',
-                            fontWeight: isCompactMode ? 600 : 800,
+                            textAlign: 'right',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'flex-end',
+                            gap: '2px',
+                            minWidth: '70px',
+                            marginRight: '16px' // Bigger gap before Value/P&L
+                        }}>
+                            {(() => {
+                                const origSym = symbols[asset.currency] || asset.currency;
+                                const p = asset.currentPrice || 0;
+                                const c = asset.buyPrice || 0;
+                                return (
+                                    <>
+                                        <span style={{
+                                            color: 'var(--text-primary)',
+                                            fontWeight: 700,
+                                            fontSize: '0.8rem'
+                                        }}>
+                                            {origSym}{smartFmt(p)}
+                                        </span>
+                                        <span style={{
+                                            color: 'var(--text-muted)',
+                                            fontWeight: 500,
+                                            fontSize: '0.7rem'
+                                        }}>
+                                            {origSym}{smartFmt(c)}
+                                        </span>
+                                    </>
+                                );
+                            })()}
+                        </div>
+                    )}
+
+
+                    {/* COL 4: Value & P&L (User's Selected Currency - EUR if selected) */}
+                    <div style={{
+                        textAlign: 'right',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-end',
+                        gap: '2px',
+                        minWidth: '80px' // Fixed width for alignment
+                    }}>
+
+                        {/* Total Value */}
+                        <div style={{
+                            fontSize: isCompactMode ? '0.9rem' : '1rem',
+                            fontWeight: 800,
                             color: 'var(--text-primary)',
                             fontVariantNumeric: 'tabular-nums',
-                            letterSpacing: '-0.02em'
+                            letterSpacing: '-0.02em',
+                            lineHeight: 1.2
                         }}>
-                            {isPrivacyMode ? '****' : `${displaySymbol}${smartFmt(displayTotalValue)}`}
+                            {isPrivacyMode ? '****' : `${displaySymbolValuePL}${smartFmt(displayTotalValue)}`}
                         </div>
 
-                        {/* Change Display - Dynamic based on Time Horizon */}
-                        {isCompactMode ? (
-                            // Compact
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '2px',
-                                color: isPositive ? 'var(--success)' : 'var(--danger)',
-                                fontSize: '0.75rem',
-                                fontWeight: 700
-                            }}>
-                                {isPositive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                                <span>{Math.abs(changePct).toFixed(0)}%</span>
-                            </div>
-                        ) : (
-                            // Standard Pill
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                background: isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                padding: '2px 6px',
-                                borderRadius: '6px'
-                            }}>
-                                {isPositive ? <TrendingUp size={12} color="#10b981" /> : <TrendingDown size={12} color="#ef4444" />}
-                                <span style={{
-                                    fontSize: '0.75rem',
-                                    fontWeight: 700,
-                                    color: isPositive ? '#10b981' : '#ef4444'
-                                }}>
-                                    {Math.abs(changePct).toFixed(0)}%
-                                </span>
-                            </div>
-                        )}
+                        {/* P&L Line: Amount • % */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                            gap: '4px',
+                            color: isPositive ? 'var(--success)' : 'var(--danger)',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap'
+                        }}>
+                            {isCompactMode ? (
+                                // Compact: Just %
+                                <span>{isPositive ? '+' : ''}{Math.abs(changePct).toFixed(0)}%</span>
+                            ) : (
+                                // Normal: Amount • %
+                                <>
+                                    <span>
+                                        {isPrivacyMode ? '****' : `${displaySymbolValuePL}${smartFmt(displayTotalValue - displayTotalCost)}`}
+                                    </span>
+                                    <span style={{ opacity: 0.5, fontSize: '0.6rem' }}>●</span>
+                                    <span>
+                                        {isPositive ? '+' : ''}{changePct.toFixed(1)}%
+                                    </span>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -417,7 +444,7 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                     <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>HOLDINGS</span>
                                     <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 700 }}>
-                                        {asset.quantity.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                                        {asset.type === 'CASH' ? '' : asset.quantity.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                                     </span>
                                 </div>
 

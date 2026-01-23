@@ -2,9 +2,10 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
-import { X, Upload, FileSpreadsheet, Check, AlertTriangle, Loader2, Plus, RefreshCw, Ban, ChevronDown, ChevronUp, Download, FileText, Cloud, Lock, Zap, Database, ArrowRight } from "lucide-react";
+import { X, Upload, FileSpreadsheet, Check, AlertTriangle, Loader2, Plus, RefreshCw, Ban, ChevronDown, ChevronUp, Download, FileText, Cloud, Lock, Zap, Database, ArrowRight, Briefcase } from "lucide-react";
 import { parseFile, ParseResult, ParsedRow, ParsedTransaction } from "@/lib/importParser";
 import { resolveImportSymbols, executeImport, ResolvedAsset, ImportAsset } from "@/app/actions/import";
+import { getUserPortfolios } from "@/app/actions/portfolio";
 import { useRouter } from "next/navigation";
 
 type ImportStep = 'upload' | 'analyzing' | 'preview' | 'resolving' | 'review' | 'importing' | 'done';
@@ -23,6 +24,23 @@ export function ImportModal({ onClose }: ImportModalProps) {
     const [error, setError] = useState<string | null>(null);
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
     const [analyzeProgress, setAnalyzeProgress] = useState(0);
+    const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>('');
+    const [availablePortfolios, setAvailablePortfolios] = useState<{ id: string; name: string; isDefault?: boolean }[]>([]);
+
+    useEffect(() => {
+        const loadPortfolios = async () => {
+            const result = await getUserPortfolios();
+            if (result.success && result.portfolios) {
+                setAvailablePortfolios(result.portfolios);
+                // Pre-select the default or first portfolio
+                if (result.portfolios.length > 0) {
+                    const defaultP = result.portfolios.find(p => p.isDefault) || result.portfolios[0];
+                    setSelectedPortfolioId(defaultP.id);
+                }
+            }
+        };
+        loadPortfolios();
+    }, []);
 
     const onDrop = useCallback(async (acceptedFiles: File[]) => {
         if (acceptedFiles.length === 0) return;
@@ -52,7 +70,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
             }
 
             if (result.success && result.rows.length > 0) {
-                setStep('preview');
+                setStep('preview'); // Go directly to preview (portfolio selection will be in review step)
             } else if (result.errors.length > 0) {
                 setError(result.errors.join('\n'));
                 setStep('upload'); // Go back to fix error state
@@ -177,7 +195,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
         setError(null);
 
         try {
-            const result = await executeImport(resolvedAssets, transactions);
+            const result = await executeImport(resolvedAssets, transactions, selectedPortfolioId || undefined);
             setImportResult(result);
             setStep('done');
 
@@ -519,6 +537,34 @@ export function ImportModal({ onClose }: ImportModalProps) {
                     {/* Step 3: Review & Commit */}
                     {step === 'review' && (
                         <div className="animate-in fade-in duration-500">
+                            {/* Portfolio Selection */}
+                            <div style={{ marginBottom: '2rem', background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Briefcase size={18} className="text-blue-400" />
+                                    </div>
+                                    <div>
+                                        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'white' }}>Target Portfolio</h3>
+                                        <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>Where should these assets be imported?</p>
+                                    </div>
+                                </div>
+
+                                <select
+                                    value={selectedPortfolioId}
+                                    onChange={(e) => setSelectedPortfolioId(e.target.value)}
+                                    style={{
+                                        width: '100%', padding: '0.8rem 1rem', borderRadius: '10px',
+                                        background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
+                                        color: 'white', fontSize: '0.95rem', cursor: 'pointer', outline: 'none'
+                                    }}
+                                >
+                                    {availablePortfolios.map(p => (
+                                        <option key={p.id} value={p.id}>{p.name} {p.isDefault ? '(Default)' : ''}</option>
+                                    ))}
+                                    {availablePortfolios.length === 0 && <option value="" disabled>Loading portfolios...</option>}
+                                </select>
+                            </div>
+
                             {/* Reuse existing Review UI logic but styled better */}
                             {/* Keeping this simple for brevity as user focused on DropZone/Mapping steps */}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
@@ -586,9 +632,12 @@ export function ImportModal({ onClose }: ImportModalProps) {
                                 <button onClick={() => setStep('preview')} style={{ color: 'rgba(255,255,255,0.6)', background: 'transparent', border: 'none', cursor: 'pointer' }}>Back</button>
                                 <button
                                     onClick={handleImport}
+                                    disabled={!selectedPortfolioId}
                                     style={{
-                                        padding: '0.8rem 3rem', background: '#4ADE80', color: 'black', fontWeight: 800, borderRadius: '12px',
-                                        border: 'none', cursor: 'pointer', boxShadow: '0 0 30px rgba(74, 222, 128, 0.2)'
+                                        padding: '0.8rem 3rem', background: selectedPortfolioId ? '#4ADE80' : 'rgba(255,255,255,0.1)',
+                                        color: selectedPortfolioId ? 'black' : 'rgba(255,255,255,0.3)', fontWeight: 800, borderRadius: '12px',
+                                        border: 'none', cursor: selectedPortfolioId ? 'pointer' : 'not-allowed',
+                                        boxShadow: selectedPortfolioId ? '0 0 30px rgba(74, 222, 128, 0.2)' : 'none'
                                     }}
                                 >
                                     Complete Import

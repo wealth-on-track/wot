@@ -6,10 +6,11 @@ import { updateUserPreferences } from "@/lib/actions";
 import { useTheme } from "@/context/ThemeContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { User, Mail, Lock, Globe, DollarSign, Moon, Sun, ArrowLeft, Eye, EyeOff, TrendingUp, BarChart3, Clock, Save } from "lucide-react";
+import { User, Mail, Lock, Globe, DollarSign, Moon, Sun, ArrowLeft, Eye, EyeOff, TrendingUp, BarChart3, Clock, Save, Pencil } from "lucide-react";
 
 interface SettingsPageProps {
     userEmail: string;
+    username?: string;
     preferences?: {
         defaultRange?: string;
         benchmarks?: string[];
@@ -17,7 +18,7 @@ interface SettingsPageProps {
     };
 }
 
-export function SettingsPage({ userEmail, preferences, onBack }: SettingsPageProps & { onBack?: () => void }) {
+export function SettingsPage({ userEmail, username, preferences, onBack }: SettingsPageProps & { onBack?: () => void }) {
     const router = useRouter();
     const { currency, setCurrency } = useCurrency();
     const { language, setLanguage } = useLanguage();
@@ -250,6 +251,131 @@ export function SettingsPage({ userEmail, preferences, onBack }: SettingsPagePro
                     </h1>
                 </div>
 
+                {/* Full Width Account Profile Header */}
+                <div style={{
+                    width: '100%',
+                    marginBottom: isMobile ? '1rem' : '1.5rem',
+                    background: 'rgba(var(--bg-secondary-rgb), 0.5)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '16px',
+                    padding: isMobile ? '1rem' : '1.25rem 2.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '1.5rem',
+                    overflow: 'hidden',
+                    position: 'relative'
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: isMobile ? '1rem' : '2rem',
+                        flex: 1
+                    }}>
+                        {/* Avatar/Profile Initial */}
+                        <div style={{
+                            width: isMobile ? '48px' : '64px',
+                            height: isMobile ? '48px' : '64px',
+                            borderRadius: '16px',
+                            background: 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontWeight: 800,
+                            fontSize: isMobile ? '1.2rem' : '1.6rem',
+                            boxShadow: '0 8px 24px rgba(var(--accent-rgb), 0.25)',
+                            textTransform: 'uppercase',
+                            flexShrink: 0
+                        }}>
+                            {(username || userEmail)[0]}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.8rem',
+                                flexWrap: 'wrap'
+                            }}>
+                                <span style={{
+                                    color: 'var(--text-primary)',
+                                    fontWeight: 800,
+                                    fontSize: isMobile ? '1.2rem' : '1.6rem',
+                                    letterSpacing: '-0.02em'
+                                }}>
+                                    {username || userEmail.split('@')[0]}
+                                </span>
+                                <span style={{
+                                    padding: '3px 10px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(var(--accent-rgb), 0.1)',
+                                    color: 'var(--accent)',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.05em',
+                                    border: '1px solid rgba(var(--accent-rgb), 0.2)'
+                                }}>
+                                    Active Account
+                                </span>
+                            </div>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                opacity: 0.8
+                            }}>
+                                <Mail size={16} style={{ color: 'var(--text-secondary)' }} />
+                                <span style={{
+                                    color: 'var(--text-secondary)',
+                                    fontSize: isMobile ? '0.85rem' : '1.1rem',
+                                    fontWeight: 500
+                                }}>
+                                    {userEmail}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        className="glass-button"
+                        style={{
+                            padding: isMobile ? '0.6rem 1rem' : '0.75rem 1.75rem',
+                            borderRadius: '12px',
+                            background: 'var(--bg-primary)',
+                            border: '1px solid var(--border)',
+                            color: 'var(--text-primary)',
+                            fontSize: '0.9rem',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                        }}
+                    >
+                        <Pencil size={16} style={{ color: 'var(--accent)' }} />
+                        <span>Edit Details</span>
+                    </button>
+
+                    {/* Decorative glow */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '-50%',
+                        right: '-5%',
+                        width: '250px',
+                        height: '250px',
+                        background: 'var(--accent)',
+                        opacity: 0.03,
+                        filter: 'blur(80px)',
+                        borderRadius: '50%',
+                        pointerEvents: 'none'
+                    }} />
+                </div>
+
                 {/* Content Layout - Flex Grid */}
                 <div style={{
                     display: 'grid',
@@ -258,36 +384,13 @@ export function SettingsPage({ userEmail, preferences, onBack }: SettingsPagePro
                     alignItems: 'stretch' // Makes both columns equal height
                 }}>
 
-                    {/* Left Column: Account + Password */}
+                    {/* Left Column: Password */}
                     <div style={{
                         display: 'flex',
                         flexDirection: 'column',
                         gap: isMobile ? '0.5rem' : '1.5rem',
                         height: '100%'
                     }}>
-                        {/* Account Information */}
-                        <section className="neo-card" style={{
-                            padding: isMobile ? '0.75rem' : '1rem'
-                        }}>
-                            <h2 style={sectionTitleStyle}>
-                                <User size={isMobile ? 14 : 16} />
-                                Account
-                            </h2>
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: isMobile ? '0.5rem' : '0.75rem',
-                                background: 'var(--bg-secondary)',
-                                borderRadius: '6px',
-                                border: '1px solid var(--border)'
-                            }}>
-                                <Mail size={14} style={{ color: 'var(--text-secondary)' }} />
-                                <span style={{ color: 'var(--text-primary)', fontWeight: 500, fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
-                                    {userEmail}
-                                </span>
-                            </div>
-                        </section>
 
                         {/* Password Change */}
                         <section className="neo-card" style={{

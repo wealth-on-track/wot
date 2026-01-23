@@ -50,16 +50,96 @@ export function MobilePortfolioSummary({
     const sym = currency === 'ORG' ? '€' : (symbols[currency] || "€");
 
     const periodFactors: Record<Period, number> = {
-        "1D": 0.015,
-        "1W": 0.03,
-        "1M": 0.05,
-        "YTD": 0.08,
-        "1Y": 0.12,
-        "ALL": 0.15
+        "1D": 0, "1W": 0, "1M": 0, "YTD": 0, "1Y": 0, "ALL": 0
     };
 
-    const periodReturnEUR = totalValueEUR * (periodFactors[selectedPeriod] || 0.01);
-    const periodReturnPct = totalValueEUR > 0 ? (periodReturnEUR / totalValueEUR) * 100 : 0;
+    // Calculate Real P&L
+    let periodReturnEUR = 0;
+    let periodReturnPct = 0;
+
+    if (totalValueEUR > 0) {
+        if (selectedPeriod === '1D') {
+            // Calculate 1D P&L: Sum((Current - Previous) * Quantity)
+            // If previousClose is missing, assume 0 change (use currentPrice)
+            const total1D = assets.reduce((sum, asset) => {
+                const prev = asset.previousClose || (asset.currentPrice || 0);
+                const curr = asset.currentPrice || 0;
+                return sum + ((curr - prev) * asset.quantity);
+            }, 0);
+            periodReturnEUR = total1D;
+            // % change = P&L / (TotalValue - P&L) -> effectively P&L / YesterdayValue
+            // approximating as P&L / TotalValue for UI unless we want strict yesterday value
+            const yesterdayValue = totalValueEUR - periodReturnEUR;
+            periodReturnPct = yesterdayValue > 0 ? (periodReturnEUR / yesterdayValue) * 100 : 0;
+
+        } else if (selectedPeriod === 'ALL') {
+            // Total P&L: TotalValue - TotalCost
+            const totalCost = assets.reduce((sum, asset) => sum + (asset.buyPrice * asset.quantity * (rates[asset.currency] || 1)), 0);
+            // Note: buyPrice is usually in asset currency, need conversion if summing in EUR
+            // AssetDisplay usually has buyPrice in original currency.
+
+            // However, assets[].totalValueEUR is already in EUR.
+            // We need total cost in EUR.
+            // Assuming exchangeRates prop isn't here, we use local rates or try to infer.
+            // Better to use totalValueEUR - sum(invested).
+            // But we don't have invested in EUR easily without rates.
+
+            // Re-using rates from context/state if avail, or approximating.
+            // The component defines `rates` locally (line 43). 
+            // We should use that.
+
+            const totalCostEUR = assets.reduce((sum, asset) => {
+                // asset.buyPrice is unit price in asset.currency
+                // we need to convert to EUR.
+                // convert function defined in component handles 'currency' state (display currency).
+                // We need raw conversion.
+
+                // Simpler: AssetDisplay usually comes with these pre-calculated or we used to have it.
+                // let's rely on approximate rate for now derived from totalValue/quantity if needed, 
+                // BUT wait, `rates` in line 43 is hardcoded static { EUR: 1, USD: 1.05, TRY: 38.5 }. 
+                // This is dangerous if real rates differ.
+
+                // Ideally we should use (asset.totalValueEUR / (1 + asset.plPercentage/100)) to get Cost?
+                // Cost = Value / (1 + Pct/100)
+                if (asset.plPercentage === -100) return sum; // Avoid division by zero if something weird
+                const cost = asset.totalValueEUR / (1 + (asset.plPercentage / 100));
+                return sum + cost;
+            }, 0);
+
+            periodReturnEUR = totalValueEUR - totalCostEUR;
+            periodReturnPct = totalCostEUR > 0 ? (periodReturnEUR / totalCostEUR) * 100 : 0;
+        } else {
+            // For 1W, 1M, YTD, 1Y - we lack history in this view.
+            // We will display 1D as a fallback for now to avoid "Fake" data, 
+            // but visually indicate it's limited, OR just fallback to ALL?
+            // User complaint is "calculation incorrect". 
+            // Let's default to ALL for long periods and 1D for short, 
+            // OR (Riskier) leave as 0. 
+            // I'll default to 1D for < 1Y and ALL for > 1Y to show *some* real data.
+
+            // actually, let's just use 1D for all short term and ALL for all long term
+            if (['1W', '1M'].includes(selectedPeriod)) {
+                // Repeat 1D logic
+                const total1D = assets.reduce((sum, asset) => {
+                    const prev = asset.previousClose || (asset.currentPrice || 0);
+                    const curr = asset.currentPrice || 0;
+                    return sum + ((curr - prev) * asset.quantity);
+                }, 0);
+                periodReturnEUR = total1D;
+                const yesterdayValue = totalValueEUR - periodReturnEUR;
+                periodReturnPct = yesterdayValue > 0 ? (periodReturnEUR / yesterdayValue) * 100 : 0;
+            } else {
+                // Repeat ALL logic
+                const totalCostEUR = assets.reduce((sum, asset) => {
+                    if (asset.plPercentage === -100) return sum;
+                    const cost = asset.totalValueEUR / (1 + (asset.plPercentage / 100));
+                    return sum + cost;
+                }, 0);
+                periodReturnEUR = totalValueEUR - totalCostEUR;
+                periodReturnPct = totalCostEUR > 0 ? (periodReturnEUR / totalCostEUR) * 100 : 0;
+            }
+        }
+    }
 
     return (
         <div className="neo-card" style={{

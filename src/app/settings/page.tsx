@@ -16,8 +16,17 @@ export default async function Settings() {
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        select: { preferences: true }
+        select: {
+            username: true,
+            preferences: true
+        }
     });
 
-    return <SettingsPage userEmail={session.user.email} preferences={user?.preferences as any} />;
+    return (
+        <SettingsPage
+            username={user?.username || ""}
+            userEmail={session.user.email}
+            preferences={user?.preferences as any}
+        />
+    );
 }

@@ -124,6 +124,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             goals={displayedGoals}
             exchangeRates={rates}
             preferences={(user.preferences as any) || undefined}
+            userEmail={user.email}
             navbar={
                 <Navbar
                     totalBalance={totalPortfolioValueEUR}

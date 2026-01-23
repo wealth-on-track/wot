@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import {
     Briefcase, PieChart, TrendingUp, Lightbulb, Eye,
     Target, Trophy, XCircle, Share2, Settings, Hash, Monitor, Pencil, Wallet, Save, X,
-    ChevronUp, ChevronDown, FileSpreadsheet, Trash2, GripVertical
+    ChevronUp, ChevronDown, FileSpreadsheet, Trash2, GripVertical, Upload, ListChecks
 } from "lucide-react";
 import {
     DndContext,
@@ -119,6 +119,7 @@ interface FullScreenLayoutProps {
     goals?: any[];
     exchangeRates?: Record<string, number>;
     preferences?: any;
+    userEmail?: string;
     defaultSection?: SectionId;
 }
 
@@ -130,6 +131,7 @@ export function FullScreenLayout({
     goals = [],
     exchangeRates,
     preferences,
+    userEmail,
     defaultSection = 'open-positions'
 }: FullScreenLayoutProps) {
     const [activeSection, setActiveSection] = useState<SectionId>(defaultSection);
@@ -137,6 +139,7 @@ export function FullScreenLayout({
     const [closedPositionsCount, setClosedPositionsCount] = useState<number>(0);
     const [openPositionsCount, setOpenPositionsCount] = useState<number>(assets.length);
     const [showImportModal, setShowImportModal] = useState(false);
+    const [activePositionTab, setActivePositionTab] = useState<'open' | 'closed'>('open');
 
     // Fetch open and closed positions counts - refetch when activeSection changes
     React.useEffect(() => {
@@ -192,7 +195,7 @@ export function FullScreenLayout({
     const renderContent = () => {
         switch (activeSection) {
             case 'open-positions':
-                return <OpenPositionsFullScreen key={`open-${sectionKey}`} assets={assets} exchangeRates={exchangeRates} globalCurrency={preferences?.currency || 'EUR'} onOpenImport={() => setShowImportModal(true)} onCountChange={refreshCounts} />;
+                return <OpenPositionsFullScreen key={`open-${sectionKey}`} assets={assets} exchangeRates={exchangeRates} globalCurrency={preferences?.currency || 'EUR'} onOpenImport={() => setShowImportModal(true)} onCountChange={refreshCounts} closedPositionsCount={closedPositionsCount} />;
             case 'allocations':
                 return <AllocationsFullScreen assets={assets} exchangeRates={exchangeRates} />;
             case 'performance':
@@ -210,7 +213,7 @@ export function FullScreenLayout({
             case 'share':
                 return <ShareFullScreen key={activeSection} assets={assets} username={username} totalValueEUR={totalValueEUR} />;
             case 'settings':
-                return <SettingsFullScreen key={activeSection} preferences={preferences} />;
+                return <SettingsFullScreen key={activeSection} preferences={preferences} username={username} userEmail={userEmail} />;
             default:
                 return null;
         }
@@ -341,7 +344,8 @@ export function FullScreenLayout({
 // Full Screen Section Components
 
 // 1. Open Positions - Table Only, No Tabs
-function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalCurrency = 'EUR', onOpenImport, onCountChange }: { assets: any[], exchangeRates?: Record<string, number>, globalCurrency?: string, onOpenImport: () => void, onCountChange: () => void }) {
+function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalCurrency = 'EUR', onOpenImport, onCountChange, closedPositionsCount }: { assets: any[], exchangeRates?: Record<string, number>, globalCurrency?: string, onOpenImport: () => void, onCountChange: () => void, closedPositionsCount: number }) {
+    const [activePositionTab, setActivePositionTab] = React.useState<'open' | 'closed'>('open');
     const [isBatchEditMode, setIsBatchEditMode] = React.useState(false);
     const [editedAssets, setEditedAssets] = React.useState<Record<string, any>>({});
     const [assets, setAssets] = React.useState(initialAssets);
@@ -527,639 +531,675 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                 alignItems: 'center',
                 gap: '16px'
             }}>
-                {/* Icon */}
-                <div style={{
-                    width: '36px', height: '36px', borderRadius: '10px',
-                    background: 'var(--bg-primary)', border: '1px solid var(--border)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'var(--text-primary)',
-                    flexShrink: 0
-                }}>
-                    <Briefcase size={18} strokeWidth={2} />
+                {/* Header with Tabs */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                        <button
+                            onClick={() => setActivePositionTab('open')}
+                            style={{
+                                padding: '6px 14px',
+                                borderRadius: '8px',
+                                background: activePositionTab === 'open' ? 'var(--surface)' : 'transparent',
+                                color: activePositionTab === 'open' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                fontWeight: 700,
+                                fontSize: '13px',
+                                border: activePositionTab === 'open' ? '1px solid var(--border)' : 'none',
+                                boxShadow: activePositionTab === 'open' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
+                                cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            <Briefcase size={16} />
+                            <span>Open Positions ({assets.length})</span>
+                        </button>
+                        <button
+                            onClick={() => setActivePositionTab('closed')}
+                            style={{
+                                padding: '6px 14px',
+                                borderRadius: '8px',
+                                background: activePositionTab === 'closed' ? 'var(--surface)' : 'transparent',
+                                color: activePositionTab === 'closed' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                fontWeight: 700,
+                                fontSize: '13px',
+                                border: activePositionTab === 'closed' ? '1px solid var(--border)' : 'none',
+                                boxShadow: activePositionTab === 'closed' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
+                                cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            <XCircle size={16} />
+                            <span>Closed Positions ({closedPositionsCount})</span>
+                        </button>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                        {/* Total Wealth */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                                Total Wealth:
+                            </span>
+                            <span style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                <span style={{ color: 'var(--accent)' }}>€</span>{formatNumber(totalPortfolioValue, 0)}
+                            </span>
+                        </div>
+
+                        <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
+
+                        {/* Import Button */}
+                        <button
+                            onClick={onOpenImport}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border)',
+                                color: 'var(--text-primary)',
+                                fontWeight: 700,
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            <Upload size={16} />
+                            <span>Import</span>
+                        </button>
+                    </div>
                 </div>
+            </div>
 
-                {/* Title & Count */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <h1 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                        Open Positions ({assets.length})
-                    </h1>
-                    <button
-                        onClick={onOpenImport}
-                        style={{
-                            background: 'var(--bg-secondary)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '8px',
-                            width: '32px', height: '32px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer',
-                            color: 'var(--text-secondary)',
-                            transition: 'all 0.2s',
-                            marginLeft: '4px'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.color = 'var(--text-primary)';
-                            e.currentTarget.style.borderColor = 'var(--text-primary)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.color = 'var(--text-secondary)';
-                            e.currentTarget.style.borderColor = 'var(--border)';
-                        }}
-                        title="Import CSV"
-                    >
-                        <FileSpreadsheet size={16} />
-                    </button>
-                </div>
+            {activePositionTab === 'open' && (
+                <>
+                    {/* Divider */}
+                    <div style={{ width: '1px', height: '28px', background: 'var(--border)' }}></div>
 
-                {/* Spacer */}
-                <div style={{ flex: 1 }} />
-
-                {/* Total Wealth */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                        Total Wealth:
-                    </span>
-                    <span style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                        <span style={{ color: 'var(--accent)' }}>€</span>{formatNumber(totalPortfolioValue, 0)}
-                    </span>
-                </div>
-
-                {/* Divider */}
-                <div style={{ width: '1px', height: '28px', background: 'var(--border)' }}></div>
-
-                {/* Batch Edit Button */}
-                <button
-                    onClick={() => {
-                        if (isBatchEditMode) {
-                            // Apply edits to assets
-                            const updatedAssets = assets.map(asset => {
-                                if (editedAssets[asset.id]) {
-                                    const edits = editedAssets[asset.id];
-                                    return {
-                                        ...asset,
-                                        ...edits,
-                                        // Explicitly overwrite key fields to ensure UI updates immediately
-                                        // Update ALL possible aliases for cost/price
-                                        buyPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.buyPrice,
-                                        averageBuyPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.averageBuyPrice,
-                                        avgPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.avgPrice,
-
-                                        // Update portfolio/group fields
-                                        customGroup: edits.portfolio !== undefined ? edits.portfolio : asset.customGroup,
-                                        portfolio: edits.portfolio !== undefined ? edits.portfolio : asset.portfolio,
-
-                                        // Update quantity
-                                        quantity: edits.quantity !== undefined ? Number(edits.quantity) : asset.quantity,
-
-                                        // Update name
-                                        name: edits.name !== undefined ? edits.name : asset.name,
-
-                                        // Update platform
-                                        platform: edits.platform !== undefined ? edits.platform : asset.platform
-                                    };
-                                }
-                                return asset;
-                            });
-
-                            setAssets(updatedAssets);
-
-                            // Persist changes to database
-                            const saveChanges = async () => {
-                                const { updateAsset } = await import('@/lib/actions');
-                                const promises = Object.entries(editedAssets).map(([id, data]) => {
-                                    // Map form fields to API fields
-                                    return updateAsset(id, {
-                                        quantity: data.quantity,
-                                        buyPrice: data.averageBuyPrice, // Map back to buyPrice
-                                        name: data.name,
-                                        platform: data.platform,
-                                        customGroup: data.portfolio
-                                    });
-                                });
-                                await Promise.all(promises);
-                                onCountChange();
-                            };
-                            saveChanges().catch(err => console.error("Batch save failed:", err));
-
-                            // Show success notification
-                            setShowSuccessNotification(true);
-                            setTimeout(() => {
-                                setShowSuccessNotification(false);
-                            }, 2000);
-
-                            setEditedAssets({});
-                            setIsBatchEditMode(false);
-                        } else {
-                            // Initialize editedAssets with current values when entering batch mode
-                            const initialEdits: Record<string, any> = {};
-                            assets.forEach(asset => {
-                                initialEdits[asset.id] = {
-                                    portfolio: asset.portfolio || 'Main',
-                                    platform: asset.platform || 'Interactive Brokers',
-                                    name: asset.name || asset.symbol,
-                                    quantity: asset.quantity,
-                                    averageBuyPrice: asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0
-                                };
-                            });
-                            setEditedAssets(initialEdits);
-                            setIsBatchEditMode(true);
-                        }
-                    }}
-                    style={{
-                        background: isBatchEditMode ? 'var(--accent)' : 'transparent',
-                        border: isBatchEditMode ? '1px solid var(--accent)' : '1px dashed var(--border)',
-                        borderRadius: '8px',
-                        padding: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                        color: isBatchEditMode ? '#fff' : 'var(--text-muted)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        minWidth: isBatchEditMode ? '72px' : '36px',
-                        height: '36px',
-                        flexShrink: 0
-                    }}
-                    onMouseEnter={(e) => {
-                        if (!isBatchEditMode) {
-                            e.currentTarget.style.borderColor = 'var(--text-primary)';
-                            e.currentTarget.style.color = 'var(--text-primary)';
-                        }
-                    }}
-                    onMouseLeave={(e) => {
-                        if (!isBatchEditMode) {
-                            e.currentTarget.style.borderColor = 'var(--border)';
-                            e.currentTarget.style.color = 'var(--text-muted)';
-                        }
-                    }}
-                    title={isBatchEditMode ? "Save Changes" : "Batch Edit"}>
-                    {isBatchEditMode ? (
-                        <>
-                            <Save size={16} />
-                        </>
-                    ) : (
-                        <Pencil size={16} />
-                    )}
-                </button>
-
-                {/* Cancel Button - Only show in batch edit mode */}
-                {isBatchEditMode && (
+                    {/* Batch Edit Button */}
                     <button
                         onClick={() => {
-                            setEditedAssets({});
-                            setIsBatchEditMode(false);
+                            if (isBatchEditMode) {
+                                // Apply edits to assets
+                                const updatedAssets = assets.map(asset => {
+                                    if (editedAssets[asset.id]) {
+                                        const edits = editedAssets[asset.id];
+                                        return {
+                                            ...asset,
+                                            ...edits,
+                                            // Explicitly overwrite key fields to ensure UI updates immediately
+                                            // Update ALL possible aliases for cost/price
+                                            buyPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.buyPrice,
+                                            averageBuyPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.averageBuyPrice,
+                                            avgPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.avgPrice,
+
+                                            // Update portfolio/group fields
+                                            customGroup: edits.portfolio !== undefined ? edits.portfolio : asset.customGroup,
+                                            portfolio: edits.portfolio !== undefined ? edits.portfolio : asset.portfolio,
+
+                                            // Update quantity
+                                            quantity: edits.quantity !== undefined ? Number(edits.quantity) : asset.quantity,
+
+                                            // Update name
+                                            name: edits.name !== undefined ? edits.name : asset.name,
+
+                                            // Update platform
+                                            platform: edits.platform !== undefined ? edits.platform : asset.platform
+                                        };
+                                    }
+                                    return asset;
+                                });
+
+                                setAssets(updatedAssets);
+
+                                // Persist changes to database
+                                const saveChanges = async () => {
+                                    const { updateAsset } = await import('@/lib/actions');
+                                    const promises = Object.entries(editedAssets).map(([id, data]) => {
+                                        // Map form fields to API fields
+                                        return updateAsset(id, {
+                                            quantity: data.quantity,
+                                            buyPrice: data.averageBuyPrice, // Map back to buyPrice
+                                            name: data.name,
+                                            platform: data.platform,
+                                            customGroup: data.portfolio
+                                        });
+                                    });
+                                    await Promise.all(promises);
+                                    onCountChange();
+                                };
+                                saveChanges().catch(err => console.error("Batch save failed:", err));
+
+                                // Show success notification
+                                setShowSuccessNotification(true);
+                                setTimeout(() => {
+                                    setShowSuccessNotification(false);
+                                }, 2000);
+
+                                setEditedAssets({});
+                                setIsBatchEditMode(false);
+                            } else {
+                                // Initialize editedAssets with current values when entering batch mode
+                                const initialEdits: Record<string, any> = {};
+                                assets.forEach(asset => {
+                                    initialEdits[asset.id] = {
+                                        portfolio: asset.portfolio || 'Main',
+                                        platform: asset.platform || 'Interactive Brokers',
+                                        name: asset.name || asset.symbol,
+                                        quantity: asset.quantity,
+                                        averageBuyPrice: asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0
+                                    };
+                                });
+                                setEditedAssets(initialEdits);
+                                setIsBatchEditMode(true);
+                            }
                         }}
                         style={{
-                            background: 'transparent',
-                            border: '1px solid var(--border)',
+                            background: isBatchEditMode ? 'var(--accent)' : 'transparent',
+                            border: isBatchEditMode ? '1px solid var(--accent)' : '1px dashed var(--border)',
                             borderRadius: '8px',
                             padding: '8px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: 'var(--text-muted)',
+                            gap: '4px',
+                            color: isBatchEditMode ? '#fff' : 'var(--text-muted)',
                             cursor: 'pointer',
                             transition: 'all 0.2s',
-                            width: '36px',
+                            minWidth: isBatchEditMode ? '72px' : '36px',
                             height: '36px',
                             flexShrink: 0
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = '#ef4444';
-                            e.currentTarget.style.color = '#ef4444';
+                            if (!isBatchEditMode) {
+                                e.currentTarget.style.borderColor = 'var(--text-primary)';
+                                e.currentTarget.style.color = 'var(--text-primary)';
+                            }
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--border)';
-                            e.currentTarget.style.color = 'var(--text-muted)';
+                            if (!isBatchEditMode) {
+                                e.currentTarget.style.borderColor = 'var(--border)';
+                                e.currentTarget.style.color = 'var(--text-muted)';
+                            }
                         }}
-                        title="Cancel">
-                        <X size={16} />
+                        title={isBatchEditMode ? "Save Changes" : "Batch Edit"}>
+                        {isBatchEditMode ? (
+                            <>
+                                <Save size={16} />
+                            </>
+                        ) : (
+                            <Pencil size={16} />
+                        )}
                     </button>
-                )}
 
-                {/* Success Notification Toast */}
-                {showSuccessNotification && (
+                    {/* Cancel Button - Only show in batch edit mode */}
+                    {isBatchEditMode && (
+                        <button
+                            onClick={() => {
+                                setEditedAssets({});
+                                setIsBatchEditMode(false);
+                            }}
+                            style={{
+                                background: 'transparent',
+                                border: '1px solid var(--border)',
+                                borderRadius: '8px',
+                                padding: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--text-muted)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                width: '36px',
+                                height: '36px',
+                                flexShrink: 0
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = '#ef4444';
+                                e.currentTarget.style.color = '#ef4444';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--border)';
+                                e.currentTarget.style.color = 'var(--text-muted)';
+                            }}
+                            title="Cancel">
+                            <X size={16} />
+                        </button>
+                    )}
+
+                    {/* Success Notification Toast */}
+                    {showSuccessNotification && (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 16px',
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            color: '#fff',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                            animation: 'fadeIn 0.3s ease-out',
+                            marginLeft: '8px'
+                        }}>
+                            <Save size={16} />
+                            <span>Saved successfully!</span>
+                        </div>
+                    )}
+
                     <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 16px',
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: '#fff',
-                        borderRadius: '8px',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-                        animation: 'fadeIn 0.3s ease-out',
-                        marginLeft: '8px'
+                        background: 'var(--surface)',
+                        borderRadius: '16px',
+                        border: '1px solid var(--border)',
+                        overflow: 'visible',
+                        boxShadow: 'var(--shadow-md)'
                     }}>
-                        <Save size={16} />
-                        <span>Saved successfully!</span>
-                    </div>
-                )}
-            </div>
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleDragEnd}
+                        >
+                            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                                <thead>
+                                    <tr style={{ background: 'var(--bg-secondary)', height: sizing.headerHeight }}>
+                                        {/* Drag Handle Header */}
+                                        <th style={{ width: '30px', borderBottom: '1px solid var(--border)' }} />
+                                        {/* Portfolio Icon Header */}
+                                        <th style={{ padding: '0 12px', textAlign: 'center', color: 'var(--text-muted)', width: '60px', borderBottom: '1px solid var(--border)' }}>
+                                            <Wallet size={sizing.iconSize} strokeWidth={2.5} />
+                                        </th>
+                                        {/* Platform Icon Header */}
+                                        <th style={{ padding: '0 12px', textAlign: 'center', color: 'var(--text-muted)', width: '110px', borderBottom: '1px solid var(--border)' }}>
+                                            <Monitor size={sizing.iconSize} strokeWidth={2.5} />
+                                        </th>
+                                        {/* Asset */}
+                                        <th style={{ padding: '0 16px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                                            Asset Name
+                                        </th>
+                                        {/* Qty Icon Header */}
+                                        <th style={{ padding: '0 12px', textAlign: 'right', color: 'var(--text-muted)', width: '80px', borderBottom: '1px solid var(--border)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                                                <Hash size={sizing.iconSize} strokeWidth={2.5} />
+                                            </div>
+                                        </th>
+                                        {/* Price */}
+                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                                            <div>Price</div>
+                                            <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost</div>
+                                        </th>
+                                        {/* Total Value Org */}
+                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                                            <div>Value</div>
+                                            <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost</div>
+                                        </th>
+                                        {/* Total Value Global */}
+                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                                            <div>Value ({getCurrencySymbol(globalCurrency)})</div>
+                                            <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost ({getCurrencySymbol(globalCurrency)})</div>
+                                        </th>
+                                        {/* Weight */}
+                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                                            Weight
+                                        </th>
+                                        {/* P&L */}
+                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                                            <div>P&L</div>
+                                            <div style={{ opacity: 0.5, fontWeight: 500 }}>Amt</div>
+                                        </th>
+                                        {/* Delete Action (Batch Mode Only) */}
+                                        <th style={{
+                                            padding: isBatchEditMode ? '0 12px' : '0',
+                                            width: isBatchEditMode ? '60px' : '0px',
+                                            opacity: isBatchEditMode ? 1 : 0,
+                                            transition: 'all 0.3s ease',
+                                            overflow: 'hidden',
+                                            borderBottom: '1px solid var(--border)'
+                                        }} />
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <SortableContext
+                                        items={assets.map(a => a.id)}
+                                        strategy={verticalListSortingStrategy}
+                                    >
+                                        {assets.map((asset, i) => {
+                                            const isLast = i === assets.length - 1;
 
-            <div style={{
-                background: 'var(--surface)',
-                borderRadius: '16px',
-                border: '1px solid var(--border)',
-                overflow: 'visible',
-                boxShadow: 'var(--shadow-md)'
-            }}>
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                >
-                    <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
-                        <thead>
-                            <tr style={{ background: 'var(--bg-secondary)', height: sizing.headerHeight }}>
-                                {/* Drag Handle Header */}
-                                <th style={{ width: '30px', borderBottom: '1px solid var(--border)' }} />
-                                {/* Portfolio Icon Header */}
-                                <th style={{ padding: '0 12px', textAlign: 'center', color: 'var(--text-muted)', width: '60px', borderBottom: '1px solid var(--border)' }}>
-                                    <Wallet size={sizing.iconSize} strokeWidth={2.5} />
-                                </th>
-                                {/* Platform Icon Header */}
-                                <th style={{ padding: '0 12px', textAlign: 'center', color: 'var(--text-muted)', width: '110px', borderBottom: '1px solid var(--border)' }}>
-                                    <Monitor size={sizing.iconSize} strokeWidth={2.5} />
-                                </th>
-                                {/* Asset */}
-                                <th style={{ padding: '0 16px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
-                                    Asset Name
-                                </th>
-                                {/* Qty Icon Header */}
-                                <th style={{ padding: '0 12px', textAlign: 'right', color: 'var(--text-muted)', width: '80px', borderBottom: '1px solid var(--border)' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                                        <Hash size={sizing.iconSize} strokeWidth={2.5} />
-                                    </div>
-                                </th>
-                                {/* Price */}
-                                <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
-                                    <div>Price</div>
-                                    <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost</div>
-                                </th>
-                                {/* Total Value Org */}
-                                <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
-                                    <div>Value</div>
-                                    <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost</div>
-                                </th>
-                                {/* Total Value Global */}
-                                <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
-                                    <div>Value ({getCurrencySymbol(globalCurrency)})</div>
-                                    <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost ({getCurrencySymbol(globalCurrency)})</div>
-                                </th>
-                                {/* Weight */}
-                                <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
-                                    Weight
-                                </th>
-                                {/* P&L */}
-                                <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
-                                    <div>P&L</div>
-                                    <div style={{ opacity: 0.5, fontWeight: 500 }}>Amt</div>
-                                </th>
-                                {/* Delete Action (Batch Mode Only) */}
-                                <th style={{
-                                    padding: isBatchEditMode ? '0 12px' : '0',
-                                    width: isBatchEditMode ? '60px' : '0px',
-                                    opacity: isBatchEditMode ? 1 : 0,
-                                    transition: 'all 0.3s ease',
-                                    overflow: 'hidden',
-                                    borderBottom: '1px solid var(--border)'
-                                }} />
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <SortableContext
-                                items={assets.map(a => a.id)}
-                                strategy={verticalListSortingStrategy}
-                            >
-                                {assets.map((asset, i) => {
-                                    const isLast = i === assets.length - 1;
+                                            // Calculations per row for consistent display
+                                            const calculateValues = () => {
+                                                const price = asset.currentPrice || asset.price || asset.previousClose || 0;
+                                                const cost = asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0;
+                                                const quantity = asset.quantity || 0;
+                                                const value = price * quantity;
+                                                const costValue = cost * quantity;
 
-                                    // Calculations per row for consistent display
-                                    const calculateValues = () => {
-                                        const price = asset.currentPrice || asset.price || asset.previousClose || 0;
-                                        const cost = asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0;
-                                        const quantity = asset.quantity || 0;
-                                        const value = price * quantity;
-                                        const costValue = cost * quantity;
+                                                const currency = asset.currency || 'EUR';
 
-                                        const currency = asset.currency || 'EUR';
+                                                // Calculate values in EUR first (Base)
+                                                let rateToEur = 1;
+                                                if (currency !== 'EUR') {
+                                                    if (exchangeRates && exchangeRates[currency]) {
+                                                        rateToEur = exchangeRates[currency];
+                                                    }
+                                                }
+                                                const valueEur = value / rateToEur;
+                                                const costEur = costValue / rateToEur;
 
-                                        // Calculate values in EUR first (Base)
-                                        let rateToEur = 1;
-                                        if (currency !== 'EUR') {
-                                            if (exchangeRates && exchangeRates[currency]) {
-                                                rateToEur = exchangeRates[currency];
-                                            }
-                                        }
-                                        const valueEur = value / rateToEur;
-                                        const costEur = costValue / rateToEur;
+                                                // Convert to Global Currency (e.g. USD) if needed
+                                                let globalRate = 1;
+                                                if (globalCurrency !== 'EUR') {
+                                                    if (exchangeRates && exchangeRates[globalCurrency]) {
+                                                        globalRate = exchangeRates[globalCurrency];
+                                                    }
+                                                }
 
-                                        // Convert to Global Currency (e.g. USD) if needed
-                                        let globalRate = 1;
-                                        if (globalCurrency !== 'EUR') {
-                                            if (exchangeRates && exchangeRates[globalCurrency]) {
-                                                globalRate = exchangeRates[globalCurrency];
-                                            }
-                                        }
+                                                const valueGlobal = valueEur * globalRate;
+                                                const costGlobal = costEur * globalRate;
+                                                const plAmount = valueGlobal - costGlobal;
+                                                const weight = totalPortfolioValue > 0 ? (valueEur / totalPortfolioValue) * 100 : 0;
 
-                                        const valueGlobal = valueEur * globalRate;
-                                        const costGlobal = costEur * globalRate;
-                                        const plAmount = valueGlobal - costGlobal;
-                                        const weight = totalPortfolioValue > 0 ? (valueEur / totalPortfolioValue) * 100 : 0;
+                                                return { value, costValue, valueGlobal, costGlobal, plAmount, weight, currency, price, cost };
+                                            };
 
-                                        return { value, costValue, valueGlobal, costGlobal, plAmount, weight, currency, price, cost };
-                                    };
+                                            const { value, costValue, valueGlobal, costGlobal, plAmount, weight, currency, price, cost } = calculateValues();
 
-                                    const { value, costValue, valueGlobal, costGlobal, plAmount, weight, currency, price, cost } = calculateValues();
-
-                                    return (
-                                        <SortableRow
-                                            key={asset.id}
-                                            id={asset.id}
-                                            isBatchEditMode={isBatchEditMode}
-                                        >
-                                            {/* Portfolio Pill */}
-                                            <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                {isBatchEditMode ? (
-                                                    <input
-                                                        type="text"
-                                                        value={getCurrentValue(asset.id, 'portfolio', asset.portfolio || 'Main')}
-                                                        onChange={(e) => {
-                                                            setEditedAssets(prev => ({
-                                                                ...prev,
-                                                                [asset.id]: { ...prev[asset.id], portfolio: e.target.value }
-                                                            }));
-                                                        }}
-                                                        style={{
-                                                            width: '100%',
-                                                            padding: sizing.inputPadding,
-                                                            borderRadius: '6px',
-                                                            background: 'var(--bg-primary)',
-                                                            border: '1px solid var(--accent)',
-                                                            fontSize: sizing.pillFontSize,
-                                                            fontWeight: 700,
-                                                            color: 'var(--text-primary)',
-                                                            textAlign: 'center'
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div style={{
-                                                        display: 'inline-flex', padding: sizing.pillPadding,
-                                                        borderRadius: '6px',
-                                                        background: 'var(--bg-primary)',
-                                                        border: '1px solid var(--border)',
-                                                        fontSize: sizing.pillFontSize, fontWeight: 700,
-                                                        color: 'var(--text-secondary)',
-                                                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                                                    }}>
-                                                        {asset.portfolio || 'Main'}
-                                                    </div>
-                                                )}
-                                            </td>
-                                            {/* Platform Pill */}
-                                            <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                {isBatchEditMode ? (
-                                                    <input
-                                                        type="text"
-                                                        value={getCurrentValue(asset.id, 'platform', asset.platform || 'Interactive Brokers')}
-                                                        onChange={(e) => {
-                                                            setEditedAssets(prev => ({
-                                                                ...prev,
-                                                                [asset.id]: { ...prev[asset.id], platform: e.target.value }
-                                                            }));
-                                                        }}
-                                                        style={{
-                                                            width: '100%',
-                                                            padding: sizing.inputPadding,
-                                                            borderRadius: '6px',
-                                                            background: 'var(--bg-primary)',
-                                                            border: '1px solid var(--accent)',
-                                                            fontSize: sizing.pillFontSize,
-                                                            fontWeight: 700,
-                                                            color: 'var(--text-primary)',
-                                                            textAlign: 'center'
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div style={{
-                                                        display: 'inline-flex', padding: sizing.pillPadding,
-                                                        borderRadius: '6px',
-                                                        background: 'var(--bg-primary)',
-                                                        border: '1px solid var(--border)',
-                                                        fontSize: sizing.pillFontSize, fontWeight: 700,
-                                                        color: 'var(--text-secondary)',
-                                                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                                                    }}>
-                                                        {asset.platform || 'Interactive Brokers'}
-                                                    </div>
-                                                )}
-                                            </td>
-                                            {/* Asset (Logo + Name) */}
-                                            <td style={{ padding: `${sizing.rowPadding} ${sizing.rowPaddingLR}`, verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <div style={{
-                                                        width: `${sizing.logoSize}px`, height: `${sizing.logoSize}px`,
-                                                        borderRadius: '50%', overflow: 'hidden',
-                                                        background: '#fff',
-                                                        border: '1px solid var(--border-light)',
-                                                        flexShrink: 0,
-                                                        padding: '2px',
-                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
-                                                    }}>
-                                                        <img
-                                                            src={getLogoUrl(asset.symbol, asset.type || 'STOCK', asset.exchange, asset.country) || ''}
-                                                            alt={asset.symbol}
-                                                            style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
-                                                            onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random` }}
-                                                        />
-                                                    </div>
-                                                    <div style={{ flex: 1 }}>
-                                                        {isBatchEditMode ? (
-                                                            <>
-                                                                <input
-                                                                    type="text"
-                                                                    value={getCurrentValue(asset.id, 'name', asset.name || asset.symbol)}
-                                                                    onChange={(e) => {
-                                                                        setEditedAssets(prev => ({
-                                                                            ...prev,
-                                                                            [asset.id]: { ...prev[asset.id], name: e.target.value }
-                                                                        }));
-                                                                    }}
-                                                                    style={{
-                                                                        width: '100%',
-                                                                        padding: '2px 4px',
-                                                                        marginBottom: '2px',
-                                                                        borderRadius: '4px',
-                                                                        background: 'var(--bg-primary)',
-                                                                        border: '1px solid var(--accent)',
-                                                                        fontSize: '14px',
-                                                                        fontWeight: 700,
-                                                                        color: 'var(--text-primary)'
-                                                                    }}
-                                                                />
-                                                                <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500, marginTop: '2px' }}>{asset.symbol}</div>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <div style={{ fontSize: sizing.assetNameSize, fontWeight: 700, color: 'var(--text-primary)' }}>{asset.name || asset.symbol}</div>
-                                                                <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500 }}>{asset.symbol}</div>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            {/* Qty */}
-                                            <td style={{ padding: `${sizing.rowPaddingLR} 12px`, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                {isBatchEditMode ? (
-                                                    <input
-                                                        type="number"
-                                                        value={getCurrentValue(asset.id, 'quantity', asset.quantity)}
-                                                        onChange={(e) => {
-                                                            setEditedAssets(prev => ({
-                                                                ...prev,
-                                                                [asset.id]: { ...prev[asset.id], quantity: parseFloat(e.target.value) || 0 }
-                                                            }));
-                                                        }}
-                                                        style={{
-                                                            width: '100%',
-                                                            padding: '4px 8px',
-                                                            borderRadius: '6px',
-                                                            background: 'var(--bg-primary)',
-                                                            border: '1px solid var(--accent)',
-                                                            fontSize: '14px',
-                                                            fontWeight: 700,
-                                                            color: 'var(--text-primary)',
-                                                            textAlign: 'right'
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                        {formatNumber(asset.quantity, 0)}
-                                                    </div>
-                                                )}
-                                            </td>
-                                            {/* Price / Cost */}
-                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                    {getCurrencySymbol(currency)}{formatNumber(price)}
-                                                </div>
-                                                {isBatchEditMode ? (
-                                                    <input
-                                                        type="number"
-                                                        step="0.01"
-                                                        value={getCurrentValue(asset.id, 'averageBuyPrice', cost)}
-                                                        onChange={(e) => {
-                                                            setEditedAssets(prev => ({
-                                                                ...prev,
-                                                                [asset.id]: { ...prev[asset.id], averageBuyPrice: parseFloat(e.target.value) || 0 }
-                                                            }));
-                                                        }}
-                                                        style={{
-                                                            width: '100%',
-                                                            padding: '2px 4px',
-                                                            marginTop: '2px',
-                                                            borderRadius: '4px',
-                                                            background: 'var(--bg-primary)',
-                                                            border: '1px solid var(--accent)',
-                                                            fontSize: '12px',
-                                                            fontWeight: 500,
-                                                            color: 'var(--text-primary)',
-                                                            textAlign: 'right'
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
-                                                        {getCurrencySymbol(currency)}{formatNumber(cost)}
-                                                    </div>
-                                                )}
-                                            </td>
-                                            {/* Value / Cost (Local) */}
-                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                    {currency !== globalCurrency && value > 0 ? `${getCurrencySymbol(currency)}${formatNumber(value, 0)}` : '-'}
-                                                </div>
-                                                <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
-                                                    {currency !== globalCurrency && costValue > 0 ? `${getCurrencySymbol(currency)}${formatNumber(costValue, 0)}` : '-'}
-                                                </div>
-                                            </td>
-                                            {/* Value / Cost (Global) */}
-                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                    {valueGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(valueGlobal, 0)}` : '-'}
-                                                </div>
-                                                <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
-                                                    {costGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(costGlobal, 0)}` : '-'}
-                                                </div>
-                                            </td>
-                                            {/* Weight */}
-                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
-                                                    {Math.round(weight)}%
-                                                </div>
-                                            </td>
-                                            {/* P&L */}
-                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                <div style={{ fontSize: sizing.numberSize, fontWeight: 800, color: (asset.plPercentage || 0) >= 0 ? '#34d399' : '#f87171', fontVariantNumeric: 'tabular-nums' }}>
-                                                    {(asset.plPercentage || 0) >= 0 ? '+' : ''}{Math.round(asset.plPercentage || 0)}%
-                                                </div>
-                                                <div style={{ fontSize: sizing.smallNumberSize, color: plAmount >= 0 ? '#34d399' : '#f87171', marginTop: '2px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                                                    {plAmount >= 0 ? '+' : ''}{getCurrencySymbol(globalCurrency)}{formatNumber(plAmount, 0)}
-                                                </div>
-                                            </td>
-                                            {/* Delete Action Button */}
-                                            <td style={{
-                                                padding: isBatchEditMode ? sizing.rowPadding : 0,
-                                                width: isBatchEditMode ? '60px' : '0px',
-                                                maxWidth: isBatchEditMode ? '60px' : '0px',
-                                                opacity: isBatchEditMode ? 1 : 0,
-                                                textAlign: 'center',
-                                                verticalAlign: 'middle',
-                                                borderBottom: isLast ? 'none' : '1px solid var(--border-light)',
-                                                transition: 'all 0.3s ease',
-                                                overflow: 'hidden',
-                                                visibility: isBatchEditMode ? 'visible' : 'hidden'
-                                            }}>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDelete(asset.id);
-                                                    }}
-                                                    style={{
-                                                        background: 'var(--bg-secondary)',
-                                                        border: '1px solid var(--border)',
-                                                        borderRadius: '8px',
-                                                        width: '32px', height: '32px',
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        cursor: 'pointer',
-                                                        color: '#ef4444',
-                                                        transition: 'all 0.2s',
-                                                        opacity: isBatchEditMode ? 1 : 0,
-                                                        transform: isBatchEditMode ? 'scale(1)' : 'scale(0.8)'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.currentTarget.style.background = '#fee2e2';
-                                                        e.currentTarget.style.borderColor = '#ef4444';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.currentTarget.style.background = 'var(--bg-secondary)';
-                                                        e.currentTarget.style.borderColor = 'var(--border)';
-                                                    }}
-                                                    title="Delete Position"
+                                            return (
+                                                <SortableRow
+                                                    key={asset.id}
+                                                    id={asset.id}
+                                                    isBatchEditMode={isBatchEditMode}
                                                 >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </td>
-                                        </SortableRow>
-                                    );
-                                })}
-                            </SortableContext>
-                        </tbody>
-                    </table>
-                </DndContext>
-            </div>
+                                                    {/* Portfolio Pill */}
+                                                    <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
+                                                        {isBatchEditMode ? (
+                                                            <input
+                                                                type="text"
+                                                                value={getCurrentValue(asset.id, 'portfolio', asset.portfolio || 'Main')}
+                                                                onChange={(e) => {
+                                                                    setEditedAssets(prev => ({
+                                                                        ...prev,
+                                                                        [asset.id]: { ...prev[asset.id], portfolio: e.target.value }
+                                                                    }));
+                                                                }}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    padding: sizing.inputPadding,
+                                                                    borderRadius: '6px',
+                                                                    background: 'var(--bg-primary)',
+                                                                    border: '1px solid var(--accent)',
+                                                                    fontSize: sizing.pillFontSize,
+                                                                    fontWeight: 700,
+                                                                    color: 'var(--text-primary)',
+                                                                    textAlign: 'center'
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <div style={{
+                                                                display: 'inline-flex', padding: sizing.pillPadding,
+                                                                borderRadius: '6px',
+                                                                background: 'var(--bg-primary)',
+                                                                border: '1px solid var(--border)',
+                                                                fontSize: sizing.pillFontSize, fontWeight: 700,
+                                                                color: 'var(--text-secondary)',
+                                                                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                                                            }}>
+                                                                {asset.portfolio || 'Main'}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    {/* Platform Pill */}
+                                                    <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
+                                                        {isBatchEditMode ? (
+                                                            <input
+                                                                type="text"
+                                                                value={getCurrentValue(asset.id, 'platform', asset.platform || 'Interactive Brokers')}
+                                                                onChange={(e) => {
+                                                                    setEditedAssets(prev => ({
+                                                                        ...prev,
+                                                                        [asset.id]: { ...prev[asset.id], platform: e.target.value }
+                                                                    }));
+                                                                }}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    padding: sizing.inputPadding,
+                                                                    borderRadius: '6px',
+                                                                    background: 'var(--bg-primary)',
+                                                                    border: '1px solid var(--accent)',
+                                                                    fontSize: sizing.pillFontSize,
+                                                                    fontWeight: 700,
+                                                                    color: 'var(--text-primary)',
+                                                                    textAlign: 'center'
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <div style={{
+                                                                display: 'inline-flex', padding: sizing.pillPadding,
+                                                                borderRadius: '6px',
+                                                                background: 'var(--bg-primary)',
+                                                                border: '1px solid var(--border)',
+                                                                fontSize: sizing.pillFontSize, fontWeight: 700,
+                                                                color: 'var(--text-secondary)',
+                                                                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                                                            }}>
+                                                                {asset.platform || 'Interactive Brokers'}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    {/* Asset (Logo + Name) */}
+                                                    <td style={{ padding: `${sizing.rowPadding} ${sizing.rowPaddingLR}`, verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                            <div style={{
+                                                                width: `${sizing.logoSize}px`, height: `${sizing.logoSize}px`,
+                                                                borderRadius: '50%', overflow: 'hidden',
+                                                                background: '#fff',
+                                                                border: '1px solid var(--border-light)',
+                                                                flexShrink: 0,
+                                                                padding: '2px',
+                                                                boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
+                                                            }}>
+                                                                <img
+                                                                    src={getLogoUrl(asset.symbol, asset.type || 'STOCK', asset.exchange, asset.country) || ''}
+                                                                    alt={asset.symbol}
+                                                                    style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
+                                                                    onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random` }}
+                                                                />
+                                                            </div>
+                                                            <div style={{ flex: 1 }}>
+                                                                {isBatchEditMode ? (
+                                                                    <>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={getCurrentValue(asset.id, 'name', asset.name || asset.symbol)}
+                                                                            onChange={(e) => {
+                                                                                setEditedAssets(prev => ({
+                                                                                    ...prev,
+                                                                                    [asset.id]: { ...prev[asset.id], name: e.target.value }
+                                                                                }));
+                                                                            }}
+                                                                            style={{
+                                                                                width: '100%',
+                                                                                padding: '2px 4px',
+                                                                                marginBottom: '2px',
+                                                                                borderRadius: '4px',
+                                                                                background: 'var(--bg-primary)',
+                                                                                border: '1px solid var(--accent)',
+                                                                                fontSize: '14px',
+                                                                                fontWeight: 700,
+                                                                                color: 'var(--text-primary)'
+                                                                            }}
+                                                                        />
+                                                                        <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500, marginTop: '2px' }}>{asset.symbol}</div>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <div style={{ fontSize: sizing.assetNameSize, fontWeight: 700, color: 'var(--text-primary)' }}>{asset.name || asset.symbol}</div>
+                                                                        <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500 }}>{asset.symbol}</div>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    {/* Qty */}
+                                                    <td style={{ padding: `${sizing.rowPaddingLR} 12px`, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
+                                                        {isBatchEditMode ? (
+                                                            <input
+                                                                type="number"
+                                                                value={getCurrentValue(asset.id, 'quantity', asset.quantity)}
+                                                                onChange={(e) => {
+                                                                    setEditedAssets(prev => ({
+                                                                        ...prev,
+                                                                        [asset.id]: { ...prev[asset.id], quantity: parseFloat(e.target.value) || 0 }
+                                                                    }));
+                                                                }}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    padding: '4px 8px',
+                                                                    borderRadius: '6px',
+                                                                    background: 'var(--bg-primary)',
+                                                                    border: '1px solid var(--accent)',
+                                                                    fontSize: '14px',
+                                                                    fontWeight: 700,
+                                                                    color: 'var(--text-primary)',
+                                                                    textAlign: 'right'
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                {formatNumber(asset.quantity, 0)}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    {/* Price / Cost */}
+                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
+                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                            {getCurrencySymbol(currency)}{formatNumber(price)}
+                                                        </div>
+                                                        {isBatchEditMode ? (
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                value={getCurrentValue(asset.id, 'averageBuyPrice', cost)}
+                                                                onChange={(e) => {
+                                                                    setEditedAssets(prev => ({
+                                                                        ...prev,
+                                                                        [asset.id]: { ...prev[asset.id], averageBuyPrice: parseFloat(e.target.value) || 0 }
+                                                                    }));
+                                                                }}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    padding: '2px 4px',
+                                                                    marginTop: '2px',
+                                                                    borderRadius: '4px',
+                                                                    background: 'var(--bg-primary)',
+                                                                    border: '1px solid var(--accent)',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: 500,
+                                                                    color: 'var(--text-primary)',
+                                                                    textAlign: 'right'
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                                                                {getCurrencySymbol(currency)}{formatNumber(cost)}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    {/* Value / Cost (Local) */}
+                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
+                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                            {currency !== globalCurrency && value > 0 ? `${getCurrencySymbol(currency)}${formatNumber(value, 0)}` : '-'}
+                                                        </div>
+                                                        <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                                                            {currency !== globalCurrency && costValue > 0 ? `${getCurrencySymbol(currency)}${formatNumber(costValue, 0)}` : '-'}
+                                                        </div>
+                                                    </td>
+                                                    {/* Value / Cost (Global) */}
+                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
+                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                            {valueGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(valueGlobal, 0)}` : '-'}
+                                                        </div>
+                                                        <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                                                            {costGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(costGlobal, 0)}` : '-'}
+                                                        </div>
+                                                    </td>
+                                                    {/* Weight */}
+                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
+                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
+                                                            {Math.round(weight)}%
+                                                        </div>
+                                                    </td>
+                                                    {/* P&L */}
+                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
+                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 800, color: (asset.plPercentage || 0) >= 0 ? '#34d399' : '#f87171', fontVariantNumeric: 'tabular-nums' }}>
+                                                            {(asset.plPercentage || 0) >= 0 ? '+' : ''}{Math.round(asset.plPercentage || 0)}%
+                                                        </div>
+                                                        <div style={{ fontSize: sizing.smallNumberSize, color: plAmount >= 0 ? '#34d399' : '#f87171', marginTop: '2px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                                                            {plAmount >= 0 ? '+' : ''}{getCurrencySymbol(globalCurrency)}{formatNumber(plAmount, 0)}
+                                                        </div>
+                                                    </td>
+                                                    {/* Delete Action Button */}
+                                                    <td style={{
+                                                        padding: isBatchEditMode ? sizing.rowPadding : 0,
+                                                        width: isBatchEditMode ? '60px' : '0px',
+                                                        maxWidth: isBatchEditMode ? '60px' : '0px',
+                                                        opacity: isBatchEditMode ? 1 : 0,
+                                                        textAlign: 'center',
+                                                        verticalAlign: 'middle',
+                                                        borderBottom: isLast ? 'none' : '1px solid var(--border-light)',
+                                                        transition: 'all 0.3s ease',
+                                                        overflow: 'hidden',
+                                                        visibility: isBatchEditMode ? 'visible' : 'hidden'
+                                                    }}>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDelete(asset.id);
+                                                            }}
+                                                            style={{
+                                                                background: 'var(--bg-secondary)',
+                                                                border: '1px solid var(--border)',
+                                                                borderRadius: '8px',
+                                                                width: '32px', height: '32px',
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                cursor: 'pointer',
+                                                                color: '#ef4444',
+                                                                transition: 'all 0.2s',
+                                                                opacity: isBatchEditMode ? 1 : 0,
+                                                                transform: isBatchEditMode ? 'scale(1)' : 'scale(0.8)'
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.background = '#fee2e2';
+                                                                e.currentTarget.style.borderColor = '#ef4444';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.background = 'var(--bg-secondary)';
+                                                                e.currentTarget.style.borderColor = 'var(--border)';
+                                                            }}
+                                                            title="Delete Position"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </td>
+                                                </SortableRow>
+                                            );
+                                        })}
+                                    </SortableContext>
+                                </tbody>
+                            </table>
+                        </DndContext>
+                    </div>
+                </>
+            )}
+            {activePositionTab === 'closed' && (
+                <div style={{ marginTop: '0', width: '100%' }}>
+                    <ClosedPositionsFullScreen
+                        onOpenImport={onOpenImport}
+                        onCountChange={onCountChange}
+                        hideHeader={true}
+                    />
+                </div>
+            )
+            }
 
         </div>
     );
@@ -2042,7 +2082,7 @@ function TopPerformersFullScreen({ assets }: { assets: any[] }) {
 }
 
 // 8. Closed Positions - Full Table (Matching Card View Design)
-function ClosedPositionsFullScreen({ onOpenImport, onCountChange }: { onOpenImport: () => void, onCountChange: () => void }) {
+function ClosedPositionsFullScreen({ onOpenImport, onCountChange, hideHeader = false }: { onOpenImport: () => void, onCountChange: () => void, hideHeader?: boolean }) {
     const [positions, setPositions] = React.useState<any[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [expandedPositions, setExpandedPositions] = React.useState<Set<string>>(new Set());
@@ -2205,138 +2245,86 @@ function ClosedPositionsFullScreen({ onOpenImport, onCountChange }: { onOpenImpo
     }
 
     return (
-        <div style={{ padding: '24px 40px 40px 40px', maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ padding: hideHeader ? '0' : '24px 40px 40px 40px', maxWidth: '1200px', margin: hideHeader ? '0' : '0 auto', width: '100%' }}>
             {/* Premium Header Card */}
-            <div style={{
-                marginBottom: '24px',
-                padding: '12px 24px',
-                background: 'var(--surface)',
-                borderRadius: '12px',
-                border: '1px solid var(--border)',
-                boxShadow: '0 2px 8px -2px rgba(0, 0, 0, 0.03)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px'
-            }
-            }>
+            {!hideHeader && (
                 <div style={{
-                    width: '36px', height: '36px', borderRadius: '10px',
-                    background: 'var(--bg-primary)', border: '1px solid var(--border)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'var(--text-primary)',
-                    flexShrink: 0
+                    marginBottom: '24px',
+                    padding: '12px 24px',
+                    background: 'var(--surface)',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border)',
+                    boxShadow: '0 2px 8px -2px rgba(0, 0, 0, 0.03)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px'
                 }}>
-                    <XCircle size={18} strokeWidth={2} />
-                </div>
-                <h1 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                    Closed Positions ({positions.length})
-                </h1>
-                <div style={{ flex: 1 }} />
-                <button
-                    onClick={onOpenImport}
-                    style={{
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px',
-                        width: '32px', height: '32px',
+                    <div style={{
+                        width: '36px', height: '36px', borderRadius: '10px',
+                        background: 'var(--bg-primary)', border: '1px solid var(--border)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer',
-                        color: 'var(--text-secondary)',
-                        transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.color = 'var(--text-primary)';
-                        e.currentTarget.style.borderColor = 'var(--text-primary)';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.color = 'var(--text-secondary)';
-                        e.currentTarget.style.borderColor = 'var(--border)';
-                    }}
-                    title="Import CSV"
-                >
-                    <FileSpreadsheet size={16} />
-                </button>
-
-                {/* Divider */}
-                < div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div >
-
-                {/* Batch Edit Button */}
-                < button
-                    onClick={() => setIsBatchEditMode(!isBatchEditMode)
-                    }
-                    style={{
-                        background: isBatchEditMode ? 'var(--accent)' : 'transparent',
-                        border: isBatchEditMode ? '1px solid var(--accent)' : '1px dashed var(--border)',
-                        borderRadius: '8px',
-                        padding: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                        color: isBatchEditMode ? '#fff' : 'var(--text-muted)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        minWidth: isBatchEditMode ? '72px' : '36px',
-                        height: '36px',
+                        color: 'var(--text-primary)',
                         flexShrink: 0
-                    }}
-                    onMouseEnter={(e) => {
-                        if (!isBatchEditMode) {
-                            e.currentTarget.style.borderColor = 'var(--text-primary)';
+                    }}>
+                        <XCircle size={18} strokeWidth={2} />
+                    </div>
+                    <h1 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                        Closed Positions ({positions.length})
+                    </h1>
+                    <div style={{ flex: 1 }} />
+                    <button
+                        onClick={onOpenImport}
+                        style={{
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '8px',
+                            width: '32px', height: '32px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: 'var(--text-secondary)',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
                             e.currentTarget.style.color = 'var(--text-primary)';
-                        }
-                    }}
-                    onMouseLeave={(e) => {
-                        if (!isBatchEditMode) {
+                            e.currentTarget.style.borderColor = 'var(--text-primary)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'var(--text-secondary)';
                             e.currentTarget.style.borderColor = 'var(--border)';
-                            e.currentTarget.style.color = 'var(--text-muted)';
-                        }
-                    }}
-                    title={isBatchEditMode ? "Done" : "Batch Edit"} >
-                    {
-                        isBatchEditMode ? (
-                            <>
-                                <Save size={16} />
-                            </>
-                        ) : (
-                            <Pencil size={16} />
-                        )}
-                </button >
+                        }}
+                        title="Import CSV"
+                    >
+                        <FileSpreadsheet size={16} />
+                    </button>
 
-                {/* Cancel Button - Only show in batch edit mode */}
-                {
-                    isBatchEditMode && (
-                        <button
-                            onClick={() => setIsBatchEditMode(false)}
-                            style={{
-                                background: 'transparent',
-                                border: '1px solid var(--border)',
-                                borderRadius: '8px',
-                                padding: '8px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'var(--text-muted)',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                width: '36px',
-                                height: '36px',
-                                flexShrink: 0
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = '#ef4444';
-                                e.currentTarget.style.color = '#ef4444';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = 'var(--border)';
-                                e.currentTarget.style.color = 'var(--text-muted)';
-                            }}
-                            title="Cancel">
-                            <X size={16} />
-                        </button>
-                    )
-                }
-            </div >
+                    {/* Divider */}
+                    <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
+
+                    {/* Batch Edit Button */}
+                    <button
+                        onClick={() => setIsBatchEditMode(!isBatchEditMode)}
+                        style={{
+                            background: isBatchEditMode ? 'var(--accent)' : 'transparent',
+                            border: isBatchEditMode ? '1px solid var(--accent)' : '1px dashed var(--border)',
+                            borderRadius: '8px',
+                            padding: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                            color: isBatchEditMode ? '#fff' : 'var(--text-muted)',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            height: '32px',
+                            fontSize: '12px',
+                            fontWeight: 600
+                        }}
+                    >
+                        <ListChecks size={16} />
+                        {isBatchEditMode ? 'Done' : 'Select'}
+                    </button>
+                </div>
+            )}
 
             {
                 positions.length > 0 ? (
@@ -2609,7 +2597,7 @@ function ClosedPositionsFullScreen({ onOpenImport, onCountChange }: { onOpenImpo
                     to { opacity: 1; transform: translateY(0); }
                 }
             `}</style >
-        </div >
+        </div>
     );
 }
 
@@ -2623,7 +2611,7 @@ function ShareFullScreen({ assets, username, totalValueEUR }: { assets: any[], u
 }
 
 // 10. Settings - All Navbar Settings
-function SettingsFullScreen({ preferences }: { preferences?: any }) {
+function SettingsFullScreen({ preferences, username, userEmail }: { preferences?: any, username: string, userEmail?: string }) {
     const [localPrefs, setLocalPrefs] = React.useState({
         theme: preferences?.theme || 'light',
         currency: preferences?.currency || 'EUR',
@@ -2658,19 +2646,81 @@ function SettingsFullScreen({ preferences }: { preferences?: any }) {
     };
 
     return (
-        <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div>
-                    <h1 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '8px', color: 'var(--text-primary)' }}>
-                        Settings
-                    </h1>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                        Customize your portfolio preferences and account settings
-                    </p>
+        <div style={{ padding: '24px 40px 40px 40px', maxWidth: '1200px', margin: '0 auto' }}>
+            {/* Premium Header Card - Compact Single Line */}
+            <div style={{
+                marginBottom: '24px',
+                padding: '12px 24px',
+                background: 'var(--surface)',
+                borderRadius: '12px',
+                border: '1px solid var(--border)',
+                boxShadow: '0 2px 8px -2px rgba(0, 0, 0, 0.03)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px'
+            }}>
+                {/* Icon */}
+                <div style={{
+                    width: '36px', height: '36px', borderRadius: '10px',
+                    background: 'var(--bg-primary)', border: '1px solid var(--border)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'var(--text-primary)',
+                    flexShrink: 0
+                }}>
+                    <Settings size={18} strokeWidth={2} />
                 </div>
-                {/* Success Notification */}
+
+                {/* Title */}
+                <h1 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                    Settings
+                </h1>
+
+                {/* Spacer */}
+                <div style={{ flex: 1 }} />
+
+                {/* User Info - Right Side */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        color: 'var(--text-primary)'
+                    }}>
+                        {username}
+                    </span>
+
+                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--border)' }}></span>
+
+                    <span style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        background: 'rgba(var(--accent-rgb), 0.1)',
+                        color: 'var(--accent)',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        border: '1px solid rgba(var(--accent-rgb), 0.2)'
+                    }}>
+                        Active Account
+                    </span>
+
+                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--border)' }}></span>
+
+                    <span style={{
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: 'var(--text-secondary)'
+                    }}>
+                        {userEmail || 'No email linked'}
+                    </span>
+                </div>
+
+                {/* Success Notification (Toast style inside header or absolutely positioned) */}
                 {showSuccess && (
                     <div style={{
+                        position: 'absolute',
+                        top: '80px',
+                        right: '40px',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
@@ -2681,87 +2731,56 @@ function SettingsFullScreen({ preferences }: { preferences?: any }) {
                         fontSize: '13px',
                         fontWeight: 600,
                         boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-                        animation: 'fadeIn 0.3s ease-out'
+                        animation: 'fadeIn 0.3s ease-out',
+                        zIndex: 100
                     }}>
                         <Save size={16} />
-                        <span>Changes Saved</span>
+                        <span>Saved</span>
                     </div>
                 )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
-                {/* Display Settings */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '24px',
+                alignItems: 'start'
+            }}>
+                {/* 1. Display Settings */}
                 <div style={{
                     background: 'var(--surface)',
                     borderRadius: '16px',
-                    padding: '32px',
+                    padding: '24px',
                     border: '1px solid var(--border)'
                 }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', color: 'var(--text-primary)' }}>
-                        Display
+                    <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '20px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Monitor size={16} /> Display
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         {/* Theme */}
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '12px',
-                            background: 'var(--bg-secondary)',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border)'
-                        }}>
-                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                Theme
-                            </span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Theme</span>
                             <select
                                 value={localPrefs.theme}
                                 onChange={(e) => savePreference('theme', e.target.value)}
                                 disabled={saving}
-                                style={{
-                                    fontSize: '13px',
-                                    color: 'var(--text-primary)',
-                                    fontWeight: 500,
-                                    background: 'var(--surface)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '6px',
-                                    padding: '4px 8px',
-                                    cursor: 'pointer'
-                                }}
+                                className="glass-select"
+                                style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '13px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                             >
                                 <option value="light">Light</option>
                                 <option value="dark">Dark</option>
-                                <option value="system">System</option>
                             </select>
                         </div>
 
                         {/* Currency */}
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '12px',
-                            background: 'var(--bg-secondary)',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border)'
-                        }}>
-                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                Currency
-                            </span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Currency</span>
                             <select
                                 value={localPrefs.currency}
                                 onChange={(e) => savePreference('currency', e.target.value)}
                                 disabled={saving}
-                                style={{
-                                    fontSize: '13px',
-                                    color: 'var(--text-primary)',
-                                    fontWeight: 500,
-                                    background: 'var(--surface)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '6px',
-                                    padding: '4px 8px',
-                                    cursor: 'pointer'
-                                }}
+                                className="glass-select"
+                                style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '13px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                             >
                                 <option value="EUR">EUR (€)</option>
                                 <option value="USD">USD ($)</option>
@@ -2771,32 +2790,14 @@ function SettingsFullScreen({ preferences }: { preferences?: any }) {
                         </div>
 
                         {/* Language */}
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '12px',
-                            background: 'var(--bg-secondary)',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border)'
-                        }}>
-                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                Language
-                            </span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Language</span>
                             <select
                                 value={localPrefs.language}
                                 onChange={(e) => savePreference('language', e.target.value)}
                                 disabled={saving}
-                                style={{
-                                    fontSize: '13px',
-                                    color: 'var(--text-primary)',
-                                    fontWeight: 500,
-                                    background: 'var(--surface)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '6px',
-                                    padding: '4px 8px',
-                                    cursor: 'pointer'
-                                }}
+                                className="glass-select"
+                                style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '13px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                             >
                                 <option value="English">English</option>
                                 <option value="Turkish">Türkçe</option>
@@ -2804,33 +2805,15 @@ function SettingsFullScreen({ preferences }: { preferences?: any }) {
                             </select>
                         </div>
 
-                        {/* Default View Mode */}
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '12px',
-                            background: 'var(--bg-secondary)',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border)'
-                        }}>
-                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                Default View Mode
-                            </span>
+                        {/* View Mode */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Default View</span>
                             <select
                                 value={localPrefs.defaultViewMode}
                                 onChange={(e) => savePreference('defaultViewMode', e.target.value)}
                                 disabled={saving}
-                                style={{
-                                    fontSize: '13px',
-                                    color: 'var(--text-primary)',
-                                    fontWeight: 500,
-                                    background: 'var(--surface)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '6px',
-                                    padding: '4px 8px',
-                                    cursor: 'pointer'
-                                }}
+                                className="glass-select"
+                                style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '13px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                             >
                                 <option value="fullscreen">Full Screen</option>
                                 <option value="card">Card View</option>
@@ -2839,110 +2822,15 @@ function SettingsFullScreen({ preferences }: { preferences?: any }) {
                     </div>
                 </div>
 
-                {/* Account Settings */}
+                {/* 2. Notifications */}
                 <div style={{
                     background: 'var(--surface)',
                     borderRadius: '16px',
-                    padding: '32px',
+                    padding: '24px',
                     border: '1px solid var(--border)'
                 }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', color: 'var(--text-primary)' }}>
-                        Account
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '12px',
-                            background: 'var(--bg-secondary)',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border)'
-                        }}>
-                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                Profile
-                            </span>
-                            <button
-                                onClick={() => alert('Profile editing coming soon!')}
-                                style={{
-                                    fontSize: '13px',
-                                    color: 'var(--accent)',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    background: 'none',
-                                    border: 'none',
-                                    padding: 0
-                                }}
-                            >
-                                Edit
-                            </button>
-                        </div>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '12px',
-                            background: 'var(--bg-secondary)',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border)'
-                        }}>
-                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                Privacy
-                            </span>
-                            <button
-                                onClick={() => alert('Privacy settings coming soon!')}
-                                style={{
-                                    fontSize: '13px',
-                                    color: 'var(--accent)',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    background: 'none',
-                                    border: 'none',
-                                    padding: 0
-                                }}
-                            >
-                                Manage
-                            </button>
-                        </div>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '12px',
-                            background: 'var(--bg-secondary)',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border)'
-                        }}>
-                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                Security
-                            </span>
-                            <button
-                                onClick={() => alert('Security settings coming soon!')}
-                                style={{
-                                    fontSize: '13px',
-                                    color: 'var(--accent)',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    background: 'none',
-                                    border: 'none',
-                                    padding: 0
-                                }}
-                            >
-                                Configure
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Notifications */}
-                <div style={{
-                    background: 'var(--surface)',
-                    borderRadius: '16px',
-                    padding: '32px',
-                    border: '1px solid var(--border)'
-                }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', color: 'var(--text-primary)' }}>
-                        Notifications
+                    <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '20px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Share2 size={16} /> Notifications
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         {[
@@ -2950,16 +2838,8 @@ function SettingsFullScreen({ preferences }: { preferences?: any }) {
                             { key: 'goalUpdates', label: 'Goal Updates' },
                             { key: 'marketNews', label: 'Market News' }
                         ].map((setting) => (
-                            <div key={setting.key} style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                padding: '12px',
-                                background: 'var(--bg-secondary)',
-                                borderRadius: '8px',
-                                border: '1px solid var(--border)'
-                            }}>
-                                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                            <div key={setting.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
                                     {setting.label}
                                 </span>
                                 <button
@@ -2986,7 +2866,8 @@ function SettingsFullScreen({ preferences }: { preferences?: any }) {
                                         top: '2px',
                                         left: localPrefs[setting.key as keyof typeof localPrefs] ? '22px' : '2px',
                                         transition: 'left 0.2s',
-                                        pointerEvents: 'none'
+                                        pointerEvents: 'none',
+                                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
                                     }} />
                                 </button>
                             </div>
@@ -2994,71 +2875,70 @@ function SettingsFullScreen({ preferences }: { preferences?: any }) {
                     </div>
                 </div>
 
-                {/* Data & Privacy */}
+                {/* 3. Account & Security (Merged) */}
                 <div style={{
                     background: 'var(--surface)',
                     borderRadius: '16px',
-                    padding: '32px',
+                    padding: '24px',
                     border: '1px solid var(--border)'
                 }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', color: 'var(--text-primary)' }}>
-                        Data & Privacy
+                    <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '20px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <GripVertical size={16} /> Account & Data
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '12px',
-                            background: 'var(--bg-secondary)',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border)'
-                        }}>
-                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                Export Data
-                            </span>
+                        {/* Profile */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Profile</span>
+                            <button
+                                onClick={() => alert('Profile editing coming soon!')}
+                                style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+                            >
+                                Edit
+                            </button>
+                        </div>
+                        {/* Privacy */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Privacy</span>
+                            <button
+                                onClick={() => alert('Privacy settings coming soon!')}
+                                style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+                            >
+                                Manage
+                            </button>
+                        </div>
+                        {/* Security */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Security</span>
+                            <button
+                                onClick={() => alert('Security settings coming soon!')}
+                                style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+                            >
+                                Configure
+                            </button>
+                        </div>
+
+                        <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }}></div>
+
+                        {/* Export */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Export Data</span>
                             <button
                                 onClick={() => alert('Export data functionality coming soon!')}
-                                style={{
-                                    fontSize: '13px',
-                                    color: 'var(--accent)',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    background: 'none',
-                                    border: 'none',
-                                    padding: 0
-                                }}
+                                style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
                             >
                                 Download
                             </button>
                         </div>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '12px',
-                            background: 'var(--bg-secondary)',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border)'
-                        }}>
-                            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                Delete Account
-                            </span>
+                        {/* Delete */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#ef4444' }}>Delete Account</span>
                             <button
                                 onClick={() => {
                                     if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
                                         alert('Account deletion functionality coming soon!');
                                     }
                                 }}
-                                style={{
-                                    fontSize: '13px',
-                                    color: '#f87171',
-                                    fontWeight: 600,
-                                    cursor: 'pointer',
-                                    background: 'none',
-                                    border: 'none',
-                                    padding: 0
-                                }}
+                                style={{ fontSize: '12px', color: '#ef4444', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
                             >
                                 Remove
                             </button>

@@ -57,8 +57,9 @@ export function MobileAssetList({
     const [showFilterMenu, setShowFilterMenu] = useState(false);
 
     // Time Horizon State
-    const [timeHorizon, setTimeHorizon] = useState<'1D' | '1W' | '1M' | 'YTD' | '1Y' | 'ALL'>('ALL');
-    const [showTimeMenu, setShowTimeMenu] = useState(false);
+    // Time Horizon State (Removed)
+
+    // Time Horizon removed as per request - defaulting to ALL (Total P&L) logic implicitly or via prop
 
     // -- DnD State --
     // We only allow DnD when filter is 'ALL' to avoid confusion
@@ -228,245 +229,297 @@ export function MobileAssetList({
                 position: 'sticky',
                 top: 0,
                 zIndex: 40,
-                background: 'rgba(var(--bg-main-rgb), 0.95)', // Assuming css variable or fallback
+                background: 'rgba(var(--bg-main-rgb), 0.95)',
                 backdropFilter: 'blur(12px)',
                 padding: '8px 4px',
-                margin: '0 -4px', // Compensation for list padding
+                margin: '0 -4px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                borderBottom: '1px solid transparent' // Optional separator
+                borderBottom: '1px solid transparent'
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {/* Filter Button */}
-                    <div style={{ position: 'relative' }}>
-                        <button
-                            onClick={() => !isCompact && setShowFilterMenu(!showFilterMenu)}
-                            style={{
+                {/* LEFT: Filter Button */}
+                <div style={{ position: 'relative' }}>
+                    <button
+                        onClick={() => !isCompact && setShowFilterMenu(!showFilterMenu)}
+                        style={{
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '12px',
+                            padding: '8px 12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '0.85rem',
+                            fontWeight: 700,
+                            color: 'var(--text-primary)',
+                            cursor: isCompact ? 'default' : 'pointer',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
+                        }}
+                    >
+                        {!isCompact && <CurrentFilterIcon size={14} />}
+                        {isCompact ? 'Top Positions' : currentFilterLabel}
+                        {!isCompact && <ChevronDown size={14} style={{ opacity: 0.5 }} />}
+                    </button>
+
+                    {/* Filter Dropdown */}
+                    {showFilterMenu && !isCompact && (
+                        <>
+                            <div
+                                style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+                                onClick={() => setShowFilterMenu(false)}
+                            />
+                            <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                marginTop: '8px',
                                 background: 'var(--surface)',
                                 border: '1px solid var(--border)',
-                                borderRadius: '12px',
-                                padding: '8px 12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                fontSize: '0.85rem',
-                                fontWeight: 700,
-                                color: 'var(--text-primary)',
-                                cursor: isCompact ? 'default' : 'pointer',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
-                            }}
-                        >
-                            {!isCompact && <CurrentFilterIcon size={14} />}
-                            {isCompact ? 'Top Positions' : currentFilterLabel}
-                            {!isCompact && <ChevronDown size={14} style={{ opacity: 0.5 }} />}
-                        </button>
-
-                        {/* Filter Dropdown */}
-                        {showFilterMenu && !isCompact && (
-                            <>
-                                <div
-                                    style={{ position: 'fixed', inset: 0, zIndex: 40 }}
-                                    onClick={() => setShowFilterMenu(false)}
-                                />
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '100%',
-                                    left: 0,
-                                    marginTop: '8px',
-                                    background: 'var(--surface)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '16px',
-                                    padding: '8px',
-                                    minWidth: '160px',
-                                    boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
-                                    zIndex: 50,
-                                    transformOrigin: 'top left'
-                                }}>
-                                    {filterOptions.map(option => (
-                                        <button
-                                            key={option.key}
-                                            onClick={() => {
-                                                setFilter(option.key);
-                                                setShowFilterMenu(false);
-                                            }}
-                                            style={{
-                                                width: '100%',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '10px',
-                                                padding: '10px 12px',
-                                                background: filter === option.key ? 'var(--bg-secondary)' : 'transparent',
-                                                border: 'none',
-                                                borderRadius: '8px',
-                                                color: filter === option.key ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                                fontSize: '0.85rem',
-                                                fontWeight: 600,
-                                                cursor: 'pointer',
-                                                textAlign: 'left',
-                                                marginBottom: '2px'
-                                            }}
-                                        >
-                                            <option.icon size={14} />
-                                            {option.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </>
-                        )}
-                    </div>
-
-                    {/* Time Horizon Button (Hidden in compact for now or just allow it) */}
-                    {!isCompact && (
-                        <div style={{ position: 'relative' }}>
-                            <button
-                                onClick={() => setShowTimeMenu(!showTimeMenu)}
-                                style={{
-                                    background: 'var(--bg-secondary)',
-                                    border: '1px solid transparent',
-                                    borderRadius: '12px',
-                                    padding: '8px 12px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    fontSize: '0.85rem',
-                                    fontWeight: 700,
-                                    color: 'var(--text-secondary)',
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                <Clock size={14} />
-                                {timeHorizon}
-                                <ChevronDown size={14} style={{ opacity: 0.5 }} />
-                            </button>
-
-                            {showTimeMenu && (
-                                <>
-                                    <div
-                                        style={{ position: 'fixed', inset: 0, zIndex: 40 }}
-                                        onClick={() => setShowTimeMenu(false)}
-                                    />
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '100%',
-                                        left: 0,
-                                        marginTop: '8px',
-                                        background: 'var(--surface)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '16px',
-                                        padding: '8px',
-                                        minWidth: '100px',
-                                        boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
-                                        zIndex: 50
-                                    }}>
-                                        {(['1D', '1W', '1M', 'YTD', '1Y', 'ALL'] as const).map(option => (
-                                            <button
-                                                key={option}
-                                                onClick={() => {
-                                                    setTimeHorizon(option);
-                                                    setShowTimeMenu(false);
-                                                }}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '8px 12px',
-                                                    background: timeHorizon === option ? 'var(--bg-secondary)' : 'transparent',
-                                                    border: 'none',
-                                                    borderRadius: '8px',
-                                                    color: timeHorizon === option ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                                    fontSize: '0.85rem',
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    textAlign: 'left',
-                                                    marginBottom: '2px'
-                                                }}
-                                            >
-                                                {option}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                                borderRadius: '16px',
+                                padding: '8px',
+                                minWidth: '160px',
+                                boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
+                                zIndex: 50,
+                                transformOrigin: 'top left'
+                            }}>
+                                {filterOptions.map(option => (
+                                    <button
+                                        key={option.key}
+                                        onClick={() => {
+                                            setFilter(option.key);
+                                            setShowFilterMenu(false);
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '10px',
+                                            padding: '10px 12px',
+                                            background: filter === option.key ? 'var(--bg-secondary)' : 'transparent',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            color: filter === option.key ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            textAlign: 'left',
+                                            marginBottom: '2px'
+                                        }}
+                                    >
+                                        <option.icon size={14} />
+                                        {option.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </>
                     )}
                 </div>
 
-                {/* Add Button */}
-                {!isCompact && onAdd && (
-                    <button
-                        onClick={onAdd}
-                        style={{
-                            background: 'var(--accent)',
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '10px',
+                {/* RIGHT: Total Wealth & Add Button */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Total Wealth Display */}
+                    {!isCompact && (
+                        <div style={{
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '12px',
+                            padding: '8px 12px',
                             display: 'flex',
-                            alignItems: 'center',
+                            flexDirection: 'column',
+                            alignItems: 'flex-end',
                             justifyContent: 'center',
-                            border: 'none',
-                            cursor: 'pointer',
-                            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)',
-                            color: '#fff'
-                        }}
-                    >
-                        <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>+</span>
-                    </button>
-                )}
+                            minWidth: '90px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
+                        }}>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, lineHeight: 1, marginBottom: '2px' }}>Total Wealth</span>
+                            <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 800, lineHeight: 1 }}>
+                                {isPrivacyMode ? '****' : `€${totalValueEUR.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Add Button */}
+                    {!isCompact && onAdd && (
+                        <button
+                            onClick={onAdd}
+                            style={{
+                                background: 'var(--accent)',
+                                width: '42px',
+                                height: '42px',
+                                borderRadius: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: 'none',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)',
+                                color: '#fff',
+                                flexShrink: 0
+                            }}
+                        >
+                            <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>+</span>
+                        </button>
+                    )}
+                </div>
             </div>
 
-            {/* List */}
-            {filter === 'CLOSED' ? null : filter === 'ALL' && !maxDisplay ? (
-                // Draggable List only for ALL view
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                >
-                    <SortableContext
-                        items={processedAssets.map(item => item.id)}
-                        strategy={verticalListSortingStrategy}
-                    >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            {processedAssets.map((asset) => (
-                                <SortableAssetItem
-                                    key={asset.id}
-                                    asset={asset}
-                                    currency={currency}
-                                    onEdit={onEdit}
-                                    isPrivacyMode={isPrivacyMode}
-                                    totalPortfolioValue={totalValueEUR}
-                                    isCompactMode={isCompact || shouldCompact}
-                                    timeHorizon={timeHorizon} // Pass prop
-                                    highlightId={highlightId} // Pass prop
-                                />
-                            ))}
-                        </div>
-                    </SortableContext>
-                </DndContext>
-            ) : (
-                // Static List for filtered views
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {processedAssets.map((asset) => (
-                        <MobileAssetCard
-                            key={asset.id}
-                            asset={asset}
-                            currency={currency}
-                            onEdit={onEdit}
-                            isPrivacyMode={isPrivacyMode}
-                            totalPortfolioValue={totalValueEUR}
-                            isCompactMode={isCompact || (shouldCompact && !maxDisplay)}
-                            isTopList={isCompact}
-                            timeHorizon={timeHorizon} // Pass prop
-                            highlightId={highlightId} // Pass prop
-                        />
-                    ))}
+            {/* Table Header */}
+            {!isCompact && filter !== 'CLOSED' && (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    padding: '8px 14px',
+                    marginBottom: '2px',
+                    gap: '10px',
+                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.03) 0%, rgba(139, 92, 246, 0.03) 100%)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(99, 102, 241, 0.08)',
+                    backdropFilter: 'blur(8px)'
+                }}>
+                    {/* Spacer for Logo */}
+                    <div style={{ width: '42px', flexShrink: 0 }} />
+
+                    {/* Asset Column Header */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            color: 'var(--accent)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.08em',
+                            lineHeight: 1.2
+                        }}>
+                            Asset
+                        </span>
+                    </div>
+
+                    {/* Price/Cost Header - Stacked */}
+                    <div style={{
+                        textAlign: 'right',
+                        minWidth: '70px',
+                        marginRight: '16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        gap: '0px'
+                    }}>
+                        <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            color: 'var(--accent)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.08em',
+                            lineHeight: 1.2
+                        }}>
+                            Price
+                        </span>
+                        <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            color: 'var(--accent)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.08em',
+                            lineHeight: 1.2,
+                            opacity: 0.7
+                        }}>
+                            Cost
+                        </span>
+                    </div>
+
+                    {/* Value/P&L Header - Stacked */}
+                    <div style={{
+                        textAlign: 'right',
+                        minWidth: '80px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        gap: '0px'
+                    }}>
+                        <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            color: 'var(--accent)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.08em',
+                            lineHeight: 1.2
+                        }}>
+                            Value
+                        </span>
+                        <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            color: 'var(--accent)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.08em',
+                            lineHeight: 1.2,
+                            opacity: 0.7
+                        }}>
+                            P&L
+                        </span>
+                    </div>
                 </div>
             )}
 
+            {/* List */}
+            {
+                filter === 'CLOSED' ? null : filter === 'ALL' && !maxDisplay ? (
+                    // Draggable List only for ALL view
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <SortableContext
+                            items={processedAssets.map(item => item.id)}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                {processedAssets.map((asset) => (
+                                    <SortableAssetItem
+                                        key={asset.id}
+                                        asset={asset}
+                                        currency={currency}
+                                        onEdit={onEdit}
+                                        isPrivacyMode={isPrivacyMode}
+                                        totalPortfolioValue={totalValueEUR}
+                                        isCompactMode={isCompact || shouldCompact}
+                                        timeHorizon="ALL" // Fixed to ALL
+                                        highlightId={highlightId} // Pass prop
+                                    />
+                                ))}
+                            </div>
+                        </SortableContext>
+                    </DndContext>
+                ) : (
+                    // Static List for filtered views
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {processedAssets.map((asset) => (
+                            <MobileAssetCard
+                                key={asset.id}
+                                asset={asset}
+                                currency={currency}
+                                onEdit={onEdit}
+                                isPrivacyMode={isPrivacyMode}
+                                totalPortfolioValue={totalValueEUR}
+                                isCompactMode={isCompact || (shouldCompact && !maxDisplay)}
+                                isTopList={isCompact}
+                                timeHorizon="ALL" // Fixed to ALL
+                                highlightId={highlightId} // Pass prop
+                            />
+                        ))}
+                    </div>
+                )
+            }
+
             {/* Closed Positions View */}
-            {filter === 'CLOSED' && (
-                <MobileClosedPositions assets={assets} />
-            )}
-        </div>
+            {
+                filter === 'CLOSED' && (
+                    <MobileClosedPositions assets={assets} />
+                )
+            }
+        </div >
     );
 }
 
