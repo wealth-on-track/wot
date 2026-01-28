@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, TrendingUp, PieChart, Wallet } from "lucide-react";
+import { Loader2, TrendingUp, PieChart, Wallet, BarChart3, Shield } from "lucide-react";
 
 const LOADING_PHASES = [
-    { progress: 15, message: "Connecting to servers...", icon: Loader2 },
-    { progress: 35, message: "Fetching exchange rates...", icon: TrendingUp },
-    { progress: 55, message: "Loading your positions...", icon: Wallet },
-    { progress: 75, message: "Calculating portfolio value...", icon: PieChart },
-    { progress: 90, message: "Preparing dashboard...", icon: Loader2 },
-    { progress: 100, message: "Almost there...", icon: Loader2 },
+    { progress: 10, message: "Authenticating...", icon: Shield },
+    { progress: 25, message: "Fetching exchange rates...", icon: TrendingUp },
+    { progress: 45, message: "Loading your positions...", icon: Wallet },
+    { progress: 65, message: "Fetching live prices...", icon: BarChart3 },
+    { progress: 80, message: "Calculating portfolio value...", icon: PieChart },
+    { progress: 95, message: "Preparing dashboard...", icon: Loader2 },
 ];
 
 export default function Loading() {
@@ -22,11 +22,11 @@ export default function Loading() {
             setProgress(prev => {
                 const targetProgress = LOADING_PHASES[currentPhase]?.progress || 100;
                 if (prev < targetProgress) {
-                    return Math.min(prev + 1, targetProgress);
+                    return Math.min(prev + 2, targetProgress);
                 }
                 return prev;
             });
-        }, 30);
+        }, 40);
 
         // Phase progression
         const phaseInterval = setInterval(() => {
@@ -36,7 +36,7 @@ export default function Loading() {
                 }
                 return prev;
             });
-        }, 800);
+        }, 700);
 
         return () => {
             clearInterval(progressInterval);
@@ -58,49 +58,54 @@ export default function Loading() {
             justifyContent: 'center',
             zIndex: 9999
         }}>
-            {/* Logo/Icon */}
+            {/* Animated Icon */}
             <div style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '20px',
+                width: '88px',
+                height: '88px',
+                borderRadius: '22px',
                 background: 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '32px',
-                boxShadow: '0 10px 40px var(--accent-glow)'
+                marginBottom: '40px',
+                boxShadow: '0 12px 48px var(--accent-glow)',
+                animation: 'pulse 2s ease-in-out infinite'
             }}>
                 <CurrentIcon
-                    size={36}
+                    size={40}
                     color="white"
                     style={{
-                        animation: currentPhase === 0 || currentPhase >= 4 ? 'spin 1s linear infinite' : 'none'
+                        animation: currentPhase === 0 || currentPhase >= 5 ? 'spin 1s linear infinite' : 'none',
+                        transition: 'all 0.3s ease'
                     }}
                 />
             </div>
 
             {/* Progress Container */}
             <div style={{
-                width: '320px',
+                width: '360px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: '16px'
+                gap: '20px'
             }}>
-                {/* Progress Bar */}
+                {/* Progress Bar Background */}
                 <div style={{
                     width: '100%',
-                    height: '6px',
+                    height: '8px',
                     background: 'var(--bg-secondary)',
-                    borderRadius: '3px',
-                    overflow: 'hidden'
+                    borderRadius: '4px',
+                    overflow: 'hidden',
+                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
                 }}>
+                    {/* Progress Bar Fill */}
                     <div style={{
                         height: '100%',
                         width: `${progress}%`,
                         background: 'linear-gradient(90deg, var(--accent), var(--accent-hover))',
-                        borderRadius: '3px',
-                        transition: 'width 0.1s ease-out'
+                        borderRadius: '4px',
+                        transition: 'width 0.15s ease-out',
+                        boxShadow: '0 0 10px var(--accent-glow)'
                     }} />
                 </div>
 
@@ -112,42 +117,73 @@ export default function Loading() {
                     alignItems: 'center'
                 }}>
                     <span style={{
-                        fontSize: '14px',
+                        fontSize: '15px',
                         fontWeight: 500,
                         color: 'var(--text-secondary)',
-                        transition: 'opacity 0.3s'
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
                     }}>
+                        <span style={{
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '50%',
+                            background: 'var(--accent)',
+                            animation: 'blink 1s ease-in-out infinite'
+                        }} />
                         {message}
                     </span>
                     <span style={{
-                        fontSize: '14px',
+                        fontSize: '16px',
                         fontWeight: 700,
                         color: 'var(--accent)',
-                        fontFamily: 'monospace'
+                        fontFamily: 'monospace',
+                        minWidth: '45px',
+                        textAlign: 'right'
                     }}>
                         {progress}%
                     </span>
                 </div>
             </div>
 
-            {/* Subtle branding */}
+            {/* Branding */}
             <div style={{
                 position: 'absolute',
-                bottom: '32px',
+                bottom: '40px',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
-                gap: '8px',
-                color: 'var(--text-muted)',
-                fontSize: '13px',
-                fontWeight: 500
+                gap: '8px'
             }}>
-                <span style={{ opacity: 0.6 }}>Wealth on Track</span>
+                <span style={{
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    color: 'var(--text-primary)',
+                    letterSpacing: '-0.5px'
+                }}>
+                    Wealth on Track
+                </span>
+                <span style={{
+                    fontSize: '12px',
+                    color: 'var(--text-muted)',
+                    opacity: 0.7
+                }}>
+                    Loading your portfolio...
+                </span>
             </div>
 
             <style jsx global>{`
                 @keyframes spin {
                     from { transform: rotate(0deg); }
                     to { transform: rotate(360deg); }
+                }
+                @keyframes pulse {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.05); }
+                }
+                @keyframes blink {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.3; }
                 }
             `}</style>
         </div>
