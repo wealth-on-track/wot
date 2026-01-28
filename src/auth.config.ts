@@ -8,27 +8,43 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const isOnDashboard = nextUrl.pathname.startsWith("/dashboard") || nextUrl.pathname === "/";
-      const isOnRegister = nextUrl.pathname.startsWith("/register");
-      const isOnLogin = nextUrl.pathname.startsWith("/login");
 
-      if (isOnDashboard) {
-        // Redirect to login if accessing dashboard/home while logged out
-        // Wait, landing page might be different. 
-        // For now, let's say /dashboard is protected, / is landing.
-        // But user said: "xxx.com/user1" is public.
-        // So checking username routes is tricky.
+      // Define public paths
+      const isPublicPath =
+        nextUrl.pathname === "/" ||
+        nextUrl.pathname.startsWith("/login") ||
+        nextUrl.pathname.startsWith("/register") ||
+        nextUrl.pathname.startsWith("/api/auth") ||
+        nextUrl.pathname.startsWith("/_next") ||
+        nextUrl.pathname.includes("favicon.ico");
 
-        // Let's protect nothing by default except specific protected routes? 
-        // Or protect everything except public routes.
+      // Exception for Demo
+      const isDemo = nextUrl.pathname === "/demo" || nextUrl.pathname.startsWith("/demo/");
 
-        // User said "open web page, want to see my portfolio". 
-        // So root might specific. 
+      if (isDemo) return true;
+
+      if (isLoggedIn) {
+        // Redirect logged-in users away from auth pages
+        if (nextUrl.pathname.startsWith("/login") || nextUrl.pathname.startsWith("/register")) {
+          return Response.redirect(new URL("/", nextUrl));
+        }
         return true;
       }
-      return true;
+
+      // Allow public paths for everyone
+      if (isPublicPath) {
+        return true;
+      }
+
+      // Redirect unauthenticated users to login
+      return false;
     },
   },
   providers: [], // Configured in auth.ts
-  secret: process.env.AUTH_SECRET || "fallback_secret_for_dev_only",
+  secret: process.env.AUTH_SECRET,
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  trustHost: true,
 } satisfies NextAuthConfig;

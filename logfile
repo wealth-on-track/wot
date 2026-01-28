@@ -1,0 +1,174 @@
+2026-01-27 19:13:25.262 CET [27160] LOG:  starting PostgreSQL 16.9 (Homebrew) on aarch64-apple-darwin24.4.0, compiled by Apple clang version 17.0.0 (clang-1700.0.13.3), 64-bit
+2026-01-27 19:13:25.264 CET [27160] LOG:  listening on IPv6 address "::1", port 5433
+2026-01-27 19:13:25.264 CET [27160] LOG:  listening on IPv4 address "127.0.0.1", port 5433
+2026-01-27 19:13:25.264 CET [27160] LOG:  listening on Unix socket "/tmp/.s.PGSQL.5433"
+2026-01-27 19:13:25.266 CET [27163] LOG:  database system was shut down at 2026-01-27 19:13:23 CET
+2026-01-27 19:13:25.267 CET [27160] LOG:  database system is ready to accept connections
+2026-01-27 19:13:49.829 CET [27383] FATAL:  no PostgreSQL user name specified in startup packet
+2026-01-27 19:13:49.830 CET [27384] FATAL:  no PostgreSQL user name specified in startup packet
+2026-01-27 19:18:25.269 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 19:20:07.248 CET [27161] LOG:  checkpoint complete: wrote 1013 buffers (6.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=101.967 s, sync=0.010 s, total=101.980 s; sync files=428, longest=0.001 s, average=0.001 s; distance=5006 kB, estimate=5006 kB; lsn=0/1A14EC8, redo lsn=0/19FD268
+2026-01-27 19:23:25.240 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 19:23:30.214 CET [27161] LOG:  checkpoint complete: wrote 50 buffers (0.3%); 0 WAL file(s) added, 0 removed, 0 recycled; write=4.970 s, sync=0.001 s, total=4.975 s; sync files=31, longest=0.001 s, average=0.001 s; distance=101 kB, estimate=4515 kB; lsn=0/1A169C8, redo lsn=0/1A16990
+2026-01-27 19:33:25.202 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 19:33:26.730 CET [27161] LOG:  checkpoint complete: wrote 16 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.524 s, sync=0.001 s, total=1.529 s; sync files=16, longest=0.001 s, average=0.001 s; distance=4 kB, estimate=4064 kB; lsn=0/1A17D78, redo lsn=0/1A17D08
+2026-01-27 19:42:01.549 CET [30722] LOG:  could not receive data from client: Connection reset by peer
+2026-01-27 19:42:01.585 CET [30724] ERROR:  table "_prisma_migrations" does not exist
+2026-01-27 19:42:01.585 CET [30724] STATEMENT:  DROP TABLE _prisma_migrations
+2026-01-27 19:43:25.730 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 19:43:39.790 CET [27161] LOG:  checkpoint complete: wrote 140 buffers (0.9%); 0 WAL file(s) added, 0 removed, 0 recycled; write=14.043 s, sync=0.010 s, total=14.061 s; sync files=134, longest=0.001 s, average=0.001 s; distance=982 kB, estimate=3756 kB; lsn=0/1B0D6F0, redo lsn=0/1B0D6B8
+2026-01-27 19:48:25.805 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 19:48:28.333 CET [27161] LOG:  checkpoint complete: wrote 25 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.526 s, sync=0.001 s, total=2.529 s; sync files=5, longest=0.001 s, average=0.001 s; distance=97 kB, estimate=3390 kB; lsn=0/1B25EB8, redo lsn=0/1B25E80
+2026-01-27 19:58:25.335 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 19:58:36.051 CET [27161] LOG:  checkpoint complete: wrote 107 buffers (0.7%); 0 WAL file(s) added, 0 removed, 0 recycled; write=10.712 s, sync=0.003 s, total=10.717 s; sync files=56, longest=0.001 s, average=0.001 s; distance=324 kB, estimate=3084 kB; lsn=0/1B77178, redo lsn=0/1B77140
+2026-01-27 20:03:25.053 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 20:03:25.258 CET [27161] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.203 s, sync=0.001 s, total=0.206 s; sync files=2, longest=0.001 s, average=0.001 s; distance=0 kB, estimate=2775 kB; lsn=0/1B77498, redo lsn=0/1B77460
+2026-01-27 20:04:45.134 CET [31499] ERROR:  update or delete on table "User" violates foreign key constraint "Portfolio_userId_fkey" on table "Portfolio"
+2026-01-27 20:04:45.134 CET [31499] DETAIL:  Key (id)=(cmkwygept0000t3xhhdkahbul) is still referenced from table "Portfolio".
+2026-01-27 20:04:45.134 CET [31499] STATEMENT:  DELETE FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) RETURNING "public"."User"."id", "public"."User"."username", "public"."User"."email", "public"."User"."password", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."preferences"
+2026-01-27 20:05:04.978 CET [31612] ERROR:  update or delete on table "User" violates foreign key constraint "Portfolio_userId_fkey" on table "Portfolio"
+2026-01-27 20:05:04.978 CET [31612] DETAIL:  Key (id)=(cmkwygept0000t3xhhdkahbul) is still referenced from table "Portfolio".
+2026-01-27 20:05:04.978 CET [31612] STATEMENT:  DELETE FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) RETURNING "public"."User"."id", "public"."User"."username", "public"."User"."email", "public"."User"."password", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."preferences"
+2026-01-27 20:08:25.258 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 20:08:32.647 CET [27161] LOG:  checkpoint complete: wrote 74 buffers (0.5%); 0 WAL file(s) added, 0 removed, 0 recycled; write=7.384 s, sync=0.003 s, total=7.390 s; sync files=49, longest=0.001 s, average=0.001 s; distance=419 kB, estimate=2540 kB; lsn=0/1BE01C0, redo lsn=0/1BE0188
+2026-01-27 20:28:25.650 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 20:28:35.370 CET [27161] LOG:  checkpoint complete: wrote 97 buffers (0.6%); 1 WAL file(s) added, 0 removed, 0 recycled; write=9.705 s, sync=0.004 s, total=9.721 s; sync files=47, longest=0.001 s, average=0.001 s; distance=533 kB, estimate=2339 kB; lsn=0/1C69FD0, redo lsn=0/1C65790
+2026-01-27 20:33:25.371 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 20:33:32.760 CET [27161] LOG:  checkpoint complete: wrote 75 buffers (0.5%); 0 WAL file(s) added, 0 removed, 0 recycled; write=7.384 s, sync=0.003 s, total=7.389 s; sync files=48, longest=0.001 s, average=0.001 s; distance=261 kB, estimate=2131 kB; lsn=0/1CA6ED8, redo lsn=0/1CA6EA0
+2026-01-27 20:38:25.802 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 20:38:37.638 CET [27161] LOG:  checkpoint complete: wrote 118 buffers (0.7%); 0 WAL file(s) added, 0 removed, 0 recycled; write=11.832 s, sync=0.003 s, total=11.837 s; sync files=53, longest=0.001 s, average=0.001 s; distance=1500 kB, estimate=2068 kB; lsn=0/1E1E0B0, redo lsn=0/1E1E040
+2026-01-27 20:41:55.979 CET [35095] LOG:  could not receive data from client: Connection reset by peer
+2026-01-27 20:43:25.642 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 20:43:35.562 CET [27161] LOG:  checkpoint complete: wrote 99 buffers (0.6%); 0 WAL file(s) added, 0 removed, 0 recycled; write=9.914 s, sync=0.003 s, total=9.920 s; sync files=53, longest=0.001 s, average=0.001 s; distance=478 kB, estimate=1909 kB; lsn=0/1E95C50, redo lsn=0/1E95BE0
+2026-01-27 20:45:26.659 CET [35344] LOG:  could not receive data from client: Connection reset by peer
+2026-01-27 20:48:25.566 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 20:48:38.018 CET [27161] LOG:  checkpoint complete: wrote 125 buffers (0.8%); 0 WAL file(s) added, 0 removed, 0 recycled; write=12.445 s, sync=0.005 s, total=12.453 s; sync files=59, longest=0.001 s, average=0.001 s; distance=762 kB, estimate=1794 kB; lsn=0/1F54698, redo lsn=0/1F54660
+2026-01-27 20:53:25.021 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 20:53:25.329 CET [27161] LOG:  checkpoint complete: wrote 4 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.305 s, sync=0.001 s, total=0.309 s; sync files=3, longest=0.001 s, average=0.001 s; distance=17 kB, estimate=1617 kB; lsn=0/1F58CF0, redo lsn=0/1F58CB8
+2026-01-27 20:58:25.335 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 20:58:30.304 CET [27161] LOG:  checkpoint complete: wrote 50 buffers (0.3%); 0 WAL file(s) added, 0 removed, 0 recycled; write=4.963 s, sync=0.003 s, total=4.970 s; sync files=35, longest=0.001 s, average=0.001 s; distance=226 kB, estimate=1478 kB; lsn=0/1F91808, redo lsn=0/1F917D0
+2026-01-27 21:03:25.309 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 21:03:31.289 CET [27161] LOG:  checkpoint complete: wrote 60 buffers (0.4%); 0 WAL file(s) added, 0 removed, 0 recycled; write=5.974 s, sync=0.002 s, total=5.981 s; sync files=39, longest=0.001 s, average=0.001 s; distance=265 kB, estimate=1356 kB; lsn=0/1FD3CB0, redo lsn=0/1FD3C78
+2026-01-27 21:08:25.294 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 21:08:25.807 CET [27161] LOG:  checkpoint complete: wrote 5 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.510 s, sync=0.001 s, total=0.515 s; sync files=1, longest=0.001 s, average=0.001 s; distance=6 kB, estimate=1221 kB; lsn=0/1FD5850, redo lsn=0/1FD5818
+2026-01-27 21:13:25.811 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 21:13:27.955 CET [27161] LOG:  checkpoint complete: wrote 22 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.142 s, sync=0.001 s, total=2.145 s; sync files=20, longest=0.001 s, average=0.001 s; distance=84 kB, estimate=1108 kB; lsn=0/1FEA868, redo lsn=0/1FEA830
+2026-01-27 21:18:25.942 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 21:18:26.761 CET [27161] LOG:  checkpoint complete: wrote 9 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.815 s, sync=0.001 s, total=0.820 s; sync files=9, longest=0.001 s, average=0.001 s; distance=26 kB, estimate=999 kB; lsn=0/1FF1260, redo lsn=0/1FF1228
+2026-01-27 21:23:25.764 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 21:23:25.872 CET [27161] LOG:  checkpoint complete: wrote 2 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.103 s, sync=0.001 s, total=0.109 s; sync files=2, longest=0.001 s, average=0.001 s; distance=4 kB, estimate=900 kB; lsn=0/1FF2650, redo lsn=0/1FF2618
+2026-01-27 21:33:25.877 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 21:33:35.895 CET [27161] LOG:  checkpoint complete: wrote 100 buffers (0.6%); 0 WAL file(s) added, 0 removed, 1 recycled; write=10.012 s, sync=0.004 s, total=10.019 s; sync files=54, longest=0.001 s, average=0.001 s; distance=601 kB, estimate=870 kB; lsn=0/2088D30, redo lsn=0/2088CF8
+2026-01-27 21:38:25.898 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 21:38:38.443 CET [27161] LOG:  checkpoint complete: wrote 125 buffers (0.8%); 0 WAL file(s) added, 0 removed, 0 recycled; write=12.537 s, sync=0.005 s, total=12.545 s; sync files=49, longest=0.001 s, average=0.001 s; distance=756 kB, estimate=859 kB; lsn=0/2145EC0, redo lsn=0/2145E88
+2026-01-27 21:43:25.452 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 21:43:37.198 CET [27161] LOG:  checkpoint complete: wrote 118 buffers (0.7%); 0 WAL file(s) added, 0 removed, 0 recycled; write=11.741 s, sync=0.002 s, total=11.747 s; sync files=52, longest=0.001 s, average=0.001 s; distance=856 kB, estimate=858 kB; lsn=0/221BF78, redo lsn=0/221BF40
+2026-01-27 21:48:25.201 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 21:48:28.751 CET [27161] LOG:  checkpoint complete: wrote 36 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=3.545 s, sync=0.003 s, total=3.551 s; sync files=31, longest=0.001 s, average=0.001 s; distance=147 kB, estimate=787 kB; lsn=0/2240EA0, redo lsn=0/2240E30
+2026-01-27 22:03:25.760 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 22:03:37.507 CET [27161] LOG:  checkpoint complete: wrote 117 buffers (0.7%); 0 WAL file(s) added, 0 removed, 0 recycled; write=11.737 s, sync=0.003 s, total=11.749 s; sync files=53, longest=0.001 s, average=0.001 s; distance=832 kB, estimate=832 kB; lsn=0/2310FF8, redo lsn=0/2310FC0
+2026-01-27 23:03:25.493 CET [27161] LOG:  checkpoint starting: time
+2026-01-27 23:03:27.939 CET [27161] LOG:  checkpoint complete: wrote 25 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.444 s, sync=0.001 s, total=2.447 s; sync files=12, longest=0.001 s, average=0.001 s; distance=128 kB, estimate=762 kB; lsn=0/2331318, redo lsn=0/23312E0
+2026-01-28 00:03:25.924 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 00:03:28.885 CET [27161] LOG:  checkpoint complete: wrote 30 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.957 s, sync=0.001 s, total=2.961 s; sync files=14, longest=0.001 s, average=0.001 s; distance=120 kB, estimate=697 kB; lsn=0/234F430, redo lsn=0/234F3F8
+2026-01-28 08:03:26.192 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 08:03:28.952 CET [27161] LOG:  checkpoint complete: wrote 28 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.754 s, sync=0.003 s, total=2.761 s; sync files=14, longest=0.001 s, average=0.001 s; distance=139 kB, estimate=642 kB; lsn=0/2372288, redo lsn=0/2372250
+2026-01-28 08:38:26.980 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 08:38:35.391 CET [27161] LOG:  checkpoint complete: wrote 85 buffers (0.5%); 0 WAL file(s) added, 0 removed, 0 recycled; write=8.404 s, sync=0.003 s, total=8.411 s; sync files=23, longest=0.001 s, average=0.001 s; distance=263 kB, estimate=604 kB; lsn=0/23B40C8, redo lsn=0/23B4090
+2026-01-28 09:38:26.396 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 09:38:28.847 CET [27161] LOG:  checkpoint complete: wrote 25 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.445 s, sync=0.002 s, total=2.452 s; sync files=13, longest=0.001 s, average=0.001 s; distance=156 kB, estimate=559 kB; lsn=0/23DB190, redo lsn=0/23DB158
+2026-01-28 10:38:26.866 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 10:38:28.399 CET [27161] LOG:  checkpoint complete: wrote 16 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.528 s, sync=0.001 s, total=1.533 s; sync files=10, longest=0.001 s, average=0.001 s; distance=48 kB, estimate=508 kB; lsn=0/23E7258, redo lsn=0/23E7220
+2026-01-28 10:48:26.403 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 10:48:42.293 CET [27161] LOG:  checkpoint complete: wrote 158 buffers (1.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=15.886 s, sync=0.002 s, total=15.891 s; sync files=55, longest=0.001 s, average=0.001 s; distance=936 kB, estimate=936 kB; lsn=0/24D14D8, redo lsn=0/24D14A0
+2026-01-28 10:53:26.295 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 10:53:26.402 CET [27161] LOG:  checkpoint complete: wrote 1 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.102 s, sync=0.001 s, total=0.107 s; sync files=1, longest=0.001 s, average=0.001 s; distance=2 kB, estimate=843 kB; lsn=0/24D1EC0, redo lsn=0/24D1E88
+2026-01-28 10:58:26.402 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 10:58:29.467 CET [27161] LOG:  checkpoint complete: wrote 31 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=3.060 s, sync=0.002 s, total=3.065 s; sync files=13, longest=0.001 s, average=0.001 s; distance=95 kB, estimate=768 kB; lsn=0/24E9C78, redo lsn=0/24E9C40
+2026-01-28 11:18:26.454 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 11:18:27.978 CET [27161] LOG:  checkpoint complete: wrote 16 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.522 s, sync=0.001 s, total=1.526 s; sync files=10, longest=0.001 s, average=0.001 s; distance=73 kB, estimate=698 kB; lsn=0/24FC400, redo lsn=0/24FC3C8
+2026-01-28 11:23:26.979 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 11:23:28.503 CET [27161] LOG:  checkpoint complete: wrote 16 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.521 s, sync=0.001 s, total=1.525 s; sync files=11, longest=0.001 s, average=0.001 s; distance=74 kB, estimate=636 kB; lsn=0/250EE68, redo lsn=0/250EE30
+2026-01-28 11:28:26.534 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 11:28:27.146 CET [27161] LOG:  checkpoint complete: wrote 7 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.609 s, sync=0.001 s, total=0.613 s; sync files=6, longest=0.001 s, average=0.001 s; distance=24 kB, estimate=575 kB; lsn=0/2514E70, redo lsn=0/2514E38
+2026-01-28 11:48:26.100 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 11:48:32.172 CET [27161] LOG:  checkpoint complete: wrote 61 buffers (0.4%); 0 WAL file(s) added, 0 removed, 0 recycled; write=6.068 s, sync=0.002 s, total=6.073 s; sync files=13, longest=0.001 s, average=0.001 s; distance=419 kB, estimate=559 kB; lsn=0/257DA88, redo lsn=0/257DA50
+2026-01-28 11:53:26.170 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 11:53:33.411 CET [27161] LOG:  checkpoint complete: wrote 72 buffers (0.4%); 0 WAL file(s) added, 0 removed, 0 recycled; write=7.235 s, sync=0.003 s, total=7.241 s; sync files=40, longest=0.001 s, average=0.001 s; distance=225 kB, estimate=526 kB; lsn=0/25B5FD8, redo lsn=0/25B5FA0
+2026-01-28 12:13:26.406 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 12:13:29.146 CET [27161] LOG:  checkpoint complete: wrote 28 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.735 s, sync=0.002 s, total=2.741 s; sync files=26, longest=0.001 s, average=0.001 s; distance=34 kB, estimate=477 kB; lsn=0/25BEA60, redo lsn=0/25BEA28
+2026-01-28 13:58:26.290 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 13:58:27.306 CET [27161] LOG:  checkpoint complete: wrote 11 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.013 s, sync=0.001 s, total=1.017 s; sync files=9, longest=0.001 s, average=0.001 s; distance=19 kB, estimate=431 kB; lsn=0/25C3A30, redo lsn=0/25C39F8
+2026-01-28 14:03:26.309 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 14:03:26.718 CET [27161] LOG:  checkpoint complete: wrote 5 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.406 s, sync=0.001 s, total=0.409 s; sync files=3, longest=0.001 s, average=0.001 s; distance=9 kB, estimate=389 kB; lsn=0/25C6100, redo lsn=0/25C60C8
+2026-01-28 14:08:26.721 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 14:08:30.375 CET [27161] LOG:  checkpoint complete: wrote 37 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=3.649 s, sync=0.003 s, total=3.655 s; sync files=34, longest=0.001 s, average=0.001 s; distance=116 kB, estimate=361 kB; lsn=0/25E31D8, redo lsn=0/25E31A0
+2026-01-28 14:18:26.331 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 14:18:27.857 CET [27161] LOG:  checkpoint complete: wrote 16 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.522 s, sync=0.001 s, total=1.527 s; sync files=16, longest=0.001 s, average=0.001 s; distance=19 kB, estimate=327 kB; lsn=0/25E8158, redo lsn=0/25E8120
+2026-01-28 16:23:26.872 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 16:23:27.892 CET [27161] LOG:  checkpoint complete: wrote 11 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.015 s, sync=0.001 s, total=1.021 s; sync files=11, longest=0.001 s, average=0.001 s; distance=15 kB, estimate=296 kB; lsn=0/25EBEC8, redo lsn=0/25EBE90
+2026-01-28 16:33:26.893 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 16:33:39.052 CET [27161] LOG:  checkpoint complete: wrote 122 buffers (0.7%); 0 WAL file(s) added, 0 removed, 0 recycled; write=12.152 s, sync=0.004 s, total=12.160 s; sync files=53, longest=0.001 s, average=0.001 s; distance=756 kB, estimate=756 kB; lsn=0/26A9198, redo lsn=0/26A9160
+2026-01-28 16:53:26.070 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 16:53:29.417 CET [27161] LOG:  checkpoint complete: wrote 34 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=3.343 s, sync=0.002 s, total=3.347 s; sync files=25, longest=0.001 s, average=0.001 s; distance=106 kB, estimate=691 kB; lsn=0/26C3AE8, redo lsn=0/26C3AB0
+2026-01-28 16:58:26.419 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 16:58:28.551 CET [27161] LOG:  checkpoint complete: wrote 22 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.127 s, sync=0.002 s, total=2.133 s; sync files=14, longest=0.001 s, average=0.001 s; distance=27 kB, estimate=625 kB; lsn=0/26CA788, redo lsn=0/26CA750
+2026-01-28 17:03:26.551 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 17:03:27.469 CET [27161] LOG:  checkpoint complete: wrote 10 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.915 s, sync=0.001 s, total=0.919 s; sync files=8, longest=0.001 s, average=0.001 s; distance=27 kB, estimate=565 kB; lsn=0/26D1430, redo lsn=0/26D13F8
+2026-01-28 17:12:20.279 CET [60089] LOG:  could not receive data from client: Connection reset by peer
+2026-01-28 17:12:49.571 CET [60180] LOG:  could not receive data from client: Connection reset by peer
+2026-01-28 17:13:26.473 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 17:13:30.831 CET [27161] LOG:  checkpoint complete: wrote 44 buffers (0.3%); 0 WAL file(s) added, 0 removed, 0 recycled; write=4.353 s, sync=0.003 s, total=4.359 s; sync files=40, longest=0.001 s, average=0.001 s; distance=168 kB, estimate=525 kB; lsn=0/26FB590, redo lsn=0/26FB558
+2026-01-28 17:23:26.834 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 17:23:27.754 CET [27161] LOG:  checkpoint complete: wrote 10 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.915 s, sync=0.002 s, total=0.921 s; sync files=10, longest=0.001 s, average=0.001 s; distance=6 kB, estimate=473 kB; lsn=0/26FD058, redo lsn=0/26FD020
+2026-01-28 17:38:26.701 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 17:38:36.230 CET [27161] LOG:  checkpoint complete: wrote 95 buffers (0.6%); 0 WAL file(s) added, 0 removed, 0 recycled; write=9.524 s, sync=0.002 s, total=9.529 s; sync files=43, longest=0.001 s, average=0.001 s; distance=533 kB, estimate=533 kB; lsn=0/27826B8, redo lsn=0/2782680
+2026-01-28 17:43:26.228 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 17:43:28.861 CET [27161] LOG:  checkpoint complete: wrote 27 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.629 s, sync=0.002 s, total=2.634 s; sync files=10, longest=0.001 s, average=0.001 s; distance=59 kB, estimate=486 kB; lsn=0/2791428, redo lsn=0/27913F0
+2026-01-28 18:03:26.911 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 18:03:31.667 CET [27161] LOG:  checkpoint complete: wrote 48 buffers (0.3%); 0 WAL file(s) added, 0 removed, 0 recycled; write=4.752 s, sync=0.003 s, total=4.757 s; sync files=36, longest=0.001 s, average=0.001 s; distance=173 kB, estimate=454 kB; lsn=0/27BCB60, redo lsn=0/27BCB28
+2026-01-28 18:08:26.668 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 18:08:35.291 CET [27161] LOG:  checkpoint complete: wrote 86 buffers (0.5%); 0 WAL file(s) added, 0 removed, 0 recycled; write=8.615 s, sync=0.005 s, total=8.623 s; sync files=49, longest=0.001 s, average=0.001 s; distance=596 kB, estimate=596 kB; lsn=0/2851DE0, redo lsn=0/2851DA8
+2026-01-28 18:18:26.296 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 18:18:34.611 CET [27161] LOG:  checkpoint complete: wrote 84 buffers (0.5%); 0 WAL file(s) added, 0 removed, 0 recycled; write=8.308 s, sync=0.002 s, total=8.316 s; sync files=41, longest=0.001 s, average=0.001 s; distance=525 kB, estimate=589 kB; lsn=0/28D5290, redo lsn=0/28D5258
+2026-01-28 18:23:26.609 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 18:23:29.847 CET [27161] LOG:  checkpoint complete: wrote 33 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=3.236 s, sync=0.001 s, total=3.239 s; sync files=12, longest=0.001 s, average=0.001 s; distance=118 kB, estimate=542 kB; lsn=0/28F2CB0, redo lsn=0/28F2C78
+2026-01-28 18:33:26.849 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 18:33:37.079 CET [27161] LOG:  checkpoint complete: wrote 102 buffers (0.6%); 0 WAL file(s) added, 0 removed, 0 recycled; write=10.226 s, sync=0.004 s, total=10.231 s; sync files=48, longest=0.001 s, average=0.001 s; distance=642 kB, estimate=642 kB; lsn=0/29937D8, redo lsn=0/2993768
+2026-01-28 18:38:26.081 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 18:38:41.459 CET [27161] LOG:  checkpoint complete: wrote 153 buffers (0.9%); 0 WAL file(s) added, 0 removed, 0 recycled; write=15.374 s, sync=0.003 s, total=15.379 s; sync files=58, longest=0.001 s, average=0.001 s; distance=718 kB, estimate=718 kB; lsn=0/2A47098, redo lsn=0/2A47028
+2026-01-28 18:43:26.461 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 18:43:38.904 CET [27161] LOG:  checkpoint complete: wrote 125 buffers (0.8%); 0 WAL file(s) added, 0 removed, 0 recycled; write=12.439 s, sync=0.002 s, total=12.443 s; sync files=56, longest=0.001 s, average=0.001 s; distance=804 kB, estimate=804 kB; lsn=0/2B10250, redo lsn=0/2B10218
+2026-01-28 18:48:26.922 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 18:48:33.201 CET [27161] LOG:  checkpoint complete: wrote 63 buffers (0.4%); 0 WAL file(s) added, 0 removed, 0 recycled; write=6.275 s, sync=0.003 s, total=6.280 s; sync files=45, longest=0.001 s, average=0.001 s; distance=407 kB, estimate=764 kB; lsn=0/2B761B8, redo lsn=0/2B76180
+2026-01-28 18:53:26.204 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 18:53:27.019 CET [27161] LOG:  checkpoint complete: wrote 9 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.811 s, sync=0.001 s, total=0.815 s; sync files=9, longest=0.001 s, average=0.001 s; distance=14 kB, estimate=689 kB; lsn=0/2B79A68, redo lsn=0/2B79A30
+2026-01-28 19:43:26.027 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 19:43:29.276 CET [27161] LOG:  checkpoint complete: wrote 33 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=3.245 s, sync=0.002 s, total=3.250 s; sync files=26, longest=0.001 s, average=0.001 s; distance=150 kB, estimate=635 kB; lsn=0/2B9F5E8, redo lsn=0/2B9F5B0
+2026-01-28 19:58:26.280 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 19:58:32.364 CET [27161] LOG:  checkpoint complete: wrote 61 buffers (0.4%); 0 WAL file(s) added, 0 removed, 0 recycled; write=6.078 s, sync=0.003 s, total=6.085 s; sync files=36, longest=0.001 s, average=0.001 s; distance=199 kB, estimate=592 kB; lsn=0/2BD15D8, redo lsn=0/2BD15A0
+2026-01-28 20:03:26.366 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 20:03:28.196 CET [27161] LOG:  checkpoint complete: wrote 19 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.825 s, sync=0.002 s, total=1.831 s; sync files=13, longest=0.001 s, average=0.001 s; distance=77 kB, estimate=540 kB; lsn=0/2BE4AE0, redo lsn=0/2BE4AA8
+2026-01-28 20:08:26.198 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 20:08:27.317 CET [27161] LOG:  checkpoint complete: wrote 12 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.116 s, sync=0.001 s, total=1.120 s; sync files=8, longest=0.001 s, average=0.001 s; distance=36 kB, estimate=490 kB; lsn=0/2BEDD20, redo lsn=0/2BEDCE8
+2026-01-28 20:13:26.319 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 20:13:33.424 CET [27161] LOG:  checkpoint complete: wrote 73 buffers (0.4%); 0 WAL file(s) added, 0 removed, 0 recycled; write=7.099 s, sync=0.004 s, total=7.106 s; sync files=52, longest=0.002 s, average=0.001 s; distance=496 kB, estimate=496 kB; lsn=0/2C69EF0, redo lsn=0/2C69EB8
+2026-01-28 20:18:26.422 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 20:18:33.415 CET [27161] LOG:  checkpoint complete: wrote 71 buffers (0.4%); 0 WAL file(s) added, 0 removed, 0 recycled; write=6.988 s, sync=0.003 s, total=6.994 s; sync files=43, longest=0.001 s, average=0.001 s; distance=378 kB, estimate=484 kB; lsn=0/2CC8A48, redo lsn=0/2CC8A10
+2026-01-28 20:20:54.973 CET [67233] LOG:  could not receive data from client: Connection reset by peer
+2026-01-28 20:23:26.416 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 20:23:36.342 CET [27161] LOG:  checkpoint complete: wrote 99 buffers (0.6%); 0 WAL file(s) added, 0 removed, 0 recycled; write=9.920 s, sync=0.004 s, total=9.926 s; sync files=46, longest=0.001 s, average=0.001 s; distance=522 kB, estimate=522 kB; lsn=0/2D4B380, redo lsn=0/2D4B348
+2026-01-28 20:28:26.344 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 20:28:39.101 CET [27161] LOG:  checkpoint complete: wrote 127 buffers (0.8%); 0 WAL file(s) added, 0 removed, 0 recycled; write=12.752 s, sync=0.003 s, total=12.758 s; sync files=58, longest=0.001 s, average=0.001 s; distance=741 kB, estimate=741 kB; lsn=0/2E0E668, redo lsn=0/2E04820
+2026-01-28 20:33:26.103 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 20:33:31.167 CET [27161] LOG:  checkpoint complete: wrote 51 buffers (0.3%); 0 WAL file(s) added, 0 removed, 0 recycled; write=5.061 s, sync=0.002 s, total=5.064 s; sync files=16, longest=0.001 s, average=0.001 s; distance=199 kB, estimate=687 kB; lsn=0/2E36588, redo lsn=0/2E36550
+2026-01-28 20:38:26.163 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 20:38:32.845 CET [27161] LOG:  checkpoint complete: wrote 67 buffers (0.4%); 0 WAL file(s) added, 0 removed, 0 recycled; write=6.678 s, sync=0.003 s, total=6.683 s; sync files=49, longest=0.001 s, average=0.001 s; distance=210 kB, estimate=639 kB; lsn=0/2E6B0F8, redo lsn=0/2E6B0C0
+2026-01-28 23:33:26.894 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 23:33:28.926 CET [27161] LOG:  checkpoint complete: wrote 21 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=2.029 s, sync=0.001 s, total=2.032 s; sync files=19, longest=0.001 s, average=0.001 s; distance=60 kB, estimate=581 kB; lsn=0/2E7A160, redo lsn=0/2E7A128
+2026-01-28 23:38:26.927 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 23:38:43.426 CET [27161] LOG:  checkpoint complete: wrote 167 buffers (1.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=16.494 s, sync=0.004 s, total=16.500 s; sync files=59, longest=0.001 s, average=0.001 s; distance=932 kB, estimate=932 kB; lsn=0/2F63268, redo lsn=0/2F631F8
+2026-01-28 23:43:26.427 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 23:43:38.783 CET [27161] LOG:  checkpoint complete: wrote 124 buffers (0.8%); 0 WAL file(s) added, 0 removed, 1 recycled; write=12.350 s, sync=0.005 s, total=12.357 s; sync files=51, longest=0.001 s, average=0.001 s; distance=906 kB, estimate=929 kB; lsn=0/3045BE8, redo lsn=0/3045BB0
+2026-01-28 23:48:26.784 CET [27161] LOG:  checkpoint starting: time
+2026-01-28 23:48:31.044 CET [27161] LOG:  checkpoint complete: wrote 43 buffers (0.3%); 0 WAL file(s) added, 0 removed, 0 recycled; write=4.255 s, sync=0.002 s, total=4.260 s; sync files=16, longest=0.001 s, average=0.001 s; distance=200 kB, estimate=856 kB; lsn=0/3077DE8, redo lsn=0/3077DB0

@@ -1,12 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { prisma } from '@/lib/prisma';
 import { getSearchSymbol } from './marketData';
+import { getYahooQuotes, getYahooQuote } from './yahooApi';
 
-// const yahooFinance removed (unused)
-
-// ... imports
-import { getYahooQuote } from './yahooApi';
+// Optimized batch size for Yahoo Finance API
+const BATCH_SIZE = 20;
+const SKIP_THRESHOLD_MS = 60 * 60 * 1000; // 60 minutes
 
 export async function updateAllPrices() {
     // 1. Get all unique symbols from Assets with their types and categories
@@ -22,7 +20,6 @@ export async function updateAllPrices() {
     console.log(`[PriceServer] Total assets: ${assets.length}, After category filter (excluding TEFAS, CASH): ${assetsToUpdate.length}`);
 
     // Create unique search symbols using the shared helper
-    // Map: SearchSymbol -> Set of OriginalSymbols that map to it
     const searchToOriginals = new Map<string, Set<string>>();
     assetsToUpdate.forEach(a => {
         if (a.symbol) {
@@ -37,15 +34,14 @@ export async function updateAllPrices() {
 
     const uniqueSearchSymbols = Array.from(searchToOriginals.keys());
 
-    if (uniqueSearchSymbols.length === 0) return { count: 0, message: "No symbols to update." };
+    if (uniqueSearchSymbols.length === 0) {
+        return { count: 0, message: "No symbols to update." };
+    }
 
     console.log(`[PriceServer] Found ${uniqueSearchSymbols.length} unique tickers to update.`);
 
-    // 2. Filter Fresh Symbols
+    // 2. Filter Fresh Symbols - Single batch query instead of checking each
     const now = new Date();
-    const SKIP_THRESHOLD_MS = 60 * 60 * 1000; // 60 Minutes (Requested by User)
-
-    // Fetch existing cache to check timestamps
     const existingCache = await prisma.priceCache.findMany({
         where: { symbol: { in: uniqueSearchSymbols } },
         select: { symbol: true, updatedAt: true }
@@ -65,39 +61,34 @@ export async function updateAllPrices() {
         return { success: true, updatedCount: 0, message: "All fresh" };
     }
 
-    console.log(`[PriceServer] updating ${symbolsToFetch.length} symbols: ${symbolsToFetch.join(', ')}`);
+    console.log(`[PriceServer] Updating ${symbolsToFetch.length} symbols`);
 
-    // 3. Process in Parallel Batches using Robust getYahooQuote
-    // We use getYahooQuote because it includes fallbacks (AlphaVantage, Direct Chart, Finnhub)
-    // which are crucial for BIST stocks like RYGYO/TAVHL that fail in bulk quotes.
-    const BATCH_SIZE = 5; // Run 5 concurrent requests
+    // 3. Use batch fetch for efficiency (getYahooQuotes handles caching internally)
     let updatedCount = 0;
-    const errors: any[] = [];
+    const errors: { symbol: string; error: string }[] = [];
 
+    // Process in larger batches using the batch API
     for (let i = 0; i < symbolsToFetch.length; i += BATCH_SIZE) {
         const batch = symbolsToFetch.slice(i, i + BATCH_SIZE);
-        await Promise.all(batch.map(async (symbol) => {
-            try {
-                // forceRefresh = true to ensure we try API
-                const quote = await getYahooQuote(symbol, true);
-                if (quote) {
-                    updatedCount++;
-                }
-            } catch (err: any) {
-                console.error(`[PriceServer] Failed to update ${symbol}:`, err.message);
-                errors.push({ symbol, error: err.message });
-            }
-        }));
 
-        // Small buffer between batches
+        try {
+            const quotes = await getYahooQuotes(batch, true);
+            updatedCount += Object.values(quotes).filter(q => q !== null).length;
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            console.error(`[PriceServer] Batch failed:`, errorMessage);
+            batch.forEach(s => errors.push({ symbol: s, error: errorMessage }));
+        }
+
+        // Small buffer between batches to avoid rate limiting
         if (i + BATCH_SIZE < symbolsToFetch.length) {
-            await new Promise(r => setTimeout(r, 1000));
+            await new Promise(r => setTimeout(r, 500));
         }
     }
 
     console.log(`[PriceServer] Update complete. Updated ${updatedCount}/${symbolsToFetch.length} requested symbols.`);
 
-    // 4. Update Currency Rates (Hourly)
+    // 4. Update Currency Rates (Hourly) - in parallel
     await updateCurrencyRates();
 
     return {
@@ -113,33 +104,41 @@ async function updateCurrencyRates() {
         console.log("[PriceServer] Updating Exchange Rates (EUR base)...");
         const currencies = ['EURUSD=X', 'EURTRY=X', 'EURGBP=X'];
 
-        for (const symbol of currencies) {
-            try {
-                const q = await getYahooQuote(symbol, true);
-                if (!q || !q.regularMarketPrice) continue;
+        // Batch fetch all currency rates at once
+        const quotes = await getYahooQuotes(currencies, true);
 
-                let currencyCode = '';
-                if (q.symbol === 'EURUSD=X') currencyCode = 'USD';
-                if (q.symbol === 'EURTRY=X') currencyCode = 'TRY';
-                if (q.symbol === 'EURGBP=X') currencyCode = 'GBP';
+        const updates: Promise<unknown>[] = [];
 
-                if (currencyCode) {
-                    await prisma.exchangeRate.upsert({
+        for (const [symbol, quote] of Object.entries(quotes)) {
+            if (!quote?.regularMarketPrice) continue;
+
+            let currencyCode = '';
+            if (symbol === 'EURUSD=X') currencyCode = 'USD';
+            if (symbol === 'EURTRY=X') currencyCode = 'TRY';
+            if (symbol === 'EURGBP=X') currencyCode = 'GBP';
+
+            if (currencyCode) {
+                updates.push(
+                    prisma.exchangeRate.upsert({
                         where: { currency: currencyCode },
-                        create: { currency: currencyCode, rate: q.regularMarketPrice },
-                        update: { rate: q.regularMarketPrice }
-                    });
-                    // Also cache pure EUR (always 1)
-                    await prisma.exchangeRate.upsert({
-                        where: { currency: 'EUR' },
-                        create: { currency: 'EUR', rate: 1 },
-                        update: { rate: 1 }
-                    });
-                }
-            } catch (err) {
-                console.error(`[PriceServer] Failed for ${symbol}:`, err);
+                        create: { currency: currencyCode, rate: quote.regularMarketPrice },
+                        update: { rate: quote.regularMarketPrice }
+                    })
+                );
             }
         }
+
+        // Always ensure EUR = 1
+        updates.push(
+            prisma.exchangeRate.upsert({
+                where: { currency: 'EUR' },
+                create: { currency: 'EUR', rate: 1 },
+                update: { rate: 1 }
+            })
+        );
+
+        // Execute all updates in parallel
+        await Promise.all(updates);
         console.log("[PriceServer] Exchange Rates updated.");
     } catch (e) {
         console.error("[PriceServer] Failed to update currency rates:", e);

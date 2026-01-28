@@ -29,7 +29,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
     const decodedUsername = decodeURIComponent(username);
 
-    const user = await prisma.user.findFirst({
+    let user = await prisma.user.findFirst({
         where: {
             OR: [
                 { username: decodedUsername },
@@ -52,7 +52,27 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     });
 
     if (!user || !user.portfolio) {
-        notFound();
+        console.warn(`[Dashboard] User not found by username "${decodedUsername}". Trying email fallback...`);
+        const fallbackUser = await prisma.user.findFirst({
+            where: { email: decodedUsername },
+            include: {
+                portfolio: {
+                    include: {
+                        assets: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }] },
+                        goals: { orderBy: { createdAt: 'asc' } }
+                    }
+                }
+            }
+        });
+
+        if (!fallbackUser || !fallbackUser.portfolio) {
+            // User not found - redirect to login if not authenticated, otherwise 404
+            if (!session?.user) {
+                redirect('/login');
+            }
+            notFound();
+        }
+        user = fallbackUser;
     }
 
     const isOwner = session?.user?.email === user.email;
@@ -62,7 +82,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     // Exception: demo portfolio is publicly accessible
     if (!isOwner && decodedUsername.toLowerCase() !== 'demo') {
         // User is trying to view someone else's portfolio - redirect to login
-        redirect('/login');
+        // User is trying to view someone else's portfolio - redirect to home (avoids login loop)
+        redirect('/');
     }
 
     // PERFORMANCE OPTIMIZATION: Fetch exchange rates and process portfolio in parallel
@@ -112,8 +133,35 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     // Fire-and-forget: ensureThresholdGoal updates DB, next page load will show updated goals
     import("@/lib/goalUtils").then(m => m.ensureThresholdGoal(user.portfolio!.id, totalPortfolioValueEUR)).catch(() => { });
 
+    // FETCH TRANSACTIONS & ATTACH TO ASSETS (Server-Side)
+    // This allows FullScreenLayout to display transaction history for open positions
+    const transactions = await prisma.assetTransaction.findMany({
+        where: { portfolioId: user.portfolio!.id },
+        orderBy: { date: 'desc' }
+    });
+
+    // Attach transactions to assets using the same fuzzy matching logic as actions.ts
+    assetsWithValues = assetsWithValues.map(asset => {
+        const assetTxs = transactions.filter(t => {
+            // 1. Strict Symbol Match
+            if (t.symbol === asset.symbol) return true;
+            // 2. Original Name/Symbol Match (if imported)
+            if (asset.originalName && (t.symbol === asset.originalName || t.name === asset.originalName)) return true;
+            // 3. Name Match (fallback)
+            if (t.name === asset.name) return true;
+
+            return false;
+        });
+
+        return {
+            ...asset,
+            transactions: assetTxs
+        };
+    });
+
+
     // Use goals from initial query (already fetched with user.portfolio.goals)
-    const displayedGoals = user.portfolio.goals;
+    const displayedGoals = user.portfolio!.goals;
 
     return (
         <ClientWrapper

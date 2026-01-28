@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, Inbox } from "lucide-react";
+import { ChevronDown, ChevronUp, Inbox, X } from "lucide-react";
 import { getClosedPositions, ClosedPosition } from "@/app/actions/history";
 import { getLogoUrl } from "@/lib/logos";
 import { formatEUR, formatNumber } from "@/lib/formatters";
@@ -29,8 +29,9 @@ export function ClosedPositions() {
         setLoading(true);
         getClosedPositions()
             .then(data => {
-                const closed = data.filter(p => Math.abs(p.totalQuantityBought - p.totalQuantitySold) < 0.01);
-                setPositions(closed);
+                // Server already filters correctly based on current quantity
+                // No need for client-side filtering
+                setPositions(data);
             })
             .catch(err => console.error('[ClosedPositions] Error:', err))
             .finally(() => setLoading(false));
@@ -76,21 +77,45 @@ export function ClosedPositions() {
 
     if (positions.length === 0) {
         return (
-            <div style={{ marginTop: '2rem' }}>
-                <EmptyPlaceholder
-                    title="No Closed Positions"
-                    description="You haven't closed any positions yet."
-                    icon={Inbox}
-                    height="250px"
-                />
+            <div style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                padding: '80px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px',
+                marginTop: '1rem', border: '1px dashed var(--border)', textAlign: 'center'
+            }}>
+                <div style={{
+                    width: '72px', height: '72px', borderRadius: '50%',
+                    background: 'var(--bg-secondary)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px',
+                    color: 'var(--text-muted)',
+                    boxShadow: 'var(--shadow-sm)'
+                }}>
+                    <X size={32} />
+                </div>
+                <h3 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                    No Closed Positions
+                </h3>
+                <p style={{
+                    fontSize: '15px', color: 'var(--text-muted)', marginBottom: '0',
+                    maxWidth: '400px', lineHeight: '1.6'
+                }}>
+                    Your closed positions will appear here once you sell any assets.
+                </p>
             </div>
         );
     }
 
-    // Strict Grid Alignment
-    const gridStyle = {
+    // Grid for Main List (Summary Rows) - 7 Columns
+    const mainGridStyle = {
         display: 'grid',
-        gridTemplateColumns: 'minmax(160px, 3fr) 90px 60px 80px 100px 30px',
+        gridTemplateColumns: 'minmax(160px, 3fr) 90px 90px 60px 80px 100px 30px',
+        gap: '0.5rem',
+        alignItems: 'center'
+    };
+
+    // Grid for Transaction Details - 9 Columns (Running Balance)
+    const detailGridStyle = {
+        display: 'grid',
+        gridTemplateColumns: '80px 90px 90px minmax(120px, 2fr) 90px 60px 80px 100px 30px',
         gap: '0.5rem',
         alignItems: 'center'
     };
@@ -103,7 +128,7 @@ export function ClosedPositions() {
         <div style={{ marginTop: '1rem', paddingBottom: '2rem' }}>
             {/* Table Header */}
             <div style={{
-                ...gridStyle,
+                ...mainGridStyle,
                 padding: '0 0.8rem 0.4rem 0.8rem',
                 fontSize: '0.7rem',
                 fontWeight: 600,
@@ -112,6 +137,7 @@ export function ClosedPositions() {
                 textTransform: 'uppercase'
             }}>
                 <div>Asset</div>
+                <div style={{ textAlign: 'right' }}>Price</div>
                 <div style={{ textAlign: 'right' }}>Tx</div>
                 <div style={{ textAlign: 'right' }}>Held</div>
                 <div style={{ textAlign: 'right' }}>P&L %</div>
@@ -141,7 +167,7 @@ export function ClosedPositions() {
                             <div
                                 onClick={() => toggleExpand(pos.symbol)}
                                 style={{
-                                    ...gridStyle,
+                                    ...mainGridStyle,
                                     padding: '0.5rem 0.8rem',
                                     cursor: 'pointer',
                                     background: isExpanded ? 'var(--bg-secondary)' : 'transparent',
@@ -159,14 +185,21 @@ export function ClosedPositions() {
                                             (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${pos.symbol}&background=random`
                                         }}
                                     />
-                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                        <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem', textOverflow: 'ellipsis', overflow: 'hidden' }} title={pos.name || pos.symbol}>
-                                            {pos.name || pos.symbol}
-                                        </span>
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', overflow: 'hidden' }}>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                            <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem', textOverflow: 'ellipsis', overflow: 'hidden' }} title={pos.name || pos.symbol}>
+                                                {pos.name || pos.symbol}
+                                            </span>
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                             {pos.symbol}
-                                        </span>
+                                        </div>
                                     </div>
+                                </div>
+
+                                {/* Price */}
+                                <div style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                                    {pos.currentPrice ? pos.currentPrice.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
                                 </div>
 
                                 {/* Tx */}
@@ -214,39 +247,92 @@ export function ClosedPositions() {
                                     animation: 'fadeIn 0.2s ease-out'
                                 }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                                        {[...pos.transactions]
-                                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                                            .map((tx, idx) => (
+                                        {/* Header Row for Details */}
+                                        <div style={{
+                                            ...detailGridStyle,
+                                            fontSize: '0.65rem',
+                                            fontWeight: 700,
+                                            color: 'var(--text-muted)',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.05em',
+                                            paddingBottom: '0.5rem',
+                                            marginBottom: '0.2rem',
+                                            borderBottom: '1px dashed var(--border)',
+                                            opacity: 0.7
+                                        }}>
+                                            <div style={{ textAlign: 'right' }}>Total Amt</div>
+                                            <div style={{ textAlign: 'right' }}>Avg. Cost</div>
+                                            <div style={{ textAlign: 'right' }}>Value</div>
+                                            <div></div>
+                                            <div style={{ textAlign: 'right' }}>Date</div>
+                                            <div style={{ textAlign: 'right' }}>Type</div>
+                                            <div style={{ textAlign: 'right' }}>Qty</div>
+                                            <div style={{ textAlign: 'right' }}>Price</div>
+                                            <div></div>
+                                        </div>
+                                        {(() => {
+                                            // Calculate running balance for each transaction
+                                            const sortedTxs = [...pos.transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                                            let runningQty = 0;
+                                            let totalCost = 0;
+
+                                            const txsWithBalance = sortedTxs.map(tx => {
+                                                const qty = Number(tx.quantity);
+                                                const price = Number(tx.price);
+
+                                                if (tx.type === 'BUY') {
+                                                    runningQty += qty;
+                                                    totalCost += (qty * price);
+                                                } else if (tx.type === 'SELL') {
+                                                    const soldPortion = runningQty > 0 ? qty / runningQty : 0;
+                                                    totalCost = totalCost * (1 - soldPortion);
+                                                    runningQty -= qty;
+                                                }
+
+                                                const avgCost = runningQty > 0 ? totalCost / runningQty : 0;
+                                                const value = runningQty * avgCost;
+
+                                                return {
+                                                    ...tx,
+                                                    runningQty,
+                                                    avgCost,
+                                                    value
+                                                };
+                                            });
+
+                                            // Reverse to show newest first
+                                            return txsWithBalance.reverse().map((tx, idx) => (
                                                 <div key={idx} style={{
-                                                    ...gridStyle,
-                                                    height: '28px', // Enforced strict height
-                                                    borderBottom: idx === pos.transactions.length - 1 ? 'none' : '1px solid var(--border)',
+                                                    ...detailGridStyle,
+                                                    height: '28px',
+                                                    borderBottom: idx === txsWithBalance.length - 1 ? 'none' : '1px solid var(--border)',
                                                     opacity: 0.9,
                                                     fontSize: '0.75rem'
                                                 }}>
-                                                    {/* Col 1: Empty or Current Price */}
-                                                    <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '34px' }}>
-                                                        {idx === 0 && pos.currentPrice && (
-                                                            <div style={{
-                                                                display: 'flex',
-                                                                gap: '6px',
-                                                                alignItems: 'center' // Changed from baseline to center for vertical stability
-                                                            }}>
-                                                                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Current:</span>
-                                                                <div style={{ fontFamily: 'monospace', color: 'var(--text-primary)' }}>
-                                                                    <span style={{ opacity: 0.6, marginRight: '2px' }}>@</span>
-                                                                    {pos.currentPrice.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                </div>
-                                                            </div>
-                                                        )}
+                                                    {/* Col 1: Running Qty */}
+                                                    <div style={{ textAlign: 'right', fontFamily: 'inherit', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                        {tx.runningQty.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 4 })}
                                                     </div>
 
-                                                    {/* Col 2: Date */}
+                                                    {/* Col 2: Avg Cost */}
+                                                    <div style={{ textAlign: 'right', fontFamily: 'inherit', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                        {tx.avgCost.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </div>
+
+                                                    {/* Col 3: Value */}
+                                                    <div style={{ textAlign: 'right', fontFamily: 'inherit', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                        {tx.value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </div>
+
+                                                    {/* Col 4: Asset Name (empty now as current price is moved to summary) */}
+                                                    <div></div>
+
+                                                    {/* Col 5: Date */}
                                                     <div style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
                                                         {formatDate(tx.date)}
                                                     </div>
 
-                                                    {/* Col 3: Type */}
+                                                    {/* Col 6: Type */}
                                                     <div style={{ textAlign: 'right' }}>
                                                         <span style={{
                                                             fontWeight: 600,
@@ -257,22 +343,23 @@ export function ClosedPositions() {
                                                         </span>
                                                     </div>
 
-                                                    {/* Col 4: Qty */}
+                                                    {/* Col 7: Tx Qty */}
                                                     <div style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
                                                         <span style={{ opacity: 0.6, marginRight: '2px' }}>x</span>
-                                                        {tx.quantity.toLocaleString('de-DE', { maximumFractionDigits: 0 })}
+                                                        {tx.quantity.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 4 })}
                                                     </div>
 
-                                                    {/* Col 5: Price */}
+                                                    {/* Col 8: Tx Price */}
                                                     <div style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-primary)' }}>
                                                         <span style={{ opacity: 0.6, marginRight: '2px' }}>@</span>
                                                         {tx.price.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </div>
 
-                                                    {/* Col 6: Empty */}
+                                                    {/* Col 9: Empty */}
                                                     <div></div>
                                                 </div>
-                                            ))}
+                                            ));
+                                        })()}
                                     </div>
                                 </div>
                             )}

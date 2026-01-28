@@ -12,9 +12,10 @@ type ImportStep = 'upload' | 'analyzing' | 'preview' | 'resolving' | 'review' | 
 
 interface ImportModalProps {
     onClose: () => void;
+    onSuccess?: () => void;
 }
 
-export function ImportModal({ onClose }: ImportModalProps) {
+export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
     const router = useRouter();
     const [step, setStep] = useState<ImportStep>('upload');
     const [parseResult, setParseResult] = useState<ParseResult | null>(null);
@@ -25,7 +26,9 @@ export function ImportModal({ onClose }: ImportModalProps) {
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
     const [analyzeProgress, setAnalyzeProgress] = useState(0);
     const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>('');
+    const [targetPortfolioName, setTargetPortfolioName] = useState<string>('Main');
     const [availablePortfolios, setAvailablePortfolios] = useState<{ id: string; name: string; isDefault?: boolean }[]>([]);
+    const [platformOverride, setPlatformOverride] = useState<string | null>(null);
 
     useEffect(() => {
         const loadPortfolios = async () => {
@@ -96,7 +99,14 @@ export function ImportModal({ onClose }: ImportModalProps) {
     });
 
     const handleProceedToResolve = async () => {
-        if ((!parseResult?.rows || parseResult.rows.length === 0) && (!transactions || transactions.length === 0)) return;
+        console.log('[DEBUG] handleProceedToResolve called');
+        console.log('[DEBUG] parseResult:', parseResult ? 'Present' : 'Null', 'Rows:', parseResult?.rows?.length);
+        console.log('[DEBUG] transactions:', transactions ? 'Present' : 'Null', 'Length:', transactions?.length);
+
+        // if ((!parseResult?.rows || parseResult.rows.length === 0) && (!transactions || transactions.length === 0)) {
+        //     console.warn('[DEBUG] Early return triggered - No data');
+        //     return;
+        // }
 
         setStep('resolving');
         setError(null);
@@ -111,12 +121,13 @@ export function ImportModal({ onClose }: ImportModalProps) {
             // 1. Get Open Positions from Rows (Trades aggregation)
             const importAssets: ImportAsset[] = (parseResult?.rows || []).map(row => ({
                 symbol: row.symbol,
+                isin: row.isin,  // Pass ISIN for resolution
                 name: row.name,
                 quantity: row.quantity,
                 buyPrice: row.buyPrice,
                 currency: row.currency as 'USD' | 'EUR' | 'TRY',
                 type: row.type,
-                platform: row.platform
+                platform: platformOverride || row.platform
             }));
 
             // 2. Add Closed Positions and Special Items from Transactions
@@ -137,12 +148,13 @@ export function ImportModal({ onClose }: ImportModalProps) {
                         if (!existingSymbols.has(tx.symbol)) {
                             importAssets.push({
                                 symbol: tx.symbol, // EUR, FEES, or Asset Symbol
+                                isin: tx.isin,     // Pass ISIN for resolution
                                 name: tx.name || tx.symbol,
                                 quantity: 0, // Closed/History only
                                 buyPrice: 0,
                                 currency: tx.currency as any,
                                 type: isSpecialType ? 'CASH' : undefined,
-                                platform: tx.platform
+                                platform: platformOverride || tx.platform
                             });
                             existingSymbols.add(tx.symbol);
                         }
@@ -152,20 +164,21 @@ export function ImportModal({ onClose }: ImportModalProps) {
 
             const result = await resolveImportSymbols(importAssets);
 
+            console.log('[DEBUG UI] Resolved Assets:', result.resolved);
+
             if (result.success) {
                 // Determine action
                 const processed = result.resolved.map(a => {
                     // Logic:
                     // 1. If Quantity > 0 -> Add/Update (Open Position)
-                    // 2. If Quantity = 0 -> Skip (Closed Position / History Only)
-                    //    BUT for Account Statement, user wants to ensuring they are "imported". 
-                    //    Our system interprets "skip" as "don't create Asset record if not exists", 
-                    //    BUT "executeImport" WILL process transactions for skipped assets.
-                    //    So "skip" is the correct action for history-only items.
+                    // 2. If Quantity = 0 -> Close (Closed Position)
+                    //    Using 'close' instead of 'skip' ensures an Asset record is created
+                    //    with the correct customGroup (portfolio name), so getClosedPositions
+                    //    can display the portfolio name correctly.
 
                     const isClosedOrHistory = a.quantity === 0 && !a.existingAsset;
                     if (isClosedOrHistory) {
-                        return { ...a, action: 'skip' as const };
+                        return { ...a, action: 'close' as const };
                     }
                     return a;
                 });
@@ -195,12 +208,13 @@ export function ImportModal({ onClose }: ImportModalProps) {
         setError(null);
 
         try {
-            const result = await executeImport(resolvedAssets, transactions, selectedPortfolioId || undefined);
+            const result = await executeImport(resolvedAssets, transactions, selectedPortfolioId || undefined, targetPortfolioName);
             setImportResult(result);
             setStep('done');
 
             // Refresh the page data
             router.refresh();
+            if (onSuccess) onSuccess();
         } catch (e) {
             setError(`Import failed: ${e}`);
             setStep('review');
@@ -266,9 +280,10 @@ export function ImportModal({ onClose }: ImportModalProps) {
                     borderRadius: '24px',
                     padding: '0', // Full bleed
                     position: 'relative',
-                    background: '#0F1115',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    boxShadow: '0 50px 100px -20px rgba(0, 0, 0, 0.6)',
+                    background: 'var(--surface)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border)',
+                    boxShadow: 'var(--shadow-xl)',
                     maxHeight: '90vh',
                     overflowY: 'auto',
                     overflowX: 'hidden',
@@ -277,20 +292,20 @@ export function ImportModal({ onClose }: ImportModalProps) {
             >
                 {/* Minimalist Header */}
                 <div style={{
-                    padding: '1.5rem 2rem', borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    padding: '1.5rem 2rem', borderBottom: '1px solid var(--border)',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: 'rgba(255,255,255,0.01)'
+                    background: 'var(--bg-primary)'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <div style={{
                             width: '32px', height: '32px', borderRadius: '8px',
-                            background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)',
+                            background: 'var(--accent)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                         }}>
                             <Database size={16} color="white" />
                         </div>
-                        <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'white', letterSpacing: '-0.01em', margin: 0 }}>
+                        <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em', margin: 0 }}>
                             Data Terminal
                         </h2>
                     </div>
@@ -299,7 +314,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         {['Upload', 'Map', 'Success'].map((s, i) => {
                             const currentStepIdx = ['upload', 'analyzing', 'preview', 'resolving', 'review', 'importing', 'done'].indexOf(step);
-                            const stepMap = [0, 1, 3]; // Simplified mapping: Upload=0-1, Map=2-5, Success=6
+                            // const stepMap = [0, 1, 3]; // Simplified mapping
 
                             let isActive = false;
                             if (i === 0 && currentStepIdx <= 1) isActive = true;
@@ -311,12 +326,12 @@ export function ImportModal({ onClose }: ImportModalProps) {
                                     <span style={{
                                         fontSize: '0.8rem',
                                         fontWeight: isActive ? 700 : 500,
-                                        color: isActive ? 'white' : 'rgba(255,255,255,0.3)',
+                                        color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
                                         transition: 'color 0.3s'
                                     }}>
                                         {s}
                                     </span>
-                                    {i < 2 && <span style={{ width: '20px', height: '1px', background: 'rgba(255,255,255,0.1)' }} />}
+                                    {i < 2 && <span style={{ width: '20px', height: '1px', background: 'var(--border)' }} />}
                                 </div>
                             )
                         })}
@@ -327,14 +342,14 @@ export function ImportModal({ onClose }: ImportModalProps) {
                         style={{
                             background: 'transparent',
                             border: 'none',
-                            color: 'rgba(255,255,255,0.4)',
+                            color: 'var(--text-muted)',
                             cursor: 'pointer',
                             padding: '0.5rem',
                             borderRadius: '50%',
                             transition: 'all 0.2s'
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.color = 'white'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.background = 'transparent'; }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
                     >
                         <X size={20} />
                     </button>
@@ -350,62 +365,49 @@ export function ImportModal({ onClose }: ImportModalProps) {
                                     {...getRootProps()}
                                     style={{
                                         position: 'relative',
-                                        height: '400px',
+                                        height: '320px', // Slightly reduced height
                                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                        background: 'rgba(255,255,255,0.02)',
-                                        border: `1px solid ${isDragActive ? 'rgba(59, 130, 246, 0.5)' : 'rgba(255,255,255,0.08)'}`,
+                                        background: 'var(--bg-card)',
+                                        border: `2px dashed ${isDragActive ? 'var(--accent)' : 'var(--border)'}`, // Dashed border is better for dropzones
                                         borderRadius: '20px',
-                                        backdropFilter: 'blur(20px)',
                                         cursor: 'pointer',
                                         transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                                        boxShadow: isDragActive ? '0 0 30px rgba(59, 130, 246, 0.2), inset 0 0 20px rgba(59, 130, 246, 0.1)' : 'none',
+                                        boxShadow: isDragActive ? 'var(--shadow-lg)' : 'none',
                                         overflow: 'hidden'
                                     }}
                                 >
                                     <input {...getInputProps()} />
 
                                     {/* Animated Cloud Icon */}
+                                    {/* Animated Cloud Icon */}
                                     <div style={{
-                                        width: '80px', height: '80px', borderRadius: '50%',
-                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
-                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        width: '60px', height: '60px', borderRadius: '50%',
+                                        background: 'var(--bg-primary)',
+                                        border: '1px solid var(--border)',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        marginBottom: '2rem',
-                                        animation: isDragActive ? 'bounce 1s infinite' : 'pulse 3s infinite ease-in-out'
+                                        marginBottom: '1.5rem',
+                                        animation: isDragActive ? 'bounce 1s infinite' : 'pulse 3s infinite ease-in-out',
+                                        boxShadow: 'var(--shadow-sm)'
                                     }}>
-                                        <Cloud size={32} color={isDragActive ? '#60A5FA' : 'rgba(255,255,255,0.8)'} strokeWidth={1.5} />
+                                        <Cloud size={24} color={isDragActive ? 'var(--accent)' : 'var(--text-secondary)'} strokeWidth={2} />
                                     </div>
 
-                                    <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'white', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>
+                                    <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem', letterSpacing: '-0.02em', textAlign: 'center' }}>
                                         {isDragActive ? 'Release to upload' : 'Drop your transaction history here'}
                                     </h3>
 
-                                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', marginBottom: '2rem' }}>
-                                        or <span style={{ color: '#60A5FA', textDecoration: 'underline' }}>Browse files</span>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem', textAlign: 'center' }}>
+                                        Supports CSV, Excel, TXT from major brokers
                                     </p>
 
-                                    {/* Supported Brokers Ticker */}
-                                    <div style={{
-                                        display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center',
-                                        maxWidth: '400px', opacity: 0.6
-                                    }}>
-                                        {brokers.map(b => (
-                                            <span key={b} style={{
-                                                fontSize: '0.75rem', padding: '0.3rem 0.8rem',
-                                                borderRadius: '100px', background: 'rgba(255,255,255,0.05)',
-                                                border: '1px solid rgba(255,255,255,0.05)',
-                                                color: 'rgba(255,255,255,0.7)'
-                                            }}>
-                                                {b}
-                                            </span>
-                                        ))}
-                                        <span style={{ fontSize: '0.75rem', padding: '0.3rem 0.5rem', color: 'rgba(255,255,255,0.4)' }}>+ more</span>
+                                    <div style={{ marginTop: '1rem' }}>
+                                        <span style={{ color: 'var(--accent)', textDecoration: 'underline', fontWeight: 600 }}>Browse files</span>
                                     </div>
 
                                     {/* Safety Note */}
-                                    <div style={{ position: 'absolute', bottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.4 }}>
-                                        <Lock size={12} />
-                                        <span style={{ fontSize: '0.7rem' }}>Processed locally. Raw files are never stored.</span>
+                                    <div style={{ position: 'absolute', bottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.6 }}>
+                                        <Lock size={12} color="var(--text-muted)" />
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Processed locally. Raw files are never stored.</span>
                                     </div>
                                 </div>
                             ) : (
@@ -437,89 +439,123 @@ export function ImportModal({ onClose }: ImportModalProps) {
                     {(step === 'preview' || step === 'resolving') && parseResult && (
                         <div className="animate-in slide-in-from-bottom-8 duration-500">
                             {/* Mapping Visualization */}
-                            <div style={{ marginBottom: '2rem' }}>
-                                <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'white', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <Zap size={16} className="text-amber-400" /> Smart Column Mapping
-                                </h3>
-                                <div style={{
-                                    display: 'flex', flexWrap: 'wrap', gap: '0.75rem',
-                                    background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '12px',
-                                    border: '1px solid rgba(255,255,255,0.05)'
-                                }}>
-                                    {Object.entries(parseResult.detectedColumns).map(([field, col]) => (
-                                        <div key={field} style={{
-                                            display: 'flex', flexDirection: 'column', gap: '2px',
-                                            padding: '0.5rem 0.8rem', borderRadius: '8px',
-                                            background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)'
-                                        }}>
-                                            <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{field}</span>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#A7F3D0' }}>{col}</span>
-                                                <Check size={12} color="#A7F3D0" />
+
+                            <div
+                                className="flex flex-col bg-card border border-border/40 rounded-2xl overflow-hidden"
+                                style={{ height: '560px', boxShadow: '0 20px 60px -15px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.02)' }}
+                            >
+                                {/* Single Toolbar Header */}
+                                {/* Ultra Compact Toolbar */}
+                                <div style={{ background: 'var(--bg-primary)', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.5rem', height: '64px' }}>
+
+                                    {/* Mappings (Main Center) */}
+                                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', overflowX: 'auto', scrollbarWidth: 'none', paddingRight: '1rem', height: '100%' }}>
+                                        {Object.entries(parseResult.detectedColumns).map(([field, col]) => (
+                                            <div key={field} className="flex flex-col items-start justify-center bg-muted/30 rounded-lg px-2.5 py-1.5 min-w-[65px] shrink-0 transition-all duration-150 hover:bg-muted/50 cursor-default group">
+                                                <span className="text-[0.55rem] uppercase text-muted-foreground/70 font-semibold leading-none mb-1.5 tracking-wide">{field.substring(0, 10)}</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-[0.7rem] font-semibold text-foreground leading-none whitespace-nowrap max-w-[75px] overflow-hidden text-ellipsis">{col}</span>
+                                                    <Check size={7} className="text-emerald-600 opacity-60" strokeWidth={2.5} />
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                    {/* Show unmapped or potential issues if needed */}
-                                </div>
-                            </div>
-
-                            {/* Data Preview Table */}
-                            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'end' }}>
-                                <div>
-                                    <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'white', marginBottom: '0.2rem' }}>Data Preview</h3>
-                                    <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>First 50 rows of {parseResult.rows.length} records</p>
-                                </div>
-                                <div style={{ fontSize: '0.8rem', color: '#60A5FA', background: 'rgba(59,130,246,0.1)', padding: '0.3rem 0.8rem', borderRadius: '6px' }}>
-                                    {parseResult.transactions?.length || 0} Transactions Found
-                                </div>
-                            </div>
-
-                            <div style={{ maxHeight: '350px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', background: 'rgba(0,0,0,0.2)' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                                    <thead style={{ background: 'rgba(255,255,255,0.03)', position: 'sticky', top: 0 }}>
-                                        <tr>
-                                            {['Symbol', 'Name', 'Qty', 'Price', 'Currency', 'Type', 'Confidence'].map(h => (
-                                                <th key={h} style={{ padding: '0.8rem', textAlign: h === 'Symbol' || h === 'Name' ? 'left' : 'right', fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>{h}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {parseResult.rows.slice(0, 50).map((row, idx) => (
-                                            <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                                <td style={{ padding: '0.8rem', fontWeight: 600, color: 'white' }}>{row.symbol}</td>
-                                                <td style={{ padding: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>{row.name?.substring(0, 20)}...</td>
-                                                <td style={{ padding: '0.8rem', textAlign: 'right', fontFamily: 'monospace', color: '#A7F3D0' }}>
-                                                    {Number.isInteger(row.quantity) ? row.quantity.toLocaleString('de-DE') : row.quantity.toLocaleString('de-DE', { maximumFractionDigits: 5 })}
-                                                </td>
-                                                <td style={{ padding: '0.8rem', textAlign: 'right', fontFamily: 'monospace', color: 'white' }}>
-                                                    {row.buyPrice.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                </td>
-                                                <td style={{ padding: '0.8rem', textAlign: 'right' }}>{row.currency}</td>
-                                                <td style={{ padding: '0.8rem', textAlign: 'right' }}>{row.type || '-'}</td>
-                                                <td style={{ padding: '0.8rem', textAlign: 'right' }}>
-                                                    <span style={{
-                                                        color: row.confidence >= 80 ? '#4ADE80' : '#FBBF24',
-                                                        fontWeight: 700
-                                                    }}>{row.confidence}%</span>
-                                                </td>
-                                            </tr>
                                         ))}
-                                    </tbody>
-                                </table>
+                                    </div>
+
+                                    {/* Source (Right) - Aligned */}
+                                    <div style={{ flexShrink: 0, paddingLeft: '1.5rem', borderLeft: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', gap: '3px', height: '100%' }}>
+                                        <span style={{ fontSize: '0.55rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)', opacity: 0.7, letterSpacing: '0.05em', lineHeight: 1 }}>SOURCE</span>
+                                        <select
+                                            value={platformOverride || (parseResult.rows[0]?.platform) || 'Unknown'}
+                                            onChange={(e) => setPlatformOverride(e.target.value)}
+                                            className="px-2.5 py-1 rounded-lg bg-muted/30 border-0 text-foreground font-semibold text-xs outline-none cursor-pointer text-right h-7 hover:bg-muted/50 transition-all"
+                                        >
+                                            <option value="Degiro">Degiro</option>
+                                            <option value="Interactive Brokers">IBKR</option>
+                                            <option value="Binance">Binance</option>
+                                            <option value="Midas">Midas</option>
+                                            <option value="Trading212">T212</option>
+                                            <option value="Revolut">Revolut</option>
+                                            <option value="Coinbase">Coinbase</option>
+                                            <option value="Kraken">Kraken</option>
+                                            <option value="Custom">Custom</option>
+                                        </select>
+                                        {platformOverride === 'Custom' && (
+                                            <input
+                                                type="text"
+                                                placeholder="Enter platform..."
+                                                onChange={(e) => setPlatformOverride(e.target.value || 'Custom')}
+                                                className="px-2.5 py-1 rounded-lg bg-muted/30 border border-border text-foreground font-medium text-xs outline-none h-7 w-28 mt-1"
+                                                autoFocus
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Table */}
+                                <div style={{ flex: 1, overflow: 'auto', background: 'var(--bg-card)' }}>
+                                    <table className="w-full text-sm border-collapse">
+                                        <thead className="bg-muted/20 backdrop-blur-sm sticky top-0 z-10">
+                                            <tr>
+                                                <th className="pl-6 py-4 text-left font-semibold text-foreground/90 text-sm tracking-tight border-b border-border/30">
+                                                    Data Preview <span className="text-muted-foreground/60 font-medium text-[0.7rem] ml-2">Top 50</span>
+                                                </th>
+                                                {['Qty', 'Price', 'Currency', 'Type'].map(h => (
+                                                    <th key={h} className="px-3 py-4 text-right font-medium text-muted-foreground/60 text-[0.7rem] uppercase tracking-wide border-b border-border/30">{h}</th>
+                                                ))}
+                                                <th className="px-3 py-4 text-right font-medium text-muted-foreground/60 text-[0.7rem] uppercase tracking-wide border-b border-border/30">Conf.</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {parseResult.rows.slice(0, 50).map((row, idx) => (
+                                                <tr key={idx} className="border-b border-border/20 hover:bg-muted/20 transition-colors group">
+                                                    <td style={{ padding: '0.8rem 1.5rem' }}>
+                                                        <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{row.symbol}</div>
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{row.name?.substring(0, 25)}</div>
+                                                    </td>
+                                                    <td style={{ padding: '0.8rem', textAlign: 'right', fontFamily: 'monospace', color: 'var(--accent)' }}>
+                                                        {Number.isInteger(row.quantity) ? row.quantity.toLocaleString('de-DE') : row.quantity.toLocaleString('de-DE', { maximumFractionDigits: 5 })}
+                                                    </td>
+                                                    <td style={{ padding: '0.8rem', textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-primary)' }}>
+                                                        {row.buyPrice.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </td>
+                                                    <td style={{ padding: '0.8rem', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.currency}</td>
+                                                    <td style={{ padding: '0.8rem', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.type || '-'}</td>
+                                                    <td style={{ padding: '0.8rem', textAlign: 'right' }}>
+                                                        <span style={{ color: row.confidence >= 80 ? 'var(--success)' : 'var(--warning)', fontWeight: 700 }}>{row.confidence}%</span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
 
-                            <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                <button onClick={() => setStep('upload')} style={{ color: 'rgba(255,255,255,0.6)', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
-                                <button
-                                    onClick={handleProceedToResolve}
-                                    style={{
-                                        padding: '0.8rem 2rem', background: 'white', color: 'black', fontWeight: 700, borderRadius: '12px',
-                                        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                        boxShadow: '0 0 20px rgba(255,255,255,0.2)'
-                                    }}
-                                >
-                                    Run Import <ArrowRight size={18} />
-                                </button>
+                            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1.25rem', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingLeft: '0.5rem' }}>
+                                    <div className="flex items-center gap-2.5">
+                                        <span className="text-foreground font-semibold text-base tabular-nums">{parseResult.transactions?.length || 0}</span>
+                                        <span className="text-muted-foreground/60 font-medium text-[0.7rem] uppercase tracking-wider">Transactions</span>
+                                    </div>
+                                    <div className="w-px h-4 bg-border/40"></div>
+                                    <div className="flex items-center gap-2.5">
+                                        <span className="text-foreground font-semibold text-base tabular-nums">{parseResult.rows.length}</span>
+                                        <span className="text-muted-foreground/60 font-medium text-[0.7rem] uppercase tracking-wider">Records</span>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <button onClick={() => setStep('upload')} className="text-muted-foreground/70 bg-transparent border-0 cursor-pointer font-medium text-sm hover:text-foreground/90 transition-colors">Cancel</button>
+                                    <button
+                                        onClick={(e) => {
+                                            console.log('[DEBUG-INLINE] Button Clicked');
+                                            handleProceedToResolve();
+                                        }}
+                                        className="px-6 py-2.5 bg-foreground text-background font-semibold rounded-xl border-0 cursor-pointer flex items-center gap-2 hover:opacity-90 transition-opacity"
+                                        style={{ boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.12)' }}
+                                    >
+                                        <span>Run Import (Debug)</span> <ArrowRight size={16} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -537,86 +573,144 @@ export function ImportModal({ onClose }: ImportModalProps) {
                     {/* Step 3: Review & Commit */}
                     {step === 'review' && (
                         <div className="animate-in fade-in duration-500">
-                            {/* Portfolio Selection */}
-                            <div style={{ marginBottom: '2rem', background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <Briefcase size={18} className="text-blue-400" />
+                            {/* Portfolio Selection + Stats - Ultra Compact */}
+                            <div style={{ marginBottom: '1.5rem', background: 'var(--bg-surface)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    {/* Left: Icon + Title + Input */}
+                                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                        <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--accent)/20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            <Briefcase size={16} style={{ color: 'var(--accent)' }} />
+                                        </div>
+                                        <div>
+                                            <h3 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>Target Portfolio</h3>
+                                            <input
+                                                type="text"
+                                                value={targetPortfolioName}
+                                                onChange={(e) => setTargetPortfolioName(e.target.value)}
+                                                placeholder="e.g. Main, Long Term..."
+                                                style={{
+                                                    width: '200px', padding: '0.5rem 0.7rem', borderRadius: '6px',
+                                                    background: 'var(--bg-primary)', border: '1px solid var(--border)',
+                                                    color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none'
+                                                }}
+                                            />
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'white' }}>Target Portfolio</h3>
-                                        <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>Where should these assets be imported?</p>
+                                    {/* Right: Stats */}
+                                    <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', marginLeft: 'auto' }}>
+                                        {[
+                                            { label: 'Open', val: resolvedAssets.filter(a => a.quantity > 0).length, color: 'var(--success)' },
+                                            { label: 'Closed', val: resolvedAssets.filter(a => a.quantity === 0).length, color: 'var(--accent)' }
+                                        ].map(s => (
+                                            <div key={s.label} style={{ padding: '0.4rem 0.65rem', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px solid var(--border)', textAlign: 'center', minWidth: '55px' }}>
+                                                <div style={{ fontSize: '1.4rem', fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.val}</div>
+                                                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
-
-                                <select
-                                    value={selectedPortfolioId}
-                                    onChange={(e) => setSelectedPortfolioId(e.target.value)}
-                                    style={{
-                                        width: '100%', padding: '0.8rem 1rem', borderRadius: '10px',
-                                        background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
-                                        color: 'white', fontSize: '0.95rem', cursor: 'pointer', outline: 'none'
-                                    }}
-                                >
-                                    {availablePortfolios.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name} {p.isDefault ? '(Default)' : ''}</option>
-                                    ))}
-                                    {availablePortfolios.length === 0 && <option value="" disabled>Loading portfolios...</option>}
-                                </select>
+                                {/* Hidden select to maintain ID logic if multiple DB portfolios are supported in future */}
+                                <div style={{ display: 'none' }}>
+                                    <select
+                                        value={selectedPortfolioId}
+                                        onChange={(e) => setSelectedPortfolioId(e.target.value)}
+                                    >
+                                        {availablePortfolios.map(p => (
+                                            <option key={p.id} value={p.id}>{p.id}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
 
-                            {/* Reuse existing Review UI logic but styled better */}
-                            {/* Keeping this simple for brevity as user focused on DropZone/Mapping steps */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
-                                {[
-                                    { label: 'Open Positions', val: resolvedAssets.filter(a => a.quantity > 0).length, color: '#4ADE80' },
-                                    { label: 'Closed Positions', val: resolvedAssets.filter(a => a.quantity === 0).length, color: '#60A5FA' }
-                                ].map(s => (
-                                    <div key={s.label} style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                        <div style={{ fontSize: '2rem', fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.val}</div>
-                                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>{s.label}</div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '2rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                {/* Simplified List for review */}
+                            <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '2rem', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                                {/* Asset List for review */}
                                 {resolvedAssets.map((a, i) => (
                                     <div key={i} style={{
                                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                        padding: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)',
-                                        background: a.action === 'skip' ? 'rgba(0,0,0,0.2)' : 'transparent'
+                                        padding: '1rem 1.5rem', borderBottom: i < resolvedAssets.length - 1 ? '1px solid var(--border)' : 'none',
+                                        background: a.action === 'skip' ? 'var(--bg-surface)' : 'transparent'
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>
-                                                {a.resolvedSymbol.substring(0, 2)}
+                                            {/* Logo */}
+                                            <div style={{
+                                                width: '40px', height: '40px', borderRadius: '50%',
+                                                background: 'var(--bg-surface)',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)',
+                                                border: '1px solid var(--border)',
+                                                overflow: 'hidden'
+                                            }}>
+                                                {a.logoUrl ? (
+                                                    <img
+                                                        src={a.logoUrl}
+                                                        alt={a.resolvedSymbol}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                        onError={(e) => {
+                                                            e.currentTarget.style.display = 'none';
+                                                            e.currentTarget.parentElement!.textContent = a.resolvedSymbol.substring(0, 2);
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    a.resolvedSymbol.substring(0, 2)
+                                                )}
                                             </div>
+                                            {/* Name + Ticker + ISIN */}
                                             <div>
-                                                <div style={{ fontWeight: 600, color: 'white' }}>{a.resolvedSymbol}</div>
-                                                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>{a.resolvedName}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2px' }}>
+                                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                                                        {a.resolvedName || a.name}
+                                                    </span>
+                                                    {/* Ticker Badge - always show */}
+                                                    {a.resolvedSymbol && (
+                                                        <span style={{
+                                                            background: a.resolvedSymbol !== a.isin ? 'var(--accent)' : 'var(--bg-surface)',
+                                                            color: a.resolvedSymbol !== a.isin ? 'white' : 'var(--text-muted)',
+                                                            padding: '2px 8px',
+                                                            borderRadius: '4px',
+                                                            fontSize: '0.7rem',
+                                                            fontWeight: 700,
+                                                            letterSpacing: '0.5px',
+                                                            border: a.resolvedSymbol === a.isin ? '1px solid var(--border)' : 'none'
+                                                        }}>
+                                                            {a.resolvedSymbol}
+                                                        </span>
+                                                    )}
+                                                    {/* Verification Status */}
+                                                    {a.matchSource === 'MEMORY' && (
+                                                        <span style={{ fontSize: '0.65rem', color: 'var(--success)', fontWeight: 600 }}>✓</span>
+                                                    )}
+                                                    {a.matchSource === 'SEARCH' && (
+                                                        <span style={{ fontSize: '0.65rem', color: 'var(--warning)', fontWeight: 600 }}>?</span>
+                                                    )}
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    {/* ISIN - only show if different from resolvedSymbol */}
+                                                    {a.isin && a.isin !== a.resolvedSymbol && (
+                                                        <span style={{ fontFamily: 'monospace', opacity: 0.7 }}>{a.isin}</span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                                             <div style={{ textAlign: 'right' }}>
-                                                <div style={{ color: 'white', fontFamily: 'monospace' }}>
+                                                <div style={{ color: 'var(--text-primary)', fontFamily: 'monospace', fontWeight: 600 }}>
                                                     {Number.isInteger(a.quantity) ? a.quantity.toLocaleString('de-DE') : a.quantity.toLocaleString('de-DE', { maximumFractionDigits: 5 })}
                                                 </div>
-                                                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                                     @ {a.buyPrice.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </div>
                                             </div>
                                             <select
                                                 value={a.action}
                                                 onChange={(e) => handleActionChange(i, e.target.value as any)}
-                                                style={{
-                                                    background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '0.4rem', borderRadius: '6px', fontSize: '0.8rem',
-                                                    width: 'auto', minWidth: '160px', cursor: 'pointer'
-                                                }}
+                                                className="bg-background border border-border text-foreground px-3 py-2 rounded-lg text-sm font-medium cursor-pointer hover:border-primary/50 transition-colors"
+                                                style={{ minWidth: '180px' }}
                                             >
                                                 {a.quantity > 0 ? (
                                                     <>
                                                         <option value="add">Add to Open Positions</option>
                                                         {a.existingAsset && <option value="update">Update Position</option>}
+                                                        <option value="close">Add to Closed Positions</option>
                                                         <option value="skip">Skip</option>
                                                     </>
                                                 ) : (
@@ -629,15 +723,17 @@ export function ImportModal({ onClose }: ImportModalProps) {
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                <button onClick={() => setStep('preview')} style={{ color: 'rgba(255,255,255,0.6)', background: 'transparent', border: 'none', cursor: 'pointer' }}>Back</button>
+                                <button onClick={() => setStep('preview')} className="text-muted-foreground/70 bg-transparent border-0 cursor-pointer font-medium text-sm hover:text-foreground/90 transition-colors px-4 py-2">Back</button>
                                 <button
                                     onClick={handleImport}
                                     disabled={!selectedPortfolioId}
+                                    className="px-8 py-3 font-semibold rounded-xl border-0 cursor-pointer flex items-center gap-2 transition-all"
                                     style={{
-                                        padding: '0.8rem 3rem', background: selectedPortfolioId ? '#4ADE80' : 'rgba(255,255,255,0.1)',
-                                        color: selectedPortfolioId ? 'black' : 'rgba(255,255,255,0.3)', fontWeight: 800, borderRadius: '12px',
-                                        border: 'none', cursor: selectedPortfolioId ? 'pointer' : 'not-allowed',
-                                        boxShadow: selectedPortfolioId ? '0 0 30px rgba(74, 222, 128, 0.2)' : 'none'
+                                        background: selectedPortfolioId ? 'var(--accent)' : 'var(--bg-surface)',
+                                        color: selectedPortfolioId ? 'white' : 'var(--text-muted)',
+                                        cursor: selectedPortfolioId ? 'pointer' : 'not-allowed',
+                                        boxShadow: selectedPortfolioId ? '0 4px 12px -2px rgba(96, 165, 250, 0.3)' : 'none',
+                                        opacity: selectedPortfolioId ? 1 : 0.5
                                     }}
                                 >
                                     Complete Import
@@ -720,7 +816,7 @@ export function ImportModal({ onClose }: ImportModalProps) {
                     50% { transform: translateY(-10px); }
                 }
             `}</style>
-        </div>
+        </div >
     );
 }
 

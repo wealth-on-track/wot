@@ -4,8 +4,10 @@ import React, { useState } from "react";
 import {
     Briefcase, PieChart, TrendingUp, Lightbulb, Eye,
     Target, Trophy, XCircle, Share2, Settings, Hash, Monitor, Pencil, Wallet, Save, X,
-    ChevronUp, ChevronDown, FileSpreadsheet, Trash2, GripVertical, Upload, ListChecks
+    ChevronUp, ChevronDown, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2, GripVertical, Upload, ListChecks, SlidersHorizontal, Search,
+    LayoutGrid, List, PanelLeftClose, PanelLeft
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
     DndContext,
     closestCenter,
@@ -24,14 +26,19 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-import { ImportModal } from "./ImportModal";
+import { ImportCSVInline } from "./ImportCSVInline";
+import { TransactionsFullScreen } from "./TransactionsFullScreen";
 import { getLogoUrl } from "@/lib/logos";
 import { ShareHub } from "./share/ShareHub";
+import { TransactionHistory } from '@/components/TransactionHistory';
 import { InsightsTab } from "./InsightsTab";
 import { AllocationCard } from "./PortfolioSidebarComponents";
 import { PortfolioPerformanceChart } from "./PortfolioPerformanceChart";
 import { usePrivacy } from "@/context/PrivacyContext";
 import { BENCHMARK_ASSETS } from "@/lib/benchmarkApi";
+import { getPortfolioStyle } from "@/lib/portfolioStyles";
+import { deleteAccount } from "@/lib/actions";
+import { signOut } from "next-auth/react";
 
 // Sortable Row Component for Open Positions Table
 function SortableRow({ children, id, isBatchEditMode }: { children: React.ReactNode, id: string, isBatchEditMode: boolean }) {
@@ -52,16 +59,25 @@ function SortableRow({ children, id, isBatchEditMode }: { children: React.ReactN
         position: isDragging ? 'relative' as const : 'static' as const,
     };
 
+    const [isHovered, setIsHovered] = React.useState(false);
+
     return (
-        <tr ref={setNodeRef} style={style} className="table-row-hover">
+        <tr
+            ref={setNodeRef}
+            style={style}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
             {/* Drag Handle Column */}
             <td style={{
                 width: '30px',
                 padding: '0',
                 textAlign: 'center',
                 verticalAlign: 'middle',
-                borderBottom: '1px solid var(--border-light)',
-                cursor: isBatchEditMode ? 'default' : 'grab'
+                borderBottom: '1px solid var(--border)',
+                cursor: isBatchEditMode ? 'default' : 'grab',
+                background: isHovered ? 'var(--bg-secondary)' : 'transparent',
+                transition: 'background 0.15s ease'
             }}
                 {...(!isBatchEditMode ? { ...attributes, ...listeners } : {})}
             >
@@ -75,7 +91,19 @@ function SortableRow({ children, id, isBatchEditMode }: { children: React.ReactN
                     <GripVertical size={14} />
                 </div>
             </td>
-            {children}
+            {React.Children.map(children, (child) => {
+                if (React.isValidElement(child) && child.type === 'td') {
+                    const tdChild = child as React.ReactElement<React.TdHTMLAttributes<HTMLTableCellElement>>;
+                    return React.cloneElement(tdChild, {
+                        style: {
+                            ...tdChild.props.style,
+                            background: isHovered ? 'var(--bg-secondary)' : (tdChild.props.style?.background || 'transparent'),
+                            transition: 'background 0.15s ease'
+                        }
+                    });
+                }
+                return child;
+            })}
         </tr>
     );
 }
@@ -88,7 +116,6 @@ type SectionId =
     | 'vision'
     | 'financial-goals'
     | 'top-performers'
-    | 'closed-positions'
     | 'share'
     | 'settings';
 
@@ -99,14 +126,13 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-    { id: 'open-positions', label: 'Open Positions', icon: Briefcase },
+    { id: 'open-positions', label: 'Positions', icon: Briefcase },
     { id: 'allocations', label: 'Allocations', icon: PieChart },
     { id: 'performance', label: 'Performance', icon: TrendingUp },
     { id: 'insights', label: 'Insights', icon: Lightbulb },
     { id: 'vision', label: 'Vision', icon: Eye },
     { id: 'financial-goals', label: 'Financial Goals', icon: Target },
     { id: 'top-performers', label: 'Top & Worst Performers', icon: Trophy },
-    { id: 'closed-positions', label: 'Closed Positions', icon: XCircle },
     { id: 'share', label: 'Share', icon: Share2 },
     { id: 'settings', label: 'Settings', icon: Settings },
 ];
@@ -138,21 +164,18 @@ export function FullScreenLayout({
     const [hoveredItem, setHoveredItem] = useState<SectionId | null>(null);
     const [closedPositionsCount, setClosedPositionsCount] = useState<number>(0);
     const [openPositionsCount, setOpenPositionsCount] = useState<number>(assets.length);
-    const [showImportModal, setShowImportModal] = useState(false);
     const [activePositionTab, setActivePositionTab] = useState<'open' | 'closed'>('open');
+    const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(true);
 
-    // Fetch open and closed positions counts - refetch when activeSection changes
+    // Sync open positions count with assets prop updates (e.g. after import)
     React.useEffect(() => {
-        // Fetch open positions count
-        import('@/lib/actions').then(({ getOpenPositions }) => {
-            getOpenPositions()
-                .then(data => {
-                    setOpenPositionsCount(data.length);
-                })
-                .catch(err => console.error('[FullScreenLayout] Error fetching open positions count:', err));
-        });
+        setOpenPositionsCount(assets.length);
+    }, [assets]);
 
-        // Fetch closed positions count
+    // Fetch closed positions count only on initial mount (not on every section change)
+    // Open positions count is already synced from assets prop
+    React.useEffect(() => {
+        // Only fetch closed positions count once on mount
         import('@/app/actions/history').then(({ getClosedPositions }) => {
             getClosedPositions()
                 .then(data => {
@@ -161,17 +184,17 @@ export function FullScreenLayout({
                 })
                 .catch(err => console.error('[FullScreenLayout] Error fetching closed positions count:', err));
         });
-    }, [activeSection]);
+    }, []); // Empty dependency - only run on mount
 
-    const [sectionKey, setSectionKey] = React.useState(0);
+    // sectionKey removed - unnecessary forced remounts were causing performance issues
 
-    // Increment key when section changes to force remount and refetch data
-    React.useEffect(() => {
-        setSectionKey(prev => prev + 1);
-    }, [activeSection]);
+    const router = useRouter();
 
     // Function to refresh counts (called after save/delete operations)
     const refreshCounts = React.useCallback(() => {
+        // Trigger server data refresh to get latest assets and transactions
+        router.refresh();
+
         // Fetch open positions count
         import('@/lib/actions').then(({ getOpenPositions }) => {
             getOpenPositions()
@@ -190,12 +213,12 @@ export function FullScreenLayout({
                 })
                 .catch(err => console.error('[refreshCounts] Error fetching closed positions count:', err));
         });
-    }, []);
+    }, [router]);
 
     const renderContent = () => {
         switch (activeSection) {
             case 'open-positions':
-                return <OpenPositionsFullScreen key={`open-${sectionKey}`} assets={assets} exchangeRates={exchangeRates} globalCurrency={preferences?.currency || 'EUR'} onOpenImport={() => setShowImportModal(true)} onCountChange={refreshCounts} closedPositionsCount={closedPositionsCount} />;
+                return <OpenPositionsFullScreen key="open-positions" assets={assets} exchangeRates={exchangeRates} globalCurrency={preferences?.currency || 'EUR'} onCountChange={refreshCounts} closedPositionsCount={closedPositionsCount} isOwner={isOwner} />;
             case 'allocations':
                 return <AllocationsFullScreen assets={assets} exchangeRates={exchangeRates} />;
             case 'performance':
@@ -208,8 +231,6 @@ export function FullScreenLayout({
                 return <FinancialGoalsFullScreen goals={goals} totalValueEUR={totalValueEUR} exchangeRates={exchangeRates} isOwner={isOwner} />;
             case 'top-performers':
                 return <TopPerformersFullScreen assets={assets} />;
-            case 'closed-positions':
-                return <ClosedPositionsFullScreen key={`closed-${sectionKey}`} onOpenImport={() => setShowImportModal(true)} onCountChange={refreshCounts} />;
             case 'share':
                 return <ShareFullScreen key={activeSection} assets={assets} username={username} totalValueEUR={totalValueEUR} />;
             case 'settings':
@@ -227,102 +248,155 @@ export function FullScreenLayout({
             background: 'var(--bg-primary)',
             position: 'relative'
         }}>
-            {/* Sidebar Menu - Fixed width, no expansion */}
+            {/* Sidebar Menu - Collapsible */}
             <div style={{
-                width: '70px',
+                width: sidebarExpanded ? '90px' : '56px',
                 background: 'var(--surface)',
                 borderRight: '1px solid var(--border)',
                 display: 'flex',
                 flexDirection: 'column',
-                padding: '20px 0',
-                gap: '8px',
+                padding: '8px 0',
                 position: 'relative',
                 zIndex: 10,
-                boxShadow: 'var(--shadow-sm)'
+                boxShadow: 'var(--shadow-sm)',
+                overflowY: 'auto',
+                transition: 'width 0.2s ease'
             }}>
-                {MENU_ITEMS.map((item) => {
+                {/* Toggle Button */}
+                <button
+                    onClick={() => setSidebarExpanded(!sidebarExpanded)}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '8px',
+                        margin: '0 8px 8px 8px',
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        transition: 'all 0.2s'
+                    }}
+                    title={sidebarExpanded ? 'Collapse menu' : 'Expand menu'}
+                >
+                    {sidebarExpanded ? <PanelLeftClose size={16} /> : <PanelLeft size={16} />}
+                </button>
+
+                {/* Divider after toggle */}
+                <div style={{
+                    height: '1px',
+                    background: 'var(--border)',
+                    margin: '0 8px 8px 8px'
+                }} />
+
+                {MENU_ITEMS.map((item, index) => {
                     const Icon = item.icon;
                     const isActive = activeSection === item.id;
                     const isHovered = hoveredItem === item.id;
-                    const showCount =
-                        (item.id === 'closed-positions' && closedPositionsCount > 0) ||
-                        (item.id === 'open-positions' && openPositionsCount > 0);
+                    const showCount = item.id === 'open-positions' && openPositionsCount > 0;
+                    const isLast = index === MENU_ITEMS.length - 1;
 
                     return (
-                        <div key={item.id} style={{ position: 'relative' }}>
-                            <button
-                                onClick={() => setActiveSection(item.id)}
-                                onMouseEnter={() => setHoveredItem(item.id)}
-                                onMouseLeave={() => setHoveredItem(null)}
-                                style={{
-                                    width: '100%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    padding: '12px 0',
-                                    background: isActive ? 'var(--accent)' : 'transparent',
-                                    color: isActive ? '#fff' : 'var(--text-muted)',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    position: 'relative'
-                                }}
-                            >
-                                <Icon size={20} style={{ flexShrink: 0 }} />
-                                {isActive && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        left: 0,
-                                        top: 0,
-                                        bottom: 0,
-                                        width: '4px',
-                                        background: '#fff',
-                                        borderRadius: '0 4px 4px 0'
-                                    }} />
-                                )}
-                            </button>
+                        <React.Fragment key={item.id}>
+                            <div style={{ position: 'relative' }}>
+                                <button
+                                    onClick={() => setActiveSection(item.id)}
+                                    onMouseEnter={() => setHoveredItem(item.id)}
+                                    onMouseLeave={() => setHoveredItem(null)}
+                                    style={{
+                                        width: '100%',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: sidebarExpanded ? '4px' : '0',
+                                        padding: sidebarExpanded ? '10px 4px' : '12px 4px',
+                                        background: isActive ? 'var(--accent)' : isHovered ? 'var(--bg-secondary)' : 'transparent',
+                                        color: isActive ? '#fff' : 'var(--text-muted)',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        position: 'relative'
+                                    }}
+                                >
+                                    <Icon size={18} style={{ flexShrink: 0 }} />
+                                    {sidebarExpanded && (
+                                        <span style={{
+                                            fontSize: '9px',
+                                            fontWeight: 600,
+                                            textAlign: 'center',
+                                            lineHeight: 1.2,
+                                            maxWidth: '80px',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}>
+                                            {item.label}
+                                        </span>
+                                    )}
+                                    {isActive && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            left: 0,
+                                            top: 0,
+                                            bottom: 0,
+                                            width: '3px',
+                                            background: '#fff',
+                                            borderRadius: '0 3px 3px 0'
+                                        }} />
+                                    )}
+                                </button>
 
-                            {/* Tooltip with Count */}
-                            {isHovered && (
-                                <div style={{
-                                    position: 'absolute',
-                                    left: '75px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    background: 'var(--surface)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '8px',
-                                    padding: '8px 16px',
-                                    boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-                                    zIndex: 1000,
-                                    whiteSpace: 'nowrap',
-                                    pointerEvents: 'none'
-                                }}>
-                                    <div style={{
-                                        fontSize: '13px',
-                                        fontWeight: 600,
-                                        color: 'var(--text-primary)'
-                                    }}>
-                                        {item.label}
-                                        {item.id === 'closed-positions' && closedPositionsCount > 0 && ` (${closedPositionsCount})`}
-                                        {item.id === 'open-positions' && openPositionsCount > 0 && ` (${openPositionsCount})`}
-                                    </div>
-                                    {/* Arrow pointing to sidebar */}
+                                {/* Tooltip - only when collapsed */}
+                                {!sidebarExpanded && isHovered && (
                                     <div style={{
                                         position: 'absolute',
-                                        left: '-6px',
+                                        left: '60px',
                                         top: '50%',
-                                        transform: 'translateY(-50%) rotate(-45deg)',
-                                        width: '12px',
-                                        height: '12px',
+                                        transform: 'translateY(-50%)',
                                         background: 'var(--surface)',
                                         border: '1px solid var(--border)',
-                                        borderRight: 'none',
-                                        borderBottom: 'none'
-                                    }} />
-                                </div>
+                                        borderRadius: '8px',
+                                        padding: '8px 12px',
+                                        boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                                        zIndex: 1000,
+                                        whiteSpace: 'nowrap',
+                                        pointerEvents: 'none'
+                                    }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                            color: 'var(--text-primary)'
+                                        }}>
+                                            {item.label}
+                                        </div>
+                                        {/* Arrow */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            left: '-6px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%) rotate(-45deg)',
+                                            width: '10px',
+                                            height: '10px',
+                                            background: 'var(--surface)',
+                                            border: '1px solid var(--border)',
+                                            borderRight: 'none',
+                                            borderBottom: 'none'
+                                        }} />
+                                    </div>
+                                )}
+                            </div>
+                            {/* Divider line between items */}
+                            {!isLast && (
+                                <div style={{
+                                    height: '1px',
+                                    background: 'var(--border)',
+                                    margin: sidebarExpanded ? '4px 12px' : '4px 8px',
+                                    opacity: 0.5
+                                }} />
                             )}
-                        </div>
+                        </React.Fragment>
                     );
                 })}
             </div>
@@ -336,7 +410,6 @@ export function FullScreenLayout({
                 {renderContent()}
             </div>
 
-            {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} />}
         </div>
     );
 }
@@ -344,14 +417,32 @@ export function FullScreenLayout({
 // Full Screen Section Components
 
 // 1. Open Positions - Table Only, No Tabs
-function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalCurrency = 'EUR', onOpenImport, onCountChange, closedPositionsCount }: { assets: any[], exchangeRates?: Record<string, number>, globalCurrency?: string, onOpenImport: () => void, onCountChange: () => void, closedPositionsCount: number }) {
-    const [activePositionTab, setActivePositionTab] = React.useState<'open' | 'closed'>('open');
+function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalCurrency = 'EUR', onCountChange, closedPositionsCount, isOwner = true }: { assets: any[], exchangeRates?: Record<string, number>, globalCurrency?: string, onCountChange: () => void, closedPositionsCount: number, isOwner?: boolean }) {
+    const dndId = React.useId();
+    const [activePositionTab, setActivePositionTab] = React.useState<'open' | 'closed' | 'import' | 'transactions'>('open');
+    const [transViewMode, setTransViewMode] = React.useState<'group' | 'date'>('group');
     const [isBatchEditMode, setIsBatchEditMode] = React.useState(false);
+    const [isClosedBatchEditMode, setIsClosedBatchEditMode] = React.useState(false);
     const [editedAssets, setEditedAssets] = React.useState<Record<string, any>>({});
-    const [assets, setAssets] = React.useState(initialAssets);
-    const [showSuccessNotification, setShowSuccessNotification] = React.useState(false);
-    const [loading, setLoading] = React.useState(false);
+    const [assets, setAssets] = React.useState(() => initialAssets.filter(a => Math.abs(a.quantity) > 0.000001));
+    const [expandedAssets, setExpandedAssets] = React.useState<Set<string>>(new Set());
 
+    const toggleExpand = (assetId: string) => {
+        setExpandedAssets(prev => {
+            const next = new Set(prev);
+            if (next.has(assetId)) next.delete(assetId);
+            else next.add(assetId);
+            return next;
+        });
+    };
+
+    // Sync state with props when data is refreshed (e.g. after import)
+    React.useEffect(() => {
+        setAssets(initialAssets.filter(a => Math.abs(a.quantity) > 0.000001));
+    }, [initialAssets]);
+
+    const [showSuccessNotification, setShowSuccessNotification] = React.useState(false);
+    const [successMessage, setSuccessMessage] = React.useState('Saved');
     const sensors = useSensors(
         useSensor(PointerSensor),
         useSensor(KeyboardSensor, {
@@ -381,25 +472,13 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         }
     };
 
-    // Fetch fresh data from database on mount
+    /* 
+    // LOADING STATE REMOVED - Rely on SSR 'initialAssets' for immediate render
     React.useEffect(() => {
-        const fetchAssets = async () => {
-            setLoading(true);
-            try {
-                const { getOpenPositions } = await import('@/lib/actions');
-                const freshAssets = await getOpenPositions();
-                setAssets(freshAssets);
-            } catch (error) {
-                console.error('[OpenPositionsFullScreen] Error fetching assets:', error);
-                // Fallback to initial assets if fetch fails
-                setAssets(initialAssets);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAssets();
-    }, []); // Only run on mount
+        // Redundant fetch removed. 
+        // We already have data from server (initialAssets).
+    }, []); 
+    */
 
     // Recalculate total value dynamically based on current prices and rates
     const totalPortfolioValue = assets.reduce((sum, asset) => {
@@ -497,25 +576,78 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         }
     };
 
-    // Show loading state while fetching data
-    if (loading) {
-        return (
-            <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
-                <div style={{ padding: '3rem', color: 'var(--text-muted)' }}>
-                    <div style={{
-                        margin: '0 auto 1rem',
-                        width: '32px',
-                        height: '32px',
-                        border: '3px solid var(--border)',
-                        borderTopColor: 'var(--accent)',
-                        borderRadius: '50%',
-                        animation: 'spin 0.8s linear infinite'
-                    }} />
-                    <p style={{ fontSize: '14px', fontWeight: 500 }}>Loading positions...</p>
-                </div>
-            </div>
-        );
-    }
+    /* Loading block removed */
+
+    const handleBatchSaveOrToggle = () => {
+        if (activePositionTab === 'closed') {
+            setIsClosedBatchEditMode(!isClosedBatchEditMode);
+            return;
+        }
+
+        // Open Positions Logic
+        if (isBatchEditMode) {
+            // Apply edits to assets
+            const updatedAssets = assets.map(asset => {
+                if (editedAssets[asset.id]) {
+                    const edits = editedAssets[asset.id];
+                    return {
+                        ...asset,
+                        ...edits,
+                        buyPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.buyPrice,
+                        averageBuyPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.averageBuyPrice,
+                        avgPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.avgPrice,
+                        customGroup: edits.portfolio !== undefined ? edits.portfolio : asset.customGroup,
+                        portfolio: edits.portfolio !== undefined ? edits.portfolio : asset.portfolio,
+                        quantity: edits.quantity !== undefined ? Number(edits.quantity) : asset.quantity,
+                        name: edits.name !== undefined ? edits.name : asset.name,
+                        platform: edits.platform !== undefined ? edits.platform : asset.platform
+                    };
+                }
+                return asset;
+            });
+
+            setAssets(updatedAssets);
+
+            const saveChanges = async () => {
+                const { updateAsset } = await import('@/lib/actions');
+                const promises = Object.entries(editedAssets).map(([id, data]) => {
+                    return updateAsset(id, {
+                        quantity: data.quantity,
+                        buyPrice: data.averageBuyPrice,
+                        name: data.name,
+                        platform: data.platform,
+                        customGroup: data.portfolio
+                    });
+                });
+                await Promise.all(promises);
+                onCountChange();
+            };
+            saveChanges().catch(err => console.error("Batch save failed:", err));
+
+            setSuccessMessage('Changes Saved');
+            setShowSuccessNotification(true);
+            setTimeout(() => {
+                setShowSuccessNotification(false);
+            }, 2000);
+
+            setEditedAssets({});
+            setIsBatchEditMode(false);
+        } else {
+            // Enter edit mode
+            const initialEdits: Record<string, any> = {};
+            assets.forEach(asset => {
+                initialEdits[asset.id] = {
+                    portfolio: asset.customGroup || 'Main',
+                    platform: asset.platform || 'Interactive Brokers',
+                    name: asset.name || asset.symbol,
+                    quantity: asset.quantity,
+                    averageBuyPrice: asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0
+                };
+            });
+            setEditedAssets(initialEdits);
+            setIsBatchEditMode(true);
+        }
+    };
 
     return (
         <div style={{ padding: '24px 40px 40px 40px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -529,243 +661,257 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                 boxShadow: '0 2px 8px -2px rgba(0, 0, 0, 0.03)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '16px'
+                gap: '16px',
+                height: '60px'
             }}>
-                {/* Header with Tabs */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                {/* Positions Tabs */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                        onClick={() => setActivePositionTab('open')}
+                        style={{
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            background: activePositionTab === 'open' ? 'var(--bg-secondary)' : 'transparent',
+                            color: activePositionTab === 'open' ? 'var(--text-primary)' : 'var(--text-muted)',
+                            fontWeight: 700,
+                            fontSize: '13px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        Open Positions
+                    </button>
+                    <button
+                        onClick={() => setActivePositionTab('closed')}
+                        style={{
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            background: activePositionTab === 'closed' ? 'var(--bg-secondary)' : 'transparent',
+                            color: activePositionTab === 'closed' ? 'var(--text-primary)' : 'var(--text-muted)',
+                            fontWeight: 700,
+                            fontSize: '13px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        Closed Positions
+                    </button>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        padding: '4px',
+                        paddingRight: activePositionTab === 'transactions' ? '8px' : '4px',
+                        background: activePositionTab === 'transactions' ? 'var(--bg-secondary)' : 'transparent',
+                        borderRadius: '8px',
+                        transition: 'all 0.2s',
+                    }}>
                         <button
-                            onClick={() => setActivePositionTab('open')}
+                            onClick={() => setActivePositionTab('transactions')}
                             style={{
-                                padding: '6px 14px',
-                                borderRadius: '8px',
-                                background: activePositionTab === 'open' ? 'var(--surface)' : 'transparent',
-                                color: activePositionTab === 'open' ? 'var(--text-primary)' : 'var(--text-muted)',
-                                fontWeight: 700,
-                                fontSize: '13px',
-                                border: activePositionTab === 'open' ? '1px solid var(--border)' : 'none',
-                                boxShadow: activePositionTab === 'open' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
-                                cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', gap: '8px',
-                                transition: 'all 0.2s'
+                                padding: '6px 12px',
+                                background: 'transparent',
+                                color: activePositionTab === 'transactions' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                fontWeight: 700, fontSize: '13px', border: 'none', cursor: 'pointer',
                             }}
                         >
-                            <Briefcase size={16} />
-                            <span>Open Positions ({assets.length})</span>
+                            Account Statement
                         </button>
-                        <button
-                            onClick={() => setActivePositionTab('closed')}
-                            style={{
-                                padding: '6px 14px',
-                                borderRadius: '8px',
-                                background: activePositionTab === 'closed' ? 'var(--surface)' : 'transparent',
-                                color: activePositionTab === 'closed' ? 'var(--text-primary)' : 'var(--text-muted)',
-                                fontWeight: 700,
-                                fontSize: '13px',
-                                border: activePositionTab === 'closed' ? '1px solid var(--border)' : 'none',
-                                boxShadow: activePositionTab === 'closed' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
-                                cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', gap: '8px',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            <XCircle size={16} />
-                            <span>Closed Positions ({closedPositionsCount})</span>
-                        </button>
+
+                        {activePositionTab === 'transactions' && (
+                            <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-primary)', padding: '2px', borderRadius: '6px' }}>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setTransViewMode('group'); }}
+                                    style={{
+                                        padding: '4px', borderRadius: '4px',
+                                        background: transViewMode === 'group' ? 'var(--bg-secondary)' : 'transparent',
+                                        color: transViewMode === 'group' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center'
+                                    }}
+                                    title="Group View"
+                                >
+                                    <LayoutGrid size={14} />
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setTransViewMode('date'); }}
+                                    style={{
+                                        padding: '4px', borderRadius: '4px',
+                                        background: transViewMode === 'date' ? 'var(--bg-secondary)' : 'transparent',
+                                        color: transViewMode === 'date' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center'
+                                    }}
+                                    title="Date View"
+                                >
+                                    <List size={14} />
+                                </button>
+                            </div>
+                        )}
                     </div>
+                    <button
+                        onClick={() => setActivePositionTab('import')}
+                        style={{
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            background: activePositionTab === 'import' ? 'var(--bg-secondary)' : 'transparent',
+                            color: activePositionTab === 'import' ? 'var(--text-primary)' : 'var(--text-muted)',
+                            fontWeight: 700,
+                            fontSize: '13px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        Import CSV
+                    </button>
+                </div>
 
-                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                        {/* Total Wealth */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                                Total Wealth:
-                            </span>
-                            <span style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                <span style={{ color: 'var(--accent)' }}>€</span>{formatNumber(totalPortfolioValue, 0)}
-                            </span>
-                        </div>
+                {/* Spacer */}
+                <div style={{ flex: 1 }}></div>
 
-                        <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
+                {/* Total Wealth */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                        Total Wealth:
+                    </span>
+                    <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                        <span style={{ color: 'var(--accent)' }}>€</span>{formatNumber(totalPortfolioValue, 0)}
+                    </span>
+                </div>
 
-                        {/* Import Button */}
+                {/* Adjust/Batch Edit Button */}
+                <button
+                    onClick={handleBatchSaveOrToggle}
+                    style={{
+                        width: '32px', height: '32px',
+                        borderRadius: '8px',
+                        background: (isBatchEditMode || isClosedBatchEditMode) ? 'var(--accent)' : 'transparent',
+                        border: (isBatchEditMode || isClosedBatchEditMode) ? '1px solid var(--accent)' : '1px solid var(--border)',
+                        color: (isBatchEditMode || isClosedBatchEditMode) ? '#fff' : 'var(--text-muted)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        marginLeft: '8px'
+                    }}
+                    title={(isBatchEditMode || isClosedBatchEditMode) ? "Save/Finish" : "Adjust / Batch Edit"}
+                >
+                    {(isBatchEditMode || isClosedBatchEditMode) ? <Save size={16} /> : <SlidersHorizontal size={16} />}
+                </button>
+            </div>
+
+            {activePositionTab === 'open' && assets.length === 0 && (
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '80px 20px',
+                    background: 'rgba(255,255,255,0.02)',
+                    borderRadius: '16px',
+                    marginTop: '20px',
+                    border: '1px dashed var(--border)',
+                    textAlign: 'center'
+                }}>
+                    <div style={{
+                        width: '72px',
+                        height: '72px',
+                        borderRadius: '50%',
+                        background: 'rgba(99, 102, 241, 0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '20px',
+                        color: 'var(--accent)',
+                        boxShadow: '0 0 20px rgba(99, 102, 241, 0.15)'
+                    }}>
+                        <Search size={32} />
+                    </div>
+                    <h3 style={{
+                        fontSize: '20px',
+                        fontWeight: 700,
+                        color: 'var(--text-primary)',
+                        marginBottom: '8px'
+                    }}>
+                        No Open Positions
+                    </h3>
+                    <p style={{
+                        fontSize: '15px',
+                        color: 'var(--text-muted)',
+                        marginBottom: '32px',
+                        maxWidth: '400px',
+                        lineHeight: '1.6'
+                    }}>
+                        Your portfolio is currently empty. Start by adding your first asset using the search bar.
+                    </p>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                         <button
-                            onClick={onOpenImport}
+                            onClick={() => {
+                                const input = document.getElementById('global-search-input');
+                                if (input) {
+                                    input.focus();
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }
+                            }}
                             style={{
-                                padding: '8px 16px',
-                                borderRadius: '8px',
-                                background: 'var(--bg-secondary)',
-                                border: '1px solid var(--border)',
-                                color: 'var(--text-primary)',
-                                fontWeight: 700,
-                                fontSize: '13px',
+                                padding: '12px 28px',
+                                background: 'var(--accent)',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '12px',
+                                fontSize: '15px',
+                                fontWeight: 600,
                                 cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', gap: '8px',
-                                transition: 'all 0.2s'
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                                transition: 'all 0.2s',
+                                transform: 'translateY(0)'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                e.currentTarget.style.boxShadow = '0 6px 16px rgba(99, 102, 241, 0.4)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)';
                             }}
                         >
-                            <Upload size={16} />
-                            <span>Import</span>
+                            <Search size={18} /> Search Assets
+                        </button>
+                        <button
+                            onClick={() => setActivePositionTab('import')}
+                            style={{
+                                padding: '12px 28px',
+                                background: 'var(--bg-secondary)',
+                                color: 'var(--text-primary)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '12px',
+                                fontSize: '15px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                transition: 'all 0.2s',
+                                transform: 'translateY(0)'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                e.currentTarget.style.background = 'var(--bg-hover)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.background = 'var(--bg-secondary)';
+                            }}
+                        >
+                            <Upload size={18} /> Import CSV
                         </button>
                     </div>
                 </div>
-            </div>
+            )}
 
-            {activePositionTab === 'open' && (
+            {activePositionTab === 'open' && assets.length > 0 && (
                 <>
-                    {/* Divider */}
-                    <div style={{ width: '1px', height: '28px', background: 'var(--border)' }}></div>
-
-                    {/* Batch Edit Button */}
-                    <button
-                        onClick={() => {
-                            if (isBatchEditMode) {
-                                // Apply edits to assets
-                                const updatedAssets = assets.map(asset => {
-                                    if (editedAssets[asset.id]) {
-                                        const edits = editedAssets[asset.id];
-                                        return {
-                                            ...asset,
-                                            ...edits,
-                                            // Explicitly overwrite key fields to ensure UI updates immediately
-                                            // Update ALL possible aliases for cost/price
-                                            buyPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.buyPrice,
-                                            averageBuyPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.averageBuyPrice,
-                                            avgPrice: edits.averageBuyPrice !== undefined ? Number(edits.averageBuyPrice) : asset.avgPrice,
-
-                                            // Update portfolio/group fields
-                                            customGroup: edits.portfolio !== undefined ? edits.portfolio : asset.customGroup,
-                                            portfolio: edits.portfolio !== undefined ? edits.portfolio : asset.portfolio,
-
-                                            // Update quantity
-                                            quantity: edits.quantity !== undefined ? Number(edits.quantity) : asset.quantity,
-
-                                            // Update name
-                                            name: edits.name !== undefined ? edits.name : asset.name,
-
-                                            // Update platform
-                                            platform: edits.platform !== undefined ? edits.platform : asset.platform
-                                        };
-                                    }
-                                    return asset;
-                                });
-
-                                setAssets(updatedAssets);
-
-                                // Persist changes to database
-                                const saveChanges = async () => {
-                                    const { updateAsset } = await import('@/lib/actions');
-                                    const promises = Object.entries(editedAssets).map(([id, data]) => {
-                                        // Map form fields to API fields
-                                        return updateAsset(id, {
-                                            quantity: data.quantity,
-                                            buyPrice: data.averageBuyPrice, // Map back to buyPrice
-                                            name: data.name,
-                                            platform: data.platform,
-                                            customGroup: data.portfolio
-                                        });
-                                    });
-                                    await Promise.all(promises);
-                                    onCountChange();
-                                };
-                                saveChanges().catch(err => console.error("Batch save failed:", err));
-
-                                // Show success notification
-                                setShowSuccessNotification(true);
-                                setTimeout(() => {
-                                    setShowSuccessNotification(false);
-                                }, 2000);
-
-                                setEditedAssets({});
-                                setIsBatchEditMode(false);
-                            } else {
-                                // Initialize editedAssets with current values when entering batch mode
-                                const initialEdits: Record<string, any> = {};
-                                assets.forEach(asset => {
-                                    initialEdits[asset.id] = {
-                                        portfolio: asset.portfolio || 'Main',
-                                        platform: asset.platform || 'Interactive Brokers',
-                                        name: asset.name || asset.symbol,
-                                        quantity: asset.quantity,
-                                        averageBuyPrice: asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0
-                                    };
-                                });
-                                setEditedAssets(initialEdits);
-                                setIsBatchEditMode(true);
-                            }
-                        }}
-                        style={{
-                            background: isBatchEditMode ? 'var(--accent)' : 'transparent',
-                            border: isBatchEditMode ? '1px solid var(--accent)' : '1px dashed var(--border)',
-                            borderRadius: '8px',
-                            padding: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '4px',
-                            color: isBatchEditMode ? '#fff' : 'var(--text-muted)',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            minWidth: isBatchEditMode ? '72px' : '36px',
-                            height: '36px',
-                            flexShrink: 0
-                        }}
-                        onMouseEnter={(e) => {
-                            if (!isBatchEditMode) {
-                                e.currentTarget.style.borderColor = 'var(--text-primary)';
-                                e.currentTarget.style.color = 'var(--text-primary)';
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            if (!isBatchEditMode) {
-                                e.currentTarget.style.borderColor = 'var(--border)';
-                                e.currentTarget.style.color = 'var(--text-muted)';
-                            }
-                        }}
-                        title={isBatchEditMode ? "Save Changes" : "Batch Edit"}>
-                        {isBatchEditMode ? (
-                            <>
-                                <Save size={16} />
-                            </>
-                        ) : (
-                            <Pencil size={16} />
-                        )}
-                    </button>
-
-                    {/* Cancel Button - Only show in batch edit mode */}
-                    {isBatchEditMode && (
-                        <button
-                            onClick={() => {
-                                setEditedAssets({});
-                                setIsBatchEditMode(false);
-                            }}
-                            style={{
-                                background: 'transparent',
-                                border: '1px solid var(--border)',
-                                borderRadius: '8px',
-                                padding: '8px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'var(--text-muted)',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                width: '36px',
-                                height: '36px',
-                                flexShrink: 0
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = '#ef4444';
-                                e.currentTarget.style.color = '#ef4444';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = 'var(--border)';
-                                e.currentTarget.style.color = 'var(--text-muted)';
-                            }}
-                            title="Cancel">
-                            <X size={16} />
-                        </button>
-                    )}
-
                     {/* Success Notification Toast */}
                     {showSuccessNotification && (
                         <div style={{
@@ -773,17 +919,17 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                             alignItems: 'center',
                             gap: '8px',
                             padding: '8px 16px',
+                            marginBottom: '16px',
                             background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                             color: '#fff',
                             borderRadius: '8px',
                             fontSize: '13px',
                             fontWeight: 600,
                             boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-                            animation: 'fadeIn 0.3s ease-out',
-                            marginLeft: '8px'
+                            animation: 'fadeIn 0.3s ease-out'
                         }}>
                             <Save size={16} />
-                            <span>Saved successfully!</span>
+                            <span>{successMessage}</span>
                         </div>
                     )}
 
@@ -791,12 +937,14 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                         background: 'var(--surface)',
                         borderRadius: '16px',
                         border: '1px solid var(--border)',
-                        overflow: 'visible',
+                        overflow: 'hidden',
                         boxShadow: 'var(--shadow-md)'
                     }}>
                         <DndContext
+                            id={dndId}
                             sensors={sensors}
                             collisionDetection={closestCenter}
+                            onDragStart={() => setExpandedAssets(new Set())}
                             onDragEnd={handleDragEnd}
                         >
                             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
@@ -855,6 +1003,8 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                             overflow: 'hidden',
                                             borderBottom: '1px solid var(--border)'
                                         }} />
+                                        {/* Expand Toggle */}
+                                        <th style={{ width: '30px', borderBottom: '1px solid var(--border)' }} />
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -868,7 +1018,31 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                             // Calculations per row for consistent display
                                             const calculateValues = () => {
                                                 const price = asset.currentPrice || asset.price || asset.previousClose || 0;
-                                                const cost = asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0;
+                                                let cost = asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0;
+
+                                                // OVERRIDE: Use transaction history average cost if available
+                                                // This ensures the main row matches the transaction grid logic
+                                                if (asset.transactions && asset.transactions.length > 0) {
+                                                    const sorted = [...asset.transactions].sort((a: any, b: any) => new Date(a.date).getTime() - b.date.getTime());
+                                                    let rQty = 0;
+                                                    let tCost = 0;
+                                                    for (const tx of sorted) {
+                                                        const q = Number(tx.quantity);
+                                                        const p = Number(tx.price);
+                                                        if (tx.type === 'BUY') {
+                                                            rQty += q;
+                                                            tCost += (q * p);
+                                                        } else if (tx.type === 'SELL') {
+                                                            const ratio = rQty > 0 ? q / rQty : 0;
+                                                            tCost = tCost * (1 - ratio);
+                                                            rQty -= q;
+                                                        }
+                                                    }
+                                                    // If we have a remaining position, use the calculated WAC
+                                                    if (rQty > 0.000001) {
+                                                        cost = tCost / rQty;
+                                                    }
+                                                }
                                                 const quantity = asset.quantity || 0;
                                                 const value = price * quantity;
                                                 const costValue = cost * quantity;
@@ -904,304 +1078,387 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                             const { value, costValue, valueGlobal, costGlobal, plAmount, weight, currency, price, cost } = calculateValues();
 
                                             return (
-                                                <SortableRow
-                                                    key={asset.id}
-                                                    id={asset.id}
-                                                    isBatchEditMode={isBatchEditMode}
-                                                >
-                                                    {/* Portfolio Pill */}
-                                                    <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                        {isBatchEditMode ? (
-                                                            <input
-                                                                type="text"
-                                                                value={getCurrentValue(asset.id, 'portfolio', asset.portfolio || 'Main')}
-                                                                onChange={(e) => {
-                                                                    setEditedAssets(prev => ({
-                                                                        ...prev,
-                                                                        [asset.id]: { ...prev[asset.id], portfolio: e.target.value }
-                                                                    }));
-                                                                }}
-                                                                style={{
-                                                                    width: '100%',
-                                                                    padding: sizing.inputPadding,
-                                                                    borderRadius: '6px',
-                                                                    background: 'var(--bg-primary)',
-                                                                    border: '1px solid var(--accent)',
-                                                                    fontSize: sizing.pillFontSize,
-                                                                    fontWeight: 700,
-                                                                    color: 'var(--text-primary)',
-                                                                    textAlign: 'center'
-                                                                }}
-                                                            />
-                                                        ) : (
-                                                            <div style={{
-                                                                display: 'inline-flex', padding: sizing.pillPadding,
-                                                                borderRadius: '6px',
-                                                                background: 'var(--bg-primary)',
-                                                                border: '1px solid var(--border)',
-                                                                fontSize: sizing.pillFontSize, fontWeight: 700,
-                                                                color: 'var(--text-secondary)',
-                                                                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                                                            }}>
-                                                                {asset.portfolio || 'Main'}
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                    {/* Platform Pill */}
-                                                    <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                        {isBatchEditMode ? (
-                                                            <input
-                                                                type="text"
-                                                                value={getCurrentValue(asset.id, 'platform', asset.platform || 'Interactive Brokers')}
-                                                                onChange={(e) => {
-                                                                    setEditedAssets(prev => ({
-                                                                        ...prev,
-                                                                        [asset.id]: { ...prev[asset.id], platform: e.target.value }
-                                                                    }));
-                                                                }}
-                                                                style={{
-                                                                    width: '100%',
-                                                                    padding: sizing.inputPadding,
-                                                                    borderRadius: '6px',
-                                                                    background: 'var(--bg-primary)',
-                                                                    border: '1px solid var(--accent)',
-                                                                    fontSize: sizing.pillFontSize,
-                                                                    fontWeight: 700,
-                                                                    color: 'var(--text-primary)',
-                                                                    textAlign: 'center'
-                                                                }}
-                                                            />
-                                                        ) : (
-                                                            <div style={{
-                                                                display: 'inline-flex', padding: sizing.pillPadding,
-                                                                borderRadius: '6px',
-                                                                background: 'var(--bg-primary)',
-                                                                border: '1px solid var(--border)',
-                                                                fontSize: sizing.pillFontSize, fontWeight: 700,
-                                                                color: 'var(--text-secondary)',
-                                                                boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                                                            }}>
-                                                                {asset.platform || 'Interactive Brokers'}
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                    {/* Asset (Logo + Name) */}
-                                                    <td style={{ padding: `${sizing.rowPadding} ${sizing.rowPaddingLR}`, verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                            <div style={{
-                                                                width: `${sizing.logoSize}px`, height: `${sizing.logoSize}px`,
-                                                                borderRadius: '50%', overflow: 'hidden',
-                                                                background: '#fff',
-                                                                border: '1px solid var(--border-light)',
-                                                                flexShrink: 0,
-                                                                padding: '2px',
-                                                                boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
-                                                            }}>
-                                                                <img
-                                                                    src={getLogoUrl(asset.symbol, asset.type || 'STOCK', asset.exchange, asset.country) || ''}
-                                                                    alt={asset.symbol}
-                                                                    style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
-                                                                    onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random` }}
+                                                <React.Fragment key={asset.id}>
+                                                    <SortableRow
+                                                        key={asset.id}
+                                                        id={asset.id}
+                                                        isBatchEditMode={isBatchEditMode}
+                                                    >
+                                                        {/* Portfolio Pill */}
+                                                        <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            {isBatchEditMode ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={getCurrentValue(asset.id, 'portfolio', asset.customGroup || 'Main')}
+                                                                    onChange={(e) => {
+                                                                        setEditedAssets(prev => ({
+                                                                            ...prev,
+                                                                            [asset.id]: { ...prev[asset.id], portfolio: e.target.value }
+                                                                        }));
+                                                                    }}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: sizing.inputPadding,
+                                                                        borderRadius: '6px',
+                                                                        background: 'var(--bg-primary)',
+                                                                        border: '1px solid var(--accent)',
+                                                                        fontSize: sizing.pillFontSize,
+                                                                        fontWeight: 700,
+                                                                        color: 'var(--text-primary)',
+                                                                        textAlign: 'center'
+                                                                    }}
                                                                 />
-                                                            </div>
-                                                            <div style={{ flex: 1 }}>
-                                                                {isBatchEditMode ? (
-                                                                    <>
-                                                                        <input
-                                                                            type="text"
-                                                                            value={getCurrentValue(asset.id, 'name', asset.name || asset.symbol)}
-                                                                            onChange={(e) => {
-                                                                                setEditedAssets(prev => ({
-                                                                                    ...prev,
-                                                                                    [asset.id]: { ...prev[asset.id], name: e.target.value }
-                                                                                }));
-                                                                            }}
-                                                                            style={{
-                                                                                width: '100%',
-                                                                                padding: '2px 4px',
-                                                                                marginBottom: '2px',
-                                                                                borderRadius: '4px',
-                                                                                background: 'var(--bg-primary)',
-                                                                                border: '1px solid var(--accent)',
-                                                                                fontSize: '14px',
-                                                                                fontWeight: 700,
-                                                                                color: 'var(--text-primary)'
-                                                                            }}
-                                                                        />
-                                                                        <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500, marginTop: '2px' }}>{asset.symbol}</div>
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <div style={{ fontSize: sizing.assetNameSize, fontWeight: 700, color: 'var(--text-primary)' }}>{asset.name || asset.symbol}</div>
-                                                                        <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500 }}>{asset.symbol}</div>
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    {/* Qty */}
-                                                    <td style={{ padding: `${sizing.rowPaddingLR} 12px`, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                        {isBatchEditMode ? (
-                                                            <input
-                                                                type="number"
-                                                                value={getCurrentValue(asset.id, 'quantity', asset.quantity)}
-                                                                onChange={(e) => {
-                                                                    setEditedAssets(prev => ({
-                                                                        ...prev,
-                                                                        [asset.id]: { ...prev[asset.id], quantity: parseFloat(e.target.value) || 0 }
-                                                                    }));
-                                                                }}
-                                                                style={{
-                                                                    width: '100%',
-                                                                    padding: '4px 8px',
+                                                            ) : (
+                                                                (() => {
+                                                                    const name = (asset.customGroup || 'Main').toUpperCase();
+                                                                    const style = getPortfolioStyle(name);
+                                                                    return (
+                                                                        <div style={{
+                                                                            display: 'inline-flex', padding: sizing.pillPadding,
+                                                                            borderRadius: '6px',
+                                                                            background: style.bg,
+                                                                            border: `1px solid ${style.border}`,
+                                                                            fontSize: sizing.pillFontSize, fontWeight: 700,
+                                                                            color: style.text,
+                                                                            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                                                                            whiteSpace: 'nowrap',
+                                                                            textTransform: 'uppercase',
+                                                                            fontFamily: 'var(--font-mono)'
+                                                                        }}>
+                                                                            {name}
+                                                                        </div>
+                                                                    );
+                                                                })()
+                                                            )}
+                                                        </td>
+                                                        {/* Platform Pill */}
+                                                        <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            {isBatchEditMode ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={getCurrentValue(asset.id, 'platform', asset.platform || 'Interactive Brokers')}
+                                                                    onChange={(e) => {
+                                                                        setEditedAssets(prev => ({
+                                                                            ...prev,
+                                                                            [asset.id]: { ...prev[asset.id], platform: e.target.value }
+                                                                        }));
+                                                                    }}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: sizing.inputPadding,
+                                                                        borderRadius: '6px',
+                                                                        background: 'var(--bg-primary)',
+                                                                        border: '1px solid var(--accent)',
+                                                                        fontSize: sizing.pillFontSize,
+                                                                        fontWeight: 700,
+                                                                        color: 'var(--text-primary)',
+                                                                        textAlign: 'center'
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <div style={{
+                                                                    display: 'inline-flex', padding: sizing.pillPadding,
                                                                     borderRadius: '6px',
                                                                     background: 'var(--bg-primary)',
-                                                                    border: '1px solid var(--accent)',
-                                                                    fontSize: '14px',
-                                                                    fontWeight: 700,
-                                                                    color: 'var(--text-primary)',
-                                                                    textAlign: 'right'
-                                                                }}
-                                                            />
-                                                        ) : (
-                                                            <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                                {formatNumber(asset.quantity, 0)}
+                                                                    border: '1px solid var(--border)',
+                                                                    fontSize: sizing.pillFontSize, fontWeight: 700,
+                                                                    color: 'var(--text-secondary)',
+                                                                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                                                                }}>
+                                                                    {asset.platform || 'Interactive Brokers'}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        {/* Asset (Logo + Name) */}
+                                                        <td style={{ padding: `${sizing.rowPadding} ${sizing.rowPaddingLR}`, verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                                <div style={{
+                                                                    width: `${sizing.logoSize}px`, height: `${sizing.logoSize}px`,
+                                                                    borderRadius: '50%', overflow: 'hidden',
+                                                                    background: '#fff',
+                                                                    border: '1px solid var(--border)',
+                                                                    flexShrink: 0,
+                                                                    padding: '2px',
+                                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
+                                                                }}>
+                                                                    <img
+                                                                        src={getLogoUrl(asset.symbol, asset.type || 'STOCK', asset.exchange, asset.country) || ''}
+                                                                        alt={asset.symbol}
+                                                                        style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
+                                                                        onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random` }}
+                                                                    />
+                                                                </div>
+                                                                <div style={{ flex: 1 }}>
+                                                                    {isBatchEditMode ? (
+                                                                        <>
+                                                                            <input
+                                                                                type="text"
+                                                                                value={getCurrentValue(asset.id, 'name', asset.name || asset.symbol)}
+                                                                                onChange={(e) => {
+                                                                                    setEditedAssets(prev => ({
+                                                                                        ...prev,
+                                                                                        [asset.id]: { ...prev[asset.id], name: e.target.value }
+                                                                                    }));
+                                                                                }}
+                                                                                style={{
+                                                                                    width: '100%',
+                                                                                    padding: '2px 4px',
+                                                                                    marginBottom: '2px',
+                                                                                    borderRadius: '4px',
+                                                                                    background: 'var(--bg-primary)',
+                                                                                    border: '1px solid var(--accent)',
+                                                                                    fontSize: '14px',
+                                                                                    fontWeight: 700,
+                                                                                    color: 'var(--text-primary)'
+                                                                                }}
+                                                                            />
+                                                                            <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500, marginTop: '2px' }}>{asset.symbol}</div>
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <div style={{ fontSize: sizing.assetNameSize, fontWeight: 700, color: 'var(--text-primary)' }}>{asset.name || asset.symbol}</div>
+                                                                            <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500 }}>{asset.symbol}</div>
+                                                                        </>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        )}
-                                                    </td>
-                                                    {/* Price / Cost */}
-                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                            {getCurrencySymbol(currency)}{formatNumber(price)}
-                                                        </div>
-                                                        {isBatchEditMode ? (
-                                                            <input
-                                                                type="number"
-                                                                step="0.01"
-                                                                value={getCurrentValue(asset.id, 'averageBuyPrice', cost)}
-                                                                onChange={(e) => {
-                                                                    setEditedAssets(prev => ({
-                                                                        ...prev,
-                                                                        [asset.id]: { ...prev[asset.id], averageBuyPrice: parseFloat(e.target.value) || 0 }
-                                                                    }));
+                                                        </td>
+                                                        {/* Qty */}
+                                                        <td style={{ padding: `${sizing.rowPaddingLR} 12px`, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            {isBatchEditMode ? (
+                                                                <input
+                                                                    type="number"
+                                                                    value={getCurrentValue(asset.id, 'quantity', asset.quantity)}
+                                                                    onChange={(e) => {
+                                                                        setEditedAssets(prev => ({
+                                                                            ...prev,
+                                                                            [asset.id]: { ...prev[asset.id], quantity: parseFloat(e.target.value) || 0 }
+                                                                        }));
+                                                                    }}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '4px 8px',
+                                                                        borderRadius: '6px',
+                                                                        background: 'var(--bg-primary)',
+                                                                        border: '1px solid var(--accent)',
+                                                                        fontSize: '14px',
+                                                                        fontWeight: 700,
+                                                                        color: 'var(--text-primary)',
+                                                                        textAlign: 'right'
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                    {formatNumber(asset.quantity, asset.quantity % 1 === 0 ? 0 : 2)}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        {/* Price / Cost */}
+                                                        <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                {getCurrencySymbol(currency)}{formatNumber(price)}
+                                                            </div>
+                                                            {isBatchEditMode ? (
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={getCurrentValue(asset.id, 'averageBuyPrice', cost)}
+                                                                    onChange={(e) => {
+                                                                        setEditedAssets(prev => ({
+                                                                            ...prev,
+                                                                            [asset.id]: { ...prev[asset.id], averageBuyPrice: parseFloat(e.target.value) || 0 }
+                                                                        }));
+                                                                    }}
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        padding: '2px 4px',
+                                                                        marginTop: '2px',
+                                                                        borderRadius: '4px',
+                                                                        background: 'var(--bg-primary)',
+                                                                        border: '1px solid var(--accent)',
+                                                                        fontSize: '12px',
+                                                                        fontWeight: 500,
+                                                                        color: 'var(--text-primary)',
+                                                                        textAlign: 'right'
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                                                                    {getCurrencySymbol(currency)}{formatNumber(cost)}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        {/* Value / Cost (Local) */}
+                                                        <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                {currency !== globalCurrency && value > 0 ? `${getCurrencySymbol(currency)}${formatNumber(value, 0)}` : '-'}
+                                                            </div>
+                                                            <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                                                                {currency !== globalCurrency && costValue > 0 ? `${getCurrencySymbol(currency)}${formatNumber(costValue, 0)}` : '-'}
+                                                            </div>
+                                                        </td>
+                                                        {/* Value / Cost (Global) */}
+                                                        <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                {valueGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(valueGlobal, 0)}` : '-'}
+                                                            </div>
+                                                            <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                                                                {costGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(costGlobal, 0)}` : '-'}
+                                                            </div>
+                                                        </td>
+                                                        {/* Weight */}
+                                                        <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                {Math.round(weight)}%
+                                                            </div>
+                                                        </td>
+                                                        {/* P&L */}
+                                                        <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            <div style={{ fontSize: sizing.numberSize, fontWeight: 800, color: (asset.plPercentage || 0) >= 0 ? '#34d399' : '#f87171', fontVariantNumeric: 'tabular-nums' }}>
+                                                                {(asset.plPercentage || 0) >= 0 ? '+' : ''}{Math.round(asset.plPercentage || 0)}%
+                                                            </div>
+                                                            <div style={{ fontSize: sizing.smallNumberSize, color: plAmount >= 0 ? '#34d399' : '#f87171', marginTop: '2px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                                                                {plAmount >= 0 ? '+' : ''}{getCurrencySymbol(globalCurrency)}{formatNumber(plAmount, 0)}
+                                                            </div>
+                                                        </td>
+                                                        {/* Delete Action Button */}
+                                                        <td style={{
+                                                            padding: isBatchEditMode ? sizing.rowPadding : 0,
+                                                            width: isBatchEditMode ? '60px' : '0px',
+                                                            maxWidth: isBatchEditMode ? '60px' : '0px',
+                                                            opacity: isBatchEditMode ? 1 : 0,
+                                                            textAlign: 'center',
+                                                            verticalAlign: 'middle',
+                                                            borderBottom: isLast ? 'none' : '1px solid var(--border)',
+                                                            transition: 'all 0.3s ease',
+                                                            overflow: 'hidden',
+                                                            visibility: isBatchEditMode ? 'visible' : 'hidden'
+                                                        }}>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDelete(asset.id);
                                                                 }}
                                                                 style={{
-                                                                    width: '100%',
-                                                                    padding: '2px 4px',
-                                                                    marginTop: '2px',
-                                                                    borderRadius: '4px',
-                                                                    background: 'var(--bg-primary)',
-                                                                    border: '1px solid var(--accent)',
-                                                                    fontSize: '12px',
-                                                                    fontWeight: 500,
-                                                                    color: 'var(--text-primary)',
-                                                                    textAlign: 'right'
+                                                                    background: 'var(--bg-secondary)',
+                                                                    border: '1px solid var(--border)',
+                                                                    borderRadius: '8px',
+                                                                    width: '32px', height: '32px',
+                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                    cursor: 'pointer',
+                                                                    color: '#ef4444',
+                                                                    transition: 'all 0.2s',
+                                                                    opacity: isBatchEditMode ? 1 : 0,
+                                                                    transform: isBatchEditMode ? 'scale(1)' : 'scale(0.8)'
                                                                 }}
-                                                            />
-                                                        ) : (
-                                                            <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
-                                                                {getCurrencySymbol(currency)}{formatNumber(cost)}
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                    {/* Value / Cost (Local) */}
-                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                            {currency !== globalCurrency && value > 0 ? `${getCurrencySymbol(currency)}${formatNumber(value, 0)}` : '-'}
-                                                        </div>
-                                                        <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
-                                                            {currency !== globalCurrency && costValue > 0 ? `${getCurrencySymbol(currency)}${formatNumber(costValue, 0)}` : '-'}
-                                                        </div>
-                                                    </td>
-                                                    {/* Value / Cost (Global) */}
-                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                            {valueGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(valueGlobal, 0)}` : '-'}
-                                                        </div>
-                                                        <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
-                                                            {costGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(costGlobal, 0)}` : '-'}
-                                                        </div>
-                                                    </td>
-                                                    {/* Weight */}
-                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
-                                                            {Math.round(weight)}%
-                                                        </div>
-                                                    </td>
-                                                    {/* P&L */}
-                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border-light)' }}>
-                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 800, color: (asset.plPercentage || 0) >= 0 ? '#34d399' : '#f87171', fontVariantNumeric: 'tabular-nums' }}>
-                                                            {(asset.plPercentage || 0) >= 0 ? '+' : ''}{Math.round(asset.plPercentage || 0)}%
-                                                        </div>
-                                                        <div style={{ fontSize: sizing.smallNumberSize, color: plAmount >= 0 ? '#34d399' : '#f87171', marginTop: '2px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                                                            {plAmount >= 0 ? '+' : ''}{getCurrencySymbol(globalCurrency)}{formatNumber(plAmount, 0)}
-                                                        </div>
-                                                    </td>
-                                                    {/* Delete Action Button */}
-                                                    <td style={{
-                                                        padding: isBatchEditMode ? sizing.rowPadding : 0,
-                                                        width: isBatchEditMode ? '60px' : '0px',
-                                                        maxWidth: isBatchEditMode ? '60px' : '0px',
-                                                        opacity: isBatchEditMode ? 1 : 0,
-                                                        textAlign: 'center',
-                                                        verticalAlign: 'middle',
-                                                        borderBottom: isLast ? 'none' : '1px solid var(--border-light)',
-                                                        transition: 'all 0.3s ease',
-                                                        overflow: 'hidden',
-                                                        visibility: isBatchEditMode ? 'visible' : 'hidden'
-                                                    }}>
-                                                        <button
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.background = '#fee2e2';
+                                                                    e.currentTarget.style.borderColor = '#ef4444';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.background = 'var(--bg-secondary)';
+                                                                    e.currentTarget.style.borderColor = 'var(--border)';
+                                                                }}
+                                                                title="Delete Position"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </td>
+                                                        <td
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDelete(asset.id);
+                                                                toggleExpand(asset.id);
                                                             }}
                                                             style={{
-                                                                background: 'var(--bg-secondary)',
-                                                                border: '1px solid var(--border)',
-                                                                borderRadius: '8px',
-                                                                width: '32px', height: '32px',
-                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                padding: 0,
+                                                                width: '30px',
+                                                                textAlign: 'center',
+                                                                verticalAlign: 'middle',
+                                                                borderBottom: isLast && !expandedAssets.has(asset.id) ? 'none' : '1px solid var(--border)',
                                                                 cursor: 'pointer',
-                                                                color: '#ef4444',
-                                                                transition: 'all 0.2s',
-                                                                opacity: isBatchEditMode ? 1 : 0,
-                                                                transform: isBatchEditMode ? 'scale(1)' : 'scale(0.8)'
+                                                                color: 'var(--text-secondary)'
                                                             }}
-                                                            onMouseEnter={(e) => {
-                                                                e.currentTarget.style.background = '#fee2e2';
-                                                                e.currentTarget.style.borderColor = '#ef4444';
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                e.currentTarget.style.background = 'var(--bg-secondary)';
-                                                                e.currentTarget.style.borderColor = 'var(--border)';
-                                                            }}
-                                                            title="Delete Position"
                                                         >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </td>
-                                                </SortableRow>
+                                                            {expandedAssets.has(asset.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                        </td>
+                                                    </SortableRow>
+
+                                                    {
+                                                        expandedAssets.has(asset.id) && (
+                                                            <tr style={{ background: 'var(--bg-secondary)' }}>
+                                                                <td colSpan={100} style={{ padding: '0 0.8rem 0.8rem 0.8rem', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                    <div style={{ marginTop: '0.8rem' }}>
+                                                                        <TransactionHistory
+                                                                            symbol={asset.symbol}
+                                                                            transactions={asset.transactions || []}
+                                                                            onUpdate={onCountChange}
+                                                                            isBatchEditMode={isBatchEditMode}
+                                                                            isOwner={isOwner}
+                                                                            defaultCurrency={asset.currency}
+                                                                        />
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )
+                                                    }
+                                                </React.Fragment>
                                             );
                                         })}
                                     </SortableContext>
                                 </tbody>
                             </table>
                         </DndContext>
-                    </div>
+                    </div >
                 </>
-            )}
-            {activePositionTab === 'closed' && (
-                <div style={{ marginTop: '0', width: '100%' }}>
-                    <ClosedPositionsFullScreen
-                        onOpenImport={onOpenImport}
-                        onCountChange={onCountChange}
-                        hideHeader={true}
-                    />
-                </div>
             )
             }
+            {
+                activePositionTab === 'closed' && (
+                    <div style={{ marginTop: '0', width: '100%' }}>
+                        <ClosedPositionsFullScreen
+                            onCountChange={onCountChange}
+                            hideHeader={true}
+                            isBatchEditMode={isClosedBatchEditMode}
+                            isOwner={isOwner}
+                            sizing={sizing}
+                        />
+                    </div>
+                )
+            }
+            {
+                activePositionTab === 'transactions' && (
+                    <div style={{ marginTop: '0', width: '100%' }}>
+                        <TransactionsFullScreen viewMode={transViewMode} assets={assets} />
+                    </div>
+                )
+            }
+            {
+                activePositionTab === 'import' && (
+                    <div style={{ marginTop: '0', width: '100%' }}>
+                        <ImportCSVInline
+                            onSuccess={(stats) => {
+                                onCountChange();
+                                setActivePositionTab('open');
+                                if (stats) {
+                                    // User Request: "4 open positions 28 closed positions"
+                                    const parts = [];
+                                    if (stats.open > 0) parts.push(`${stats.open} Open Positions`);
+                                    if (stats.closed > 0) parts.push(`${stats.closed} Closed Positions`);
+                                    if (stats.statement > 0) parts.push(`${stats.statement} Statements`);
 
-        </div>
+                                    const msg = parts.join(', ') + ' Imported Successfully';
+                                    setSuccessMessage(msg);
+                                    setShowSuccessNotification(true);
+                                    setTimeout(() => setShowSuccessNotification(false), 5000);
+                                }
+                            }}
+                            onCancel={() => setActivePositionTab('open')}
+                        />
+                    </div>
+                )
+            }
+
+        </div >
     );
 }
 
@@ -2028,7 +2285,7 @@ function TopPerformersFullScreen({ assets }: { assets: any[] }) {
                     </thead>
                     <tbody>
                         {sortedAssets.map((asset, i) => (
-                            <tr key={asset.id} style={{ borderBottom: i < sortedAssets.length - 1 ? '1px solid var(--border-light)' : 'none' }}>
+                            <tr key={asset.id} style={{ borderBottom: i < sortedAssets.length - 1 ? '1px solid var(--border)' : 'none' }}>
                                 <td style={{ padding: '6px 12px' }}>
                                     <div style={{
                                         width: '24px',
@@ -2082,11 +2339,14 @@ function TopPerformersFullScreen({ assets }: { assets: any[] }) {
 }
 
 // 8. Closed Positions - Full Table (Matching Card View Design)
-function ClosedPositionsFullScreen({ onOpenImport, onCountChange, hideHeader = false }: { onOpenImport: () => void, onCountChange: () => void, hideHeader?: boolean }) {
+function ClosedPositionsFullScreen({ onCountChange, hideHeader = false, isBatchEditMode: externalBatchEditMode, isOwner = true, sizing }: { onCountChange: () => void, hideHeader?: boolean, isBatchEditMode?: boolean, isOwner?: boolean, sizing: any }) {
     const [positions, setPositions] = React.useState<any[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [expandedPositions, setExpandedPositions] = React.useState<Set<string>>(new Set());
-    const [isBatchEditMode, setIsBatchEditMode] = React.useState(false);
+    const [internalBatchEditMode, setInternalBatchEditMode] = React.useState(false);
+
+    // Use external prop if provided, otherwise internal state
+    const isBatchEditMode = externalBatchEditMode !== undefined ? externalBatchEditMode : internalBatchEditMode;
 
     React.useEffect(() => {
         setLoading(true);
@@ -2272,37 +2532,18 @@ function ClosedPositionsFullScreen({ onOpenImport, onCountChange, hideHeader = f
                         Closed Positions ({positions.length})
                     </h1>
                     <div style={{ flex: 1 }} />
-                    <button
-                        onClick={onOpenImport}
-                        style={{
-                            background: 'var(--bg-secondary)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '8px',
-                            width: '32px', height: '32px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer',
-                            color: 'var(--text-secondary)',
-                            transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.color = 'var(--text-primary)';
-                            e.currentTarget.style.borderColor = 'var(--text-primary)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.color = 'var(--text-secondary)';
-                            e.currentTarget.style.borderColor = 'var(--border)';
-                        }}
-                        title="Import CSV"
-                    >
-                        <FileSpreadsheet size={16} />
-                    </button>
+
 
                     {/* Divider */}
                     <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
 
                     {/* Batch Edit Button */}
                     <button
-                        onClick={() => setIsBatchEditMode(!isBatchEditMode)}
+                        onClick={() => {
+                            if (externalBatchEditMode === undefined) {
+                                setInternalBatchEditMode(!isBatchEditMode);
+                            }
+                        }}
                         style={{
                             background: isBatchEditMode ? 'var(--accent)' : 'transparent',
                             border: isBatchEditMode ? '1px solid var(--accent)' : '1px dashed var(--border)',
@@ -2328,25 +2569,39 @@ function ClosedPositionsFullScreen({ onOpenImport, onCountChange, hideHeader = f
 
             {
                 positions.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '3px',
+                        background: 'var(--surface)',
+                        borderRadius: '16px',
+                        border: '1px solid var(--border)',
+                        overflow: 'hidden',
+                        boxShadow: 'var(--shadow-md)'
+                    }}>
                         {/* Table Header */}
                         <div style={{
                             display: 'grid',
-                            gridTemplateColumns: `minmax(200px, 3fr) 80px 70px 100px 120px 40px ${isBatchEditMode ? '40px' : '0px'}`,
+                            gridTemplateColumns: `80px 90px minmax(180px, 3fr) 90px 80px 70px 100px 120px 40px ${isBatchEditMode ? '40px' : '0px'}`,
                             gap: '0.5rem',
                             alignItems: 'center',
-                            padding: '0 1rem 0.5rem 1rem',
+                            padding: '0.75rem 1rem',
                             fontSize: '11px',
                             fontWeight: 700,
                             color: 'var(--text-muted)',
                             letterSpacing: '0.05em',
-                            textTransform: 'uppercase'
+                            textTransform: 'uppercase',
+                            background: 'var(--bg-secondary)',
+                            borderBottom: '1px solid var(--border)'
                         }}>
+                            <div style={{ textAlign: 'center' }}><Wallet size={14} /></div>
+                            <div style={{ textAlign: 'center' }}><Monitor size={14} /></div>
                             <div>Asset</div>
+                            <div style={{ textAlign: 'right' }}>Price</div>
                             <div style={{ textAlign: 'right' }}>TX</div>
                             <div style={{ textAlign: 'right' }}>Held</div>
                             <div style={{ textAlign: 'right' }}>P&L %</div>
-                            <div style={{ textAlign: 'right' }}>P&L €</div>
+                            <div style={{ textAlign: 'right' }}>P&L Amt</div>
                             <div></div>
                             <div style={{ transition: 'all 0.3s ease', opacity: isBatchEditMode ? 1 : 0 }}></div>
                         </div>
@@ -2354,36 +2609,94 @@ function ClosedPositionsFullScreen({ onOpenImport, onCountChange, hideHeader = f
                         {/* Position Rows */}
                         {positions
                             .sort((a, b) => new Date(b.lastTradeDate).getTime() - new Date(a.lastTradeDate).getTime())
-                            .map((pos) => {
-                                const isExpanded = expandedPositions.has(pos.symbol);
+                            .map((pos, index, array) => {
+                                const isExpanded = expandedPositions.has(`${pos.symbol}-${pos.customGroup || 'Main'}`);
                                 const holdDays = calculateHoldDays(pos.transactions);
                                 const returnPercent = calculateReturn(pos);
                                 const pnl = pos.realizedPnl;
                                 const isProfit = pnl >= 0;
+                                const isLast = index === array.length - 1;
 
                                 return (
-                                    <div key={pos.symbol} style={{
-                                        background: 'var(--surface)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '8px',
-                                        overflow: 'hidden',
-                                        transition: 'all 0.2s ease',
-                                        boxShadow: 'var(--shadow-sm)'
+                                    <div key={`${pos.symbol}-${pos.customGroup || 'Main'}`} style={{
+                                        overflow: 'hidden'
                                     }}>
                                         {/* Summary Row */}
                                         <div
-                                            onClick={() => toggleExpand(pos.symbol)}
+                                            onClick={() => toggleExpand(`${pos.symbol}-${pos.customGroup || 'Main'}`)}
+                                            onMouseEnter={(e) => {
+                                                if (!isExpanded) {
+                                                    e.currentTarget.style.background = 'var(--bg-secondary)';
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (!isExpanded) {
+                                                    e.currentTarget.style.background = 'transparent';
+                                                }
+                                            }}
                                             style={{
                                                 display: 'grid',
-                                                gridTemplateColumns: `minmax(200px, 3fr) 80px 70px 100px 120px 40px ${isBatchEditMode ? '40px' : '0px'}`,
+                                                gridTemplateColumns: `80px 90px minmax(180px, 3fr) 90px 80px 70px 100px 120px 40px ${isBatchEditMode ? '40px' : '0px'}`,
                                                 gap: '0.5rem',
                                                 alignItems: 'center',
                                                 padding: '0.6rem 1rem',
                                                 cursor: 'pointer',
                                                 background: isExpanded ? 'var(--bg-secondary)' : 'transparent',
-                                                transition: 'background 0.2s'
+                                                transition: 'background 0.15s ease',
+                                                borderBottom: isLast ? 'none' : '1px solid var(--border)'
                                             }}
                                         >
+                                            {/* Portfolio */}
+                                            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                                {(() => {
+                                                    const name = (pos.customGroup || 'Main').toUpperCase();
+                                                    const style = getPortfolioStyle(name);
+                                                    return (
+                                                        <div style={{
+                                                            display: 'inline-flex',
+                                                            padding: sizing.pillPadding,
+                                                            borderRadius: '6px',
+                                                            background: style.bg,
+                                                            border: `1px solid ${style.border}`,
+                                                            fontSize: sizing.pillFontSize,
+                                                            fontWeight: 700,
+                                                            color: style.text,
+                                                            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                                                            whiteSpace: 'nowrap',
+                                                            textTransform: 'uppercase',
+                                                            fontFamily: 'var(--font-mono)'
+                                                        }}>
+                                                            {name}
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+
+                                            {/* Platform */}
+                                            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                                {pos.platform ? (
+                                                    <div title={pos.platform} style={{
+                                                        display: 'inline-flex',
+                                                        padding: sizing.pillPadding,
+                                                        borderRadius: '6px',
+                                                        background: 'var(--bg-primary)',
+                                                        border: '1px solid var(--border)',
+                                                        fontSize: sizing.pillFontSize,
+                                                        fontWeight: 700,
+                                                        color: 'var(--text-secondary)',
+                                                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                                                        maxWidth: '70px',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap'
+                                                    }}>
+                                                        {pos.platform}
+                                                    </div>
+                                                ) : (
+                                                    <Monitor size={sizing.iconSize} color="var(--text-muted)" style={{ opacity: 0.5 }} />
+                                                )}
+                                            </div>
+
                                             {/* Asset */}
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
                                                 <img
@@ -2394,14 +2707,21 @@ function ClosedPositionsFullScreen({ onOpenImport, onCountChange, hideHeader = f
                                                         (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${pos.symbol}&background=random`;
                                                     }}
                                                 />
-                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px', textOverflow: 'ellipsis', overflow: 'hidden' }} title={pos.name || pos.symbol}>
-                                                        {pos.name || pos.symbol}
-                                                    </span>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', overflow: 'hidden' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                                        <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px', textOverflow: 'ellipsis', overflow: 'hidden' }} title={pos.name || pos.symbol}>
+                                                            {pos.name || pos.symbol}
+                                                        </span>
+                                                    </div>
                                                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                                                         {pos.symbol}
                                                     </span>
                                                 </div>
+                                            </div>
+
+                                            {/* Price */}
+                                            <div style={{ textAlign: 'right', fontSize: '13px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                                                {pos.currentPrice ? pos.currentPrice.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
                                             </div>
 
                                             {/* TX */}
@@ -2466,112 +2786,19 @@ function ClosedPositionsFullScreen({ onOpenImport, onCountChange, hideHeader = f
 
                                         {/* Expanded Transaction Details */}
                                         {isExpanded && (
-                                            <div style={{
-                                                borderTop: '1px solid var(--border)',
-                                                background: 'var(--bg-secondary)',
-                                                padding: '0.5rem 1rem',
-                                                animation: 'fadeIn 0.2s ease-out'
-                                            }}>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                                                    {[...pos.transactions]
-                                                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                                                        .map((tx, idx) => (
-                                                            <div key={idx} style={{
-                                                                display: 'grid',
-                                                                gridTemplateColumns: `minmax(200px, 3fr) 80px 70px 100px 120px 40px ${isBatchEditMode ? '40px' : '0px'}`,
-                                                                gap: '0.5rem',
-                                                                alignItems: 'center',
-                                                                height: '32px',
-                                                                borderBottom: idx === pos.transactions.length - 1 ? 'none' : '1px solid var(--border)',
-                                                                opacity: 0.9,
-                                                                fontSize: '12px'
-                                                            }}>
-                                                                {/* Col 1: Current Price (first row only) */}
-                                                                <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '38px' }}>
-                                                                    {idx === 0 && pos.currentPrice && (
-                                                                        <div style={{
-                                                                            display: 'flex',
-                                                                            gap: '6px',
-                                                                            alignItems: 'center'
-                                                                        }}>
-                                                                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Current:</span>
-                                                                            <div style={{ fontFamily: 'monospace', color: 'var(--text-primary)', fontSize: '11px' }}>
-                                                                                <span style={{ opacity: 0.6, marginRight: '2px' }}>@</span>
-                                                                                {pos.currentPrice.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-
-                                                                {/* Col 2: Date */}
-                                                                <div style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-muted)', fontSize: '11px' }}>
-                                                                    {formatDate(tx.date)}
-                                                                </div>
-
-                                                                {/* Col 3: Type */}
-                                                                <div style={{ textAlign: 'right' }}>
-                                                                    <span style={{
-                                                                        fontWeight: 600,
-                                                                        fontSize: '11px',
-                                                                        color: tx.type === 'BUY' ? GREEN : RED,
-                                                                    }}>
-                                                                        {tx.type}
-                                                                    </span>
-                                                                </div>
-
-                                                                {/* Col 4: Qty */}
-                                                                <div style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-muted)', fontSize: '11px' }}>
-                                                                    <span style={{ opacity: 0.6, marginRight: '2px' }}>x</span>
-                                                                    {tx.quantity.toLocaleString('de-DE', { maximumFractionDigits: 0 })}
-                                                                </div>
-
-                                                                {/* Col 5: Price */}
-                                                                <div style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-primary)', fontSize: '11px' }}>
-                                                                    <span style={{ opacity: 0.6, marginRight: '2px' }}>@</span>
-                                                                    {tx.price.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                </div>
-
-                                                                {/* Col 6: Empty */}
-                                                                <div></div>
-
-                                                                {/* Col 7: Delete Transaction */}
-                                                                <div style={{
-                                                                    display: 'flex',
-                                                                    justifyContent: 'center',
-                                                                    alignItems: 'center',
-                                                                    opacity: isBatchEditMode ? 1 : 0,
-                                                                    width: isBatchEditMode ? 'auto' : 0,
-                                                                    overflow: 'hidden',
-                                                                    transition: 'all 0.3s ease'
-                                                                }}>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleDeleteTransaction(pos.symbol, tx.id);
-                                                                        }}
-                                                                        style={{
-                                                                            background: 'rgba(239, 68, 68, 0.1)',
-                                                                            border: 'none',
-                                                                            borderRadius: '4px',
-                                                                            width: '24px', height: '24px',
-                                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                            cursor: 'pointer',
-                                                                            color: '#ef4444'
-                                                                        }}
-                                                                        title="Delete Transaction"
-                                                                    >
-                                                                        <Trash2 size={12} />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                </div>
-                                            </div>
+                                            <TransactionHistory
+                                                symbol={pos.symbol}
+                                                transactions={pos.transactions}
+                                                onUpdate={onCountChange}
+                                                isBatchEditMode={isBatchEditMode}
+                                                isOwner={isOwner}
+                                                defaultCurrency={pos.currency}
+                                            />
                                         )}
                                     </div>
                                 );
                             })}
-                    </div>
+                    </div >
                 ) : (
                     <div style={{
                         background: 'var(--surface)',
@@ -2597,7 +2824,7 @@ function ClosedPositionsFullScreen({ onOpenImport, onCountChange, hideHeader = f
                     to { opacity: 1; transform: translateY(0); }
                 }
             `}</style >
-        </div>
+        </div >
     );
 }
 
@@ -2735,7 +2962,7 @@ function SettingsFullScreen({ preferences, username, userEmail }: { preferences?
                         zIndex: 100
                     }}>
                         <Save size={16} />
-                        <span>Saved</span>
+                        <span>Settings saved</span>
                     </div>
                 )}
             </div>
@@ -2933,9 +3160,14 @@ function SettingsFullScreen({ preferences, username, userEmail }: { preferences?
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '13px', fontWeight: 600, color: '#ef4444' }}>Delete Account</span>
                             <button
-                                onClick={() => {
-                                    if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-                                        alert('Account deletion functionality coming soon!');
+                                onClick={async () => {
+                                    if (confirm('Are you sure you want to delete your account? This will permanently remove all your data including assets, transactions, and portfolio history. This action cannot be undone.')) {
+                                        const result = await deleteAccount();
+                                        if (result.success) {
+                                            await signOut({ callbackUrl: '/' });
+                                        } else {
+                                            alert(result.error || 'Failed to delete account');
+                                        }
                                     }
                                 }}
                                 style={{ fontSize: '12px', color: '#ef4444', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}

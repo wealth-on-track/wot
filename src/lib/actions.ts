@@ -322,7 +322,32 @@ export async function getOpenPositions() {
         const { getPortfolioMetrics } = await import('@/lib/portfolio');
         const { assetsWithValues } = await getPortfolioMetrics(user.portfolio.assets, undefined, false, user.id);
 
-        return assetsWithValues;
+        // Fetch transactions separately
+        const transactions = await prisma.assetTransaction.findMany({
+            where: { portfolioId: user.portfolio.id },
+            orderBy: { date: 'desc' }
+        });
+
+        // Attach transactions to assets
+        console.log(`[getOpenPositions] Processing ${assetsWithValues.length} assets and ${transactions.length} transactions`);
+
+        return assetsWithValues.map(asset => {
+            const assetTxs = transactions.filter(t => {
+                // 1. Strict Symbol Match
+                if (t.symbol === asset.symbol) return true;
+                // 2. Original Name/Symbol Match (if imported)
+                if (asset.originalName && (t.symbol === asset.originalName || t.name === asset.originalName)) return true;
+                // 3. Name Match (fallback)
+                if (t.name === asset.name) return true;
+
+                return false;
+            });
+
+            return {
+                ...asset,
+                transactions: assetTxs
+            };
+        });
     } catch (error) {
         console.error('[getOpenPositions] Error:', error);
         return [];
@@ -645,10 +670,98 @@ export async function updateUserPreferences(newPreferences: any) {
         where: { email: session.user.email },
         data: { preferences: updatedPreferences }
     });
-    // Optional: revalidatePath might not be needed if state is local, 
-    // but good for ensuring fresh data on reload.
-    // Revalidate paths to ensure immediate updates on navigation
-    revalidatePath("/");
-    revalidatePath("/settings");
-    revalidatePath("/[username]", "page");
+    // Note: revalidatePath removed to prevent refresh loops.
+    // Preferences are managed via client-side state (contexts).
+    // The updated preferences will be loaded on next page navigation.
+}
+
+export async function getTransactions() {
+    const session = await auth();
+    if (!session?.user?.email) return [];
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            include: { portfolio: true }
+        });
+        if (!user?.portfolio) return [];
+
+        const transactions = await prisma.assetTransaction.findMany({
+            where: { portfolioId: user.portfolio.id },
+            orderBy: { date: 'desc' }
+        });
+        return transactions;
+    } catch (error) {
+        console.error("Get transactions error:", error);
+        return [];
+    }
+}
+
+/**
+ * Delete user account and all associated data
+ * This permanently removes: User, Portfolio, Assets, Transactions, Goals, Snapshots
+ */
+export async function deleteAccount(): Promise<{ success: boolean; error?: string }> {
+    const session = await auth();
+    if (!session?.user?.email) {
+        return { success: false, error: "Not authenticated" };
+    }
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            include: { portfolio: true }
+        });
+
+        if (!user) {
+            return { success: false, error: "User not found" };
+        }
+
+        // Track account deletion before deleting (for audit trail)
+        await trackActivity('AUTH', 'DELETE_ACCOUNT', {
+            userId: user.id,
+            username: user.username,
+            details: { email: user.email }
+        });
+
+        // Delete in correct order due to foreign key constraints:
+        if (user.portfolio) {
+            const portfolioId = user.portfolio.id;
+
+            // 1. Delete Assets (no cascade on Portfolio relation)
+            await prisma.asset.deleteMany({
+                where: { portfolioId }
+            });
+
+            // 2. Delete Goals
+            await prisma.goal.deleteMany({
+                where: { portfolioId }
+            });
+
+            // 3. Delete Portfolio Snapshots
+            await prisma.portfolioSnapshot.deleteMany({
+                where: { portfolioId }
+            });
+
+            // 4. Delete Asset Transactions
+            await prisma.assetTransaction.deleteMany({
+                where: { portfolioId }
+            });
+
+            // 5. Delete Portfolio itself
+            await prisma.portfolio.delete({
+                where: { id: portfolioId }
+            });
+        }
+
+        // 6. Delete User
+        await prisma.user.delete({
+            where: { id: user.id }
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error("[deleteAccount] Error:", error);
+        return { success: false, error: "Failed to delete account" };
+    }
 }

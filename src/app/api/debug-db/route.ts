@@ -1,32 +1,39 @@
-export const dynamic = 'force-dynamic';
-import { prisma } from '@/lib/prisma';
+
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { auth } from '@/auth';
 
 export async function GET() {
     try {
-        // Attempt to "auto-patch" the database for the missing column
-        try {
-            await prisma.$executeRaw`ALTER TABLE "Asset" ADD COLUMN "customGroup" TEXT;`;
-            console.log("Successfully added customGroup column");
-        } catch (e: any) {
-            // Ignore error if column already exists (common error code for duplicate column)
-            console.log("Column likely exists or error adding:", e.message);
-        }
+        // Bypass auth for debug
+        const user = await prisma.user.findFirst({
+            include: { portfolio: true }
+        });
 
-        const userCount = await prisma.user.count();
-        const priceCacheCount = await prisma.priceCache.count();
+        if (!user?.portfolio) return NextResponse.json({ error: 'Portfolio not found' });
+
+        const assets = await prisma.asset.findMany({
+            where: { portfolioId: user.portfolio.id },
+            select: { symbol: true, quantity: true, customGroup: true, id: true }
+        });
+
+        // Select specific fields to avoid "Unknown field" error if runtime is still stale
+        // But we WANT to check if customGroup exists. 
+        // We'll try to select it. If it fails, we know runtime is stale.
+        const transactions = await prisma.assetTransaction.findMany({
+            where: { portfolioId: user.portfolio.id },
+            // select: { symbol: true, quantity: true, type: true, customGroup: true, date: true } // Commented out to just get all and see what happens or specific
+        });
 
         return NextResponse.json({
-            status: "ok",
-            message: "Database connection successful & Schema Patched",
-            users: userCount,
-            cacheEntries: priceCacheCount
+            user: user.email,
+            assets,
+            transactions: transactions.slice(0, 10).map(t => ({
+                ...t,
+                customGroup: (t as any).customGroup // Cast to any to see if it exists at runtime
+            }))
         });
     } catch (error: any) {
-        return NextResponse.json({
-            status: "error",
-            message: error.message,
-            stack: error.stack
-        }, { status: 500 });
+        return NextResponse.json({ error: error.toString() }, { status: 500 });
     }
 }

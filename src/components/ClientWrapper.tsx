@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, ReactNode, useState } from "react";
+import { useEffect, ReactNode, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import Dashboard from "@/components/DashboardV2";
 import { CurrencyProvider, useCurrency } from "@/context/CurrencyContext";
@@ -58,6 +58,9 @@ export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals 
         (preferences?.defaultViewMode as 'card' | 'fullscreen') || 'fullscreen'
     );
     const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+    // Track if this is the initial mount to prevent saving on first render
+    const isInitialMount = useRef(true);
 
     // Find portal target for view mode toggle
     useEffect(() => {
@@ -122,9 +125,15 @@ export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals 
         return () => clearInterval(interval);
     }, [isOwner]);
 
-    // Save view mode preference when it changes
+    // Save view mode preference when it changes (skip initial mount to prevent refresh loop)
     useEffect(() => {
         if (!isOwner) return;
+
+        // Skip the first render to avoid triggering revalidatePath on page load
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
 
         const saveViewMode = async () => {
             try {

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useMemo, useCallback } from 'react';
 
 interface PrivacyContextType {
     showAmounts: boolean;
@@ -12,12 +12,19 @@ const PrivacyContext = createContext<PrivacyContextType | undefined>(undefined);
 export function PrivacyProvider({ children }: { children: ReactNode }) {
     const [showAmounts, setShowAmounts] = useState(true);
 
-    const toggleAmounts = () => {
+    // Memoize toggle function to prevent unnecessary re-renders
+    const toggleAmounts = useCallback(() => {
         setShowAmounts(prev => !prev);
-    };
+    }, []);
+
+    // Memoize context value to prevent unnecessary re-renders
+    const value = useMemo(() => ({
+        showAmounts,
+        toggleAmounts
+    }), [showAmounts, toggleAmounts]);
 
     return (
-        <PrivacyContext.Provider value={{ showAmounts, toggleAmounts }}>
+        <PrivacyContext.Provider value={value}>
             {children}
         </PrivacyContext.Provider>
     );

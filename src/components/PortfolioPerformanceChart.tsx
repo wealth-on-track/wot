@@ -11,7 +11,7 @@ import {
     ResponsiveContainer,
     Line
 } from 'recharts';
-import { LineChart as LineChartIcon, Eye, EyeOff, ChevronDown, TrendingDown, Activity, TrendingUp, Settings, Edit2, Share2, Target } from 'lucide-react';
+import { Share2, Target } from 'lucide-react';
 import { ShareHub } from './share/ShareHub';
 import { ShareData } from './share/Templates';
 import { BENCHMARK_ASSETS, fetchBenchmarkData, normalizeToPercentage, BenchmarkDataPoint } from '@/lib/benchmarkApi';
@@ -22,7 +22,10 @@ import { formatEUR, formatNumber } from '@/lib/formatters';
 import { useCurrency } from '@/context/CurrencyContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { convertCurrency, getCurrencySymbol } from '@/lib/currency';
-import { motion } from 'framer-motion';
+
+import { ChartTooltip } from './ChartTooltip';
+import { ChartBenchmarkSelector } from './ChartBenchmarkSelector';
+import { ChartTimeSelector } from './ChartTimeSelector';
 
 interface PortfolioPerformanceChartProps {
     username: string;
@@ -92,16 +95,14 @@ export function PortfolioPerformanceChart({
     const [activeScenario, setActiveScenario] = useState<'bear' | 'expected' | 'bull' | 'custom'>('expected');
     const [customRate, setCustomRate] = useState(10); // Default custom rate 10%
 
-    // UI State for Period Dropdown
-    const [isPeriodMenuOpen, setIsPeriodMenuOpen] = useState(false);
+
 
     // Update range if preference changes
     useEffect(() => {
         if (defaultRange) setSelectedPeriod(defaultRange as TimePeriod);
     }, [defaultRange]);
 
-    const [showCompareMenu, setShowCompareMenu] = useState(false);
-    const [showTimeMenu, setShowTimeMenu] = useState(false); // Added state for Time Menu
+
     const [portfolioData, setPortfolioData] = useState<BenchmarkDataPoint[]>([]);
     const [benchmarkData, setBenchmarkData] = useState<Record<string, BenchmarkDataPoint[]>>({});
     const [activeReferenceDate, setActiveReferenceDate] = useState<string | null>(null);
@@ -166,11 +167,6 @@ export function PortfolioPerformanceChart({
     // Note: portfolioStats.change is calculated in EUR above.
     const displayedChange = convertCurrency(portfolioStats.change, 'EUR', targetCurrency);
     const isPositive = portfolioStats.changePercent >= 0;
-
-    // Helper to format currency
-    const fmtCurrency = (val: number) => {
-        return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
-    };
 
     // 2. Fetch Benchmark History (Smart 1D Logic)
     useEffect(() => {
@@ -522,252 +518,9 @@ export function PortfolioPerformanceChart({
         return `${day} ${month} ${year} - ${weekday}`;
     };
 
-    // Shared Tooltip Content Renderer
-    const renderTooltipContent = (payload: any[], label: string) => {
-        // --- VISION MODE TOOLTIP ---
-        if (activeView === 'vision') {
-            const dataPoint = payload[0]?.payload;
-            const projectedVal = dataPoint?._actualValue || 0;
-            const impactVal = dataPoint?._impactActualValue || 0;
-            const impactDiff = impactVal - projectedVal;
-
-            // Lifestyle / Freedom Calc
-            // Assumptions: 
-            // 1 Day Freedom (Basic Living Cost) = ~50 EUR (1500/mo)
-            // 1 Year Rent = 12,000 EUR
-            // 1 Lambo = 300,000 EUR
-            const freedomDays = Math.floor(projectedVal / 50);
-            const rentYears = (projectedVal / 12000).toFixed(1);
-
-            return (
-                <div style={{
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                    backdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(139, 92, 246, 0.3)',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-                    color: '#fff',
-                    minWidth: '220px'
-                }}>
-                    <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '12px', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
-                        {formatTooltipDate(label)}
-                    </p>
-
-                    {/* Main Projection */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '0.85rem', color: '#e2e8f0' }}>Estimated Value</span>
-                        <span style={{ fontSize: '1rem', fontWeight: 800, color: '#10b981' }}>
-                            {currencySym}{fmtCurrency(projectedVal)}
-                        </span>
-                    </div>
-
-                    {/* Impact / Ghost Line */}
-                    {simulatedImpact !== 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                            <span style={{ fontSize: '0.85rem', color: '#fbbf24' }}>With Impact</span>
-                            <span style={{ fontSize: '1rem', fontWeight: 800, color: '#fbbf24' }}>
-                                {currencySym}{fmtCurrency(impactVal)}
-                            </span>
-                        </div>
-                    )}
-
-                    {/* Impact Delta */}
-                    {simulatedImpact !== 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', background: 'rgba(251, 191, 36, 0.1)', padding: '6px 8px', borderRadius: '6px' }}>
-                            <span style={{ fontSize: '0.8rem', color: '#fbbf24', fontWeight: 600 }}>Effect</span>
-                            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fbbf24' }}>
-                                +{currencySym}{fmtCurrency(impactDiff)}
-                            </span>
-                        </div>
-                    )}
-
-                    {/* Lifestyle Box */}
-                    <div style={{ marginTop: '12px', background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '8px' }}>
-                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, marginBottom: '6px' }}>
-                            Lifestyle Power
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#e2e8f0' }}>
-                                <span>🏠</span> <strong>{rentYears} Years</strong> of Rent
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#e2e8f0' }}>
-                                <span>🏄</span> <strong>{freedomDays} Days</strong> of Freedom
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        // --- STANDARD HISTORY MODE TOOLTIP ---
-        // Sort payload by value (highest to lowest)
-        const sortedPayload = [...payload].sort((a, b) => {
-            const valA = Number(a.value) || 0;
-            const valB = Number(b.value) || 0;
-            return valB - valA; // Descending order (highest first)
-        });
-
-        return (
-            <div style={{
-                backgroundColor: 'rgba(15, 23, 42, 0.85)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '12px',
-                padding: '12px',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
-                color: '#fff',
-                minWidth: '200px'
-            }}>
-                <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '8px', fontWeight: 500 }}>
-                    {formatTooltipDate(label)}
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {sortedPayload.map((entry: any) => {
-                        const isPortfolio = entry.dataKey === 'portfolio';
-                        const benchmark = BENCHMARK_ASSETS.find(b => b.id === entry.dataKey);
-                        const name = isPortfolio ? 'My Portfolio' : (benchmark?.name || entry.dataKey);
-                        const color = isPortfolio ? '#6366f1' : (benchmark?.color || entry.color);
-                        const val = Number(entry.value);
-
-                        return (
-                            <div key={entry.dataKey || entry.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: color }} />
-                                    <span style={{ fontSize: '0.8rem', color: '#e2e8f0' }}>{name}</span>
-                                </div>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: val >= 0 ? '#4ade80' : '#f87171' }}>
-                                    {val > 0 ? '+' : ''}{val.toFixed(2)}%
-                                </span>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-        );
-    };
-
-    const CustomTooltip = ({ active, payload, label }: any) => {
-        if (!active || !payload || payload.length === 0) return null;
-        return renderTooltipContent(payload, label);
-    };
-
-    const BenchmarkSelector = () => (
-        <div style={{ position: 'relative' }}>
-            <button
-                onClick={() => setShowCompareMenu(!showCompareMenu)}
-                style={{
-                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                    padding: '0.4rem 0.8rem',
-                    background: selectedBenchmarks.length > 0 ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                    border: '1px solid var(--border)',
-                    borderRadius: '8px',
-                    color: selectedBenchmarks.length > 0 ? '#6366f1' : 'var(--text-secondary)',
-                    fontSize: '0.8rem', fontWeight: 600,
-                    cursor: 'pointer'
-                }}
-            >
-                <LineChartIcon size={16} />
-                <span>{t('benchmarks')}</span>
-                {selectedBenchmarks.length > 0 && (
-                    <span style={{ background: '#6366f1', color: '#fff', fontSize: '0.65rem', padding: '0px 5px', borderRadius: '10px' }}>
-                        {selectedBenchmarks.length}
-                    </span>
-                )}
-            </button>
 
 
-            {/* Dropdown - Check position */}
-            {showCompareMenu && (
-                <>
-                    <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setShowCompareMenu(false)} />
-                    <div style={{
-                        position: 'absolute', top: '115%', left: 0, width: '170px',
-                        background: 'var(--surface)', border: '1px solid var(--border)',
-                        borderRadius: '12px', padding: '8px', zIndex: 50,
-                        boxShadow: '0 10px 30px -10px rgba(0,0,0,0.2)',
-                        maxHeight: '300px', overflowY: 'auto'
-                    }}>
-                        <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', padding: '4px 8px', textTransform: 'uppercase' }}>
-                            Overlay
-                        </div>
-                        <div onClick={onTogglePortfolio} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', borderRadius: '6px', cursor: 'pointer', background: isPortfolioVisible ? 'rgba(99, 102, 241, 0.1)' : 'transparent' }}>
-                            <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>My Portfolio</span>
-                            {isPortfolioVisible ? <Eye size={16} color="#6366f1" /> : <EyeOff size={16} color="#94a3b8" />}
-                        </div>
-                        <div style={{ height: '1px', background: 'var(--border)', margin: '4px 0' }} />
-                        {BENCHMARK_ASSETS.map(b => (
-                            <div key={b.id} onClick={() => onToggleBenchmark(b.id)} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', borderRadius: '6px', cursor: 'pointer', background: selectedBenchmarks.includes(b.id) ? 'var(--bg-secondary)' : 'transparent' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: b.color }} />
-                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>{b.name}</span>
-                                </div>
-                                {selectedBenchmarks.includes(b.id) && <Eye size={16} color={b.color} />}
-                            </div>
-                        ))}
 
-                    </div>
-                </>
-            )}
-        </div>
-    );
-
-    const TimePeriodSelector = () => (
-        <div style={{ position: 'relative' }}>
-            <button
-                onClick={() => setShowTimeMenu(!showTimeMenu)}
-                style={{
-                    display: 'flex', alignItems: 'center', gap: '0.4rem',
-                    padding: '0.4rem 0.8rem',
-                    background: 'var(--bg-secondary)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '8px',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.85rem', fontWeight: 600,
-                    cursor: 'pointer',
-                    minWidth: '80px',
-                    justifyContent: 'space-between'
-                }}
-            >
-                <span>{selectedPeriod}</span>
-                <ChevronDown size={14} color="var(--text-muted)" />
-            </button>
-
-            {showTimeMenu && (
-                <>
-                    <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setShowTimeMenu(false)} />
-                    <div style={{
-                        position: 'absolute', top: '115%', right: 0, width: '100px',
-                        background: 'var(--surface)', border: '1px solid var(--border)',
-                        borderRadius: '8px', padding: '4px', zIndex: 50,
-                        boxShadow: '0 10px 30px -10px rgba(0,0,0,0.2)'
-                    }}>
-                        {(['1D', '1W', '1M', 'YTD', '1Y', 'ALL'] as const).map((period) => (
-                            <div
-                                key={period}
-                                onClick={() => {
-                                    handlePeriodChange(period);
-                                    setShowTimeMenu(false);
-                                }}
-                                style={{
-                                    padding: '6px 12px',
-                                    fontSize: '0.8rem',
-                                    fontWeight: selectedPeriod === period ? 700 : 500,
-                                    color: selectedPeriod === period ? 'var(--accent)' : 'var(--text-primary)',
-                                    background: selectedPeriod === period ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    marginBottom: '2px'
-                                }}
-                            >
-                                {period}
-                            </div>
-                        ))}
-                    </div>
-                </>
-            )}
-        </div>
-    );
 
     // Fix for broken Y-Axis ticks in Vision Mode
     const visionTicks = useMemo(() => {
@@ -813,7 +566,7 @@ export function PortfolioPerformanceChart({
                 {showPortfolioValue && (
                     <div className="neo-card" style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1 }}>
-                            {currencySym}{fmtCurrency(displayedTotalValue)}
+                            {currencySym}{formatNumber(displayedTotalValue, 0, 0)}
                         </h2>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -821,7 +574,7 @@ export function PortfolioPerformanceChart({
                                     {portfolioData.length > 0 ? (isPositive ? '▲' : '▼') : ''}{Math.abs(portfolioStats.changePercent).toFixed(2)}%
                                 </span>
                                 <span style={{ fontSize: '0.85rem', fontWeight: 600, color: isPositive ? 'var(--success)' : 'var(--danger)', opacity: 0.9 }}>
-                                    ({isPositive ? '+' : '-'}{currencySym}{fmtCurrency(Math.abs(displayedChange))})
+                                    ({isPositive ? '+' : '-'}{currencySym}{formatNumber(Math.abs(displayedChange), 0, 0)})
                                 </span>
                             </div>
                             <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)' }}>
@@ -829,7 +582,8 @@ export function PortfolioPerformanceChart({
                             </span>
                         </div>
                     </div>
-                )}
+                )
+                }
 
                 {/* 2. Chart Card */}
                 <div className="neo-card" style={{ padding: '0.5rem 0.5rem 0.2rem 0.5rem', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 20, overflow: 'visible' }}>
@@ -843,16 +597,16 @@ export function PortfolioPerformanceChart({
                         zIndex: 10
                     }}>
                         {/* Benchmark Selector (Left side for Fullscreen) */}
-                        {layoutMode === 'fullscreen' && <BenchmarkSelector />}
+                        {layoutMode === 'fullscreen' && <ChartBenchmarkSelector selectedBenchmarks={selectedBenchmarks} onToggleBenchmark={onToggleBenchmark} isPortfolioVisible={isPortfolioVisible} onTogglePortfolio={onTogglePortfolio} />}
 
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                             {/* Benchmark Selector (Right side for Default) */}
-                            {layoutMode !== 'fullscreen' && <BenchmarkSelector />}
+                            {layoutMode !== 'fullscreen' && <ChartBenchmarkSelector selectedBenchmarks={selectedBenchmarks} onToggleBenchmark={onToggleBenchmark} isPortfolioVisible={isPortfolioVisible} onTogglePortfolio={onTogglePortfolio} />}
 
                             {showPeriodSelector && (
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
                                     <div style={{ display: 'flex', background: 'rgba(0,0,0,0.03)', padding: '2px', borderRadius: '8px', gap: '2px' }}>
-                                        <TimePeriodSelector />
+                                        <ChartTimeSelector selectedPeriod={selectedPeriod} onPeriodChange={handlePeriodChange} />
                                     </div>
                                     {selectedPeriod === '1D' && chartDateLabel && (
                                         <span style={{
@@ -921,7 +675,7 @@ export function PortfolioPerformanceChart({
                                         domain={['auto', 'auto']}
                                         width={40}
                                     />
-                                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} /> {/* Better cursor for scrubbing */}
+                                    <Tooltip content={<ChartTooltip activeView={activeView} currencySym={currencySym} simulatedImpact={simulatedImpact} />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} /> {/* Better cursor for scrubbing */}
                                     {selectedBenchmarks.map(id => {
                                         const b = BENCHMARK_ASSETS.find(a => a.id === id);
                                         return <Line key={id} type="monotone" dataKey={id} stroke={b?.color} strokeWidth={2} dot={false} connectNulls animationDuration={800} />;
@@ -936,47 +690,49 @@ export function PortfolioPerformanceChart({
                 </div>
 
                 {/* 3. Summary Card */}
-                {zoomedData.length > 0 && (
-                    <div className="neo-card" style={{ padding: '0.8rem' }}>
-                        {(() => {
-                            const lastPoint = zoomedData[zoomedData.length - 1];
-                            const comparisons = [];
-                            if (isPortfolioVisible) comparisons.push({ name: 'My Portfolio', value: Number(lastPoint.portfolio), color: '#6366f1' });
-                            selectedBenchmarks.forEach(id => {
-                                const val = Number(lastPoint[id]);
-                                if (!isNaN(val)) comparisons.push({ name: BENCHMARK_ASSETS.find(a => a.id === id)?.name || id, value: val, color: BENCHMARK_ASSETS.find(a => a.id === id)?.color || '#ccc' });
-                            });
-                            comparisons.sort((a, b) => b.value - a.value);
+                {
+                    zoomedData.length > 0 && (
+                        <div className="neo-card" style={{ padding: '0.8rem' }}>
+                            {(() => {
+                                const lastPoint = zoomedData[zoomedData.length - 1];
+                                const comparisons = [];
+                                if (isPortfolioVisible) comparisons.push({ name: 'My Portfolio', value: Number(lastPoint.portfolio), color: '#6366f1' });
+                                selectedBenchmarks.forEach(id => {
+                                    const val = Number(lastPoint[id]);
+                                    if (!isNaN(val)) comparisons.push({ name: BENCHMARK_ASSETS.find(a => a.id === id)?.name || id, value: val, color: BENCHMARK_ASSETS.find(a => a.id === id)?.color || '#ccc' });
+                                });
+                                comparisons.sort((a, b) => b.value - a.value);
 
-                            return (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem', paddingBottom: '0.2rem', borderBottom: '1px solid var(--border)' }}>
-                                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Performance ({selectedPeriod})</span>
-                                        <span style={{ fontSize: '0.65rem', fontWeight: 500, color: 'var(--text-muted)' }}>{formatTooltipDate(lastPoint.date)}</span>
-                                    </div>
-                                    <div style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: '1fr 1fr',
-                                        gap: '8px 16px' // Row gap 8px, Col gap 16px
-                                    }}>
-                                        {comparisons.map((item) => (
-                                            <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px dashed var(--border)' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-                                                    <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: item.color, flexShrink: 0 }} />
-                                                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
+                                return (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem', paddingBottom: '0.2rem', borderBottom: '1px solid var(--border)' }}>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Performance ({selectedPeriod})</span>
+                                            <span style={{ fontSize: '0.65rem', fontWeight: 500, color: 'var(--text-muted)' }}>{formatTooltipDate(lastPoint.date)}</span>
+                                        </div>
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '1fr 1fr',
+                                            gap: '8px 16px' // Row gap 8px, Col gap 16px
+                                        }}>
+                                            {comparisons.map((item) => (
+                                                <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px dashed var(--border)' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                                                        <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: item.color, flexShrink: 0 }} />
+                                                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
+                                                    </div>
+                                                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: item.value >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                                                        {item.value > 0 ? '+' : ''}{item.value.toFixed(2)}%
+                                                    </span>
                                                 </div>
-                                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: item.value >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                                                    {item.value > 0 ? '+' : ''}{item.value.toFixed(2)}%
-                                                </span>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })()}
-                    </div>
-                )}
-            </div>
+                                );
+                            })()}
+                        </div>
+                    )
+                }
+            </div >
         );
     }
 
@@ -1069,7 +825,7 @@ export function PortfolioPerformanceChart({
                                         <span>My Vision ({visionYears + new Date().getFullYear()})</span>
                                     </div>
                                 ) : (
-                                    <BenchmarkSelector />
+                                    <ChartBenchmarkSelector selectedBenchmarks={selectedBenchmarks} onToggleBenchmark={onToggleBenchmark} isPortfolioVisible={isPortfolioVisible} onTogglePortfolio={onTogglePortfolio} />
                                 )
                             ) : (
                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '1.5rem' }}>
@@ -1082,7 +838,7 @@ export function PortfolioPerformanceChart({
                                         fontVariantNumeric: 'tabular-nums',
                                         letterSpacing: '-0.03em'
                                     }}>
-                                        {currencySym}{fmtCurrency(Number(activeView === 'vision' ? (chartData[chartData.length - 1]?._actualValue || displayedTotalValue) : displayedTotalValue))}
+                                        {currencySym}{formatNumber(Number(activeView === 'vision' ? (chartData[chartData.length - 1]?._actualValue || displayedTotalValue) : displayedTotalValue), 0, 0)}
                                     </div>
 
                                     {/* 2. Changes */}
@@ -1092,7 +848,7 @@ export function PortfolioPerformanceChart({
                                                 {isPositive ? '▲' : '▼'}{Math.abs(portfolioStats.changePercent).toFixed(2)}%
                                             </span>
                                             <span style={{ fontSize: '1rem', fontWeight: 500, color: isPositive ? 'var(--success)' : 'var(--danger)', opacity: 0.9 }}>
-                                                {isPositive ? '+' : '-'}{currencySym}{fmtCurrency(Math.abs(displayedChange))}
+                                                {isPositive ? '+' : '-'}{currencySym}{formatNumber(Math.abs(displayedChange), 0, 0)}
                                             </span>
                                         </div>
                                     )}
@@ -1158,7 +914,7 @@ export function PortfolioPerformanceChart({
                                 )}
 
                                 {/* Benchmarks Selector */}
-                                {activeView !== 'vision' && layoutMode !== 'fullscreen' && <BenchmarkSelector />}
+                                {activeView !== 'vision' && layoutMode !== 'fullscreen' && <ChartBenchmarkSelector selectedBenchmarks={selectedBenchmarks} onToggleBenchmark={onToggleBenchmark} isPortfolioVisible={isPortfolioVisible} onTogglePortfolio={onTogglePortfolio} />}
                             </div>
                         </div>
 
@@ -1230,7 +986,7 @@ export function PortfolioPerformanceChart({
                                             />
 
                                             <Tooltip
-                                                content={<CustomTooltip />}
+                                                content={<ChartTooltip activeView={activeView} currencySym={currencySym} simulatedImpact={simulatedImpact} />}
                                                 cursor={{ stroke: activeView === 'vision' ? '#2DBC8E' : '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }}
                                                 wrapperStyle={{ outline: 'none' }}
                                             />

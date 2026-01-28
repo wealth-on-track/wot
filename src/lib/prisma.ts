@@ -1,8 +1,20 @@
 import { PrismaClient } from "@prisma/client";
 
-const globalForPrisma = globalThis as unknown as { prismaClientInstance_v4: PrismaClient };
+const globalForPrisma = globalThis as unknown as { prismaClientInstance: PrismaClient };
 
-// Force a new instance if the current one is stale (missing models)
-export const prisma = globalForPrisma.prismaClientInstance_v4 || new PrismaClient();
+// Create Prisma client with optimized settings
+function createPrismaClient() {
+    return new PrismaClient({
+        log: process.env.NODE_ENV === 'development'
+            ? ['error', 'warn']
+            : ['error'],
+    });
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prismaClientInstance_v4 = prisma;
+// Singleton pattern for Prisma client
+export const prisma = globalForPrisma.prismaClientInstance ?? createPrismaClient();
+
+// Prevent multiple instances in development (hot reload)
+if (process.env.NODE_ENV !== "production") {
+    globalForPrisma.prismaClientInstance = prisma;
+}

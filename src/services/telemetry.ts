@@ -76,7 +76,7 @@ export async function getRecentLogs(limit: number = 50) {
 
 export type ActivityType = 'AUTH' | 'ASSET' | 'SEARCH' | 'PORTFOLIO' | 'NAVIGATION' | 'SYSTEM' | 'GOAL' | 'API';
 export type ActivityAction =
-    | 'LOGIN' | 'LOGOUT' | 'SIGNUP'
+    | 'LOGIN' | 'LOGOUT' | 'SIGNUP' | 'DELETE_ACCOUNT'
     | 'CREATE' | 'UPDATE' | 'DELETE' | 'VIEW'
     | 'QUERY' | 'SELECT'
     | 'NAVIGATE'

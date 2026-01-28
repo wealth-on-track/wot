@@ -140,6 +140,17 @@ export function isPriceStale(lastUpdate: Date): boolean {
 }
 
 export async function getMarketPrice(symbol: string, type: string, exchange?: string, forceRefresh: boolean = false, userId: string = 'System', category?: string): Promise<PriceResult | undefined> {
+    // Ticker Normalization (Force correct symbols for known issues)
+    if (symbol.toUpperCase() === 'SOIT.PA') symbol = 'SOI.PA';
+
+    // FORCE REFRESH for Soitec if we suspect bad cache (Price 0)
+    if (symbol === 'SOI.PA' && !forceRefresh) {
+        const checkCache = await prisma.priceCache.findUnique({ where: { symbol: 'SOI.PA' } });
+        if (checkCache && checkCache.previousClose === 0) {
+            console.log(`[MarketData] Forcing refresh for Soitec (SOI.PA) due to zero price in cache.`);
+            forceRefresh = true;
+        }
+    }
 
     // 0. GLOBAL CACHE CHECK (Closing Price Strategy)
     // If we have data in DB, use it unless forced.
@@ -451,6 +462,50 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                 }
             } catch (fallbackErr) {
                 console.warn('[MarketData] Finnhub fallback failed:', fallbackErr);
+            }
+        }
+
+        // ISIN SELF-HEALING FALLBACK
+        // If price is still missing or zero, try to resolve via ISIN stored in DB
+        if ((!quote || !quote.regularMarketPrice) && !derivedQuote) {
+            try {
+                // Find ANY asset with this symbol that has an ISIN
+                const dbAsset = await prisma.asset.findFirst({
+                    where: {
+                        symbol: symbol,
+                        isin: { not: null }
+                    },
+                    select: { isin: true }
+                });
+
+                if (dbAsset && dbAsset.isin) {
+                    console.log(`[MarketData] Price missing for ${symbol}. Attempting recovery via ISIN: ${dbAsset.isin}`);
+                    const searchResults = await searchYahoo(dbAsset.isin);
+
+                    if (searchResults.length > 0) {
+                        const bestMatch = searchResults[0];
+                        const newSymbol = bestMatch.symbol;
+
+                        // Use the new symbol if it's different and looks valid
+                        if (newSymbol && newSymbol !== symbol) {
+                            console.log(`[MarketData] 🛠️ SELF-HEALING: Updating obsolete ticker ${symbol} -> ${newSymbol}`);
+
+                            // 1. Heal the data in DB (Update all instances with this bad symbol + ISIN)
+                            await prisma.asset.updateMany({
+                                where: { symbol: symbol, isin: dbAsset.isin },
+                                data: {
+                                    symbol: newSymbol,
+                                    originalName: bestMatch.shortname || bestMatch.longname // Update name too for clarity
+                                }
+                            });
+
+                            // 2. Recursively fetch with the NEW symbol
+                            return getMarketPrice(newSymbol, type, exchange, true, userId, category);
+                        }
+                    }
+                }
+            } catch (healingErr) {
+                console.warn('[MarketData] Self-healing failed:', healingErr);
             }
         }
 

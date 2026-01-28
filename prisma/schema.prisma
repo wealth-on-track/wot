@@ -17,6 +17,7 @@ model User {
   updatedAt DateTime   @updatedAt
   preferences Json?
   portfolio Portfolio?
+  aliases   AssetAlias[]
 }
 
 model Portfolio {
@@ -82,6 +83,7 @@ model Asset {
   symbol       String
   name         String?       // User's custom name (editable)
   originalName String?       // Original name from search API (immutable)
+  isin         String?       // International Securities Identification Number
   quantity     Float
   buyPrice     Float
   currency     String
@@ -222,6 +224,7 @@ model AssetTransaction {
   date        DateTime
   exchange    String?
   platform    String?  // e.g. "DeGiro"
+  customGroup String?  // User assigned group/account name
   externalId  String?  // Source system ID (e.g. Order ID)
 
   // P&L info
@@ -243,3 +246,18 @@ model AssetTransaction {
 }
 
 // Insights model removed for rollback
+
+model AssetAlias {
+  id            String   @id @default(cuid())
+  userId        String
+  sourceString  String   // The exact string from CSV (e.g. "WISDOMTREE NASDAQ 3X")
+  platform      String?  // Optional context (e.g. "DEGIRO")
+  resolvedSymbol String  // The correct Yahoo Symbol (e.g. "QQQ3.L")
+  isVerified    Boolean  @default(false) // True if user manually confirmed
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sourceString, platform]) // Ensure unique mapping per input
+  @@index([userId, sourceString])
+}

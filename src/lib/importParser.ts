@@ -1,15 +1,30 @@
 /**
  * Smart Import Parser
- * Handles CSV/Excel parsing with fuzzy column matching
- * Supports: Generic CSV, DeGiro Transactions, Interactive Brokers, etc.
+ *
+ * STRUCTURAL DESIGN PRINCIPLE:
+ * ============================
+ * This parser does ONE thing: Extract raw data from CSV files.
+ * It does NOT resolve ISINs to symbols - that's the job of import.ts
+ *
+ * Data Flow:
+ * 1. Parser extracts: { isin, productName, quantity, price, ... }
+ * 2. Parser outputs symbol = ISIN (as identifier, not ticker)
+ * 3. import.ts resolves ISIN → ticker via Yahoo API
+ * 4. import.ts validates Yahoo result against productName
+ *
+ * This ensures 100% correct imports because:
+ * - No hardcoded mappings that can become stale or wrong
+ * - Yahoo API is the single source of truth for ticker symbols
+ * - Product name from CSV validates the Yahoo result
  */
 
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
+import { parseKrakenTransactions } from './krakenParser';
 
 // Known column name variations for fuzzy matching
 const COLUMN_ALIASES: Record<string, string[]> = {
-    symbol: ['symbol', 'ticker', 'code', 'sembol', 'kod', 'hisse', 'stock'],
+    symbol: ['symbol', 'ticker', 'code', 'sembol', 'kod', 'hisse', 'stock', 'asset'],
     isin: ['isin'],
     name: ['name', 'company', 'şirket', 'isim', 'ad', 'firma', 'description', 'product'],
     quantity: ['quantity', 'qty', 'amount', 'adet', 'miktar', 'lot', 'shares', 'units'],
@@ -19,62 +34,22 @@ const COLUMN_ALIASES: Record<string, string[]> = {
     platform: ['platform', 'broker', 'exchange', 'borsa', 'aracı kurum', 'araci'],
     localValue: ['local value', 'localvalue', 'value', 'total', 'wert', 'betrag', 'gesamtwert', 'tutar'],
     valueEur: ['value eur', 'valueeur', 'total eur', 'totaleur'],
-    date: ['date', 'tarih', 'transaction date'],
+    date: ['date', 'tarih', 'transaction date', 'time'],
     description: ['description', 'omschrijving', 'beschreibung'],
     change: ['change', 'mutatie', 'veraenderung', 'veränderung'],
     balance: ['balance', 'saldo', 'bestand'],
     orderid: ['orderid', 'order id', 'order-id', 'auftragsnummer'],
-};
-
-// ISIN to Symbol mapping for common securities
-// This will be extended by Yahoo API lookups
-const ISIN_TO_SYMBOL: Record<string, { symbol: string; name: string; type: string }> = {
-    // US Stocks
-    'US88160R1014': { symbol: 'TSLA', name: 'Tesla Inc', type: 'STOCK' },
-    'US67066G1040': { symbol: 'NVDA', name: 'NVIDIA Corporation', type: 'STOCK' },
-    'US0378331005': { symbol: 'AAPL', name: 'Apple Inc', type: 'STOCK' },
-    'US5949181045': { symbol: 'MSFT', name: 'Microsoft Corporation', type: 'STOCK' },
-    'US02079K3059': { symbol: 'GOOGL', name: 'Alphabet Inc', type: 'STOCK' },
-    'US0231351067': { symbol: 'AMZN', name: 'Amazon.com Inc', type: 'STOCK' },
-    'US30303M1027': { symbol: 'META', name: 'Meta Platforms Inc', type: 'STOCK' },
-    'US7170811035': { symbol: 'PFE', name: 'Pfizer Inc', type: 'STOCK' },
-    'US8552441094': { symbol: 'SBUX', name: 'Starbucks Corporation', type: 'STOCK' },
-    'US64110L1061': { symbol: 'NFLX', name: 'Netflix Inc', type: 'STOCK' },
-    'US38268T1034': { symbol: 'GPRO', name: 'GoPro Inc', type: 'STOCK' },
-    'US9001112047': { symbol: 'TKC', name: 'Turkcell ADR', type: 'STOCK' },
-    'US69608A1088': { symbol: 'PLTR', name: 'Palantir Technologies', type: 'STOCK' },
-    'US15961R1059': { symbol: 'CHPT', name: 'ChargePoint Holdings', type: 'STOCK' },
-    'KYG8990D1253': { symbol: 'TPGY', name: 'TPG Pace Beneficial', type: 'STOCK' },
-    // German Stocks
-    'DE0007500001': { symbol: 'TKA.DE', name: 'ThyssenKrupp AG', type: 'STOCK' },
-    // ETFs
-    'IE00B5BMR087': { symbol: 'CSPX.L', name: 'iShares Core S&P 500 UCITS ETF', type: 'FUND' },
-    'IE00B53SZB19': { symbol: 'CNDX.L', name: 'iShares NASDAQ 100 UCITS ETF', type: 'FUND' },
-    'IE00BK5BQT80': { symbol: 'VWCE.DE', name: 'Vanguard FTSE All-World UCITS ETF', type: 'FUND' },
-    'IE00B3RBWM25': { symbol: 'VWRL.AS', name: 'Vanguard FTSE All-World UCITS ETF', type: 'FUND' },
-    'DE000A0Q4R85': { symbol: 'IBZL.DE', name: 'iShares MSCI Brazil UCITS ETF', type: 'FUND' },
-    'IE00BLRPRJ20': { symbol: 'PHAU.L', name: 'WisdomTree Physical Gold', type: 'FUND' },
-    'IE00BLRPRL42': { symbol: 'PHAG.L', name: 'WisdomTree Physical Silver', type: 'FUND' },
-    'IE00BMC38736': { symbol: 'SMH.L', name: 'VanEck Semiconductor UCITS ETF', type: 'FUND' },
-    'IE00BJXRZJ40': { symbol: 'CYBR.L', name: 'Rize Cybersecurity ETF', type: 'FUND' },
-    'IE00BF0M2Z96': { symbol: 'BATG.L', name: 'L&G Battery Value-Chain ETF', type: 'FUND' },
-    'IE00BYPLS672': { symbol: 'ISPY.L', name: 'L&G Cyber Security ETF', type: 'FUND' },
-    'IE00BLCHJN13': { symbol: 'LIT.L', name: 'Global X Lithium & Battery Tech ETF', type: 'FUND' },
-    'IE000GA3D489': { symbol: 'ARKK.L', name: 'ARK Innovation UCITS ETF', type: 'FUND' },
-    'IE000O5M6XO1': { symbol: 'ARKG.L', name: 'ARK Genomic Revolution UCITS ETF', type: 'FUND' },
-    'IE0003A512E4': { symbol: 'ARKQ.L', name: 'ARK AI & Robotics UCITS ETF', type: 'FUND' },
-    'GB00BLD4ZM24': { symbol: 'ETHE.L', name: 'CoinShares Physical Staked Ethereum', type: 'CRYPTO' },
-    // Bonds / Certificates
-    'XS1002121454': { symbol: 'RABO.AS', name: 'Rabobank Certificate', type: 'BOND' },
-    // Crypto (DeGiro specific ISINs)
-    'XFC000A2YY6Q': { symbol: 'BTC-EUR', name: 'Bitcoin', type: 'CRYPTO' },
-    'XFC000A2YY6X': { symbol: 'ETH-EUR', name: 'Ethereum', type: 'CRYPTO' },
-    'XFC000A402FE': { symbol: 'XRP-EUR', name: 'XRP', type: 'CRYPTO' },
+    // Kraken-specific
+    txid: ['txid', 'transaction id', 'tx id'],
+    refid: ['refid', 'reference id', 'ref id'],
+    wallet: ['wallet'],
+    subtype: ['subtype', 'sub type'],
+    fee: ['fee', 'fees', 'commission'],
 };
 
 export interface ParsedTransaction {
-    symbol: string;
-    name?: string;
+    symbol: string;      // ISIN or raw identifier (NOT resolved ticker)
+    name?: string;       // Product name from CSV (used for validation in import.ts)
     type: TransactionType;
     quantity: number;
     price: number;
@@ -85,21 +60,22 @@ export interface ParsedTransaction {
     platform: string;
     externalId?: string;
     fee: number;
+    isin?: string;       // ISIN for resolution in import.ts
 }
 
 export type TransactionType = 'BUY' | 'SELL' | 'DEPOSIT' | 'WITHDRAWAL' | 'DIVIDEND' | 'COUPON' | 'INTEREST' | 'FEE' | 'FX';
 
 export interface ParsedRow {
-    symbol: string;
-    name?: string;
+    symbol: string;      // ISIN or raw identifier (NOT resolved ticker)
+    name?: string;       // Product name from CSV (used for validation in import.ts)
     quantity: number;
     buyPrice: number;
     currency: string;
     type?: string;
     platform?: string;
-    isin?: string;
+    isin?: string;       // ISIN for resolution in import.ts
     rawRow: Record<string, any>;
-    confidence: number; // 0-100 how confident we are about this row
+    confidence: number;  // 0-100 how confident we are about this row
     warnings: string[];
 }
 
@@ -210,8 +186,6 @@ function isDeGiroFormat(columns: string[]): boolean {
  */
 function isDeGiroAccountStatementFormat(columns: string[]): boolean {
     const normalized = columns.map(c => normalize(c));
-    // Must have Description, Change, Balance, Order Id (or their Dutch/German equivalents)
-    // We can use findBestMatch to check existence efficiently against aliases
 
     const hasDescription = findBestMatch(normalized, 'description');
     const hasChange = findBestMatch(normalized, 'change');
@@ -219,6 +193,17 @@ function isDeGiroAccountStatementFormat(columns: string[]): boolean {
     const hasOrderId = findBestMatch(normalized, 'orderid');
 
     return !!(hasDescription && hasChange && hasBalance && hasOrderId);
+}
+
+/**
+ * Detect if this is a Kraken transaction export
+ */
+function isKrakenFormat(columns: string[]): boolean {
+    const normalized = columns.map(c => normalize(c));
+    return normalized.includes('txid') &&
+        normalized.includes('refid') &&
+        normalized.includes('wallet') &&
+        normalized.includes('subtype');
 }
 
 /**
@@ -245,14 +230,6 @@ function detectColumnMappings(columns: string[], isDeGiro: boolean = false): Rec
     }
 
     return mappings;
-}
-
-/**
- * Resolve ISIN to symbol using our mapping table
- */
-function resolveISIN(isin: string): { symbol: string; name: string; type: string } | null {
-    const upperIsin = isin.toUpperCase().trim();
-    return ISIN_TO_SYMBOL[upperIsin] || null;
 }
 
 /**
@@ -297,6 +274,8 @@ function parseDate(dateStr: string): Date {
 
 /**
  * Parse DeGiro transaction rows and aggregate by ISIN
+ *
+ * STRUCTURAL: Parser outputs ISIN as symbol. Resolution happens in import.ts
  */
 function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<string, string>): { rows: ParsedRow[], transactions: ParsedTransaction[], processedCount: number, closedPositionCount: number } {
     // Group transactions by ISIN for Asset Snapshot
@@ -320,8 +299,6 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
     // Possible columns for IDs
     const idAliases = ['orderid', 'id', 'ref', 'reference'];
 
-    // Find currency column - might be empty header before "Local value"
-    // In DeGiro, look for the column that contains EUR/USD values
     const columns = Object.keys(data[0] || {});
 
     // Track external IDs to handle duplicates (partial fills sharing same Order ID)
@@ -331,7 +308,6 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
         const isin = isinCol ? String(row[isinCol] || '').trim() : '';
         if (!isin || isin.length < 5) continue; // Skip invalid ISINs
 
-        // Assuming this row is valid enough to attempt processing
         processedCount++;
 
         const name = nameCol ? String(row[nameCol] || '').trim() : '';
@@ -347,9 +323,7 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
         for (const col of columns) {
             const normal = normalize(col);
             if (idAliases.some(alias => normal === alias || normal.endsWith(alias))) {
-                // If found, check value
                 const val = String(row[col] || '').trim();
-                // DeGiro uses UUIDs usually
                 if (val && val.length > 5) {
                     externalId = val;
                     break;
@@ -357,7 +331,7 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
             }
         }
 
-        // Make external ID unique for partial fills (same Order ID serves multiple rows)
+        // Make external ID unique for partial fills
         if (externalId) {
             const count = externalIdCounts.get(externalId) || 0;
             externalIdCounts.set(externalId, count + 1);
@@ -366,11 +340,7 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
             }
         }
 
-        // If no explicit ID column found by name, try looking at the very last column if unlabeled?
-        // But DeGiro has "Order ID" explicitly. The normalize logic should catch it.
-
         // For crypto (empty quantity), calculate from value / price
-        // Look for "Local value" or "Value EUR" columns
         let localValue = 0;
         for (const col of columns) {
             const normalCol = normalize(col);
@@ -395,12 +365,11 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
         quantity = Math.abs(quantity);
 
         // DeGiro special case: Bonds/Certificates (ISIN starting with XS) are reported in nominal value
-        // Real quantity = nominal / 100
         if (isin && isin.startsWith('XS')) {
             quantity = quantity / 100;
         }
 
-        if (quantity === 0) continue; // Skip if still no quantity
+        if (quantity === 0) continue;
 
         // Detect currency from the row
         let currency = 'EUR'; // Default for DeGiro
@@ -412,12 +381,8 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
             }
         }
 
-        // Resolve Symbol for Transaction History
-        const resolved = resolveISIN(isin);
-        const symbol = resolved?.symbol || isin;
+        // Find exchange/venue
         let exchange = '';
-
-        // Try to find exchange/venue
         for (const col of columns) {
             const normal = normalize(col);
             if (normal.includes('exchange') || normal.includes('venue')) {
@@ -426,10 +391,10 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
             }
         }
 
-        // 1. Add to Transaction History
+        // STRUCTURAL: Use ISIN as symbol - resolution happens in import.ts
         transactions.push({
-            symbol,
-            name: name || resolved?.name,
+            symbol: isin,  // ISIN as identifier
+            name: name,    // Product name for validation
             type: isSell ? 'SELL' : 'BUY',
             quantity,
             price,
@@ -439,10 +404,11 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
             exchange,
             platform: 'DeGiro',
             externalId,
-            fee: 0 // Fee parsing could be added (AutoFX, etc column)
+            fee: 0,
+            isin: isin     // Also store ISIN explicitly
         });
 
-        // 2. Add to Aggregation for Asset Snapshot
+        // Add to Aggregation for Asset Snapshot
         if (!transactionsByIsin[isin]) {
             transactionsByIsin[isin] = {
                 isin,
@@ -469,63 +435,39 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
     let closedPositionCount = 0;
 
     for (const [isin, data] of Object.entries(transactionsByIsin)) {
-        // Calculate net position
         const totalBought = data.buys.reduce((sum, t) => sum + t.quantity, 0);
         const totalSold = data.sells.reduce((sum, t) => sum + t.quantity, 0);
         const netQuantity = totalBought - totalSold;
 
-        // Check if position is closed (net quantity <= 0)
-        // Ensure we handle floating point errors
         const isClosed = netQuantity <= 0.000001;
 
         if (isClosed) {
             closedPositionCount++;
-            // We DO want to return closed positions as rows now, so they can be reviewed and imported as history
-            // continue; <--- REMOVED THIS SKIP
         }
 
-        // Calculate weighted average buy price
-        // Simple logic: Total Cost / Total Units Bought (First In First Out is implied or Avg Cost)
-        // For net position, we often just use avg buy price of *remaining* units, 
-        // but simple Avg Buy Cost of all buys is often used for simplicity in imports if not tracking lots.
-        // Let's stick to Weighted Avg of ALL buys for now as a safe proxy.
-        // For closed positions, avgBuyPrice is still relevant for historical analysis
         const totalBuyCost = data.buys.reduce((sum, t) => sum + (t.quantity * t.price), 0);
         const avgBuyPrice = totalBought > 0 ? totalBuyCost / totalBought : 0;
 
-        // Resolve ISIN to symbol
-        const resolved = resolveISIN(isin);
-        const symbol = resolved?.symbol || isin; // Fallback to ISIN if not found
-        const type = resolved?.type || inferTypeFromName(data.name);
+        // STRUCTURAL: Use ISIN as symbol - resolution happens in import.ts
+        const type = inferTypeFromName(data.name);
 
         const warnings: string[] = [];
-        let confidence = resolved ? 100 : 85;
-
-        // Better symbol resolution for common big tech if not in map
-        let resolvedName = resolved?.name || data.name;
-
-        if (!resolved) {
-            // If ISIN not in map, maybe we can extract from name (e.g. "APPLE INC" -> AAPL is hard, but we can warn)
-            // Or keep ISIN as symbol
-            if (symbol === isin) {
-                warnings.push(`Used ISIN ${isin} as symbol. Please verify.`);
-                confidence -= 10;
-            }
-        }
+        // Lower confidence since symbol needs resolution
+        let confidence = 80;
 
         if (totalSold > 0) {
             warnings.push(`Calculated from history: ${totalBought.toFixed(4)} bought, ${totalSold.toFixed(4)} sold`);
         }
 
         rows.push({
-            symbol,
-            name: resolvedName,
+            symbol: isin,      // ISIN as identifier
+            name: data.name,   // Product name for validation
             quantity: netQuantity,
             buyPrice: avgBuyPrice,
             currency: data.currency,
             type,
             platform: 'DeGiro',
-            isin,
+            isin,              // Explicit ISIN for resolution
             rawRow: { isin, transactions: data.buys.length + data.sells.length },
             confidence,
             warnings
@@ -537,39 +479,10 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
 
 /**
  * Parse DeGiro Account Statement (Cash Report)
- * Extracts transaction info from "Description" column e.g. "Koop 10 @ 100 EUR"
+ *
+ * STRUCTURAL: Parser outputs ISIN as symbol. Resolution happens in import.ts
  */
 function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Record<string, string>, columns: string[]): { rows: ParsedRow[], transactions: ParsedTransaction[], processedCount: number, closedPositionCount: number } {
-    // 1. Identify specific columns for Value/Amount
-    // In this format, "Change" is the currency column, and the column AFTER it is the value
-    // "Balance" is currency, column AFTER is balance value
-    // We renamed empty columns to __EMPTY_${index}
-
-    // Find index of 'Change' column
-    const headerRow = columns; // Assuming data keys match these if processed correctly? 
-    // PapaParse keys come from the transformHeader.
-    // We need to find the key that corresponds to the empty column after Change.
-
-    // Actually, `mappings` contains our standard fields mapping. 
-    // But 'Change' isn't a standard field in our generic map. 
-    // Let's rely on the specific keys generated.
-
-    // Find the key for "Change" (Currency) if not mapped yet (though we use findBestMatch below)
-    // We need to identify the VALUE column associated with Change.
-    // In DeGiro CSVs, often: "Mutatie" (header) -> "EUR" (value in row? No, "Mutatie" column contains currency? Wait)
-    // Actually, in the supplied CSV structure (implied):
-    // Header: ..., Mutatie, ...
-    // Row: ..., "EUR", -100.00 (in NEXT column)
-    // OR: Row: ..., -100.00, ... (if Mutatie is value)
-
-    // Let's assume the passed data uses the header name as key.
-    // If "Mutatie" is the key, `row['Mutatie']` gives the value.
-    // However, the prompt/comments suggest "Change" is Currency and next col is val?
-    // Let's look at `uniqueHeaders`. Empty headers become `__EMPTY_X`.
-
-    // Strategy: Find the 'Change' column. If its value is 'EUR'/'USD', then look at next column.
-    // If its value is numeric, then it IS the value.
-
     const keys = Object.keys(data[0] || {});
 
     const transactionsByIsin: Record<string, {
@@ -584,25 +497,22 @@ function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Reco
     let processedCount = 0;
 
     const isinCol = mappings['isin'] || findBestMatch(keys, 'isin');
-
-    // Explicitly look for Statement columns using our new aliases
     const descCol = mappings['description'] || findBestMatch(keys, 'description');
     const orderIdCol = mappings['orderid'] || findBestMatch(keys, 'orderid');
-    const productCol = mappings['product'] || findBestMatch(keys, 'product') || mappings['name']; // Product is Name
+    const productCol = mappings['product'] || findBestMatch(keys, 'product') || mappings['name'];
     const dateCol = mappings['date'] || findBestMatch(keys, 'date');
     const changeColKey = mappings['change'] || findBestMatch(keys, 'change');
-    const balanceColKey = mappings['balance'] || findBestMatch(keys, 'balance');
 
     // Regex for parsing Description
     const tradeRegex = /(Koop|Buy|Verkauf|Kauf|Verkoop|Sell)\s+([\d.,]+)\s+(@|at)\s+([\d.,]+)\s+([A-Z]{3})/i;
     const dividendRegex = /(Dividend|Coupon|Kupon|Temettü)/i;
     const interestRegex = /(Rente|Interest)/i;
-    const feeRegex = /(Transactiekosten|Aansluitingskosten|Kosten|Fee|Tax|Belasting)/i; // Aansluitingskosten = Connection fee
+    const feeRegex = /(Transactiekosten|Aansluitingskosten|Kosten|Fee|Tax|Belasting)/i;
     const depositRegex = /(Deposit|Storting|Einzahlung)/i;
     const withdrawalRegex = /(Withdrawal|Terugstorting|Auszahlung)/i;
-    const transferRegex = /(Overboeking|Transfer|Überweisung)/i; // Ambiguous, check sign
+    const transferRegex = /(Overboeking|Transfer|Überweisung)/i;
     const fxRegex = /(Valuta|FX)/i;
-    const reservationRegex = /(Reservation|Reservering)/i; // Ignore these usually? User said ignore/categorize but don't show.
+    const reservationRegex = /(Reservation|Reservering)/i;
 
     for (const row of data) {
         const isin = isinCol ? String(row[isinCol] || '').trim() : '';
@@ -613,48 +523,27 @@ function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Reco
         const product = productCol ? String(row[productCol] || '').trim() : '';
 
         // Value/Amount parsing
-        // Value/Amount parsing
-        // Check if changeColKey holds a currency string (EUR/USD) or a number
         let changeAmount = 0;
-        let changeCurrency = 'EUR'; // Default
+        let changeCurrency = 'EUR';
 
         if (changeColKey) {
             const val = row[changeColKey];
             const isCurrency = val && (val === 'EUR' || val === 'USD' || val === 'TRY' || val.length === 3);
 
             if (isCurrency) {
-                // The 'Change' column is the Currency column
                 changeCurrency = val;
-                // The amount is in the NEXT header (which might be __EMPTY_X)
-                // We need to find the key that corresponds to the index of changeColKey + 1
                 const idx = keys.indexOf(changeColKey);
                 if (idx !== -1 && idx + 1 < keys.length) {
                     const amtKey = keys[idx + 1];
                     changeAmount = parseEuropeanNumber(row[amtKey]);
                 }
             } else {
-                // The 'Change' column IS the amount (e.g. Dutch 'Mutatie' often has the amount directly if currency is elsewhere, OR it behaves as above)
-                // Let's check if there is an empty column next to it that looks numeric?
-                // Actually, standard behavior: 
-                // Col matches 'Mutatie'. Row value: '-100,00'.
                 changeAmount = parseEuropeanNumber(val);
-
-                // Try to find currency elsewhere?
-                // Often 'Mutatie' is amount, and there isn't a specific currency col for it, 
-                // but the Account has a base currency (EUR).
-                // Or looking at 'Saldo' (Balance) column logic?
-                // Let's stick to EUR default if not found.
             }
         }
 
-        // --- Categorization ---
-
-        // 0. Skip Reservations / Cash Sweep (intermediate)
+        // Skip Reservations / Cash Sweep
         if (reservationRegex.test(description)) continue;
-        // Cash Sweep is usually internal noise, unless user wants it. 
-        // "Degiro Cash Sweep Transfer" -> usually we ignore, we care about "Deposit" or "Withdrawal" or "Overboeking"
-        // But "Overboeking van/naar" matches Transfer.
-        // Let's filter strictly.
         if (description.includes('Degiro Cash Sweep')) continue;
 
         // 1. TRADES (Buy/Sell)
@@ -665,17 +554,13 @@ function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Reco
             const isSell = actionStr.startsWith('v') || actionStr.startsWith('s');
 
             const quantity = parseEuropeanNumber(tradeMatch[2]);
-            const price = parseEuropeanNumber(tradeMatch[4]); // Group 4 is Price
-            const currency = tradeMatch[5].toUpperCase(); // Group 5 is Currency
+            const price = parseEuropeanNumber(tradeMatch[4]);
+            const currency = tradeMatch[5].toUpperCase();
 
-            // Resolve Symbol
-            const resolved = resolveISIN(isin);
-            const symbol = resolved?.symbol || isin;
-            const name = resolved?.name || product || isin;
-
+            // STRUCTURAL: Use ISIN as symbol
             transactions.push({
-                symbol,
-                name,
+                symbol: isin,
+                name: product,
                 type: isSell ? 'SELL' : 'BUY',
                 quantity,
                 price,
@@ -684,20 +569,21 @@ function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Reco
                 originalDateStr: dateStr,
                 platform: 'DeGiro',
                 externalId: orderId,
-                fee: 0
+                fee: 0,
+                isin: isin
             });
 
-            // Add to Aggregation (Snapshot/Open Positions)
+            // Add to Aggregation
             if (!transactionsByIsin[isin]) {
-                transactionsByIsin[isin] = { isin, name, buys: [], sells: [], currency };
+                transactionsByIsin[isin] = { isin, name: product, buys: [], sells: [], currency };
             }
             if (isSell) transactionsByIsin[isin].sells.push({ quantity, price, value: quantity * price });
             else transactionsByIsin[isin].buys.push({ quantity, price, value: quantity * price });
 
-            continue; // Done with this row
+            continue;
         }
 
-        // 2. FEES (Moved before Income to catch "Dividend Tax")
+        // 2. FEES
         if (feeRegex.test(description)) {
             processedCount++;
             transactions.push({
@@ -705,7 +591,7 @@ function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Reco
                 name: 'Trading Fees',
                 type: 'FEE' as any,
                 quantity: 0,
-                price: changeAmount, // usually negative
+                price: changeAmount,
                 currency: changeCurrency,
                 date,
                 originalDateStr: dateStr,
@@ -717,41 +603,36 @@ function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Reco
         }
 
         // 3. INCOME (Dividends/Coupons/Interest)
-        // Check for Dividend/Coupon
         if (dividendRegex.test(description)) {
             processedCount++;
             const isCoupon = /Coupon/i.test(description);
 
-            // Resolve Asset
-            let symbol = 'UNKNOWN';
-            let name = 'Unknown Asset';
-            if (isin) {
-                const resolved = resolveISIN(isin);
-                symbol = resolved?.symbol || isin;
-                name = resolved?.name || product || isin;
-            }
+            // STRUCTURAL: Use ISIN as symbol
+            const symbol = isin || 'UNKNOWN';
+            const name = product || 'Unknown Asset';
 
             transactions.push({
                 symbol,
                 name,
-                type: isCoupon ? 'COUPON' : 'DIVIDEND' as any, // Cast to any if strict typing complains, but we added type above
-                quantity: 0, // No qty change
-                price: Math.abs(changeAmount), // Value
+                type: isCoupon ? 'COUPON' : 'DIVIDEND' as any,
+                quantity: 0,
+                price: Math.abs(changeAmount),
                 currency: changeCurrency,
                 date,
                 originalDateStr: dateStr,
                 platform: 'DeGiro',
                 externalId: orderId || `DIV-${dateStr}-${Math.abs(changeAmount)}`,
-                fee: 0
+                fee: 0,
+                isin: isin || undefined
             });
             continue;
         }
 
-        // Check for Interest
+        // Interest
         if (interestRegex.test(description)) {
             processedCount++;
             transactions.push({
-                symbol: 'EUR', // Linked to Cash
+                symbol: 'EUR',
                 name: 'Interest Income',
                 type: 'INTEREST' as any,
                 quantity: 0,
@@ -774,7 +655,7 @@ function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Reco
                 name: 'Cash Deposit',
                 type: 'DEPOSIT' as any,
                 quantity: Math.abs(changeAmount),
-                price: 1, // 1:1
+                price: 1,
                 currency: changeCurrency,
                 date,
                 originalDateStr: dateStr,
@@ -803,12 +684,10 @@ function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Reco
             continue;
         }
 
-        // 5. FX (Valuta) - Import but maybe hide? User said "categorize import but dont show"
+        // 5. FX
         if (fxRegex.test(description)) {
-            // We skip adding to main transactions list to avoid clutter? 
-            // Or add with type 'FX' so backend handles it?
             transactions.push({
-                symbol: isin ? (resolveISIN(isin)?.symbol || isin) : 'FX',
+                symbol: isin || 'FX',
                 name: 'FX Conversion',
                 type: 'FX' as any,
                 quantity: 0,
@@ -818,29 +697,25 @@ function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Reco
                 originalDateStr: dateStr,
                 platform: 'DeGiro',
                 externalId: orderId,
-                fee: 0
+                fee: 0,
+                isin: isin || undefined
             });
             continue;
         }
     }
 
-    // Aggregate to Rows (Snapshot)
-    // Only trades affect "Rows" (Open/Closed Positions) logic significantly for the preview table
-    // However, the user wants CASH and FEES as closed positions.
-
-    // Sort transactions by date (Oldest first)
+    // Sort transactions by date
     transactions.sort((a, b) => a.date.getTime() - b.date.getTime());
 
     const rows: ParsedRow[] = [];
     let closedPositionCount = 0;
 
-    // Add Cash Position Check
+    // Add Cash Position
     const cashTx = transactions.filter(t => t.type === 'DEPOSIT' || t.type === 'WITHDRAWAL' || t.type === 'INTEREST');
     if (cashTx.length > 0) {
-        // Calculate net cash input (Deposits - Withdrawals + Interest)
         const netCash = cashTx.reduce((sum, t) => {
             if (t.type === 'DEPOSIT') return sum + t.quantity;
-            if (t.type === 'INTEREST') return sum + t.price; // Interest amount is stored in price
+            if (t.type === 'INTEREST') return sum + t.price;
             if (t.type === 'WITHDRAWAL') return sum - t.quantity;
             return sum;
         }, 0);
@@ -862,9 +737,7 @@ function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Reco
         }
     }
 
-    // ... existing Trade Aggregation loop ...
-
-
+    // Trade Aggregation
     for (const [isin, data] of Object.entries(transactionsByIsin)) {
         const totalBought = data.buys.reduce((sum, t) => sum + t.quantity, 0);
         const totalSold = data.sells.reduce((sum, t) => sum + t.quantity, 0);
@@ -878,19 +751,18 @@ function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Reco
         const totalBuyCost = data.buys.reduce((sum, t) => sum + (t.quantity * t.price), 0);
         const avgBuyPrice = totalBought > 0 ? totalBuyCost / totalBought : 0;
 
-        const resolved = resolveISIN(isin);
-        const symbol = resolved?.symbol || isin;
-        const type = resolved?.type || inferTypeFromName(data.name);
+        const type = inferTypeFromName(data.name);
 
-        let confidence = resolved ? 100 : 85;
+        let confidence = 80;
         const warnings: string[] = [];
 
         if (totalSold > 0) {
             warnings.push(`Calculated from history: ${totalBought.toFixed(4)} bought, ${totalSold.toFixed(4)} sold`);
         }
 
+        // STRUCTURAL: Use ISIN as symbol
         rows.push({
-            symbol,
+            symbol: isin,
             name: data.name,
             quantity: netQuantity,
             buyPrice: avgBuyPrice,
@@ -909,6 +781,8 @@ function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Reco
 
 /**
  * Parse a single row using detected mappings (generic format)
+ *
+ * STRUCTURAL: If ISIN present, use it as symbol. Resolution happens in import.ts
  */
 function parseRow(
     row: Record<string, any>,
@@ -918,21 +792,23 @@ function parseRow(
     const warnings: string[] = [];
     let confidence = 100;
 
-    // Try to get symbol from ISIN first, then symbol column
-    let symbol = '';
-    let resolvedData: { symbol: string; name: string; type: string } | null = null;
-
+    // Get ISIN if available
     const isinCol = mappings['isin'];
-    if (isinCol && row[isinCol]) {
-        const isin = String(row[isinCol]).trim();
-        resolvedData = resolveISIN(isin);
-        if (resolvedData) {
-            symbol = resolvedData.symbol;
-        }
-    }
+    const isin = isinCol ? String(row[isinCol] || '').trim() : undefined;
 
-    // If no ISIN resolution, try symbol column
-    if (!symbol) {
+    // Get product name from CSV
+    const nameCol = mappings['name'];
+    const csvProductName = nameCol ? String(row[nameCol] || '').trim() : undefined;
+
+    // STRUCTURAL: If ISIN present, use it as symbol
+    // Symbol resolution will happen in import.ts via Yahoo API
+    let symbol = '';
+
+    if (isin && isin.length > 5) {
+        symbol = isin;  // Use ISIN as symbol - will be resolved in import.ts
+        confidence = 80; // Lower confidence since it needs resolution
+    } else {
+        // No ISIN - try symbol column
         const symbolCol = mappings['symbol'];
         const rawSymbol = symbolCol ? row[symbolCol] : null;
         if (!rawSymbol || String(rawSymbol).trim() === '') {
@@ -983,54 +859,45 @@ function parseRow(
         } else if (cur.includes('$') || cur.includes('USD')) {
             currency = 'USD';
         } else {
-            // Try to infer from symbol
             if (symbol.endsWith('.IS') || symbol.includes('BIST')) {
                 currency = 'TRY';
             }
         }
     } else {
-        // Infer from symbol
         if (symbol.endsWith('.IS') || symbol.includes('XU')) {
             currency = 'TRY';
         }
         confidence -= 5;
     }
 
-    // Get name (optional)
-    const nameCol = mappings['name'];
-    const name = resolvedData?.name || (nameCol ? String(row[nameCol] || '').trim() : undefined);
-
     // Get type (optional)
-    let type: string | undefined = resolvedData?.type;
-    if (!type) {
-        const typeCol = mappings['type'];
-        if (typeCol && row[typeCol]) {
-            const t = String(row[typeCol]).toUpperCase();
-            if (t.includes('CRYPTO') || t.includes('BTC') || t.includes('ETH')) type = 'CRYPTO';
-            else if (t.includes('FUND') || t.includes('ETF')) type = 'FUND';
-            else if (t.includes('GOLD') || t.includes('ALTIN')) type = 'GOLD';
-            else if (t.includes('BOND') || t.includes('TAHVIL')) type = 'BOND';
-            else if (t.includes('CASH') || t.includes('NAKIT')) type = 'CASH';
-            else type = 'STOCK';
-        }
+    let type: string | undefined;
+    const typeCol = mappings['type'];
+    if (typeCol && row[typeCol]) {
+        const t = String(row[typeCol]).toUpperCase();
+        if (t.includes('CRYPTO') || t.includes('BTC') || t.includes('ETH')) type = 'CRYPTO';
+        else if (t.includes('FUND') || t.includes('ETF')) type = 'FUND';
+        else if (t.includes('GOLD') || t.includes('ALTIN')) type = 'GOLD';
+        else if (t.includes('BOND') || t.includes('TAHVIL')) type = 'BOND';
+        else if (t.includes('CASH') || t.includes('NAKIT')) type = 'CASH';
+        else type = 'STOCK';
+    } else if (csvProductName) {
+        type = inferTypeFromName(csvProductName);
     }
 
     // Get platform (optional)
     const platformCol = mappings['platform'];
     const platform = platformCol ? String(row[platformCol] || '').trim() || undefined : undefined;
 
-    // Get ISIN if available
-    const isin = isinCol ? String(row[isinCol] || '').trim() || undefined : undefined;
-
     return {
-        symbol,
-        name: name || undefined,
+        symbol,             // ISIN or ticker - will be resolved in import.ts
+        name: csvProductName,  // Product name for validation
         quantity,
         buyPrice,
         currency,
         type,
         platform,
-        isin,
+        isin,               // Explicit ISIN for resolution
         rawRow: row,
         confidence: Math.max(0, confidence),
         warnings
@@ -1045,8 +912,8 @@ export function parseCSV(content: string): ParseResult {
 
     const parseResult = Papa.parse(content, {
         header: true,
-        skipEmptyLines: 'greedy', // Handle lines with only delimiters
-        transformHeader: uniqueHeaders, // Ensure unique headers for empty columns
+        skipEmptyLines: 'greedy',
+        transformHeader: uniqueHeaders,
     });
 
     if (parseResult.errors.length > 0) {
@@ -1071,7 +938,25 @@ export function parseCSV(content: string): ParseResult {
     const columns = Object.keys(data[0]);
     const isDeGiro = isDeGiroFormat(columns);
     const isDeGiroStatement = isDeGiroAccountStatementFormat(columns);
+    const isKraken = isKrakenFormat(columns);
     const mappings = detectColumnMappings(columns, isDeGiro || isDeGiroStatement);
+
+    // Kraken Handler
+    if (isKraken) {
+        const { rows, transactions, processedCount, closedPositionCount } = parseKrakenTransactions(data);
+        return {
+            success: true,
+            rows,
+            transactions,
+            closedPositionCount,
+            detectedColumns: { txid: 'txid', refid: 'refid', asset: 'asset', amount: 'amount' },
+            unmappedColumns: [],
+            errors,
+            totalRows: data.length,
+            skippedRows: data.length - processedCount,
+            detectedFormat: 'generic'
+        };
+    }
 
     // DEGIRO Handlers
     if (isDeGiro || isDeGiroStatement) {
@@ -1087,7 +972,7 @@ export function parseCSV(content: string): ParseResult {
                 errors,
                 totalRows: data.length,
                 skippedRows: data.length - processedCount,
-                detectedFormat: 'degiro' // Same UI treatment
+                detectedFormat: 'degiro'
             };
         }
 
@@ -1105,7 +990,6 @@ export function parseCSV(content: string): ParseResult {
             };
         }
 
-        // Parse and aggregate DeGiro transactions
         const { rows, transactions, processedCount, closedPositionCount } = parseDeGiroTransactions(data, mappings);
 
         return {
@@ -1123,7 +1007,6 @@ export function parseCSV(content: string): ParseResult {
     }
 
     // Generic Format
-    // Check required mappings
     if (!mappings['symbol'] && !mappings['isin']) {
         return {
             success: false,
@@ -1154,7 +1037,7 @@ export function parseCSV(content: string): ParseResult {
     return {
         success: true,
         rows,
-        transactions: [], // Generic format doesn't support transaction history yet
+        transactions: [],
         detectedColumns: mappings,
         unmappedColumns: columns.filter(c => !Object.values(mappings).includes(c)),
         errors,
@@ -1174,7 +1057,6 @@ export function parseExcel(buffer: ArrayBuffer): ParseResult {
         const firstSheet = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheet];
 
-        // Convert to CSV and use CSV parser
         const csv = XLSX.utils.sheet_to_csv(worksheet);
         return parseCSV(csv);
     } catch (error) {

@@ -32,11 +32,14 @@ export interface YahooQuote {
 
 
 
-async function searchDirect(query: string): Promise<YahooSymbol[]> {
+async function searchDirect(query: string, useQuery2 = false): Promise<YahooSymbol[]> {
     try {
-        console.log(`[YahooApi] Fallback Direct Search: ${query}`);
-        // Switched to query1 for search as it sometimes behaves better than query2
-        const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&lang=en-US&region=US&quotesCount=8&newsCount=0`;
+        const subdomain = useQuery2 ? 'query2' : 'query1';
+        console.log(`[YahooApi] Direct Search (${subdomain}): ${query}`);
+
+        // Yahoo Finance Search API
+        // query1 is usually faster/newer, query2 is the classic fallback
+        const url = `https://${subdomain}.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&lang=en-US&region=US&quotesCount=10&newsCount=0&enableFuzzyQuery=false&quotesQueryId=tss_match_phrase_query&multiQuoteQueryId=multi_quote_single_token_query`;
 
         const response = await fetch(url, {
             headers: {
@@ -47,14 +50,14 @@ async function searchDirect(query: string): Promise<YahooSymbol[]> {
         });
 
         if (!response.ok) {
-            console.warn(`[YahooApi] Direct search failed: ${response.status} ${response.statusText}`);
-            await trackApiRequest('YAHOO_DIRECT', false);
+            console.warn(`[YahooApi] Direct search (${subdomain}) failed: ${response.status} ${response.statusText}`);
+            await trackApiRequest(`YAHOO_DIRECT_${subdomain.toUpperCase()}`, false);
             return [];
         }
 
         const data = await response.json();
         const quotes = data.quotes || [];
-        await trackApiRequest('YAHOO_DIRECT', true);
+        await trackApiRequest(`YAHOO_DIRECT_${subdomain.toUpperCase()}`, true);
 
         return quotes.map((q: any) => ({
             symbol: q.symbol,
@@ -66,8 +69,8 @@ async function searchDirect(query: string): Promise<YahooSymbol[]> {
         }));
 
     } catch (e: any) {
-        console.warn('[YahooApi] Direct search error:', e.message || e);
-        await trackApiRequest('YAHOO_DIRECT', false);
+        console.warn(`[YahooApi] Direct search error:`, e.message || e);
+        // await trackApiRequest('YAHOO_DIRECT', false); // Optional: don't span telemetry with catches
         return [];
     }
 }
@@ -96,37 +99,31 @@ export async function searchYahoo(query: string): Promise<YahooSymbol[]> {
     // Remove duplicates
     const uniqueQueries = [...new Set(queryVariations)];
 
-    // Try each query variation
+    // Try each query variation with Primary Search (query1)
     for (const searchQuery of uniqueQueries) {
-        const directResults = await searchDirect(searchQuery);
+        const directResults = await searchDirect(searchQuery, false); // False = query1
         if (directResults.length > 0) {
             apiCache.set(cacheKey, directResults, 10);
             return directResults;
         }
     }
 
-    // Fallback to library search with original query
+    // Fallback: Try Original Query with Secondary Server (query2)
+    // This replaces the unstable library call with a controlled fetch
     try {
-        console.log(`[YahooApi] Library Search Fallback: ${query}`);
-        const results = await yahooFinance.search(query);
-        await trackApiRequest('YAHOO', true);
-        const quotes = results.quotes.filter((q: any) => q.isYahooFinance);
+        console.log(`[YahooApi] Secondary Search Fallback: ${query}`);
+        const fallbackResults = await searchDirect(query, true); // True = query2
 
-        const mapped = quotes.map((q: any) => ({
-            symbol: q.symbol,
-            shortname: q.shortname,
-            longname: q.longname,
-            exchange: q.exchange,
-            quoteType: q.quoteType,
-            typeDisp: q.typeDisp
-        }));
-
-        apiCache.set(cacheKey, mapped, 10);
-        return mapped;
+        if (fallbackResults.length > 0) {
+            apiCache.set(cacheKey, fallbackResults, 10);
+            return fallbackResults;
+        }
     } catch (error: any) {
-        await trackApiRequest('YAHOO', false);
+        console.warn(`[YahooApi] Secondary fallback failed:`, error);
         return [];
     }
+
+    return [];
 }
 
 /**
@@ -188,6 +185,9 @@ function getEstimatedUSMarketState(): string {
 }
 
 export async function getYahooQuote(symbol: string, forceRefresh: boolean = false): Promise<YahooQuote | null> {
+    // Ticker Normalization (Force correct symbols for known issues)
+    if (symbol.toUpperCase() === 'SOIT.PA') symbol = 'SOI.PA';
+
     const forcedCurrency = detectCurrency(symbol);
 
     try {
@@ -419,11 +419,14 @@ export async function getYahooQuotes(symbols: string[], forceRefresh: boolean = 
     if (!symbols.length) return {};
 
     const results: Record<string, YahooQuote | null> = {};
+
+    // Normalize input symbols
+    const normalizedSymbols = symbols.map(s => s.toUpperCase() === 'SOIT.PA' ? 'SOI.PA' : s);
     let missingSymbols: string[] = [];
 
     // 1. Check Memory Cache FIRST (instant)
     const symbolsToCheckDB: string[] = [];
-    for (const symbol of symbols) {
+    for (const symbol of normalizedSymbols) {
         const cacheKey = `yahoo:quote:${symbol}`;
         if (!forceRefresh) {
             const cachedData = apiCache.get<YahooQuote>(cacheKey);

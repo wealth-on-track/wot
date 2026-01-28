@@ -391,6 +391,7 @@ export function InlineAssetSearch() {
                 </div>
 
                 <input
+                    id="global-search-input"
                     type="text"
                     value={searchQuery}
                     onChange={handleSearchChange}

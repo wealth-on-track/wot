@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 
 type Theme = 'dark' | 'light';
 
@@ -13,7 +13,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [theme, setTheme] = useState<Theme>(() => {
+    const [theme, setThemeState] = useState<Theme>(() => {
         if (typeof window !== 'undefined') {
             const stored = localStorage.getItem('theme') as Theme;
             if (stored === 'light' || stored === 'dark') return stored;
@@ -42,12 +42,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('theme', theme);
     }, [theme, mounted]);
 
-    const toggleTheme = () => {
-        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-    };
+    // Memoize toggle and set functions
+    const toggleTheme = useCallback(() => {
+        setThemeState(prev => prev === 'dark' ? 'light' : 'dark');
+    }, []);
+
+    const setTheme = useCallback((newTheme: Theme) => {
+        setThemeState(newTheme);
+    }, []);
+
+    // Memoize context value to prevent unnecessary re-renders
+    const value = useMemo(() => ({
+        theme,
+        toggleTheme,
+        setTheme
+    }), [theme, toggleTheme, setTheme]);
 
     return (
-        <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+        <ThemeContext.Provider value={value}>
             {children}
         </ThemeContext.Provider>
     );

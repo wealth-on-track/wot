@@ -26,6 +26,7 @@ export interface ClosedPosition {
         currency: string;
     }>;
     currentPrice?: number;
+    customGroup?: string;
 }
 
 /**
@@ -41,7 +42,7 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
             portfolio: {
                 include: {
                     assets: {
-                        select: { symbol: true, type: true, exchange: true, category: true }
+                        select: { symbol: true, type: true, exchange: true, category: true, quantity: true, customGroup: true }
                     }
                 }
             }
@@ -50,13 +51,20 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
 
     if (!user?.portfolio) return [];
 
-    // Map assets for type lookup (to help getMarketPrice)
-    const assetMap = new Map<string, { type: string, exchange: string, category: string }>();
-    user.portfolio.assets.forEach(a => assetMap.set(a.symbol, {
-        type: a.type,
-        exchange: a.exchange,
-        category: a.category
-    }));
+    // Map assets for type lookup and quantity check using COMPOSITE KEY
+    const assetMap = new Map<string, { type: string, exchange: string, category: string, customGroup?: string }>();
+    const quantityMap = new Map<string, number>();
+
+    user.portfolio.assets.forEach(a => {
+        const key = `${a.symbol}|${a.customGroup || ''}`;
+        assetMap.set(key, {
+            type: a.type,
+            exchange: a.exchange,
+            category: a.category,
+            customGroup: a.customGroup || undefined
+        });
+        quantityMap.set(key, a.quantity);
+    });
 
     // Get all transactions
     const transactions = await prisma.assetTransaction.findMany({
@@ -64,7 +72,7 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
         orderBy: { date: 'asc' }
     });
 
-    // Group by symbol
+    // Group by symbol AND customGroup
     const grouped = new Map<string, {
         symbol: string;
         name: string;
@@ -74,11 +82,15 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
         lastDate: Date;
         exchange?: string;
         platform?: string;
+        customGroup?: string;
     }>();
 
     for (const tx of transactions) {
-        if (!grouped.has(tx.symbol)) {
-            grouped.set(tx.symbol, {
+        // key includes customGroup to separate same-symbol assets in different groups
+        const key = `${tx.symbol}|${tx.customGroup || ''}`;
+
+        if (!grouped.has(key)) {
+            grouped.set(key, {
                 symbol: tx.symbol,
                 name: tx.name || tx.symbol,
                 buys: [],
@@ -86,11 +98,12 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
                 currency: tx.currency,
                 lastDate: tx.date,
                 exchange: tx.exchange || undefined,
-                platform: tx.platform || undefined
+                platform: tx.platform || undefined,
+                customGroup: tx.customGroup || undefined
             });
         }
 
-        const group = grouped.get(tx.symbol)!;
+        const group = grouped.get(key)!;
         if (tx.date > group.lastDate) group.lastDate = tx.date;
         if (tx.name) group.name = tx.name; // Update to latest name
 
@@ -103,19 +116,26 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
 
     const closedPositions: ClosedPosition[] = [];
 
-    for (const [symbol, data] of grouped.entries()) {
+    for (const [key, data] of grouped.entries()) {
+        const assetInfo = assetMap.get(key);
         const totalBought = data.buys.reduce((acc, t) => acc + t.qty, 0);
         const totalSold = data.sells.reduce((acc, t) => acc + t.qty, 0);
+        const currentQty = quantityMap.get(key) ?? 0;
 
-        // Show ALL positions with transaction history
-        if (totalBought > 0 || totalSold > 0) {
+        // Condition for Closed Position:
+        // 1. Must have history (bought or sold)
+        // 2. Current Quantity in DB must be <= 0.000001 (Floating point tolerance)
+        // This handles cases where totalBought != totalSold (e.g. external deposits) correctly.
+        const isClosed = currentQty <= 0.000001;
+
+        if ((totalBought > 0 || totalSold > 0) && isClosed) {
             const totalInvested = data.buys.reduce((acc, t) => acc + (t.qty * t.price), 0);
             const totalRealized = data.sells.reduce((acc, t) => acc + (t.qty * t.price), 0);
 
             const realizedPnl = totalRealized - totalInvested;
 
             closedPositions.push({
-                symbol,
+                symbol: data.symbol,
                 name: data.name,
                 totalQuantityBought: totalBought,
                 totalQuantitySold: totalSold,
@@ -126,6 +146,7 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
                 lastTradeDate: data.lastDate,
                 exchange: data.exchange,
                 platform: data.platform,
+                customGroup: data.customGroup || assetInfo?.customGroup,
                 transactionCount: data.buys.length + data.sells.length,
                 transactions: [
                     ...data.buys.map(t => ({ id: t.id, type: 'BUY' as const, quantity: t.qty, price: t.price, date: t.date, currency: data.currency })),
@@ -136,17 +157,14 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
     }
 
     // Enrich with current prices in parallel
-    // This allows the user to compare exit price with current market price
     await Promise.all(closedPositions.map(async (pos) => {
-        // Try to infer type/exchange if not available in transactions
         const assetInfo = assetMap.get(pos.symbol);
 
         // Inference logic
         let type = assetInfo?.type || 'STOCK';
         let exchange = assetInfo?.exchange || pos.exchange;
-        const category = assetInfo?.category?.toString(); // Cast enum to string
+        const category = assetInfo?.category?.toString();
 
-        // Heuristics if asset not in DB (deleted)
         if (!assetInfo) {
             if (pos.exchange === 'BINANCE' || pos.exchange === 'COINBASE') type = 'CRYPTO';
             else if (pos.exchange === 'TEFAS') type = 'FUND';
@@ -159,11 +177,9 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
             }
         } catch (e) {
             // Ignore price fetch errors for history
-            // console.warn(`Failed to fetch history price for ${pos.symbol}`, e);
         }
     }));
 
-    // Sort by last trade date desc
     return closedPositions.sort((a, b) => b.lastTradeDate.getTime() - a.lastTradeDate.getTime());
 }
 
@@ -182,7 +198,6 @@ export async function deleteTransaction(transactionId: string) {
 
         if (!user?.portfolio) return { error: "Portfolio not found" };
 
-        // Verify ownership
         const transaction = await prisma.assetTransaction.findUnique({
             where: { id: transactionId }
         });
@@ -191,7 +206,6 @@ export async function deleteTransaction(transactionId: string) {
             return { error: "Unauthorized" };
         }
 
-        // Delete the transaction
         await prisma.assetTransaction.delete({
             where: { id: transactionId }
         });
@@ -203,9 +217,6 @@ export async function deleteTransaction(transactionId: string) {
     }
 }
 
-/**
- * Delete all transactions for a specific symbol (entire position)
- */
 export async function deleteAllTransactionsForSymbol(symbol: string) {
     const session = await auth();
     if (!session?.user?.email) return { error: "Not authenticated" };
@@ -218,7 +229,6 @@ export async function deleteAllTransactionsForSymbol(symbol: string) {
 
         if (!user?.portfolio) return { error: "Portfolio not found" };
 
-        // Delete all transactions for this symbol in the user's portfolio
         await prisma.assetTransaction.deleteMany({
             where: {
                 portfolioId: user.portfolio.id,
@@ -230,5 +240,94 @@ export async function deleteAllTransactionsForSymbol(symbol: string) {
     } catch (error) {
         console.error('[deleteAllTransactionsForSymbol] Error:', error);
         return { error: "Failed to delete transactions" };
+    }
+}
+
+/**
+ * Add a manual transaction to an existing asset (or new one by symbol)
+ */
+export async function addTransaction(data: {
+    symbol: string;
+    type: 'BUY' | 'SELL';
+    quantity: number;
+    price: number;
+    date: Date;
+    currency?: string;
+    exchange?: string;
+}) {
+    const session = await auth();
+    if (!session?.user?.email) return { error: "Not authenticated" };
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            include: { portfolio: true }
+        });
+
+        if (!user?.portfolio) return { error: "Portfolio not found" };
+
+        const transaction = await prisma.assetTransaction.create({
+            data: {
+                portfolioId: user.portfolio.id,
+                symbol: data.symbol,
+                type: data.type,
+                quantity: data.quantity,
+                price: data.price,
+                date: data.date,
+                currency: data.currency || 'USD', // Default fallback
+                exchange: data.exchange,
+                name: data.symbol // Optional, can be enriched later
+            }
+        });
+
+        return { success: true, transaction };
+    } catch (error) {
+        console.error('[addTransaction] Error:', error);
+        return { error: "Failed to add transaction" };
+    }
+}
+
+/**
+ * Update an existing transaction
+ */
+export async function updateTransaction(transactionId: string, data: {
+    type?: 'BUY' | 'SELL';
+    quantity?: number;
+    price?: number;
+    date?: Date;
+}) {
+    const session = await auth();
+    if (!session?.user?.email) return { error: "Not authenticated" };
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            include: { portfolio: true }
+        });
+
+        if (!user?.portfolio) return { error: "Portfolio not found" };
+
+        const transaction = await prisma.assetTransaction.findUnique({
+            where: { id: transactionId }
+        });
+
+        if (!transaction || transaction.portfolioId !== user.portfolio.id) {
+            return { error: "Unauthorized" };
+        }
+
+        const updated = await prisma.assetTransaction.update({
+            where: { id: transactionId },
+            data: {
+                type: data.type,
+                quantity: data.quantity,
+                price: data.price,
+                date: data.date
+            }
+        });
+
+        return { success: true, transaction: updated };
+    } catch (error) {
+        console.error('[updateTransaction] Error:', error);
+        return { error: "Failed to update transaction" };
     }
 }

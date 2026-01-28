@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useMemo, useCallback } from 'react';
 
 type Currency = "ORG" | "EUR" | "USD" | "TRY";
 
@@ -12,10 +12,21 @@ interface CurrencyContextType {
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
-    const [currency, setCurrency] = useState<Currency>("ORG");
+    const [currency, setCurrencyState] = useState<Currency>("ORG");
+
+    // Memoize setCurrency to prevent unnecessary re-renders
+    const setCurrency = useCallback((newCurrency: Currency) => {
+        setCurrencyState(newCurrency);
+    }, []);
+
+    // Memoize context value to prevent unnecessary re-renders
+    const value = useMemo(() => ({
+        currency,
+        setCurrency
+    }), [currency, setCurrency]);
 
     return (
-        <CurrencyContext.Provider value={{ currency, setCurrency }}>
+        <CurrencyContext.Provider value={value}>
             {children}
         </CurrencyContext.Provider>
     );

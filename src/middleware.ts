@@ -1,7 +1,14 @@
+import NextAuth from 'next-auth';
+import { authConfig } from './auth.config';
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+const { auth } = NextAuth(authConfig);
+
+export default auth((req) => {
+    // Determine the response based on auth result (handled by wrapper? No, wrapper calls this)
+    // Actually, `auth` wrapper handles the `authorized` check logic internally and redirection.
+    // If we are here, it means we are authorized (or authorized callback returned true, or it's a public route).
+
     const response = NextResponse.next();
 
     // Security Headers
@@ -16,7 +23,7 @@ export function middleware(request: NextRequest) {
     }
 
     return response;
-}
+});
 
 export const config = {
     matcher: [

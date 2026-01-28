@@ -66,38 +66,34 @@ export async function GET(
 
         log(`DEBUG: Found user, assets count: ${user.portfolio.assets.length}`);
 
-        // 1. Fetch Real Snapshots from DB with Timeout
+        // 1. Fetch Real Snapshots from DB
         let snapshots: any[] = [];
         try {
-            // timeout promise
-            const fetchSnapshots = async () => {
-                if ((prisma as any).portfolioSnapshot) {
-                    return await prisma.portfolioSnapshot.findMany({
-                        where: {
-                            portfolioId: user.portfolio!.id,
-                            date: { gte: startDate }
-                        },
-                        orderBy: { date: 'asc' }
-                    });
-                }
-                return [];
-            };
-
-            const timeout = new Promise<any[]>((_, reject) =>
-                setTimeout(() => reject(new Error('DB Timeout')), 5000)
-            );
-
-            snapshots = await Promise.race([fetchSnapshots(), timeout]);
+            // Optimized query: Only select needed fields
+            // Removed custom timeout as Prisma has its own timeouts and Promise.race is brittle here
+            if ((prisma as any).portfolioSnapshot) {
+                snapshots = await prisma.portfolioSnapshot.findMany({
+                    where: {
+                        portfolioId: user.portfolio!.id,
+                        date: { gte: startDate }
+                    },
+                    orderBy: { date: 'asc' },
+                    select: {
+                        date: true,
+                        totalValue: true
+                    }
+                });
+            }
             log(`DEBUG: Snapshots found: ${snapshots.length}`);
         } catch (dbError) {
-            log(`WARNING: DB access failed or timed out: ${dbError}. Falling back to simulation.`);
+            log(`WARNING: DB access failed: ${dbError}. Falling back.`);
             snapshots = [];
         }
 
         // 2. Determine Strategy
         let historyData: { date: string, value: number }[] = [];
 
-        if (snapshots.length >= Math.max(2, days / 5)) {
+        if (snapshots.length > 0) {
             // Strategy A: Use Real Snapshots
             log('DEBUG: Strategy Database');
             historyData = snapshots.map(s => ({
