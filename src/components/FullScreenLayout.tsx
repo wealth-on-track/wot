@@ -5,7 +5,7 @@ import {
     Briefcase, PieChart, TrendingUp, Lightbulb, Eye,
     Target, Trophy, XCircle, Share2, Settings, Hash, Monitor, Pencil, Wallet, Save, X,
     ChevronUp, ChevronDown, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2, GripVertical, Upload, ListChecks, SlidersHorizontal, Search,
-    LayoutGrid, List, PanelLeftClose, PanelLeft
+    LayoutGrid, List, PanelLeftClose, PanelLeft, ChevronsLeft, ChevronsRight, Menu
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -35,6 +35,9 @@ import { InsightsTab } from "./InsightsTab";
 import { AllocationCard } from "./PortfolioSidebarComponents";
 import { PortfolioPerformanceChart } from "./PortfolioPerformanceChart";
 import { usePrivacy } from "@/context/PrivacyContext";
+import { useTheme } from "@/context/ThemeContext";
+import { useCurrency } from "@/context/CurrencyContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { BENCHMARK_ASSETS } from "@/lib/benchmarkApi";
 import { getPortfolioStyle } from "@/lib/portfolioStyles";
 import { deleteAccount } from "@/lib/actions";
@@ -166,6 +169,17 @@ export function FullScreenLayout({
     const [openPositionsCount, setOpenPositionsCount] = useState<number>(assets.length);
     const [activePositionTab, setActivePositionTab] = useState<'open' | 'closed'>('open');
     const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(true);
+    const [isToggleHovered, setIsToggleHovered] = useState(false);
+
+    // Restore sidebar state preference
+    React.useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const savedState = localStorage.getItem('sidebarExpanded');
+            if (savedState !== null) {
+                setSidebarExpanded(savedState === 'true');
+            }
+        }
+    }, []);
 
     // Sync open positions count with assets prop updates (e.g. after import)
     React.useEffect(() => {
@@ -179,8 +193,8 @@ export function FullScreenLayout({
         import('@/app/actions/history').then(({ getClosedPositions }) => {
             getClosedPositions()
                 .then(data => {
-                    const closed = data.filter(p => Math.abs(p.totalQuantityBought - p.totalQuantitySold) < 0.01);
-                    setClosedPositionsCount(closed.length);
+                    // No additional filter - getClosedPositions() returns only closed positions
+                    setClosedPositionsCount(data.length);
                 })
                 .catch(err => console.error('[FullScreenLayout] Error fetching closed positions count:', err));
         });
@@ -208,8 +222,8 @@ export function FullScreenLayout({
         import('@/app/actions/history').then(({ getClosedPositions }) => {
             getClosedPositions()
                 .then(data => {
-                    const closed = data.filter(p => Math.abs(p.totalQuantityBought - p.totalQuantitySold) < 0.01);
-                    setClosedPositionsCount(closed.length);
+                    // No additional filter - getClosedPositions() returns only closed positions
+                    setClosedPositionsCount(data.length);
                 })
                 .catch(err => console.error('[refreshCounts] Error fetching closed positions count:', err));
         });
@@ -243,8 +257,8 @@ export function FullScreenLayout({
     return (
         <div style={{
             display: 'flex',
-            height: 'calc(100vh - 5rem)',
-            marginTop: '5rem',
+            minHeight: 'calc(100vh - 5rem)',
+            marginTop: '5rem', // CONTROL TOP GAP HERE (Distance from top)
             background: 'var(--bg-primary)',
             position: 'relative'
         }}>
@@ -255,39 +269,94 @@ export function FullScreenLayout({
                 borderRight: '1px solid var(--border)',
                 display: 'flex',
                 flexDirection: 'column',
-                padding: '8px 0',
+                padding: '12px 0',
                 position: 'relative',
                 zIndex: 10,
                 boxShadow: 'var(--shadow-sm)',
-                overflowY: 'auto',
+                overflowY: sidebarExpanded ? 'auto' : 'visible',
                 transition: 'width 0.2s ease'
             }}>
                 {/* Toggle Button */}
                 <button
-                    onClick={() => setSidebarExpanded(!sidebarExpanded)}
+                    onClick={() => {
+                        const newState = !sidebarExpanded;
+                        setSidebarExpanded(newState);
+                        if (typeof window !== 'undefined') {
+                            localStorage.setItem('sidebarExpanded', String(newState));
+                        }
+                    }}
                     style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '8px',
-                        margin: '0 8px 8px 8px',
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border)',
+                        justifyContent: sidebarExpanded ? 'flex-end' : 'center',
+                        padding: sidebarExpanded ? '6px 10px' : '8px',
+                        margin: '0 8px 6px 8px',
+                        background: isToggleHovered ? 'var(--bg-secondary)' : 'transparent',
+                        border: 'none',
                         borderRadius: '8px',
                         cursor: 'pointer',
-                        color: 'var(--text-muted)',
-                        transition: 'all 0.2s'
+                        color: isToggleHovered ? 'var(--text-primary)' : 'var(--text-muted)',
+                        transition: 'all 0.2s',
+                        height: '28px'
                     }}
                     title={sidebarExpanded ? 'Collapse menu' : 'Expand menu'}
+                    onMouseEnter={() => setIsToggleHovered(true)}
+                    onMouseLeave={() => setIsToggleHovered(false)}
                 >
-                    {sidebarExpanded ? <PanelLeftClose size={16} /> : <PanelLeft size={16} />}
+                    {sidebarExpanded ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Hide</span>
+                            <ChevronsLeft size={16} />
+                        </div>
+                    ) : (
+                        <ChevronsRight size={18} />
+                    )}
                 </button>
+
+                {/* Custom Premium Tooltip for Toggle */}
+                {!sidebarExpanded && isToggleHovered && (
+                    <div style={{
+                        position: 'absolute',
+                        left: '60px',
+                        top: '24px', // Aligned with button center (approx)
+                        transform: 'translateY(-50%)',
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                        zIndex: 1000,
+                        whiteSpace: 'nowrap',
+                        pointerEvents: 'none'
+                    }}>
+                        <div style={{
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: 'var(--text-primary)'
+                        }}>
+                            Open Menu
+                        </div>
+                        {/* Arrow */}
+                        <div style={{
+                            position: 'absolute',
+                            left: '-6px',
+                            top: '50%',
+                            transform: 'translateY(-50%) rotate(-45deg)',
+                            width: '10px',
+                            height: '10px',
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border)',
+                            borderRight: 'none',
+                            borderBottom: 'none'
+                        }} />
+                    </div>
+                )}
 
                 {/* Divider after toggle */}
                 <div style={{
                     height: '1px',
                     background: 'var(--border)',
-                    margin: '0 8px 8px 8px'
+                    margin: '0 8px 20px 8px'
                 }} />
 
                 {MENU_ITEMS.map((item, index) => {
@@ -310,8 +379,8 @@ export function FullScreenLayout({
                                         flexDirection: 'column',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: sidebarExpanded ? '4px' : '0',
-                                        padding: sidebarExpanded ? '10px 4px' : '12px 4px',
+                                        gap: sidebarExpanded ? '2px' : '0',
+                                        padding: sidebarExpanded ? '6px 4px' : '10px 4px',
                                         background: isActive ? 'var(--accent)' : isHovered ? 'var(--bg-secondary)' : 'transparent',
                                         color: isActive ? '#fff' : 'var(--text-muted)',
                                         border: 'none',
@@ -320,7 +389,7 @@ export function FullScreenLayout({
                                         position: 'relative'
                                     }}
                                 >
-                                    <Icon size={18} style={{ flexShrink: 0 }} />
+                                    <Icon size={16} style={{ flexShrink: 0 }} />
                                     {sidebarExpanded && (
                                         <span style={{
                                             fontSize: '9px',
@@ -392,7 +461,7 @@ export function FullScreenLayout({
                                 <div style={{
                                     height: '1px',
                                     background: 'var(--border)',
-                                    margin: sidebarExpanded ? '4px 12px' : '4px 8px',
+                                    margin: sidebarExpanded ? '6px 12px' : '6px 8px',
                                     opacity: 0.5
                                 }} />
                             )}
@@ -404,12 +473,191 @@ export function FullScreenLayout({
             {/* Main Content Area */}
             <div style={{
                 flex: 1,
-                overflow: 'auto',
-                background: 'var(--bg-primary)'
+                background: 'var(--bg-primary)',
+                minHeight: '100%',
+                overflowY: 'auto'
             }}>
-                {renderContent()}
+                <div key={activeSection} style={{ animation: 'fadeIn 0.4s ease-out' }}>
+                    {renderContent()}
+                </div>
             </div>
+            <style jsx global>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
 
+        </div>
+    );
+}
+
+// Import Progress Overlay Component
+function ImportProgressOverlay({ progress, phase, icon, successStats }: {
+    progress: number;
+    phase: string;
+    icon: string;
+    successStats?: { open: number; closed: number; statement: number } | null;
+}) {
+    const isComplete = successStats !== null && successStats !== undefined;
+
+    return (
+        <div style={{
+            position: 'fixed',
+            top: '120px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '16px',
+            padding: '24px 32px',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+            minWidth: '420px',
+            backdropFilter: 'blur(20px)',
+            animation: 'slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}>
+            {!isComplete ? (
+                <>
+                    {/* Progress Mode */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px',
+                        marginBottom: '16px'
+                    }}>
+                        <div style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '24px',
+                            boxShadow: '0 8px 24px var(--accent-glow)',
+                            animation: 'pulse 1.5s ease-in-out infinite'
+                        }}>
+                            {icon}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <div style={{
+                                fontSize: '15px',
+                                fontWeight: 700,
+                                color: 'var(--text-primary)',
+                                marginBottom: '4px'
+                            }}>
+                                Importing your wealth...
+                            </div>
+                            <div style={{
+                                fontSize: '13px',
+                                color: 'var(--text-secondary)',
+                                fontWeight: 500
+                            }}>
+                                {phase}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div style={{
+                        width: '100%',
+                        height: '6px',
+                        background: 'var(--bg-secondary)',
+                        borderRadius: '3px',
+                        overflow: 'hidden',
+                        marginBottom: '8px'
+                    }}>
+                        <div style={{
+                            height: '100%',
+                            width: `${progress}%`,
+                            background: 'linear-gradient(90deg, var(--accent), var(--accent-hover))',
+                            borderRadius: '3px',
+                            transition: 'width 0.15s ease-out',
+                            boxShadow: '0 0 10px var(--accent-glow)'
+                        }} />
+                    </div>
+
+                    {/* Progress Percentage */}
+                    <div style={{
+                        textAlign: 'right',
+                        fontSize: '12px',
+                        color: 'var(--text-muted)',
+                        fontWeight: 600
+                    }}>
+                        {Math.round(progress)}%
+                    </div>
+                </>
+            ) : (
+                <>
+                    {/* Success Mode */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px'
+                    }}>
+                        <div style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '24px',
+                            boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)'
+                        }}>
+                            ✅
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <div style={{
+                                fontSize: '15px',
+                                fontWeight: 700,
+                                color: 'var(--text-primary)',
+                                marginBottom: '4px'
+                            }}>
+                                Import Complete!
+                            </div>
+                            <div style={{
+                                fontSize: '13px',
+                                color: 'var(--text-secondary)',
+                                fontWeight: 500
+                            }}>
+                                {(() => {
+                                    const parts = [];
+                                    if (successStats.open > 0) parts.push(`${successStats.open} Open`);
+                                    if (successStats.closed > 0) parts.push(`${successStats.closed} Closed`);
+                                    if (successStats.statement > 0) parts.push(`${successStats.statement} Statement`);
+                                    return parts.join(', ') + ' Imported';
+                                })()}
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            <style jsx>{`
+                @keyframes slideDown {
+                    from {
+                        opacity: 0;
+                        transform: translateX(-50%) translateY(-20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(-50%) translateY(0);
+                    }
+                }
+                @keyframes pulse {
+                    0%, 100% {
+                        transform: scale(1);
+                        opacity: 1;
+                    }
+                    50% {
+                        transform: scale(1.05);
+                        opacity: 0.9;
+                    }
+                }
+            `}</style>
         </div>
     );
 }
@@ -443,6 +691,20 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
 
     const [showSuccessNotification, setShowSuccessNotification] = React.useState(false);
     const [successMessage, setSuccessMessage] = React.useState('Saved');
+
+    // Import progress overlay state
+    const [importProgress, setImportProgress] = React.useState<{
+        isActive: boolean;
+        progress: number;
+        phase: string;
+        icon: string;
+    } | null>(null);
+    const [importSuccessStats, setImportSuccessStats] = React.useState<{
+        open: number;
+        closed: number;
+        statement: number;
+    } | null>(null);
+
     const sensors = useSensors(
         useSensor(PointerSensor),
         useSensor(KeyboardSensor, {
@@ -805,10 +1067,10 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                     alignItems: 'center',
                     justifyContent: 'center',
                     padding: '80px 20px',
-                    background: 'rgba(255,255,255,0.02)',
+                    background: 'var(--bg-secondary)',
                     borderRadius: '16px',
                     marginTop: '20px',
-                    border: '1px dashed var(--border)',
+                    border: '2px dashed var(--text-muted)',
                     textAlign: 'center'
                 }}>
                     <div style={{
@@ -976,12 +1238,12 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                             <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost</div>
                                         </th>
                                         {/* Total Value Org */}
-                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', minWidth: '100px' }}>
                                             <div>Value</div>
                                             <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost</div>
                                         </th>
                                         {/* Total Value Global */}
-                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', minWidth: '110px', whiteSpace: 'nowrap' }}>
                                             <div>Value ({getCurrencySymbol(globalCurrency)})</div>
                                             <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost ({getCurrencySymbol(globalCurrency)})</div>
                                         </th>
@@ -990,7 +1252,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                             Weight
                                         </th>
                                         {/* P&L */}
-                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', minWidth: '100px', whiteSpace: 'nowrap' }}>
                                             <div>P&L</div>
                                             <div style={{ opacity: 0.5, fontWeight: 500 }}>Amt</div>
                                         </th>
@@ -1182,7 +1444,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                     boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
                                                                 }}>
                                                                     <img
-                                                                        src={getLogoUrl(asset.symbol, asset.type || 'STOCK', asset.exchange, asset.country) || ''}
+                                                                        src={getLogoUrl(asset.symbol, asset.type || 'STOCK', asset.exchange, asset.country) || undefined}
                                                                         alt={asset.symbol}
                                                                         style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
                                                                         onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random` }}
@@ -1223,7 +1485,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        {/* Qty */}
+                                                        {/* Quantity */}
                                                         <td style={{ padding: `${sizing.rowPaddingLR} 12px`, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
                                                             {isBatchEditMode ? (
                                                                 <input
@@ -1314,10 +1576,10 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                         </td>
                                                         {/* P&L */}
                                                         <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-                                                            <div style={{ fontSize: sizing.numberSize, fontWeight: 800, color: (asset.plPercentage || 0) >= 0 ? '#34d399' : '#f87171', fontVariantNumeric: 'tabular-nums' }}>
+                                                            <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: (asset.plPercentage || 0) >= 0 ? '#34d399' : '#f87171', fontVariantNumeric: 'tabular-nums' }}>
                                                                 {(asset.plPercentage || 0) >= 0 ? '+' : ''}{Math.round(asset.plPercentage || 0)}%
                                                             </div>
-                                                            <div style={{ fontSize: sizing.smallNumberSize, color: plAmount >= 0 ? '#34d399' : '#f87171', marginTop: '2px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                                                            <div style={{ fontSize: sizing.smallNumberSize, color: plAmount >= 0 ? '#34d399' : '#f87171', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                                                                 {plAmount >= 0 ? '+' : ''}{getCurrencySymbol(globalCurrency)}{formatNumber(plAmount, 0)}
                                                             </div>
                                                         </td>
@@ -1436,20 +1698,36 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                 activePositionTab === 'import' && (
                     <div style={{ marginTop: '0', width: '100%' }}>
                         <ImportCSVInline
-                            onSuccess={(stats) => {
-                                onCountChange();
-                                setActivePositionTab('open');
-                                if (stats) {
-                                    // User Request: "4 open positions 28 closed positions"
-                                    const parts = [];
-                                    if (stats.open > 0) parts.push(`${stats.open} Open Positions`);
-                                    if (stats.closed > 0) parts.push(`${stats.closed} Closed Positions`);
-                                    if (stats.statement > 0) parts.push(`${stats.statement} Statements`);
 
-                                    const msg = parts.join(', ') + ' Imported Successfully';
-                                    setSuccessMessage(msg);
-                                    setShowSuccessNotification(true);
-                                    setTimeout(() => setShowSuccessNotification(false), 5000);
+                            onSuccess={async (stats) => {
+                                onCountChange();
+
+                                // Poll for data update if we expect open positions
+                                if (stats && stats.open > 0) {
+                                    const { getOpenPositions } = await import('@/lib/actions');
+                                    let attempts = 0;
+                                    const maxAttempts = 20; // 10 seconds max (20 * 500ms)
+
+                                    const checkData = async () => {
+                                        try {
+                                            const positions = await getOpenPositions();
+                                            // If we found positions, or we ran out of attempts, switch tab
+                                            if ((positions && positions.length > 0) || attempts >= maxAttempts) {
+                                                setActivePositionTab('open');
+                                            } else {
+                                                attempts++;
+                                                setTimeout(checkData, 500);
+                                            }
+                                        } catch (e) {
+                                            console.error("Polling error:", e);
+                                            setActivePositionTab('open'); // Fallback
+                                        }
+                                    };
+
+                                    checkData();
+                                } else {
+                                    // No open positions to wait for, switch immediately
+                                    setActivePositionTab('open');
                                 }
                             }}
                             onCancel={() => setActivePositionTab('open')}
@@ -2353,8 +2631,9 @@ function ClosedPositionsFullScreen({ onCountChange, hideHeader = false, isBatchE
         import('@/app/actions/history').then(({ getClosedPositions }) => {
             getClosedPositions()
                 .then(data => {
-                    const closed = data.filter(p => Math.abs(p.totalQuantityBought - p.totalQuantitySold) < 0.01);
-                    setPositions(closed);
+                    // No additional filter needed - getClosedPositions() already returns only closed positions
+                    // (positions where currentQty <= 0.000001 from the asset table)
+                    setPositions(data);
                 })
                 .catch(err => console.error('[ClosedPositionsFullScreen] Error:', err))
                 .finally(() => setLoading(false));
@@ -2387,8 +2666,15 @@ function ClosedPositionsFullScreen({ onCountChange, hideHeader = false, isBatchE
     };
 
     const getAssetType = (pos: any) => {
-        const ex = pos.exchange?.toUpperCase();
-        if (ex === 'BINANCE' || ex === 'COINBASE') return 'CRYPTO';
+        // Priority: Trust explicit valid types from DB
+        if (pos.type === 'CRYPTO' || pos.type === 'FUND') return pos.type;
+
+        const ex = pos.exchange?.toUpperCase() || '';
+        const pl = pos.platform?.toUpperCase() || '';
+
+        // Robust Crypto Detection
+        if (pl === 'KRAKEN' || ex === 'KRAKEN' || ex === 'CCC' || ex === 'BINANCE' || ex === 'COINBASE') return 'CRYPTO';
+
         if (ex === 'TEFAS') return 'FUND';
         if (pos.name?.toLowerCase().includes('gold') || pos.symbol === 'XAU') return 'COMMODITY';
         return 'STOCK';
@@ -2700,7 +2986,7 @@ function ClosedPositionsFullScreen({ onCountChange, hideHeader = false, isBatchE
                                             {/* Asset */}
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
                                                 <img
-                                                    src={getLogoUrl(pos.symbol, getAssetType(pos), pos.exchange) || ''}
+                                                    src={pos.logoUrl || getLogoUrl(pos.symbol, getAssetType(pos), pos.exchange) || ''}
                                                     alt={pos.symbol}
                                                     style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
                                                     onError={(e) => {
@@ -2839,11 +3125,15 @@ function ShareFullScreen({ assets, username, totalValueEUR }: { assets: any[], u
 
 // 10. Settings - All Navbar Settings
 function SettingsFullScreen({ preferences, username, userEmail }: { preferences?: any, username: string, userEmail?: string }) {
+    // Import context hooks for instant UI updates
+    const { theme, setTheme } = useTheme();
+    const { currency, setCurrency } = useCurrency();
+    const { language, setLanguage } = useLanguage();
+
     const [localPrefs, setLocalPrefs] = React.useState({
-        theme: preferences?.theme || 'light',
-        currency: preferences?.currency || 'EUR',
-        language: preferences?.language || 'English',
-        defaultViewMode: preferences?.defaultViewMode || 'fullscreen',
+        theme: preferences?.theme || theme || 'light',
+        currency: preferences?.currency || currency || 'EUR',
+        language: preferences?.language || language || 'ENG',
         priceAlerts: preferences?.priceAlerts !== false,
         goalUpdates: preferences?.goalUpdates !== false,
         marketNews: preferences?.marketNews === true
@@ -2854,6 +3144,22 @@ function SettingsFullScreen({ preferences, username, userEmail }: { preferences?
     const savePreference = async (key: string, value: any) => {
         setSaving(true);
         try {
+            // Update React context FIRST for instant UI change
+            if (key === 'theme') {
+                setTheme(value as 'light' | 'dark');
+            } else if (key === 'currency') {
+                setCurrency(value as any);
+            } else if (key === 'language') {
+                // Map display names to context values
+                const langMap: Record<string, 'ENG' | 'TR'> = {
+                    'English': 'ENG',
+                    'Turkish': 'TR',
+                    'German': 'ENG' // Fallback to ENG for now
+                };
+                setLanguage(langMap[value] || 'ENG');
+            }
+
+            // Then persist to database
             const { updateUserPreferences } = await import('@/lib/actions');
             await updateUserPreferences({ [key]: value });
             setLocalPrefs(prev => ({ ...prev, [key]: value }));
@@ -3032,20 +3338,7 @@ function SettingsFullScreen({ preferences, username, userEmail }: { preferences?
                             </select>
                         </div>
 
-                        {/* View Mode */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Default View</span>
-                            <select
-                                value={localPrefs.defaultViewMode}
-                                onChange={(e) => savePreference('defaultViewMode', e.target.value)}
-                                disabled={saving}
-                                className="glass-select"
-                                style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '13px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
-                            >
-                                <option value="fullscreen">Full Screen</option>
-                                <option value="card">Card View</option>
-                            </select>
-                        </div>
+
                     </div>
                 </div>
 

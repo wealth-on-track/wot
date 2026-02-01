@@ -16,12 +16,21 @@ export function LoginForm() {
     const isLoading = isAuthPending || isRegisterPending;
 
     // Effect to handle switching to registration mode if user not found
-    // Effect to handle switching to registration mode if user not found
     useEffect(() => {
         if (authResult?.status === "user_not_found") {
             setIsRegistering(true);
         }
     }, [authResult]);
+
+    // Handle URL error parameters
+    const [loginError, setLoginError] = useState<string | null>(null);
+    useEffect(() => {
+        const searchParams = new URLSearchParams(window.location.search);
+        const errorType = searchParams.get('error');
+        if (errorType === 'UserNotFound') {
+            setLoginError("The user account you are trying to access does not exist.");
+        }
+    }, []);
 
     // Reset loading when register result comes back
 
@@ -97,6 +106,10 @@ export function LoginForm() {
 
                 {authResult?.error && !isRegistering && (
                     <div style={{ color: 'var(--danger)', fontSize: '0.85rem', textAlign: 'center', fontWeight: 600 }}>{authResult.error}</div>
+                )}
+
+                {loginError && !authResult?.error && !isRegistering && (
+                    <div style={{ color: 'var(--danger)', fontSize: '0.85rem', textAlign: 'center', fontWeight: 600 }}>{loginError}</div>
                 )}
 
                 {registerResult?.error && (

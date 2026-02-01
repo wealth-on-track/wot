@@ -186,8 +186,8 @@ export function TransactionsFullScreen({ viewMode = 'group', assets = [] }: { vi
         txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         groups.push({
             id: `CASH-${platform}`,
-            symbol: 'CASH',
-            name: `CASH ${platform}`,
+            symbol: `Cash | ${platform}`,
+            name: 'Deposit-Withdrawal',
             platform,
             transactions: txs,
             lastDate: new Date(txs[0].date)

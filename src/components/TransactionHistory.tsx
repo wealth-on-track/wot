@@ -4,7 +4,7 @@ import { addTransaction, updateTransaction, deleteTransaction } from '@/app/acti
 
 interface Transaction {
     id: string;
-    type: 'BUY' | 'SELL' | 'CLEANUP';
+    type: 'BUY' | 'SELL' | 'CLEANUP' | 'DIVIDEND' | 'INTEREST' | 'COUPON' | 'STAKING';
     quantity: number;
     price: number;
     date: Date | string;
@@ -145,6 +145,14 @@ export function TransactionHistory({ symbol, transactions, onUpdate, isBatchEdit
                 totalCost = totalCost * (1 - soldPortion);
                 runningQty -= qty;
                 // avgCost remains as previous currentAvgCost
+            } else if (tx.type === 'DIVIDEND' || tx.type === 'INTEREST' || tx.type === 'COUPON' || tx.type === 'STAKING') {
+                // Rewards add to running qty but are "free" (cost = 0)
+                // This effectively lowers the average cost per unit
+                runningQty += qty;
+                // totalCost stays the same, so avgCost decreases
+                if (runningQty > 0) {
+                    currentAvgCost = totalCost / runningQty;
+                }
             }
 
             const avgCost = currentAvgCost;
@@ -376,6 +384,22 @@ export function TransactionHistory({ symbol, transactions, onUpdate, isBatchEdit
                                         {tx.type === 'CLEANUP' ? (
                                             <span style={{ fontWeight: 500, fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                                                 Cleanup
+                                            </span>
+                                        ) : tx.type === 'STAKING' ? (
+                                            <span style={{ fontWeight: 600, fontSize: '11px', color: '#3b82f6' }}>
+                                                STAKING
+                                            </span>
+                                        ) : tx.type === 'DIVIDEND' || tx.type === 'INTEREST' || tx.type === 'COUPON' ? (
+                                            <span style={{
+                                                fontWeight: 600,
+                                                fontSize: '10px',
+                                                color: '#f59e0b',
+                                                background: 'rgba(245, 158, 11, 0.1)',
+                                                padding: '2px 6px',
+                                                borderRadius: '4px',
+                                                textTransform: 'uppercase'
+                                            }}>
+                                                {tx.type}
                                             </span>
                                         ) : (
                                             <span style={{ fontWeight: 600, fontSize: '11px', color: tx.type === 'BUY' ? '#22c55e' : '#ef4444' }}>

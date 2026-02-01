@@ -1,8 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 
-type Currency = "ORG" | "EUR" | "USD" | "TRY";
+type Currency = "ORG" | "EUR" | "USD" | "TRY" | "GBP";
 
 interface CurrencyContextType {
     currency: Currency;
@@ -12,7 +12,22 @@ interface CurrencyContextType {
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
-    const [currency, setCurrencyState] = useState<Currency>("ORG");
+    const [currency, setCurrencyState] = useState<Currency>(() => {
+        if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem('currency') as Currency;
+            if (stored && ['ORG', 'EUR', 'USD', 'TRY', 'GBP'].includes(stored)) {
+                return stored;
+            }
+        }
+        return "EUR";
+    });
+
+    // Persist currency changes to localStorage
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('currency', currency);
+        }
+    }, [currency]);
 
     // Memoize setCurrency to prevent unnecessary re-renders
     const setCurrency = useCallback((newCurrency: Currency) => {

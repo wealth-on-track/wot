@@ -2213,7 +2213,7 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                 display: 'flex',
                                                                 flexDirection: 'column',
                                                                 width: '100%',
-                                                                background: 'var(--surface)',
+                                                                background: '#ffffff',
                                                                 borderRadius: 'var(--radius-lg)',
                                                                 border: '1px solid var(--border)',
                                                                 boxShadow: 'var(--shadow-sm)',

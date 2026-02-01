@@ -21,6 +21,11 @@
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { parseKrakenTransactions } from './krakenParser';
+import { parseIsBankTXT, detectIsBank } from './isBankParser';
+
+// Unified threshold for quantity comparisons (positions with qty <= this are considered closed)
+const QUANTITY_THRESHOLD = 0.000001;
+
 
 // Known column name variations for fuzzy matching
 const COLUMN_ALIASES: Record<string, string[]> = {
@@ -63,7 +68,7 @@ export interface ParsedTransaction {
     isin?: string;       // ISIN for resolution in import.ts
 }
 
-export type TransactionType = 'BUY' | 'SELL' | 'DEPOSIT' | 'WITHDRAWAL' | 'DIVIDEND' | 'COUPON' | 'INTEREST' | 'FEE' | 'FX';
+export type TransactionType = 'BUY' | 'SELL' | 'DEPOSIT' | 'WITHDRAWAL' | 'DIVIDEND' | 'COUPON' | 'INTEREST' | 'FEE' | 'FX' | 'STAKING';
 
 export interface ParsedRow {
     symbol: string;      // ISIN or raw identifier (NOT resolved ticker)
@@ -74,6 +79,10 @@ export interface ParsedRow {
     type?: string;
     platform?: string;
     isin?: string;       // ISIN for resolution in import.ts
+    exchange?: string;   // Exchange from CSV
+    category?: string;   // Added
+    country?: string;    // Added
+    sector?: string;     // Added
     rawRow: Record<string, any>;
     confidence: number;  // 0-100 how confident we are about this row
     warnings: string[];
@@ -89,7 +98,7 @@ export interface ParseResult {
     totalRows: number;
     skippedRows: number;
     closedPositionCount?: number;
-    detectedFormat?: 'generic' | 'degiro' | 'ibkr';
+    detectedFormat?: 'generic' | 'degiro' | 'ibkr' | 'isbank';
 }
 
 /**
@@ -285,6 +294,7 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
         buys: { quantity: number; price: number; value: number }[];
         sells: { quantity: number; price: number; value: number }[];
         currency: string;
+        exchange: string;
     }> = {};
 
     const transactions: ParsedTransaction[] = [];
@@ -361,6 +371,7 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
         }
 
         // Determine if buy or sell from value sign or quantity sign
+        // DeGiro: Negative localValue = BUY (money out), Positive = SELL (money in)
         const isSell = localValue > 0 || quantity < 0;
         quantity = Math.abs(quantity);
 
@@ -382,13 +393,32 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
         }
 
         // Find exchange/venue
+        // Priority: "Reference Exchange" > any column with "exchange" > "Venue"
         let exchange = '';
+        let venueValue = '';
         for (const col of columns) {
             const normal = normalize(col);
-            if (normal.includes('exchange') || normal.includes('venue')) {
-                const val = String(row[col] || '');
-                if (val) exchange = val;
+            // Prefer "Reference Exchange" column specifically
+            if (normal === 'referenceexchange') {
+                const val = String(row[col] || '').trim();
+                if (val) {
+                    exchange = val;
+                    break; // Found the best source, stop looking
+                }
             }
+            // Track venue as fallback
+            else if (normal === 'venue') {
+                venueValue = String(row[col] || '').trim();
+            }
+            // Other exchange columns
+            else if (normal.includes('exchange')) {
+                const val = String(row[col] || '').trim();
+                if (val && !exchange) exchange = val;
+            }
+        }
+        // Use venue as fallback if no exchange found
+        if (!exchange && venueValue) {
+            exchange = venueValue;
         }
 
         // STRUCTURAL: Use ISIN as symbol - resolution happens in import.ts
@@ -415,8 +445,12 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
                 name: name || isin,
                 buys: [],
                 sells: [],
-                currency
+                currency,
+                exchange
             };
+        } else if (exchange && !transactionsByIsin[isin].exchange) {
+            // Update exchange if we find it later
+            transactionsByIsin[isin].exchange = exchange;
         }
 
         const transaction = { quantity, price, value: Math.abs(localValue) };
@@ -439,7 +473,7 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
         const totalSold = data.sells.reduce((sum, t) => sum + t.quantity, 0);
         const netQuantity = totalBought - totalSold;
 
-        const isClosed = netQuantity <= 0.000001;
+        const isClosed = netQuantity <= QUANTITY_THRESHOLD;
 
         if (isClosed) {
             closedPositionCount++;
@@ -468,6 +502,7 @@ function parseDeGiroTransactions(data: Record<string, any>[], mappings: Record<s
             type,
             platform: 'DeGiro',
             isin,              // Explicit ISIN for resolution
+            exchange: data.exchange || undefined, // Exchange from CSV (Reference Exchange)
             rawRow: { isin, transactions: data.buys.length + data.sells.length },
             confidence,
             warnings
@@ -723,7 +758,7 @@ function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Reco
         if (Math.abs(netCash) > 0.01) {
             rows.push({
                 symbol: 'EUR',
-                name: 'Cash (EUR)',
+                name: 'Deposit & Withdrawal',
                 quantity: netCash,
                 buyPrice: 1,
                 currency: 'EUR',
@@ -743,7 +778,7 @@ function parseDeGiroAccountStatement(data: Record<string, any>[], mappings: Reco
         const totalSold = data.sells.reduce((sum, t) => sum + t.quantity, 0);
         const netQuantity = totalBought - totalSold;
 
-        if (netQuantity <= 0.000001) {
+        if (netQuantity <= QUANTITY_THRESHOLD) {
             closedPositionCount++;
             continue;
         }
@@ -907,7 +942,27 @@ function parseRow(
 /**
  * Parse CSV content
  */
-export function parseCSV(content: string): ParseResult {
+export function parseCSV(content: string, platform?: string): ParseResult {
+    // Check for İş Bank TXT format (before Papa Parse)
+    // Check for İş Bank TXT format (before Papa Parse)
+    const isIsBank = detectIsBank(content);
+
+    if (isIsBank || platform?.toLowerCase().includes('is bank')) {
+        const { rows, transactions, processedCount, closedPositionCount } = parseIsBankTXT(content);
+        return {
+            success: true,
+            rows,
+            transactions,
+            closedPositionCount,
+            detectedColumns: {},
+            unmappedColumns: [],
+            errors: [],
+            totalRows: rows.length + transactions.length,
+            skippedRows: 0,
+            detectedFormat: 'isbank'
+        };
+    }
+
     const errors: string[] = [];
 
     const parseResult = Papa.parse(content, {
@@ -936,13 +991,35 @@ export function parseCSV(content: string): ParseResult {
 
     // Detect columns from first row
     const columns = Object.keys(data[0]);
-    const isDeGiro = isDeGiroFormat(columns);
-    const isDeGiroStatement = isDeGiroAccountStatementFormat(columns);
-    const isKraken = isKrakenFormat(columns);
-    const mappings = detectColumnMappings(columns, isDeGiro || isDeGiroStatement);
+
+    // Determine which parser to use based on platform selection or auto-detection
+    let useKraken = false;
+    let useDeGiro = false;
+    let useDeGiroStatement = false;
+
+    if (platform) {
+        // User-selected platform takes precedence
+        const normalizedPlatform = platform.toLowerCase();
+
+        if (normalizedPlatform.includes('kraken')) {
+            useKraken = true;
+        } else if (normalizedPlatform.includes('degiro')) {
+            // For DeGiro, still need to distinguish between formats
+            // Check columns to determine which DeGiro parser to use
+            useDeGiroStatement = isDeGiroAccountStatementFormat(columns);
+            useDeGiro = !useDeGiroStatement;
+        }
+    } else {
+        // Fallback to auto-detection
+        useKraken = isKrakenFormat(columns);
+        useDeGiroStatement = isDeGiroAccountStatementFormat(columns);
+        useDeGiro = isDeGiroFormat(columns);
+    }
+
+    const mappings = detectColumnMappings(columns, useDeGiro || useDeGiroStatement);
 
     // Kraken Handler
-    if (isKraken) {
+    if (useKraken) {
         const { rows, transactions, processedCount, closedPositionCount } = parseKrakenTransactions(data);
         return {
             success: true,
@@ -959,8 +1036,8 @@ export function parseCSV(content: string): ParseResult {
     }
 
     // DEGIRO Handlers
-    if (isDeGiro || isDeGiroStatement) {
-        if (isDeGiroStatement) {
+    if (useDeGiro || useDeGiroStatement) {
+        if (useDeGiroStatement) {
             const { rows, transactions, processedCount, closedPositionCount } = parseDeGiroAccountStatement(data, mappings, columns);
             return {
                 success: true,
@@ -1051,14 +1128,14 @@ export function parseCSV(content: string): ParseResult {
 /**
  * Parse Excel content (ArrayBuffer)
  */
-export function parseExcel(buffer: ArrayBuffer): ParseResult {
+export function parseExcel(buffer: ArrayBuffer, platform?: string): ParseResult {
     try {
         const workbook = XLSX.read(buffer, { type: 'array' });
         const firstSheet = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheet];
 
         const csv = XLSX.utils.sheet_to_csv(worksheet);
-        return parseCSV(csv);
+        return parseCSV(csv, platform);
     } catch (error) {
         return {
             success: false,
@@ -1076,15 +1153,15 @@ export function parseExcel(buffer: ArrayBuffer): ParseResult {
 /**
  * Detect file type and parse accordingly
  */
-export async function parseFile(file: File): Promise<ParseResult> {
+export async function parseFile(file: File, platform?: string): Promise<ParseResult> {
     const extension = file.name.split('.').pop()?.toLowerCase();
 
     if (extension === 'csv' || extension === 'txt') {
         const content = await file.text();
-        return parseCSV(content);
+        return parseCSV(content, platform);
     } else if (extension === 'xlsx' || extension === 'xls') {
         const buffer = await file.arrayBuffer();
-        return parseExcel(buffer);
+        return parseExcel(buffer, platform);
     } else {
         return {
             success: false,

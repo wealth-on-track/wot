@@ -209,7 +209,7 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                         {/* Global Toggles (Always Visible) */}
 
                         {/* View Mode Toggle (Portal Target) */}
-                        <div id="navbar-view-mode-toggle" style={{ display: 'flex', alignItems: 'center' }}></div>
+
 
                         <PrivacyToggle />
 

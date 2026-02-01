@@ -122,27 +122,40 @@ const defaultContext: LanguageContextType = {
 const LanguageContext = createContext<LanguageContextType>(defaultContext);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-    const [language, setLanguageState] = useState<Language>('ENG');
-
-    useEffect(() => {
-        const savedLang = localStorage.getItem('language') as Language;
-        if (savedLang && (savedLang === 'ENG' || savedLang === 'TR')) {
-            setLanguageState(savedLang);
+    const [language, setLanguageState] = useState<Language>(() => {
+        if (typeof window !== 'undefined') {
+            const savedLang = localStorage.getItem('language') as Language;
+            if (savedLang && (savedLang === 'ENG' || savedLang === 'TR')) {
+                return savedLang;
+            }
         }
+        return 'ENG';
+    });
+
+    // Persist language changes to localStorage
+    React.useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('language', language);
+        }
+    }, [language]);
+
+    const setLanguage = React.useCallback((lang: Language) => {
+        setLanguageState(lang);
     }, []);
 
-    const setLanguage = (lang: Language) => {
-        setLanguageState(lang);
-        localStorage.setItem('language', lang);
-    };
-
-    const t = (key: string) => {
+    const t = React.useCallback((key: string) => {
         const langMap = translations[language] || translations['ENG'];
         return langMap[key] || key;
-    };
+    }, [language]);
+
+    const value = React.useMemo(() => ({
+        language,
+        setLanguage,
+        t
+    }), [language, setLanguage, t]);
 
     return (
-        <LanguageContext.Provider value={{ language, setLanguage, t }}>
+        <LanguageContext.Provider value={value}>
             {children}
         </LanguageContext.Provider>
     );

@@ -12,7 +12,17 @@ import { getPortfolioStyle } from "@/lib/portfolioStyles";
 // Helper to infer asset type for logo
 const getAssetType = (pos: ClosedPosition) => {
     const ex = pos.exchange?.toUpperCase();
-    if (ex === 'BINANCE' || ex === 'COINBASE') return 'CRYPTO';
+    const platform = pos.platform?.toUpperCase();
+
+    // Check exchange
+    if (ex === 'BINANCE' || ex === 'COINBASE' || ex === 'CCC' || ex === 'KRAKEN') return 'CRYPTO';
+
+    // Check platform (Kraken imports may have platform but not exchange)
+    if (platform === 'KRAKEN' || platform === 'BINANCE' || platform === 'COINBASE') return 'CRYPTO';
+
+    // Check symbol pattern (crypto symbols often have -EUR, -USD suffix)
+    if (pos.symbol?.includes('-EUR') || pos.symbol?.includes('-USD')) return 'CRYPTO';
+
     if (ex === 'TEFAS') return 'FUND';
     if (pos.name?.toLowerCase().includes('gold') || pos.symbol === 'XAU') return 'COMMODITY';
     return 'STOCK';
@@ -162,7 +172,7 @@ export function ClosedPositionsNew({ isOwner = true }: { isOwner?: boolean }) {
 
                     return (
                         <div key={pos.symbol} className="neo-card" style={{
-                            background: 'var(--surface)',
+                            background: '#ffffff',
                             border: '1px solid var(--border)',
                             borderRadius: '8px',
                             overflow: 'hidden',

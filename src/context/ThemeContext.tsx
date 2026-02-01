@@ -27,7 +27,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setMounted(true);
     }, []);
 
-    useEffect(() => {
+    // Use useLayoutEffect to apply theme before paint to avoid flash/delay
+    // This is safe because we check window typeof in useState initializer
+    React.useLayoutEffect(() => {
         if (!mounted) return;
 
         // Apply theme class to body

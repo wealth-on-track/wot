@@ -5,6 +5,11 @@
  */
 
 import { ParsedRow, ParsedTransaction } from './importParser';
+import { CRYPTO_ASSET_NAMES } from '@/lib/cryptoNames';
+
+// Unified threshold for quantity comparisons (positions with qty <= this are considered closed)
+const QUANTITY_THRESHOLD = 0.000001;
+
 
 function parseEuropeanNumber(value: string | number | undefined | null): number {
     if (value === undefined || value === null || value === '') return 0;
@@ -20,7 +25,7 @@ function parseEuropeanNumber(value: string | number | undefined | null): number 
         cleaned = cleaned.replace(/,/g, '');
     }
 
-    cleaned = cleaned.replace(/[^\d.\-]/g, '');
+    cleaned = cleaned.replace(/[^\d.\-eE]/g, '');
     const result = parseFloat(cleaned);
     return isNaN(result) ? 0 : result;
 }
@@ -29,6 +34,33 @@ function parseDate(dateStr: string): Date {
     if (!dateStr) return new Date();
     const d = new Date(dateStr);
     return isNaN(d.getTime()) ? new Date() : d;
+}
+
+function normalizeKrakenTicker(ticker: string): string {
+    // 1. Handle Legacy ISO 4217 codes (X for crypto, Z for fiat)
+    if (ticker === 'XXBT' || ticker === 'XBT') return 'BTC';
+    if (ticker === 'XETH') return 'ETH';
+    if (ticker === 'XXRP') return 'XRP';
+    if (ticker === 'XLTC') return 'LTC';
+    if (ticker === 'XXLM') return 'XLM';
+    if (ticker === 'XXDG') return 'DOGE'; // Doge legacy
+    if (ticker === 'ZEUR') return 'EUR';
+    if (ticker === 'ZUSD') return 'USD';
+    if (ticker === 'ZGBP') return 'GBP';
+    if (ticker === 'ZJPY') return 'JPY';
+    if (ticker === 'ZCAD') return 'CAD';
+
+    // 2. Handle Staking/Earn prefixes and suffixes
+    // Kraken uses .S (Staking), .M (Margin?), 2 (ETH2)
+    // Remove .S, .M suffixes
+    let clean = ticker;
+    if (clean.endsWith('.S')) clean = clean.slice(0, -2);
+    else if (clean.endsWith('.M')) clean = clean.slice(0, -2);
+
+    // Handle ETH2 -> ETH
+    if (clean === 'ETH2') return 'ETH';
+
+    return clean;
 }
 
 export function parseKrakenTransactions(data: Record<string, any>[]): { rows: ParsedRow[], transactions: ParsedTransaction[], processedCount: number, closedPositionCount: number } {
@@ -68,7 +100,10 @@ export function parseKrakenTransactions(data: Record<string, any>[]): { rows: Pa
         const timeStr = String(row['time'] || '');
         const type = String(row['type'] || '').trim().toLowerCase();
         const subtype = String(row['subtype'] || '').trim().toLowerCase();
-        const asset = String(row['asset'] || '').trim().toUpperCase();
+
+        const assetRaw = String(row['asset'] || '').trim().toUpperCase();
+        const asset = normalizeKrakenTicker(assetRaw);
+
         const amount = parseEuropeanNumber(row['amount']);
         const fee = parseEuropeanNumber(row['fee']);
         const balance = parseEuropeanNumber(row['balance']); // ✅ USE BALANCE COLUMN
@@ -91,8 +126,12 @@ export function parseKrakenTransactions(data: Record<string, any>[]): { rows: Pa
 
         // Update to latest balance if this transaction is newer
         if (date >= assetBalances[asset].lastTransactionDate) {
+            const oldBalance = assetBalances[asset].balance;
             assetBalances[asset].balance = balance;
             assetBalances[asset].lastTransactionDate = date;
+            if (asset === 'XRP' || asset === 'EUR' || asset === 'BTC' || asset === 'ETH') {
+                console.log(`[Kraken] ${asset} balance update: ${oldBalance} -> ${balance} (date: ${date.toISOString()})`);
+            }
         }
 
         // FILTER: Skip low value Fiat transactions (< 1 EUR)
@@ -105,7 +144,7 @@ export function parseKrakenTransactions(data: Record<string, any>[]): { rows: Pa
             processedCount++;
             transactions.push({
                 symbol: asset,
-                name: `Cash Deposit (${asset})`,
+                name: 'Deposit-Withdrawal',
                 type: 'DEPOSIT',
                 quantity: Math.abs(amount),
                 price: 1,
@@ -124,7 +163,7 @@ export function parseKrakenTransactions(data: Record<string, any>[]): { rows: Pa
             processedCount++;
             transactions.push({
                 symbol: asset,
-                name: `Cash Withdrawal (${asset})`,
+                name: 'Deposit-Withdrawal',
                 type: 'WITHDRAWAL',
                 quantity: Math.abs(amount),
                 price: 1,
@@ -159,6 +198,8 @@ export function parseKrakenTransactions(data: Record<string, any>[]): { rows: Pa
 
             const cryptoFee = parseEuropeanNumber(cryptoRow['fee']);
             const cryptoAsset = String(cryptoRow['asset']).toUpperCase();
+            // Use full crypto name (e.g., "Bitcoin" instead of "BTC")
+            const cryptoName = CRYPTO_ASSET_NAMES[cryptoAsset] || cryptoAsset;
 
             const isBuy = cryptoAmount > 0;
             const quantity = Math.abs(cryptoAmount);
@@ -167,7 +208,7 @@ export function parseKrakenTransactions(data: Record<string, any>[]): { rows: Pa
 
             transactions.push({
                 symbol: cryptoAsset,
-                name: cryptoAsset,
+                name: cryptoName,
                 type: isBuy ? 'BUY' : 'SELL',
                 quantity,
                 price,
@@ -194,10 +235,12 @@ export function parseKrakenTransactions(data: Record<string, any>[]): { rows: Pa
         // 4. STAKING REWARDS
         if (type === 'earn' && subtype === 'reward') {
             processedCount++;
+            // Use full crypto name (e.g., "Bitcoin" instead of "BTC")
+            const assetName = CRYPTO_ASSET_NAMES[asset] || asset;
             transactions.push({
                 symbol: asset,
-                name: `Staking Reward (${asset})`,
-                type: 'DIVIDEND',
+                name: assetName,
+                type: 'STAKING', // Changed from DIVIDEND to STAKING
                 quantity: Math.abs(amount),
                 price: 0,
                 currency: asset,
@@ -218,11 +261,40 @@ export function parseKrakenTransactions(data: Record<string, any>[]): { rows: Pa
 
     transactions.sort((a, b) => a.date.getTime() - b.date.getTime());
 
+    // Clean up small fiat balances (< €10) before aggregation
+    for (const [asset, data] of Object.entries(assetBalances)) {
+        const isFiat = asset === 'EUR' || asset === 'USD' || asset === 'TRY' || asset === 'GBP';
+        if (isFiat && Math.abs(data.balance) > 0 && Math.abs(data.balance) < 10) {
+            // Add cleanup transaction
+            transactions.push({
+                symbol: asset,
+                name: `Clean-up (${asset})`,
+                type: 'WITHDRAWAL',
+                quantity: Math.abs(data.balance),
+                price: 1,
+                currency: asset,
+                date: data.lastTransactionDate,
+                originalDateStr: data.lastTransactionDate.toISOString(),
+                platform: 'Kraken',
+                externalId: `CLEANUP-${asset}`,
+                fee: 0
+            });
+            // Zero out the balance
+            assetBalances[asset].balance = 0;
+        }
+    }
+
+    // Re-sort after adding cleanup transactions
+    transactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+
     // Aggregate to rows using BALANCE column (not manual calculation)
     const rows: ParsedRow[] = [];
     let closedPositionCount = 0;
 
     for (const [asset, data] of Object.entries(assetBalances)) {
+        // Determine if it is Fiat
+        const isFiat = asset === 'EUR' || asset === 'USD' || asset === 'TRY' || asset === 'GBP';
+
         let netQuantity = data.balance; // ✅ USE KRAKEN'S BALANCE
         const avgBuyPrice = data.avgBuyPrice;
 
@@ -238,9 +310,21 @@ export function parseKrakenTransactions(data: Record<string, any>[]): { rows: Pa
             estimatedValueEUR = netQuantity * avgBuyPrice;
         }
 
-        // DUST HANDLING: If value is under €5, mark as closed and zero out quantity
-        const isDust = Math.abs(estimatedValueEUR) < 5;
-        let isClosed = netQuantity <= 0.000001 || isDust;
+        // Asset type
+        let type = isFiat ? 'CASH' : 'CRYPTO';
+
+        // DUST HANDLING:
+        // - Crypto: If value < €5, mark as closed and zero out.
+        // - Fiat: If value < €0.01, mark as closed (ignore).
+        let isDust = false;
+
+        if (type === 'CRYPTO') {
+            isDust = Math.abs(estimatedValueEUR) < 5;
+        } else {
+            isDust = Math.abs(estimatedValueEUR) < 0.01;
+        }
+
+        let isClosed = netQuantity <= QUANTITY_THRESHOLD || isDust;
 
         if (isDust && netQuantity > 0) {
             netQuantity = 0;
@@ -248,22 +332,42 @@ export function parseKrakenTransactions(data: Record<string, any>[]): { rows: Pa
 
         if (isClosed) closedPositionCount++;
 
-        let type = 'CRYPTO';
-        if (asset === 'EUR' || asset === 'USD' || asset === 'TRY') {
-            type = 'CASH';
+        // Map symbols to full names
+        const names: Record<string, string> = {
+            // Fiat
+            'EUR': 'Euro',
+            'USD': 'US Dollar',
+            'TRY': 'Turkish Lira',
+            'GBP': 'British Pound',
+            // Crypto (Imported from shared source)
+            ...CRYPTO_ASSET_NAMES
+        };
+
+        let outputName = names[asset] || asset;
+        let outputSymbol = asset;
+
+        // Custom Display for Fiat/Cash
+        if (isFiat) {
+            outputName = 'Deposit-Withdrawal';
+            // Symbol must remain unique (EUR, USD) for persistence
+            // Display 'Cash | Kraken' will be handled in UI
         }
 
         rows.push({
-            symbol: asset,
-            name: asset,
+            symbol: asset, // Keep original symbol unique!
+            name: outputName,
             quantity: netQuantity,
             buyPrice: avgBuyPrice,
-            currency: asset === 'EUR' || asset === 'USD' || asset === 'TRY' ? asset : 'EUR',
+            currency: 'EUR',
             type,
+            exchange: isFiat ? undefined : 'CCC',
+            category: isFiat ? 'CASH' : 'CRYPTO',
+            country: isFiat ? 'Europe' : 'Crypto',
+            sector: isFiat ? 'Cash' : 'Crypto',
             platform: 'Kraken',
             rawRow: { asset, finalBalance: data.balance },
             confidence: 100,
-            warnings: isDust && netQuantity === 0 ? ['Dust balance (<€5) zeroed out'] : []
+            warnings: isDust && netQuantity === 0 ? ['Dust balance zeroed out'] : []
         });
     }
 
@@ -277,8 +381,8 @@ export function parseKrakenTransactions(data: Record<string, any>[]): { rows: Pa
  * Helper to group tiny staking rewards into monthly aggregates
  */
 function consolidateRewards(transactions: ParsedTransaction[]): ParsedTransaction[] {
-    const rewards = transactions.filter(t => t.type === 'DIVIDEND');
-    const others = transactions.filter(t => t.type !== 'DIVIDEND');
+    const rewards = transactions.filter(t => t.type === 'STAKING');
+    const others = transactions.filter(t => t.type !== 'STAKING');
 
     if (rewards.length === 0) return transactions;
 
@@ -311,7 +415,7 @@ function consolidateRewards(transactions: ParsedTransaction[]): ParsedTransactio
             ...lastTx,
             quantity: totalQty,
             fee: totalFee,
-            name: lastTx.symbol, // Fix: Keep original asset name/symbol (don't rename to Reward)
+            name: lastTx.name, // Use the full name from the last transaction (e.g., "Bitcoin" not "BTC")
             externalId: `AGG-${lastTx.symbol}-${lastTx.date.getFullYear()}-${lastTx.date.getMonth()}`, // Unique ID
         });
     }

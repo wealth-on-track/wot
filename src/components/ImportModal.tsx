@@ -477,6 +477,7 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
                                             <option value="Revolut">Revolut</option>
                                             <option value="Coinbase">Coinbase</option>
                                             <option value="Kraken">Kraken</option>
+                                            <option value="Is Bank">İş Bank</option>
                                             <option value="Custom">Custom</option>
                                         </select>
                                         {platformOverride === 'Custom' && (

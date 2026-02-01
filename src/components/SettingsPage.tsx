@@ -22,62 +22,28 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
     const router = useRouter();
     const { currency, setCurrency } = useCurrency();
     const { language, setLanguage } = useLanguage();
-    const { theme, toggleTheme } = useTheme();
+    const { theme, toggleTheme, setTheme } = useTheme();
 
-    const [currentPassword, setCurrentPassword] = useState("");
-    const [newPassword, setNewPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-    const [showPasswords, setShowPasswords] = useState(false);
-    const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-    const [isChangingPassword, setIsChangingPassword] = useState(false);
-
-    // Preferences saving state
+    // Settings state
+    const [benchmarks, setBenchmarks] = useState<string[]>(preferences?.benchmarks || []);
+    const [chartRange, setChartRange] = useState(preferences?.defaultRange || '1Y');
+    const [timezone, setTimezone] = useState(preferences?.timezone || 'Europe/Istanbul');
     const [isSavingPreferences, setIsSavingPreferences] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
 
-    // Portfolio preferences
-    const [benchmarks, setBenchmarks] = useState<string[]>(preferences?.benchmarks || ['SPX']);
-    const [chartRange, setChartRange] = useState<string>(preferences?.defaultRange || '1Y');
-    const [timezone, setTimezone] = useState<string>(preferences?.timezone || 'UTC');
+    // Password change state
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPasswords, setShowPasswords] = useState(false);
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
+    const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-
-    const [isMobile, setIsMobile] = useState(false);
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-
-        // Load preferences from localStorage
-        if (typeof window !== 'undefined') {
-            const savedBenchmarks = localStorage.getItem('benchmarks');
-            if (savedBenchmarks) setBenchmarks(JSON.parse(savedBenchmarks));
-
-            const savedRange = localStorage.getItem('chartRange');
-            if (savedRange) setChartRange(savedRange);
-
-            const savedTimezone = localStorage.getItem('timezone');
-            if (savedTimezone) {
-                setTimezone(savedTimezone);
-            } else {
-                setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
-            }
-
-
-        }
-
-        const checkMobile = () => setIsMobile(window.innerWidth < 768);
-        checkMobile();
-        window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
-    }, []);
-
-    // Prevent hydration mismatch by not rendering theme-dependent UI until mounted
-    if (!mounted) return null;
+    // Mobile detection (for responsive styling)
+    const isMobile = false; // Desktop-only component, mobile has separate page
 
     const handleThemeChange = (targetTheme: 'light' | 'dark') => {
-        if (theme !== targetTheme) {
-            toggleTheme();
-        }
+        setTheme(targetTheme);
     };
 
     const handleBenchmarkToggle = (benchmark: string) => {

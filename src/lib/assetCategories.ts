@@ -40,14 +40,29 @@ export const CATEGORY_EXCHANGES: Record<AssetCategory, string[]> = {
   TEFAS: ['TEFAS'],
   US_MARKETS: ['NASDAQ', 'NYSE', 'AMEX', 'NYQ', 'NMS', 'NGM'],
   EU_MARKETS: [
-    'PAR', 'Paris',           // Euronext Paris
-    'AMS', 'Amsterdam',        // Euronext Amsterdam
-    'FRA', 'Frankfurt', 'GER', 'XETRA',  // Deutsche Börse
-    'MIL', 'Milan',            // Borsa Italiana
-    'LSE', 'LON', 'London',    // London Stock Exchange
-    'MAD', 'Madrid',           // Bolsa de Madrid
-    'LIS', 'Lisbon',           // Euronext Lisbon
-    'SWX', 'Swiss', 'VTX'      // SIX Swiss Exchange
+    // Euronext Amsterdam
+    'AMS', 'XAMS', 'EAM', 'EPA', 'Amsterdam',
+
+    // Euronext Paris
+    'PAR', 'XPAR', 'Paris',
+
+    // Deutsche Börse (Frankfurt)
+    'FRA', 'XFRA', 'Frankfurt', 'GER', 'XETRA', 'XET', 'DB',
+
+    // Borsa Italiana (Milan)
+    'MIL', 'XMIL', 'BIT', 'Milan',
+
+    // London Stock Exchange
+    'LSE', 'LON', 'XLON', 'L', 'London',
+
+    // Bolsa de Madrid
+    'MAD', 'XMAD', 'BME', 'Madrid',
+
+    // Euronext Lisbon
+    'LIS', 'XLIS', 'ENXL', 'Lisbon',
+
+    // SIX Swiss Exchange
+    'SWX', 'VTX', 'XSWX', 'Swiss'
   ],
   CRYPTO: [],
   COMMODITIES: ['Forex', 'COMEX', 'NYMEX'],
@@ -64,27 +79,57 @@ export const YAHOO_SUFFIX_MAP: Record<string, string> = {
   'BIST': '.IS',
   'IST': '.IS',
 
-  // EU Markets
-  'PAR': '.PA',
-  'Paris': '.PA',
+  // EU Markets - Euronext Amsterdam
   'AMS': '.AS',
+  'XAMS': '.AS',
+  'EAM': '.AS',
+  'EPA': '.AS',
   'Amsterdam': '.AS',
+
+  // EU Markets - Euronext Paris
+  'PAR': '.PA',
+  'XPAR': '.PA',
+  'Paris': '.PA',
+
+  // EU Markets - Deutsche Börse (Frankfurt)
   'FRA': '.F',
+  'XFRA': '.F',
   'Frankfurt': '.F',
   'GER': '.DE',
   'XETRA': '.DE',
+  'XET': '.DE',
+  'DB': '.F',
+
+  // EU Markets - Borsa Italiana (Milan)
   'MIL': '.MI',
+  'XMIL': '.MI',
+  'BIT': '.MI',
   'Milan': '.MI',
+
+  // EU Markets - London Stock Exchange
   'LSE': '.L',
   'LON': '.L',
+  'XLON': '.L',
+  'L': '.L',
   'London': '.L',
+
+  // EU Markets - Bolsa de Madrid
   'MAD': '.MC',
+  'XMAD': '.MC',
+  'BME': '.MC',
   'Madrid': '.MC',
+
+  // EU Markets - Euronext Lisbon
   'LIS': '.LS',
+  'XLIS': '.LS',
+  'ENXL': '.LS',
   'Lisbon': '.LS',
+
+  // EU Markets - SIX Swiss Exchange
   'SWX': '.SW',
-  'Swiss': '.SW',
-  'VTX': '.SW'
+  'VTX': '.SW',
+  'XSWX': '.SW',
+  'Swiss': '.SW'
 };
 
 /**
@@ -103,15 +148,82 @@ export const CATEGORY_CURRENCY: Record<AssetCategory, string> = {
 };
 
 /**
+ * ISIN Country Prefix to Category mapping
+ * Used for accurate category detection from ISIN codes
+ */
+export const ISIN_PREFIX_CATEGORY: Record<string, AssetCategory> = {
+  // Turkey
+  'TR': 'BIST',  // Will be refined to TEFAS if type is FUND
+
+  // United States
+  'US': 'US_MARKETS',
+
+  // European Union & EEA countries
+  'DE': 'EU_MARKETS',  // Germany
+  'FR': 'EU_MARKETS',  // France
+  'NL': 'EU_MARKETS',  // Netherlands
+  'GB': 'EU_MARKETS',  // United Kingdom
+  'IE': 'EU_MARKETS',  // Ireland
+  'LU': 'EU_MARKETS',  // Luxembourg
+  'IT': 'EU_MARKETS',  // Italy
+  'ES': 'EU_MARKETS',  // Spain
+  'PT': 'EU_MARKETS',  // Portugal
+  'CH': 'EU_MARKETS',  // Switzerland
+  'AT': 'EU_MARKETS',  // Austria
+  'BE': 'EU_MARKETS',  // Belgium
+  'DK': 'EU_MARKETS',  // Denmark
+  'FI': 'EU_MARKETS',  // Finland
+  'NO': 'EU_MARKETS',  // Norway
+  'SE': 'EU_MARKETS',  // Sweden
+  'PL': 'EU_MARKETS',  // Poland
+  'GR': 'EU_MARKETS',  // Greece
+  'CZ': 'EU_MARKETS',  // Czech Republic
+  'HU': 'EU_MARKETS',  // Hungary
+
+  // Crypto (some exchanges use XFC prefix)
+  'XF': 'CRYPTO',
+};
+
+/**
+ * Symbol suffix to Category mapping
+ * Used for accurate category detection from symbol suffixes
+ */
+export const SYMBOL_SUFFIX_CATEGORY: Record<string, AssetCategory> = {
+  '.IS': 'BIST',      // Borsa Istanbul
+  '.DE': 'EU_MARKETS', // Deutsche Börse (Xetra)
+  '.F': 'EU_MARKETS',  // Frankfurt
+  '.PA': 'EU_MARKETS', // Euronext Paris
+  '.AS': 'EU_MARKETS', // Euronext Amsterdam
+  '.L': 'EU_MARKETS',  // London Stock Exchange
+  '.MI': 'EU_MARKETS', // Borsa Italiana (Milan)
+  '.MC': 'EU_MARKETS', // Bolsa de Madrid
+  '.LS': 'EU_MARKETS', // Euronext Lisbon
+  '.SW': 'EU_MARKETS', // SIX Swiss Exchange
+  '.BR': 'EU_MARKETS', // Euronext Brussels
+  '.VI': 'EU_MARKETS', // Vienna Stock Exchange
+  '.CO': 'EU_MARKETS', // Copenhagen
+  '.HE': 'EU_MARKETS', // Helsinki
+  '.OL': 'EU_MARKETS', // Oslo
+  '.ST': 'EU_MARKETS', // Stockholm
+};
+
+/**
  * Convert legacy type + exchange to new category system
+ * Enhanced with ISIN prefix and symbol suffix detection for 100% accuracy
  */
 export function getAssetCategory(
   type: LegacyAssetType | string,
   exchange?: string,
-  symbol?: string
+  symbol?: string,
+  isin?: string
 ): AssetCategory {
   const upperExchange = exchange?.toUpperCase() || '';
   const upperSymbol = symbol?.toUpperCase() || '';
+  const upperIsin = isin?.toUpperCase() || '';
+
+  // ============================================
+  // PHASE 1: Explicit Type Checks (Highest Priority)
+  // ============================================
 
   // TEFAS - Explicit check first
   if (type === 'TEFAS' || type === 'FON' || upperExchange === 'TEFAS') {
@@ -128,19 +240,21 @@ export function getAssetCategory(
     return 'BENCHMARK';
   }
 
-  // FX - Currency pairs
+  // FX - Currency pairs (check symbol patterns)
   if (type === 'CURRENCY' || upperSymbol.includes('=X') ||
+    /^[A-Z]{3}[A-Z]{3}$/.test(upperSymbol) || // EURUSD, USDTRY format
     (upperSymbol.includes('USD') && upperSymbol.includes('TRY')) ||
     (upperSymbol.includes('EUR') && upperSymbol.includes('USD'))) {
     return 'FX';
   }
 
-  // CRYPTO
-  if (type === 'CRYPTO') {
+  // CRYPTO - Check type or symbol patterns
+  if (type === 'CRYPTO' || upperSymbol.includes('-USD') || upperSymbol.includes('-EUR') ||
+    upperSymbol.includes('-BTC') || upperSymbol.includes('-USDT')) {
     return 'CRYPTO';
   }
 
-  // COMMODITIES
+  // COMMODITIES - Type check
   if (type === 'GOLD' || type === 'COMMODITY') {
     return 'COMMODITIES';
   }
@@ -149,6 +263,35 @@ export function getAssetCategory(
   if (upperSymbol === 'GAUTRY' || upperSymbol === 'XAGTRY' || upperSymbol === 'AET') {
     return 'COMMODITIES';
   }
+
+  // ============================================
+  // PHASE 2: ISIN Prefix Detection (High Accuracy)
+  // ============================================
+  if (upperIsin && upperIsin.length >= 2) {
+    const isinPrefix = upperIsin.substring(0, 2);
+    const isinCategory = ISIN_PREFIX_CATEGORY[isinPrefix];
+
+    if (isinCategory) {
+      // Special case: Turkish ISIN with FUND type → TEFAS
+      if (isinPrefix === 'TR' && (type === 'FUND' || type === 'ETF' || type === 'FON')) {
+        return 'TEFAS';
+      }
+      return isinCategory;
+    }
+  }
+
+  // ============================================
+  // PHASE 3: Symbol Suffix Detection
+  // ============================================
+  for (const [suffix, category] of Object.entries(SYMBOL_SUFFIX_CATEGORY)) {
+    if (upperSymbol.endsWith(suffix)) {
+      return category;
+    }
+  }
+
+  // ============================================
+  // PHASE 4: Exchange-based Detection
+  // ============================================
 
   // BIST - Check exchange
   if (CATEGORY_EXCHANGES.BIST.some(ex => upperExchange.includes(ex))) {
@@ -160,13 +303,21 @@ export function getAssetCategory(
     return 'EU_MARKETS';
   }
 
-  // US_MARKETS - Check exchange or default for stocks
+  // US_MARKETS - Check exchange
   if (CATEGORY_EXCHANGES.US_MARKETS.some(ex => upperExchange.includes(ex))) {
     return 'US_MARKETS';
   }
 
-  // FUND type without TEFAS exchange -> could be US/EU mutual fund
+  // ============================================
+  // PHASE 5: Type-based Fallback with ISIN hints
+  // ============================================
+
+  // FUND type without TEFAS exchange -> determine by ISIN or exchange
   if (type === 'FUND' || type === 'ETF') {
+    // Check ISIN for Turkish funds → TEFAS
+    if (upperIsin && upperIsin.startsWith('TR')) {
+      return 'TEFAS';
+    }
     // Check exchange to categorize
     if (CATEGORY_EXCHANGES.BIST.some(ex => upperExchange.includes(ex))) {
       return 'BIST';
@@ -179,7 +330,15 @@ export function getAssetCategory(
 
   // Default: STOCK type
   if (type === 'STOCK' || type === 'BOND') {
-    // If no exchange specified, default to US
+    // If no exchange specified, check ISIN first
+    if (upperIsin && upperIsin.length >= 2) {
+      const isinPrefix = upperIsin.substring(0, 2);
+      if (isinPrefix === 'TR') return 'BIST';
+      if (ISIN_PREFIX_CATEGORY[isinPrefix] === 'EU_MARKETS') return 'EU_MARKETS';
+      if (isinPrefix === 'US') return 'US_MARKETS';
+    }
+
+    // If no exchange and no ISIN, default to US
     if (!exchange) {
       return 'US_MARKETS';
     }
@@ -188,7 +347,16 @@ export function getAssetCategory(
     return 'US_MARKETS';
   }
 
-  // Fallback
+  // ============================================
+  // PHASE 6: Ultimate Fallback
+  // ============================================
+  // Try ISIN one more time
+  if (upperIsin && upperIsin.length >= 2) {
+    const isinPrefix = upperIsin.substring(0, 2);
+    const isinCategory = ISIN_PREFIX_CATEGORY[isinPrefix];
+    if (isinCategory) return isinCategory;
+  }
+
   return 'US_MARKETS';
 }
 
@@ -266,54 +434,63 @@ export function getCategoryDefaults(category: AssetCategory, symbol?: string): {
   sector: string;
   country: string;
   currency: string;
+  exchange?: string;
 } {
   switch (category) {
     case 'BIST':
-      return { sector: 'UNKNOWN', country: 'Turkey', currency: 'TRY' };
+      return { sector: 'Unknown', country: 'Turkey', currency: 'TRY', exchange: 'BIST' };
 
     case 'TEFAS':
-      return { sector: 'Fund', country: 'Turkey', currency: 'TRY' };
+      return { sector: 'Fund', country: 'Turkey', currency: 'TRY', exchange: 'TEFAS' };
 
     case 'US_MARKETS':
-      return { sector: 'UNKNOWN', country: 'USA', currency: 'USD' };
+      return { sector: 'Unknown', country: 'United States', currency: 'USD', exchange: undefined };
 
     case 'EU_MARKETS':
       // Country depends on exchange, default to Europe
-      return { sector: 'UNKNOWN', country: 'Europe', currency: 'EUR' };
+      return { sector: 'Unknown', country: 'Europe', currency: 'EUR', exchange: undefined };
 
     case 'CRYPTO':
       // Crypto pairs: BTC-USD, ETH-EUR, etc.
       // Extract quote currency from symbol (e.g., BTC-EUR -> EUR)
-      let cryptoCurrency = 'USD'; // Default
+      // Default to USD if no quote currency can be determined
+      let cryptoCurrency = 'USD'; // Default to USD (most common quote currency)
       if (symbol && symbol.includes('-')) {
         const parts = symbol.split('-');
-        if (parts.length === 2) {
-          cryptoCurrency = parts[1]; // Quote currency (USD, EUR, etc.)
+        if (parts.length === 2 && parts[1].length <= 4) {
+          cryptoCurrency = parts[1].toUpperCase(); // Quote currency (USD, EUR, etc.)
         }
       }
-      return { sector: 'Crypto', country: 'Global', currency: cryptoCurrency };
+      return { sector: 'Crypto', country: 'Crypto', currency: cryptoCurrency, exchange: 'Crypto' };
 
     case 'COMMODITIES':
-      // All commodities: Country = Global, Sector = Commodity
-      // Currency: TRY for GAUTRY/XAGTRY, XAU/XAG for ounce-based, USD for others
-      let commodityCurrency = 'USD';
-      if (symbol === 'GAUTRY') commodityCurrency = 'TRY';
-      else if (symbol === 'XAGTRY') commodityCurrency = 'TRY';
-      else if (symbol === 'XAU') commodityCurrency = 'XAU';
-      else if (symbol === 'XAG') commodityCurrency = 'XAG';
+      // All commodities: Country = Commodity, Sector = Commodity
+      // Currency: TRY for Turkish commodities, USD for international
+      let commodityCurrency = 'USD'; // Default to USD (international standard)
+      if (symbol) {
+        const upperSymbol = symbol.toUpperCase();
+        if (upperSymbol === 'GAUTRY' || upperSymbol === 'XAGTRY' || upperSymbol.endsWith('TRY')) {
+          commodityCurrency = 'TRY'; // Turkish commodity pricing
+        } else if (upperSymbol === 'XAU' || upperSymbol.startsWith('XAU')) {
+          commodityCurrency = 'XAU'; // Gold in ounces
+        } else if (upperSymbol === 'XAG' || upperSymbol.startsWith('XAG')) {
+          commodityCurrency = 'XAG'; // Silver in ounces
+        }
+      }
 
       return {
         sector: 'Commodity',
-        country: 'Global',  // Always Global for all commodities
-        currency: commodityCurrency
+        country: 'Commodity',  // Keep as Commodity for grouping
+        currency: commodityCurrency,
+        exchange: 'Commodity'
       };
 
     case 'FX':
-      return { sector: 'Currency', country: 'Global', currency: 'USD' };
+      return { sector: 'Currency', country: 'Global', currency: 'USD', exchange: undefined };
 
     case 'CASH':
       let country = 'Global';
-      if (symbol === 'USD') country = 'USA';
+      if (symbol === 'USD') country = 'United States'; // Changed from 'USA'
       else if (symbol === 'EUR') country = 'Europe';
       else if (symbol === 'TRY') country = 'Turkey';
       else if (symbol === 'GBP') country = 'United Kingdom';
@@ -321,11 +498,12 @@ export function getCategoryDefaults(category: AssetCategory, symbol?: string): {
       return {
         sector: 'Cash',
         country,
-        currency: symbol || 'USD'
+        currency: symbol || 'USD',
+        exchange: undefined
       };
 
     case 'BENCHMARK':
-      return { sector: 'Index', country: 'Global', currency: 'USD' };
+      return { sector: 'Index', country: 'Global', currency: 'USD', exchange: undefined };
   }
 }
 

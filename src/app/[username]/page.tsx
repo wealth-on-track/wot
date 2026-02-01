@@ -66,11 +66,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         });
 
         if (!fallbackUser || !fallbackUser.portfolio) {
-            // User not found - redirect to login if not authenticated, otherwise 404
-            if (!session?.user) {
-                redirect('/login');
-            }
-            notFound();
+            // User not found - redirect to login with error
+            redirect('/login?error=UserNotFound');
         }
         user = fallbackUser;
     }

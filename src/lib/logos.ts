@@ -43,7 +43,31 @@ export const getLogoUrl = (symbol: string, type: string, exchange?: string, coun
         return currencyMap[s] || '/icons/currency/generic.svg';
     }
 
+    // 2.5. FX (Foreign Exchange): Currency pair icons
+    // FX pairs like EURUSD, USDTRY, EURTRY, etc.
+    if (t === 'CURRENCY' || t === 'FX') {
+        // For FX pairs, try to extract the base currency and use its icon
+        // Common FX pair formats: EURUSD, EUR/USD, EUR-USD, EURUSD=X
+        const cleanSymbol = s.replace(/[=X\/\-]/g, '').toUpperCase();
 
+        // Extract base currency (first 3 chars of a 6-char pair)
+        let baseCurrency = cleanSymbol.length >= 6 ? cleanSymbol.substring(0, 3) : cleanSymbol;
+
+        // Map base currency to local icon
+        const fxIconMap: Record<string, string> = {
+            'EUR': '/icons/currency/eur.svg',
+            'USD': '/icons/currency/usd.svg',
+            'TRY': '/icons/currency/try.svg',
+            'GBP': '/icons/currency/gbp.svg',
+            'JPY': '/icons/currency/generic.svg',
+            'CHF': '/icons/currency/generic.svg',
+            'CAD': '/icons/currency/usd.svg',
+            'AUD': '/icons/currency/usd.svg',
+            'NZD': '/icons/currency/usd.svg',
+        };
+
+        return fxIconMap[baseCurrency] || '/icons/currency/generic.svg';
+    }
 
     // 3. COMMODITIES: Systematic Icon Mapping
     // All commodity icons from Icons8 for reliability and consistency
@@ -141,8 +165,10 @@ export const getLogoUrl = (symbol: string, type: string, exchange?: string, coun
         return 'https://media.licdn.com/dms/image/v2/C4D0BAQG0YyP-lF0L7g/company-logo_200_200/company-logo_200_200/0/1630572851493/teb_portfy_y_yonetimi_a_logo?e=2147483647&v=beta&t=mS8P06pWn6lI-C-U89Xz8r-Yy7cO-n8v6Z-zI6h_0vE';
     }
 
-    // 4. STOCKS / ETFs / FUNDS: Use Logo.dev API (ticker-based, works great!)
-    if (t === 'STOCK' || t === 'ETF' || t === 'FUND') {
+    // 4. EQUITY-LIKE ASSETS: Use Logo.dev API (ticker-based)
+    // Expand to include Certificates, Warrants, Trusts, etc.
+    const equityTypes = ['STOCK', 'ETF', 'FUND', 'CERTIFICATE', 'WARRANT', 'TRUST', 'DR', 'REIT', 'STRUCTURED_PRODUCT'];
+    if (equityTypes.includes(t)) {
         const cleanSymbol = symbol.split('.')[0].toUpperCase();
 
         // For Turkish BIST stocks (.IS), use GitHub CDN
@@ -157,7 +183,20 @@ export const getLogoUrl = (symbol: string, type: string, exchange?: string, coun
 
         // Logo.dev provides high-quality logos for stocks using ticker symbols
         const apiKey = process.env.NEXT_PUBLIC_LOGODEV_API_KEY || 'pk_OYRe85gjScGyAdhJcb1Jag';
-        return `https://img.logo.dev/ticker/${cleanSymbol}?token=${apiKey}`;
+
+        // GLOBAL SAFETY CLEANUP:
+        // If the symbol looks like 'ETH-EUR' or 'BTC-USD', strip the suffix
+        // This handles cases where Crypto is treated as Stock fallback
+        let tickerForLogo = cleanSymbol;
+        if (tickerForLogo.includes('-')) {
+            const parts = tickerForLogo.split('-');
+            // Heuristic: If first part is 2-5 chars, likely the ticker
+            if (parts[0].length >= 2 && parts[0].length <= 5) {
+                tickerForLogo = parts[0];
+            }
+        }
+
+        return `https://img.logo.dev/ticker/${tickerForLogo}?token=${apiKey}`;
     }
 
     return null;

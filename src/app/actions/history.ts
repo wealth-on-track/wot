@@ -16,17 +16,22 @@ export interface ClosedPosition {
     lastTradeDate: Date;
     exchange?: string;
     platform?: string;
+    customGroup?: string;
+    type?: string;     // Added
+    logoUrl?: string;  // Added
     transactionCount: number;
     transactions: Array<{
         id: string;
-        type: 'BUY' | 'SELL';
+        type: 'BUY' | 'SELL' | 'DIVIDEND' | 'INTEREST' | 'COUPON' | 'STAKING';
         quantity: number;
         price: number;
         date: Date;
         currency: string;
     }>;
+    // Rewards summary
+    totalRewards: number;  // Total quantity received as rewards
+    rewardCount: number;   // Number of reward transactions
     currentPrice?: number;
-    customGroup?: string;
 }
 
 /**
@@ -42,7 +47,7 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
             portfolio: {
                 include: {
                     assets: {
-                        select: { symbol: true, type: true, exchange: true, category: true, quantity: true, customGroup: true }
+                        select: { symbol: true, type: true, exchange: true, category: true, quantity: true, customGroup: true, logoUrl: true }
                     }
                 }
             }
@@ -52,7 +57,7 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
     if (!user?.portfolio) return [];
 
     // Map assets for type lookup and quantity check using COMPOSITE KEY
-    const assetMap = new Map<string, { type: string, exchange: string, category: string, customGroup?: string }>();
+    const assetMap = new Map<string, { type: string, exchange: string, category: string, customGroup?: string, logoUrl?: string }>();
     const quantityMap = new Map<string, number>();
 
     user.portfolio.assets.forEach(a => {
@@ -61,7 +66,8 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
             type: a.type,
             exchange: a.exchange,
             category: a.category,
-            customGroup: a.customGroup || undefined
+            customGroup: a.customGroup || undefined,
+            logoUrl: a.logoUrl || undefined
         });
         quantityMap.set(key, a.quantity);
     });
@@ -78,6 +84,7 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
         name: string;
         buys: { id: string; qty: number; price: number; date: Date }[];
         sells: { id: string; qty: number; price: number; date: Date }[];
+        rewards: { id: string; qty: number; price: number; date: Date; type: 'DIVIDEND' | 'INTEREST' | 'COUPON' | 'STAKING' }[];
         currency: string;
         lastDate: Date;
         exchange?: string;
@@ -95,6 +102,7 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
                 name: tx.name || tx.symbol,
                 buys: [],
                 sells: [],
+                rewards: [],
                 currency: tx.currency,
                 lastDate: tx.date,
                 exchange: tx.exchange || undefined,
@@ -111,6 +119,8 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
             group.buys.push({ id: tx.id, qty: tx.quantity, price: tx.price, date: tx.date });
         } else if (tx.type === 'SELL') {
             group.sells.push({ id: tx.id, qty: tx.quantity, price: tx.price, date: tx.date });
+        } else if (tx.type === 'DIVIDEND' || tx.type === 'INTEREST' || tx.type === 'COUPON' || tx.type === 'STAKING') {
+            group.rewards.push({ id: tx.id, qty: tx.quantity, price: tx.price, date: tx.date, type: tx.type as 'DIVIDEND' | 'INTEREST' | 'COUPON' | 'STAKING' });
         }
     }
 
@@ -131,6 +141,7 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
         if ((totalBought > 0 || totalSold > 0) && isClosed) {
             const totalInvested = data.buys.reduce((acc, t) => acc + (t.qty * t.price), 0);
             const totalRealized = data.sells.reduce((acc, t) => acc + (t.qty * t.price), 0);
+            const totalRewards = data.rewards.reduce((acc, t) => acc + t.qty, 0);
 
             const realizedPnl = totalRealized - totalInvested;
 
@@ -147,10 +158,15 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
                 exchange: data.exchange,
                 platform: data.platform,
                 customGroup: data.customGroup || assetInfo?.customGroup,
-                transactionCount: data.buys.length + data.sells.length,
+                type: assetInfo?.type,         // Added
+                logoUrl: assetInfo?.logoUrl,   // Added
+                transactionCount: data.buys.length + data.sells.length + data.rewards.length,
+                totalRewards,
+                rewardCount: data.rewards.length,
                 transactions: [
                     ...data.buys.map(t => ({ id: t.id, type: 'BUY' as const, quantity: t.qty, price: t.price, date: t.date, currency: data.currency })),
-                    ...data.sells.map(t => ({ id: t.id, type: 'SELL' as const, quantity: t.qty, price: t.price, date: t.date, currency: data.currency }))
+                    ...data.sells.map(t => ({ id: t.id, type: 'SELL' as const, quantity: t.qty, price: t.price, date: t.date, currency: data.currency })),
+                    ...data.rewards.map(t => ({ id: t.id, type: t.type, quantity: t.qty, price: t.price, date: t.date, currency: data.currency }))
                 ].sort((a, b) => a.date.getTime() - b.date.getTime())
             });
         }

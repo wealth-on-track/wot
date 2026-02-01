@@ -67,3 +67,7 @@ backups/
 *.swp
 *.swo
 *~
+
+# Local Postgres Data
+local_pg_data/
+logfile

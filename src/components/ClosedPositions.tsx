@@ -9,11 +9,19 @@ import { EmptyPlaceholder } from "./EmptyPlaceholder";
 
 // Helper to infer asset type for logo
 const getAssetType = (pos: ClosedPosition) => {
-    const ex = pos.exchange?.toUpperCase();
-    if (ex === 'BINANCE' || ex === 'COINBASE') return 'CRYPTO';
+    const ex = pos.exchange?.toUpperCase() || '';
+    const pl = pos.platform?.toUpperCase() || '';
+
+    // Robust Crypto Detection - Priority 1
+    if (pl === 'KRAKEN' || ex === 'KRAKEN' || ex === 'CCC' || ex === 'BINANCE' || ex === 'COINBASE') return 'CRYPTO';
+
+    // Priority 2: Trust explicit valid types from DB
+    if (pos.type === 'CRYPTO' || pos.type === 'FUND') return pos.type;
+
     if (ex === 'TEFAS') return 'FUND';
     if (pos.name?.toLowerCase().includes('gold') || pos.symbol === 'XAU') return 'COMMODITY';
-    return 'STOCK';
+
+    return 'STOCK'; // Default
 };
 
 const formatDate = (date: Date | string) => {
@@ -154,6 +162,22 @@ export function ClosedPositions() {
                     const pnl = pos.realizedPnl;
                     const isProfit = pnl >= 0;
 
+                    const assetType = getAssetType(pos);
+                    if (pos.symbol.includes('ETH')) {
+                        console.log('[ClosedPositions Debug]', {
+                            symbol: pos.symbol,
+                            platform: pos.platform,
+                            exchange: pos.exchange,
+                            typeFromDB: pos.type,
+                            inferredType: assetType
+                        });
+                    }
+                    // Force generator for Crypto to ensure clean symbol (ETH-EUR -> ETH)
+                    // This overrides potentially bad DB values (e.g. logo.dev with currency suffix)
+                    const logoToUse = (assetType === 'CRYPTO')
+                        ? getLogoUrl(pos.symbol, 'CRYPTO', pos.exchange)
+                        : (pos.logoUrl || getLogoUrl(pos.symbol, assetType, pos.exchange));
+
                     return (
                         <div key={pos.symbol} className="neo-card" style={{
                             background: 'var(--surface)',
@@ -178,7 +202,7 @@ export function ClosedPositions() {
                                 {/* Asset */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
                                     <img
-                                        src={getLogoUrl(pos.symbol, getAssetType(pos), pos.exchange) || ''}
+                                        src={logoToUse || ''}
                                         alt={pos.symbol}
                                         style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
                                         onError={(e) => {
@@ -186,12 +210,10 @@ export function ClosedPositions() {
                                         }}
                                     />
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', overflow: 'hidden' }}>
-                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                            <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem', textOverflow: 'ellipsis', overflow: 'hidden' }} title={pos.name || pos.symbol}>
-                                                {pos.name || pos.symbol}
-                                            </span>
+                                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {pos.name}
                                         </div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             {pos.symbol}
                                         </div>
                                     </div>

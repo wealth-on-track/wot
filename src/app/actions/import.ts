@@ -3,12 +3,16 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { searchYahoo, getYahooQuote } from "@/services/yahooApi";
+import { searchYahoo, getYahooQuote, getYahooAssetProfile } from "@/services/yahooApi";
+import { getCompanyProfile } from "@/services/finnhubApi";
+import { getCompanyOverview } from "@/services/alphaVantageApi";
 import { getLogoUrl } from "@/lib/logos";
-import { getAssetCategory } from "@/lib/assetCategories";
+import { getAssetCategory, getCategoryDefaults } from "@/lib/assetCategories";
+import { getTefasFundInfo } from "@/services/tefasApi";
 import { trackActivity } from "@/services/telemetry";
 import { cleanAssetName } from "@/lib/companyNames";
 import { getExchangeRates } from "@/lib/exchangeRates";
+import { CRYPTO_ASSET_NAMES } from "@/lib/cryptoNames";
 
 /**
  * CRYPTO RESOLUTION - STRUCTURAL DESIGN
@@ -163,6 +167,7 @@ export interface ImportAsset {
     currency: 'USD' | 'EUR' | 'TRY';
     type?: string;
     platform?: string;
+    exchange?: string;  // Exchange from CSV (e.g., "Reference Exchange" in Degiro)
 }
 
 export interface ResolvedAsset extends ImportAsset {
@@ -173,6 +178,7 @@ export interface ResolvedAsset extends ImportAsset {
     exchange?: string;
     country?: string;
     sector?: string;
+    category?: string; // Asset category (BIST, TEFAS, US_MARKETS, etc.)
     currentPrice?: number;
     confidence: number;
     logoUrl?: string;
@@ -200,6 +206,7 @@ export interface ResolveResult {
  */
 /**
  * Resolve symbols using the "Three-Tier" Architecture:
+ * 0. Canonical Truth: Check Shared Crypto Names (100% confidence, forces correct naming)
  * 1. Memory: Check AssetAlias table (100% confidence)
  * 2. Gold Standard: Check ISIN search (99% confidence)
  * 3. Discovery: Check Ticker/Name search with Strict Validation (40-95% confidence)
@@ -293,7 +300,8 @@ export async function resolveImportSymbols(assets: ImportAsset[]): Promise<Resol
                 let resolvedName = asset.name || asset.symbol;
                 let resolvedType = asset.type || 'STOCK';
                 let resolvedCurrency = asset.currency;
-                let exchange: string | undefined;
+                // Use CSV exchange first, API will only override if CSV is empty
+                let exchange: string | undefined = asset.exchange;
                 let country: string | undefined;
                 let sector: string | undefined;
                 let currentPrice: number | undefined;
@@ -303,218 +311,402 @@ export async function resolveImportSymbols(assets: ImportAsset[]): Promise<Resol
                 console.log(`[Import Debug] Processing Asset ${i}: symbol='${asset.symbol}' name='${asset.name}' isin='${asset.isin}'`);
 
                 try {
-                    // --- LEVEL 1: MEMORY (The System's Brain) ---
-                    // CRITICAL: Normalize lookup key - trim whitespace and uppercase
-                    const inputName = (asset.name || asset.symbol).trim().toUpperCase();
-
-                    // DEBUG: Show exact key being looked up
-                    console.log(`[Import] MEMORY lookup: key='${inputName}', found=${aliasMap.has(inputName)}`);
-
-                    if (aliasMap.has(inputName)) {
-                        resolvedSymbol = aliasMap.get(inputName) || asset.symbol;
-                        console.log(`[Import] ✓ MEMORY HIT: '${inputName}' -> '${resolvedSymbol}'`);
-
-                        // We trust the memory 100%. Fetch quote directly.
+                    // --- LEVEL 0: CANONICAL TRUTH (Hardcoded Known Assets) ---
+                    // Force correct names for known crypto tickers (e.g. BTC -> Bitcoin)
+                    // regardless of what CSV or external APIs say.
+                    const canonicalName = CRYPTO_ASSET_NAMES[asset.symbol.toUpperCase()];
+                    if (canonicalName) {
+                        console.log(`[Import] ✓ CANONICAL HIT: '${asset.symbol}' -> '${canonicalName}'`);
+                        // We trust our own canonical list 100%
                         matchSource = 'MEMORY';
                         confidence = 100;
+                        resolvedName = canonicalName;
+                        resolvedType = 'CRYPTO';
+
+                        // Build the currency-paired ticker (e.g. BTC-EUR)
+                        const baseSymbol = asset.symbol.toUpperCase();
+                        const targetCurrency = asset.currency || 'EUR';
+                        // Check if it already has a suffix
+                        const needsSuffix = !baseSymbol.includes('-');
+                        // IMPORTANT: Use currency-paired symbol for proper logo resolution and price fetching
+                        resolvedSymbol = needsSuffix ? `${baseSymbol}-${targetCurrency}` : baseSymbol;
+
+                        // Fetch the price using the currency-paired ticker
                         const quote = await getYahooQuote(resolvedSymbol) as any;
                         if (quote) {
-                            resolvedName = cleanAssetName(quote.shortname || quote.longname || resolvedName);
-                            resolvedCurrency = (quote.currency || asset.currency) as any;
+                            resolvedCurrency = (quote.currency || resolvedCurrency) as any;
                             currentPrice = quote.regularMarketPrice;
-                            resolvedType = quote.quoteType === 'ETF' ? 'FUND' :
-                                quote.quoteType === 'CRYPTOCURRENCY' ? 'CRYPTO' : 'STOCK';
-                            exchange = quote.exchange;
+                            exchange = exchange || quote.exchange || 'CCC';
                         }
                     }
                     else {
-                        // --- LEVEL 2 & 3: DISCOVERY (Yahoo API) ---
-                        console.log(`[Import] ✗ MEMORY MISS for '${inputName}' - going to Yahoo API`);
+                        // --- LEVEL 1: MEMORY (The System's Brain) ---
+                        // CRITICAL: Normalize lookup key - trim whitespace and uppercase
+                        const inputName = (asset.name || asset.symbol).trim().toUpperCase();
 
-                        let searchResults: any[] = [];
-                        let usedIsinSearch = false;
-                        const isCrypto = isCryptoSymbol(asset.symbol, asset.type, asset.name, asset.isin);
+                        // DEBUG: Show exact key being looked up
+                        console.log(`[Import] MEMORY lookup: key='${inputName}', found=${aliasMap.has(inputName)}`);
 
-                        // 2a. CRYPTO - Direct ticker lookup (skip ISIN search, use name-to-ticker mapping)
-                        if (isCrypto) {
-                            // Use currency from CSV to determine the correct variant (e.g., BTC-EUR vs BTC-USD)
-                            const targetCurrency = asset.currency || 'EUR';
-                            const cryptoTicker = getCryptoTicker(asset.symbol, asset.name, targetCurrency);
-                            console.log(`[Import] Crypto detected: ${asset.name} (${targetCurrency}) -> trying ${cryptoTicker}`);
+                        if (aliasMap.has(inputName)) {
+                            resolvedSymbol = aliasMap.get(inputName) || asset.symbol;
+                            console.log(`[Import] ✓ MEMORY HIT: '${inputName}' -> '${resolvedSymbol}'`);
 
-                            // Get quote directly for the crypto ticker
-                            const quote = await getYahooQuote(cryptoTicker) as any;
-                            if (quote && quote.regularMarketPrice) {
-                                matchSource = 'SEARCH';
-                                confidence = 99;
-                                resolvedSymbol = cryptoTicker;
-                                resolvedName = cleanAssetName(quote.shortname || quote.longname || asset.name || cryptoTicker);
-                                resolvedType = 'CRYPTO';
-                                resolvedCurrency = (quote.currency || targetCurrency) as any;
+                            // We trust the memory 100%. Fetch quote directly.
+                            matchSource = 'MEMORY';
+                            confidence = 100;
+                            const quote = await getYahooQuote(resolvedSymbol) as any;
+                            if (quote) {
+                                resolvedName = cleanAssetName(quote.shortname || quote.longname || resolvedName);
+                                resolvedCurrency = (quote.currency || asset.currency) as any;
                                 currentPrice = quote.regularMarketPrice;
-                                exchange = quote.exchange || 'CCC';
-                                console.log(`[Import] Crypto resolved: ${asset.name} -> ${resolvedSymbol} @ ${currentPrice}`);
-                            } else {
-                                // Fallback: search for BASE SYMBOL to get all currency variants
-                                // e.g., search "ETH" returns [ETH-USD, ETH-EUR, ETH-GBP, ...]
-                                const baseSymbol = cryptoTicker.split('-')[0]; // Extract base (ETH from ETH-EUR)
-                                searchResults = await searchYahoo(baseSymbol);
-                                const cryptoOnly = searchResults.filter(r => r.quoteType === 'CRYPTOCURRENCY');
-
-                                if (cryptoOnly.length > 0) {
-                                    // SMART: Find the variant matching target currency from CSV
-                                    const currencySuffix = `-${targetCurrency}`;
-                                    const matchingVariant = cryptoOnly.find(r => r.symbol.toUpperCase().endsWith(currencySuffix));
-
-                                    if (matchingVariant) {
-                                        // Found matching currency variant - use it directly
-                                        matchSource = 'SEARCH';
-                                        confidence = 98;
-                                        resolvedSymbol = matchingVariant.symbol;
-                                        resolvedName = cleanAssetName(matchingVariant.shortname || matchingVariant.longname || asset.name || cryptoTicker);
-                                        resolvedType = 'CRYPTO';
-                                        resolvedCurrency = targetCurrency as any;
-                                        exchange = matchingVariant.exchange || 'CCC';
-
-                                        // Fetch current price
-                                        const variantQuote = await getYahooQuote(matchingVariant.symbol) as any;
-                                        if (variantQuote) {
-                                            currentPrice = variantQuote.regularMarketPrice;
-                                        }
-                                        console.log(`[Import] Crypto ${targetCurrency} variant found via base search: ${asset.name} -> ${resolvedSymbol}`);
-                                    } else {
-                                        // Currency variant not found - construct it manually and try direct quote
-                                        // e.g., If ETH-EUR not in search, but we want EUR, try ETH-EUR directly
-                                        const constructedTicker = `${baseSymbol}-${targetCurrency}`;
-                                        const directQuote = await getYahooQuote(constructedTicker) as any;
-                                        if (directQuote && directQuote.regularMarketPrice) {
-                                            matchSource = 'SEARCH';
-                                            confidence = 95;
-                                            resolvedSymbol = constructedTicker;
-                                            resolvedName = cleanAssetName(directQuote.shortname || directQuote.longname || asset.name || constructedTicker);
-                                            resolvedType = 'CRYPTO';
-                                            resolvedCurrency = targetCurrency as any;
-                                            currentPrice = directQuote.regularMarketPrice;
-                                            exchange = directQuote.exchange || 'CCC';
-                                            console.log(`[Import] Crypto ${targetCurrency} constructed: ${asset.name} -> ${resolvedSymbol}`);
-                                        } else {
-                                            // Last resort: use first crypto result but warn
-                                            searchResults = cryptoOnly;
-                                            console.warn(`[Import] Crypto ${targetCurrency} variant not available for ${baseSymbol}, will use first result`);
-                                        }
-                                    }
-                                }
+                                resolvedType = quote.quoteType === 'ETF' ? 'FUND' :
+                                    quote.quoteType === 'CRYPTOCURRENCY' ? 'CRYPTO' : 'STOCK';
+                                exchange = exchange || quote.exchange; // CSV first, then API
                             }
                         }
-
-                        // 2b. ISIN Search (Gold Standard) - only for non-crypto
-                        if (!isCrypto && asset.isin && asset.isin.length > 5) {
-                            searchResults = await searchYahoo(asset.isin);
-                            usedIsinSearch = true;
-                        }
-
-                        // 2c. Ticker / Name Fallback (skip if already resolved)
-                        if (matchSource === 'NONE' && searchResults.length === 0 && asset.symbol !== asset.isin) {
-                            console.log(`[Import] Symbol !== ISIN. Searching symbol: ${asset.symbol}`);
-                            searchResults = await searchYahoo(asset.symbol);
-                            usedIsinSearch = false;
-                        }
-                        if (matchSource === 'NONE' && searchResults.length === 0 && asset.name) {
-                            const cleanName = cleanAssetName(asset.name);
-                            console.log(`[Import Debug] Fallback to Name Search: '${asset.name}' -> Clean: '${cleanName}'`);
-                            searchResults = await searchYahoo(cleanName);
-                            console.log(`[Import Debug] Name Search Results: ${searchResults.length}`);
-                        }
-
-                        // --- VALIDATION & SELECTION --- (skip if already resolved, e.g., crypto)
-                        if (matchSource === 'NONE' && searchResults.length > 0) {
-                            const best = searchResults[0];
-                            const resultName = (best.shortname || best.longname || '').toUpperCase();
-                            const similarity = calculateSimilarity(resultName, inputName);
-                            console.log(`[Import] Checking Match: '${inputName}' vs '${resultName}' (Symbol: ${best.symbol}). Similarity: ${similarity.toFixed(2)}`);
-
-                            // Global Strict Threshold
-                            const threshold = 0.4;
-
-                            // Auto-Check: Exact Symbol Match?
-                            const exactSymbolMatch = searchResults.find(r =>
-                                r.symbol.toUpperCase() === asset.symbol.toUpperCase() ||
-                                (asset.isin && r.symbol.toUpperCase() === asset.isin.toUpperCase())
+                        else {
+                            // --- LEVEL 2: TEFAS RESOLUTION (Turkish Mutual Funds) ---
+                            // Check if this is a TEFAS fund before going to Yahoo
+                            const isTefas = (
+                                asset.type === 'TEFAS' ||
+                                asset.type === 'FON' ||
+                                asset.exchange?.toUpperCase() === 'TEFAS' ||
+                                (asset.isin && asset.isin.startsWith('TR') && (asset.type === 'FUND' || asset.type === 'ETF'))
                             );
 
-                            if (exactSymbolMatch) {
-                                // Direct Match (Level 3 - Precision)
-                                matchSource = 'SEARCH';
-                                confidence = 95;
-                                resolvedSymbol = exactSymbolMatch.symbol;
-                                resolvedName = cleanAssetName(exactSymbolMatch.shortname || exactSymbolMatch.longname || resolvedName);
-                                exchange = exactSymbolMatch.exchange;
-                                // Update type from search result
-                                if (exactSymbolMatch.quoteType) {
-                                    resolvedType = exactSymbolMatch.quoteType === 'ETF' ? 'FUND' :
-                                        exactSymbolMatch.quoteType === 'CRYPTOCURRENCY' ? 'CRYPTO' :
-                                            exactSymbolMatch.quoteType === 'MUTUALFUND' ? 'FUND' : 'STOCK';
+                            if (isTefas) {
+                                console.log(`[Import] TEFAS detected: ${asset.symbol} - fetching from TEFAS API`);
+                                const tefasInfo = await getTefasFundInfo(asset.symbol);
+
+                                if (tefasInfo) {
+                                    matchSource = 'SEARCH';
+                                    confidence = 100; // TEFAS API is authoritative
+                                    resolvedSymbol = tefasInfo.code;
+                                    resolvedName = tefasInfo.title || asset.name || asset.symbol;
+                                    resolvedType = 'TEFAS';
+                                    resolvedCurrency = 'TRY' as any;
+                                    currentPrice = tefasInfo.price || undefined;
+                                    exchange = 'TEFAS';
+                                    country = 'Turkey';
+                                    sector = 'Fund';
+                                    console.log(`[Import] TEFAS resolved: ${asset.symbol} -> ${resolvedName} @ ${currentPrice} TRY`);
+                                } else {
+                                    // TEFAS API failed - still mark as TEFAS but with lower confidence
+                                    matchSource = 'SEARCH';
+                                    confidence = 70;
+                                    resolvedSymbol = asset.symbol.toUpperCase();
+                                    resolvedName = asset.name || asset.symbol;
+                                    resolvedType = 'TEFAS';
+                                    resolvedCurrency = 'TRY' as any;
+                                    exchange = 'TEFAS';
+                                    country = 'Turkey';
+                                    sector = 'Fund';
+                                    console.warn(`[Import] TEFAS API failed for ${asset.symbol}, using CSV data`);
                                 }
-                                // Fetch Price
-                                const quote = await getYahooQuote(resolvedSymbol);
-                                if (quote) currentPrice = quote.regularMarketPrice;
                             }
-                            else if (similarity >= threshold || usedIsinSearch) {
-                                // Fuzzy Match (Level 4) OR ISIN Match (Level 2)
-                                // Note: We still check ISIN semantic similarity if possible, but trust ISIN more.
-                                // Wait - "Level 2 ISIN" should be trusted highly, UNLESS it's a known bad mapping (Input Poison).
 
-                                // Input Poison Protection
-                                // If Yahoo says "Silver" (best.symbol) and Input says "Silver" (asset.symbol),
-                                // BUT similarity < threshold? Then it's a mismatch. 
-                                // Actually, if we found via ISIN, we trust it UNLESS similarity is very low (< 0.2).
-                                // Current plan says: "Enforce 0.4 even for ISIN".
+                            // --- LEVEL 3 & 4: DISCOVERY (Yahoo API) ---
+                            if (matchSource === 'NONE') {
+                                console.log(`[Import] ✗ MEMORY MISS for '${inputName}' - going to Yahoo API`);
+                            }
 
-                                if (similarity >= threshold) {
-                                    matchSource = usedIsinSearch ? 'ISIN' : 'SEARCH';
-                                    confidence = usedIsinSearch ? 99 : Math.round(similarity * 100);
-                                    resolvedSymbol = best.symbol;
-                                    resolvedName = cleanAssetName(best.shortname || best.longname || resolvedName);
-                                    exchange = best.exchange;
-                                    // Update type from search result
-                                    if (best.quoteType) {
-                                        resolvedType = best.quoteType === 'ETF' ? 'FUND' :
-                                            best.quoteType === 'CRYPTOCURRENCY' ? 'CRYPTO' :
-                                                best.quoteType === 'MUTUALFUND' ? 'FUND' : 'STOCK';
+                            let searchResults: any[] = [];
+                            let usedIsinSearch = false;
+                            const isCrypto = isCryptoSymbol(asset.symbol, asset.type, asset.name, asset.isin);
+
+                            // 2a. CRYPTO - Direct ticker lookup (skip ISIN search, use name-to-ticker mapping)
+                            if (isCrypto) {
+                                // Use currency from CSV to determine the correct variant (e.g., BTC-EUR vs BTC-USD)
+                                const targetCurrency = asset.currency || 'EUR';
+                                const cryptoTicker = getCryptoTicker(asset.symbol, asset.name, targetCurrency);
+                                console.log(`[Import] Crypto detected: ${asset.name} (${targetCurrency}) -> trying ${cryptoTicker}`);
+
+                                // Get quote directly for the crypto ticker
+                                const quote = await getYahooQuote(cryptoTicker) as any;
+                                if (quote && quote.regularMarketPrice) {
+                                    matchSource = 'SEARCH';
+                                    confidence = 99;
+                                    resolvedSymbol = cryptoTicker;
+                                    resolvedName = cleanAssetName(quote.shortname || quote.longname || asset.name || cryptoTicker);
+                                    resolvedType = 'CRYPTO';
+                                    resolvedCurrency = (quote.currency || targetCurrency) as any;
+                                    currentPrice = quote.regularMarketPrice;
+                                    exchange = exchange || quote.exchange || 'CCC'; // CSV first
+                                    console.log(`[Import] Crypto resolved: ${asset.name} -> ${resolvedSymbol} @ ${currentPrice}`);
+                                } else {
+                                    // Fallback: search for BASE SYMBOL to get all currency variants
+                                    // e.g., search "ETH" returns [ETH-USD, ETH-EUR, ETH-GBP, ...]
+                                    const baseSymbol = cryptoTicker.split('-')[0]; // Extract base (ETH from ETH-EUR)
+                                    searchResults = await searchYahoo(baseSymbol);
+                                    const cryptoOnly = searchResults.filter(r => r.quoteType === 'CRYPTOCURRENCY');
+
+                                    if (cryptoOnly.length > 0) {
+                                        // SMART: Find the variant matching target currency from CSV
+                                        const currencySuffix = `-${targetCurrency}`;
+                                        const matchingVariant = cryptoOnly.find(r => r.symbol.toUpperCase().endsWith(currencySuffix));
+
+                                        if (matchingVariant) {
+                                            // Found matching currency variant - use it directly
+                                            matchSource = 'SEARCH';
+                                            confidence = 98;
+                                            resolvedSymbol = matchingVariant.symbol;
+                                            resolvedName = cleanAssetName(matchingVariant.shortname || matchingVariant.longname || asset.name || cryptoTicker);
+                                            resolvedType = 'CRYPTO';
+                                            resolvedCurrency = targetCurrency as any;
+                                            exchange = exchange || matchingVariant.exchange || 'CCC'; // CSV first
+
+                                            // Fetch current price
+                                            const variantQuote = await getYahooQuote(matchingVariant.symbol) as any;
+                                            if (variantQuote) {
+                                                currentPrice = variantQuote.regularMarketPrice;
+                                            }
+                                            console.log(`[Import] Crypto ${targetCurrency} variant found via base search: ${asset.name} -> ${resolvedSymbol}`);
+                                        } else {
+                                            // Currency variant not found - construct it manually and try direct quote
+                                            // e.g., If ETH-EUR not in search, but we want EUR, try ETH-EUR directly
+                                            const constructedTicker = `${baseSymbol}-${targetCurrency}`;
+                                            const directQuote = await getYahooQuote(constructedTicker) as any;
+                                            if (directQuote && directQuote.regularMarketPrice) {
+                                                matchSource = 'SEARCH';
+                                                confidence = 95;
+                                                resolvedSymbol = constructedTicker;
+                                                resolvedName = cleanAssetName(directQuote.shortname || directQuote.longname || asset.name || constructedTicker);
+                                                resolvedType = 'CRYPTO';
+                                                resolvedCurrency = targetCurrency as any;
+                                                currentPrice = directQuote.regularMarketPrice;
+                                                exchange = exchange || directQuote.exchange || 'CCC'; // CSV first
+                                                console.log(`[Import] Crypto ${targetCurrency} constructed: ${asset.name} -> ${resolvedSymbol}`);
+                                            } else {
+                                                // FINAL FALLBACK: Yahoo API failed completely
+                                                // Still use the constructed ticker since we KNOW it's crypto from parser
+                                                matchSource = 'SEARCH';
+                                                confidence = 80; // Lower confidence but still import
+                                                resolvedSymbol = constructedTicker;
+                                                resolvedName = asset.name || constructedTicker;
+                                                resolvedType = 'CRYPTO';
+                                                resolvedCurrency = targetCurrency as any;
+                                                exchange = 'CCC';
+                                                console.warn(`[Import] Crypto API failed for ${baseSymbol}, using constructed ticker: ${constructedTicker}`);
+                                            }
+                                        }
+                                    } else {
+                                        // cryptoOnly is empty (no CRYPTOCURRENCY results from Yahoo search)
+                                        // Still use the constructed ticker since parser confirmed this is crypto
+                                        const constructedTicker = `${baseSymbol}-${targetCurrency}`;
+                                        matchSource = 'SEARCH';
+                                        confidence = 75; // Lower confidence - Yahoo had no crypto results
+                                        resolvedSymbol = constructedTicker;
+                                        resolvedName = asset.name || constructedTicker;
+                                        resolvedType = 'CRYPTO';
+                                        resolvedCurrency = targetCurrency as any;
+                                        exchange = 'CCC';
+                                        console.warn(`[Import] No crypto results from Yahoo for ${baseSymbol}, using constructed ticker: ${constructedTicker}`);
                                     }
+                                }
+                            }
+
+                            // 2b. ISIN Search (Gold Standard) - only for non-crypto
+                            if (!isCrypto && asset.isin && asset.isin.length > 5) {
+                                searchResults = await searchYahoo(asset.isin);
+                                usedIsinSearch = true;
+                            }
+
+                            // 2c. Ticker / Name Fallback (skip if already resolved)
+                            if (matchSource === 'NONE' && searchResults.length === 0 && asset.symbol !== asset.isin) {
+                                console.log(`[Import] Symbol !== ISIN. Searching symbol: ${asset.symbol}`);
+                                searchResults = await searchYahoo(asset.symbol);
+                                usedIsinSearch = false;
+                            }
+                            if (matchSource === 'NONE' && searchResults.length === 0 && asset.name) {
+                                const cleanName = cleanAssetName(asset.name);
+                                console.log(`[Import Debug] Fallback to Name Search: '${asset.name}' -> Clean: '${cleanName}'`);
+                                searchResults = await searchYahoo(cleanName);
+                                console.log(`[Import Debug] Name Search Results: ${searchResults.length}`);
+                            }
+
+                            // --- VALIDATION & SELECTION --- (skip if already resolved, e.g., crypto)
+                            if (matchSource === 'NONE' && searchResults.length > 0) {
+                                const best = searchResults[0];
+                                const resultName = (best.shortname || best.longname || '').toUpperCase();
+                                const similarity = calculateSimilarity(resultName, inputName);
+                                console.log(`[Import] Checking Match: '${inputName}' vs '${resultName}' (Symbol: ${best.symbol}). Similarity: ${similarity.toFixed(2)}`);
+
+                                // Global Strict Threshold
+                                const threshold = 0.4;
+
+                                // Auto-Check: Exact Symbol Match?
+                                const exactSymbolMatch = searchResults.find(r =>
+                                    r.symbol.toUpperCase() === asset.symbol.toUpperCase() ||
+                                    (asset.isin && r.symbol.toUpperCase() === asset.isin.toUpperCase())
+                                );
+
+                                if (exactSymbolMatch) {
+                                    // Direct Match (Level 3 - Precision)
+                                    matchSource = 'SEARCH';
+                                    confidence = 95;
+                                    resolvedSymbol = exactSymbolMatch.symbol;
+                                    resolvedName = cleanAssetName(exactSymbolMatch.shortname || exactSymbolMatch.longname || resolvedName);
+                                    exchange = exchange || exactSymbolMatch.exchange; // CSV first
+                                    // Update type from search result
+                                    if (exactSymbolMatch.quoteType) {
+                                        resolvedType = exactSymbolMatch.quoteType === 'ETF' ? 'FUND' :
+                                            exactSymbolMatch.quoteType === 'CRYPTOCURRENCY' ? 'CRYPTO' :
+                                                exactSymbolMatch.quoteType === 'MUTUALFUND' ? 'FUND' : 'STOCK';
+                                    }
+                                    // Fetch Price
                                     const quote = await getYahooQuote(resolvedSymbol);
                                     if (quote) currentPrice = quote.regularMarketPrice;
-                                } else {
-                                    // REJECTED (Sim < 0.4)
-                                    resolvedAssetWarnings.push(`Suspect Match Rejected: '${resultName}' (Sim: ${similarity.toFixed(2)})`);
-                                    console.warn(`[Import] Rejected: ${inputName} vs ${resultName} (${similarity.toFixed(2)})`);
+                                }
+                                else if (similarity >= threshold || usedIsinSearch) {
+                                    // Fuzzy Match (Level 4) OR ISIN Match (Level 2)
+                                    // Note: We still check ISIN semantic similarity if possible, but trust ISIN more.
+                                    // Wait - "Level 2 ISIN" should be trusted highly, UNLESS it's a known bad mapping (Input Poison).
 
-                                    // Fallback Logic: Input Poison Prevention
-                                    // If we rejected matches, and the Input Symbol matches the Rejected Symbol,
-                                    // AND we have an ISIN, force usage of ISIN.
-                                    if (best.symbol === asset.symbol && asset.isin) {
-                                        resolvedSymbol = asset.isin;
-                                        resolvedAssetWarnings.push(`Poisoned Symbol '${asset.symbol}' detected. Forcing ISIN '${asset.isin}'.`);
+                                    // Input Poison Protection
+                                    // If Yahoo says "Silver" (best.symbol) and Input says "Silver" (asset.symbol),
+                                    // BUT similarity < threshold? Then it's a mismatch. 
+                                    // Actually, if we found via ISIN, we trust it UNLESS similarity is very low (< 0.2).
+                                    // Current plan says: "Enforce 0.4 even for ISIN".
+
+                                    if (similarity >= threshold) {
+                                        matchSource = usedIsinSearch ? 'ISIN' : 'SEARCH';
+                                        confidence = usedIsinSearch ? 99 : Math.round(similarity * 100);
+                                        resolvedSymbol = best.symbol;
+                                        resolvedName = cleanAssetName(best.shortname || best.longname || resolvedName);
+                                        exchange = exchange || best.exchange; // CSV first
+                                        // Update type from search result
+                                        if (best.quoteType) {
+                                            resolvedType = best.quoteType === 'ETF' ? 'FUND' :
+                                                best.quoteType === 'CRYPTOCURRENCY' ? 'CRYPTO' :
+                                                    best.quoteType === 'MUTUALFUND' ? 'FUND' : 'STOCK';
+                                        }
+                                        const quote = await getYahooQuote(resolvedSymbol);
+                                        if (quote) currentPrice = quote.regularMarketPrice;
+                                    } else {
+                                        // REJECTED (Sim < 0.4)
+                                        resolvedAssetWarnings.push(`Suspect Match Rejected: '${resultName}' (Sim: ${similarity.toFixed(2)})`);
+                                        console.warn(`[Import] Rejected: ${inputName} vs ${resultName} (${similarity.toFixed(2)})`);
+
+                                        // Fallback Logic: Input Poison Prevention
+                                        // If we rejected matches, and the Input Symbol matches the Rejected Symbol,
+                                        // AND we have an ISIN, force usage of ISIN.
+                                        if (best.symbol === asset.symbol && asset.isin) {
+                                            resolvedSymbol = asset.isin;
+                                            resolvedAssetWarnings.push(`Poisoned Symbol '${asset.symbol}' detected. Forcing ISIN '${asset.isin}'.`);
+                                        }
+                                        // Else: Keep original symbol, low confidence
+                                        confidence = 10;
                                     }
-                                    // Else: Keep original symbol, low confidence
+                                } else {
+                                    resolvedAssetWarnings.push(`No reliable match found.`);
                                     confidence = 10;
                                 }
                             } else {
-                                resolvedAssetWarnings.push(`No reliable match found.`);
-                                confidence = 10;
+                                resolvedAssetWarnings.push("No results found on Yahoo Finance.");
+                                confidence = 0;
                             }
-                        } else {
-                            resolvedAssetWarnings.push("No results found on Yahoo Finance.");
-                            confidence = 0;
                         }
-                    }
 
+                    }
+                    // Close the ELSE block for Level 0 Canonical Check
                 } catch (error) {
                     confidence = 0;
                     resolvedAssetWarnings.push("Resolution failed unexpectedly.");
                 }
 
                 // --- POST-RESOLUTION CHECKS ---
+
+                // --- CATEGORY-BASED METADATA ENRICHMENT ---
+
+                // Step 1: Detect asset category (with ISIN for accurate detection)
+                const category = getAssetCategory(resolvedType, exchange, resolvedSymbol, asset.isin);
+                console.log(`[Import] Detected category: ${category} for ${resolvedSymbol}`);
+
+                // Step 2: Get category defaults
+                const defaults = getCategoryDefaults(category, resolvedSymbol);
+
+                // Step 3: Apply CSV-first priority, then defaults
+                exchange = exchange || defaults.exchange;
+                country = country || defaults.country;
+                sector = sector || defaults.sector;
+
+                // Step 4: Fetch from API only for US_MARKETS and EU_MARKETS
+                if (['US_MARKETS', 'EU_MARKETS'].includes(category) && (!country || !sector || country === 'Unknown' || sector === 'Unknown')) {
+                    try {
+                        console.log(`[Import] Fetching metadata for ${category} asset: ${resolvedSymbol}...`);
+                        let profileData: { country?: string; sector?: string; industry?: string; exchange?: string } | null = null;
+
+                        if (category === 'US_MARKETS') {
+                            // US_MARKETS: Yahoo → AlphaVantage → Finnhub
+                            profileData = await getYahooAssetProfile(resolvedSymbol);
+                            if (profileData?.country && profileData?.sector) {
+                                console.log(`[Import] ✓ Yahoo metadata: country=${profileData.country}, sector=${profileData.sector}`);
+                            } else {
+                                // Fallback to AlphaVantage
+                                const alphaProfile = await getCompanyOverview(resolvedSymbol);
+                                if (alphaProfile) {
+                                    profileData = {
+                                        country: profileData?.country || alphaProfile.country,
+                                        sector: profileData?.sector || alphaProfile.sector,
+                                        industry: profileData?.industry || alphaProfile.industry
+                                    };
+                                    console.log(`[Import] ✓ AlphaVantage metadata: country=${alphaProfile.country}, sector=${alphaProfile.sector}`);
+                                }
+                            }
+
+                            // Final fallback to Finnhub for US
+                            if (!profileData?.country || !profileData?.sector) {
+                                const finnhubProfile = await getCompanyProfile(resolvedSymbol);
+                                if (finnhubProfile) {
+                                    profileData = {
+                                        country: profileData?.country || finnhubProfile.country,
+                                        sector: profileData?.sector || (finnhubProfile.sector || finnhubProfile.finnhubIndustry),
+                                        industry: profileData?.industry || finnhubProfile.industry
+                                    };
+                                    console.log(`[Import] ✓ Finnhub metadata: country=${finnhubProfile.country}, sector=${finnhubProfile.sector || finnhubProfile.finnhubIndustry}`);
+                                }
+                            }
+                        } else if (category === 'EU_MARKETS') {
+                            // EU_MARKETS: Yahoo → Finnhub (skip AlphaVantage, US-focused)
+                            profileData = await getYahooAssetProfile(resolvedSymbol);
+                            if (profileData?.country && profileData?.sector) {
+                                console.log(`[Import] ✓ Yahoo metadata: country=${profileData.country}, sector=${profileData.sector}`);
+                            } else {
+                                // Fallback to Finnhub for EU
+                                const finnhubProfile = await getCompanyProfile(resolvedSymbol);
+                                if (finnhubProfile) {
+                                    profileData = {
+                                        country: profileData?.country || finnhubProfile.country,
+                                        sector: profileData?.sector || (finnhubProfile.sector || finnhubProfile.finnhubIndustry),
+                                        industry: profileData?.industry || finnhubProfile.industry
+                                    };
+                                    console.log(`[Import] ✓ Finnhub metadata: country=${finnhubProfile.country}, sector=${finnhubProfile.sector || finnhubProfile.finnhubIndustry}`);
+                                }
+                            }
+                        }
+
+                        // Apply API metadata if found
+                        if (profileData) {
+                            exchange = exchange || profileData.exchange;
+                            country = (country === 'Unknown' || !country) ? (profileData.country || country) : country;
+                            sector = (sector === 'Unknown' || !sector) ? (profileData.sector || sector) : sector;
+                            console.log(`[Import] Final metadata for ${resolvedSymbol}: exchange=${exchange}, country=${country}, sector=${sector}`);
+                        } else {
+                            console.log(`[Import] ✗ No API metadata found for ${resolvedSymbol}, using defaults`);
+                        }
+                    } catch (error) {
+                        console.warn(`[Import] Metadata fetch error for ${resolvedSymbol}:`, error);
+                    }
+                } else {
+                    // Auto-fill categories (BIST, TEFAS, CRYPTO, COMMODITIES, etc.)
+                    console.log(`[Import] Using auto-fill for ${category}: exchange=${exchange}, country=${country}, sector=${sector}`);
+                }
+
+                // Step 5: Final fallback to defaults (in case API failed)
+                exchange = exchange || defaults.exchange;
+                country = country || defaults.country;
+                sector = sector || defaults.sector;
+
 
                 // 1. Poison Link Detection (Existing DB Check)
                 let existing = existingSymbols.get(resolvedSymbol.toUpperCase());
@@ -530,13 +722,10 @@ export async function resolveImportSymbols(assets: ImportAsset[]): Promise<Resol
                 // 2. Action Determination
                 let action: 'add' | 'update' | 'skip' | 'close' = existing ? 'update' : 'add';
 
-                // 3. Dust Detection
-                const rate = rates[resolvedCurrency] || 1;
-                const priceForCalc = currentPrice || asset.buyPrice || 0;
-                const valueEur = (asset.quantity * priceForCalc) / rate;
-                if (asset.quantity > 0 && Math.abs(valueEur) < 10 && Math.abs(valueEur) > 0) {
+                // 3. Closed Position Detection (quantity <= 0)
+                if (asset.quantity <= 0.000001) {
                     action = 'close';
-                    resolvedAssetWarnings.push("Dust position (< 10 EUR). Auto-set to Close.");
+                    console.log(`[Import] Detected CLOSED position: ${asset.symbol} (qty=${asset.quantity})`);
                 }
 
                 // 4. Logo
@@ -621,6 +810,7 @@ export async function resolveImportSymbols(assets: ImportAsset[]): Promise<Resol
                     exchange,
                     country,
                     sector,
+                    category, // Add detected category
                     currentPrice,
                     confidence,
                     logoUrl,
@@ -660,6 +850,9 @@ export async function executeImport(
     portfolioId?: string, // Optional portfolioId - if not provided, use user's default portfolio
     customGroupName?: string // Optional custom group name (e.g. "Long Term", "Speculative", etc.)
 ): Promise<ImportResult> {
+    console.log('[executeImport] Starting import with', assets.length, 'assets');
+    assets.forEach(a => console.log(`  - ${a.resolvedSymbol}: qty=${a.quantity}, action=${a.action}`));
+
     const session = await auth();
     if (!session?.user?.email) {
         return { success: false, added: 0, updated: 0, skipped: 0, errors: ['Not authenticated'] };
@@ -694,12 +887,12 @@ export async function executeImport(
 
     if (currentPortfolio?.assets) {
         for (const asset of currentPortfolio.assets) {
-            // Composite Key: Symbol + CustomGroup
-            const key = `${asset.symbol.toUpperCase()}|${asset.customGroup || ''}`;
+            // Composite Key: Symbol + CustomGroup + Platform
+            const key = `${asset.symbol.toUpperCase()}|${asset.customGroup || ''}|${asset.platform || ''}`;
             dbAssetMap.set(key, asset.id);
 
             if (asset.isin) {
-                const isinKey = `${asset.isin.toUpperCase()}|${asset.customGroup || ''}`;
+                const isinKey = `${asset.isin.toUpperCase()}|${asset.customGroup || ''}|${asset.platform || ''}`;
                 dbIsinMap.set(isinKey, asset.id);
             }
         }
@@ -713,11 +906,21 @@ export async function executeImport(
 
     // Create a map of raw symbol -> resolved asset for quick lookup
     // This helps us link transactions to the correct final symbol
+    // We map by multiple keys to ensure we can find the asset regardless of how the transaction references it
     const assetMap = new Map<string, ResolvedAsset>();
     for (const asset of assets) {
-        assetMap.set(asset.symbol, asset);
-        // Also map by resolved symbol just in case
-        assetMap.set(asset.resolvedSymbol, asset);
+        // Map by original symbol (e.g., 'XRP' from Kraken)
+        assetMap.set(asset.symbol.toUpperCase(), asset);
+        // Map by resolved symbol (e.g., 'XRP-EUR')
+        assetMap.set(asset.resolvedSymbol.toUpperCase(), asset);
+        // Map by ISIN if available (e.g., DeGiro imports)
+        if (asset.isin) {
+            assetMap.set(asset.isin.toUpperCase(), asset);
+        }
+        // Map by name for additional matching (e.g., 'Bitcoin' -> BTC-EUR)
+        if (asset.name) {
+            assetMap.set(asset.name.toUpperCase(), asset);
+        }
     }
 
     // Get minimum sortOrder for new assets
@@ -740,12 +943,12 @@ export async function executeImport(
             // IDEMPOTENCY CHECK
             // Check if asset already exists in our fresh DB map using COMPOSITE KEY
             let existingAssetId: string | undefined;
-            const lookupKey = `${asset.resolvedSymbol.toUpperCase()}|${customGroupName || ''}`;
+            const lookupKey = `${asset.resolvedSymbol.toUpperCase()}|${customGroupName || ''}|${asset.platform || ''}`;
 
             if (dbAssetMap.has(lookupKey)) {
                 existingAssetId = dbAssetMap.get(lookupKey);
             } else if (asset.isin) {
-                const isinKey = `${asset.isin.toUpperCase()}|${customGroupName || ''}`;
+                const isinKey = `${asset.isin.toUpperCase()}|${customGroupName || ''}|${asset.platform || ''}`;
                 if (dbIsinMap.has(isinKey)) {
                     existingAssetId = dbIsinMap.get(isinKey);
                 }
@@ -761,7 +964,8 @@ export async function executeImport(
             const category = getAssetCategory(
                 asset.resolvedType as any,
                 asset.exchange,
-                asset.resolvedSymbol
+                asset.resolvedSymbol,
+                asset.isin
             );
 
             if (finalAction === 'add') {
@@ -787,7 +991,7 @@ export async function executeImport(
                         customGroup: customGroupName || null,
                         isin: asset.isin || null,
                         sortOrder: currentSortOrder--,
-                        logoUrl: getLogoUrl(
+                        logoUrl: asset.logoUrl || getLogoUrl(
                             asset.resolvedSymbol,
                             asset.resolvedType,
                             asset.exchange,
@@ -797,11 +1001,11 @@ export async function executeImport(
                 });
 
                 // Add to our local map so subsequent dupes in same batch are caught
-                const newKey = `${newAsset.symbol.toUpperCase()}|${newAsset.customGroup || ''}`;
+                const newKey = `${newAsset.symbol.toUpperCase()}|${newAsset.customGroup || ''}|${newAsset.platform || ''}`;
                 dbAssetMap.set(newKey, newAsset.id);
 
                 if (asset.isin) {
-                    const newIsinKey = `${asset.isin.toUpperCase()}|${newAsset.customGroup || ''}`;
+                    const newIsinKey = `${asset.isin.toUpperCase()}|${newAsset.customGroup || ''}|${newAsset.platform || ''}`;
                     dbIsinMap.set(newIsinKey, newAsset.id);
                 }
 
@@ -813,12 +1017,41 @@ export async function executeImport(
 
                 if (targetId) {
                     // Update existing asset
+                    const existingAsset = currentPortfolio?.assets.find(a => a.id === targetId);
+
+                    // Logic to decide if we should overwrite the name
+                    // 1. If existing name is just the symbol (e.g. "BTC"), it's likely unresolved.
+                    const isNameGeneric = existingAsset && existingAsset.name === existingAsset.symbol;
+
+                    // 2. If the new name is a Canonical Crypto Name (e.g. "Bitcoin") and different from current
+                    const isCanonicalFix = existingAsset &&
+                        CRYPTO_ASSET_NAMES[existingAsset.symbol] &&
+                        asset.resolvedName === CRYPTO_ASSET_NAMES[existingAsset.symbol] &&
+                        existingAsset.name !== asset.resolvedName;
+
                     await prisma.asset.update({
                         where: { id: targetId },
                         data: {
                             quantity: asset.quantity,
                             buyPrice: asset.buyPrice, // Update average buy price
-                            // Don't update other fields - user may have customized them
+                            // Update name only if it improves the data
+                            name: (isNameGeneric || isCanonicalFix) ? asset.resolvedName : undefined,
+
+                            // SYSTEMATIC METADATA REFRESH
+                            // Always update metadata to the latest resolved values
+                            // This ensures fixes in parsers/resolvers propagate to existing assets
+                            type: asset.resolvedType,
+                            exchange: asset.exchange || 'UNKNOWN',
+                            currency: asset.resolvedCurrency,
+                            category: category || asset.category, // Use recalculated category
+                            country: asset.country || 'UNKNOWN',
+                            sector: asset.sector || 'UNKNOWN',
+                            logoUrl: asset.logoUrl || getLogoUrl(
+                                asset.resolvedSymbol,
+                                asset.resolvedType,
+                                asset.exchange,
+                                asset.country
+                            )
                         }
                     });
                     updated++;
@@ -843,7 +1076,7 @@ export async function executeImport(
                             customGroup: customGroupName || null,
                             isin: asset.isin || null,
                             sortOrder: currentSortOrder--,
-                            logoUrl: getLogoUrl(
+                            logoUrl: asset.logoUrl || getLogoUrl(
                                 asset.resolvedSymbol,
                                 asset.resolvedType,
                                 asset.exchange,
@@ -855,16 +1088,44 @@ export async function executeImport(
                 }
             } else if (finalAction === 'close') {
                 const targetId = existingAssetId;
+                console.log(`[Import] CLOSE action for ${asset.resolvedSymbol}: existingId=${targetId}, qty=${asset.quantity}`);
 
                 if (targetId) {
                     // Update to 0 quantity (Closed)
+                    const existingAsset = currentPortfolio?.assets.find(a => a.id === targetId);
+
+                    // Logic to decide if we should overwrite the name (Same as update block)
+                    const isNameGeneric = existingAsset && existingAsset.name === existingAsset.symbol;
+                    const isCanonicalFix = existingAsset &&
+                        CRYPTO_ASSET_NAMES[existingAsset.symbol] &&
+                        asset.resolvedName === CRYPTO_ASSET_NAMES[existingAsset.symbol] &&
+                        existingAsset.name !== asset.resolvedName;
+
                     await prisma.asset.update({
                         where: { id: targetId },
                         data: {
                             quantity: 0,
                             // Keep buy price for history reference
+                            // Update name only if it improves the data
+                            name: (isNameGeneric || isCanonicalFix) ? asset.resolvedName : undefined,
+
+                            // SYSTEMATIC METADATA REFRESH (Even for Closed Assets)
+                            // We want closed assets to look good too (correct type, logo, etc.)
+                            type: asset.resolvedType,
+                            exchange: asset.exchange || 'UNKNOWN',
+                            currency: asset.resolvedCurrency,
+                            category: category || asset.category,
+                            country: asset.country || 'UNKNOWN',
+                            sector: asset.sector || 'UNKNOWN',
+                            logoUrl: asset.logoUrl || getLogoUrl(
+                                asset.resolvedSymbol,
+                                asset.resolvedType,
+                                asset.exchange,
+                                asset.country
+                            )
                         }
                     });
+                    console.log(`[Import] Updated ${asset.resolvedSymbol} to quantity=0`);
 
                     // Helper: Generate dust cleaning transaction?
                     // Verify duplicate transaction not created below
@@ -872,6 +1133,7 @@ export async function executeImport(
                     // Add to closed positions directly (quantity = 0)
                     // If it doesn't exist, we create it as closed (for history tracking?)
                     // Yes, user might want to import closed history for an asset they don't own anymore.
+                    console.log(`[Import] Creating CLOSED asset: ${asset.resolvedSymbol} in group ${customGroupName}`);
                     await prisma.asset.create({
                         data: {
                             portfolioId: targetPortfolioId,
@@ -922,12 +1184,37 @@ export async function executeImport(
         for (const tx of transactions) {
             try {
                 // Determine resolved symbol using our map
-                const asset = assetMap.get(tx.symbol);
+                // Try multiple lookup strategies to find the correct asset
+                let asset = assetMap.get(tx.symbol.toUpperCase());
+
+                // If not found by symbol, try by ISIN
+                if (!asset && tx.isin) {
+                    asset = assetMap.get(tx.isin.toUpperCase());
+                }
+
+                // If not found by ISIN, try by name
+                if (!asset && tx.name) {
+                    asset = assetMap.get(tx.name.toUpperCase());
+                }
 
                 // IMPORTANT: Don't skip transactions for closed positions
-                // Use resolved symbol if available, otherwise use original symbol
-                // This ensures we save ALL transaction history, even for fully closed positions
-                const resolvedSymbol = asset ? asset.resolvedSymbol : tx.symbol;
+                // Use resolved symbol if available, otherwise try to resolve crypto symbols
+                let resolvedSymbol: string;
+                if (asset) {
+                    resolvedSymbol = asset.resolvedSymbol;
+                } else {
+                    // Fallback: For crypto assets, try to construct the correct symbol
+                    // This handles cases where the asset wasn't in the assets array but we still have transactions
+                    const isCrypto = isCryptoSymbol(tx.symbol, undefined, tx.name);
+                    if (isCrypto) {
+                        const targetCurrency = tx.currency || 'EUR';
+                        resolvedSymbol = getCryptoTicker(tx.symbol, tx.name, targetCurrency);
+                        console.log(`[Import] Transaction for ${tx.symbol} not found in assetMap, resolved as crypto: ${resolvedSymbol}`);
+                    } else {
+                        resolvedSymbol = tx.symbol;
+                        console.warn(`[Import] Transaction for ${tx.symbol} not found in assetMap, using original symbol`);
+                    }
+                }
 
                 // Try to create transaction, ignore duplicates if externalId exists and matches
                 // We use Upsert if we want to update, but usually history is immutable unless explicit update.
@@ -936,6 +1223,9 @@ export async function executeImport(
                 // Ensure externalId is unique-ish globally or per portfolio?
                 // Schema: @@unique([portfolioId, externalId])
                 // So as long as externalId is consistent from Parser, we are good.
+
+                // Prefer resolved asset name over tx.name (e.g., "Bitcoin" instead of "BTC")
+                const transactionName = asset?.resolvedName || tx.name || resolvedSymbol;
 
                 if (tx.externalId) {
                     await prisma.assetTransaction.upsert({
@@ -947,6 +1237,7 @@ export async function executeImport(
                         },
                         update: {
                             symbol: resolvedSymbol,
+                            name: transactionName,
                             quantity: tx.quantity,
                             price: tx.price,
                             currency: tx.currency,
@@ -957,7 +1248,7 @@ export async function executeImport(
                         create: {
                             portfolioId: targetPortfolioId,
                             symbol: resolvedSymbol,
-                            name: tx.name,
+                            name: transactionName,
                             type: tx.type,
                             quantity: tx.quantity,
                             price: tx.price,
@@ -988,7 +1279,7 @@ export async function executeImport(
                             data: {
                                 portfolioId: targetPortfolioId,
                                 symbol: resolvedSymbol,
-                                name: tx.name,
+                                name: transactionName,
                                 type: tx.type,
                                 quantity: tx.quantity,
                                 price: tx.price,
