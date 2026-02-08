@@ -307,6 +307,7 @@ export async function deleteAsset(assetId: string) {
  * Get all open positions (assets) for the current user with current prices
  */
 export async function getOpenPositions() {
+    console.log('=== [getOpenPositions] FUNCTION CALLED ===');
     const session = await auth();
     if (!session?.user?.email) return [];
 
@@ -340,7 +341,21 @@ export async function getOpenPositions() {
         console.log(`[getOpenPositions] Processing ${assetsWithValues.length} assets and ${transactions.length} transactions`);
 
         return assetsWithValues.map(asset => {
+            const assetGroup = (asset as any).customGroup || null;
+
             const assetTxs = transactions.filter(t => {
+                const txGroup = t.customGroup || null;
+
+                // CRITICAL FIX: First check customGroup matches (EAK vs TAK)
+                // This prevents transactions from one sub-portfolio appearing in another
+                if (assetGroup !== txGroup) {
+                    // Debug: Log when filtering out cross-portfolio transactions for same symbol
+                    if (t.symbol === asset.symbol) {
+                        console.log(`[getOpenPositions] FILTERED: ${asset.symbol} asset(${assetGroup}) != tx(${txGroup})`);
+                    }
+                    return false;
+                }
+
                 // 1. Strict Symbol Match
                 if (t.symbol === asset.symbol) return true;
                 // 2. Original Name/Symbol Match (if imported)
@@ -350,6 +365,11 @@ export async function getOpenPositions() {
 
                 return false;
             });
+
+            // Debug: Log matched transactions per asset
+            if (asset.symbol === 'ASML') {
+                console.log(`[getOpenPositions] ASML (group: ${assetGroup}): ${assetTxs.length} txs matched`);
+            }
 
             return {
                 ...asset,

@@ -233,7 +233,7 @@ export async function deleteTransaction(transactionId: string) {
     }
 }
 
-export async function deleteAllTransactionsForSymbol(symbol: string) {
+export async function deleteAllTransactionsForSymbol(symbol: string, customGroup?: string) {
     const session = await auth();
     if (!session?.user?.email) return { error: "Not authenticated" };
 
@@ -245,10 +245,12 @@ export async function deleteAllTransactionsForSymbol(symbol: string) {
 
         if (!user?.Portfolio) return { error: "Portfolio not found" };
 
+        // Filter by both symbol AND customGroup to prevent cross-portfolio deletion
         await prisma.assetTransaction.deleteMany({
             where: {
                 portfolioId: user.Portfolio.id,
-                symbol: symbol
+                symbol: symbol,
+                customGroup: customGroup || null
             }
         });
 
@@ -270,6 +272,7 @@ export async function addTransaction(data: {
     date: Date;
     currency?: string;
     exchange?: string;
+    customGroup?: string; // Sub-portfolio (EAK, TAK, etc.)
 }) {
     const session = await auth();
     if (!session?.user?.email) return { error: "Not authenticated" };
@@ -292,7 +295,8 @@ export async function addTransaction(data: {
                 date: data.date,
                 currency: data.currency || 'USD', // Default fallback
                 exchange: data.exchange,
-                name: data.symbol // Optional, can be enriched later
+                name: data.symbol, // Optional, can be enriched later
+                customGroup: data.customGroup || null
             }
         });
 

@@ -21,9 +21,10 @@ interface TransactionHistoryProps {
     isBatchEditMode?: boolean;
     isOwner?: boolean;
     defaultCurrency?: string;
+    customGroup?: string; // Sub-portfolio (EAK, TAK, etc.)
 }
 
-export function TransactionHistory({ symbol, transactions, onUpdate, isBatchEditMode, isOwner = true, defaultCurrency }: TransactionHistoryProps) {
+export function TransactionHistory({ symbol, transactions, onUpdate, isBatchEditMode, isOwner = true, defaultCurrency, customGroup }: TransactionHistoryProps) {
     const [mode, setMode] = React.useState<'VIEW' | 'MODIFY' | 'DELETE'>('VIEW');
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
     const [isAddMode, setIsAddMode] = React.useState(false);
@@ -78,7 +79,8 @@ export function TransactionHistory({ symbol, transactions, onUpdate, isBatchEdit
             quantity: parseFloat(newTx.quantity),
             price: parseFloat(newTx.price),
             date: new Date(newTx.date),
-            currency: defaultCurrency || transactions[0]?.currency || 'USD'
+            currency: defaultCurrency || transactions[0]?.currency || 'USD',
+            customGroup // Pass sub-portfolio for proper isolation (EAK vs TAK)
         });
 
         setIsAddMode(false);

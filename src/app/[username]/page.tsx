@@ -165,7 +165,15 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
     // Attach transactions to assets using the same fuzzy matching logic as actions.ts
     assetsWithValues = assetsWithValues.map(asset => {
+        const assetGroup = (asset as any).customGroup || null;
+
         const assetTxs = transactions.filter(t => {
+            const txGroup = t.customGroup || null;
+
+            // CRITICAL: First check customGroup matches (EAK vs TAK)
+            // This prevents transactions from one sub-portfolio appearing in another
+            if (assetGroup !== txGroup) return false;
+
             // 1. Strict Symbol Match
             if (t.symbol === asset.symbol) return true;
             // 2. Original Name/Symbol Match (if imported)

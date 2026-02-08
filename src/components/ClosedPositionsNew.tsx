@@ -315,6 +315,7 @@ export function ClosedPositionsNew({ isOwner = true }: { isOwner?: boolean }) {
                                     onUpdate={refreshData}
                                     isOwner={isOwner}
                                     defaultCurrency={pos.currency}
+                                    customGroup={pos.customGroup}
                                 />
                             )}
                         </div>

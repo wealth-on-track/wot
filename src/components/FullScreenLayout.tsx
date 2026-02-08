@@ -2157,6 +2157,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                                     isBatchEditMode={isBatchEditMode}
                                                                                     isOwner={isOwner}
                                                                                     defaultCurrency={asset.currency}
+                                                                                    customGroup={(asset as any).customGroup}
                                                                                 />
                                                                             )}
                                                                         </div>
@@ -3184,14 +3185,16 @@ function ClosedPositionsFullScreen({ onCountChange, hideHeader = false, isBatchE
     const RED = '#ef4444';
     const GREEN = '#22c55e';
 
-    const handleDeletePosition = async (symbol: string) => {
-        // Optimistically update UI
-        setPositions(prev => prev.filter(p => p.symbol !== symbol));
+    const handleDeletePosition = async (symbol: string, customGroup?: string) => {
+        // Optimistically update UI - filter by both symbol AND customGroup
+        setPositions(prev => prev.filter(p =>
+            !(p.symbol === symbol && (p.customGroup || null) === (customGroup || null))
+        ));
 
         // Persist to database
         try {
             const { deleteAllTransactionsForSymbol } = await import('@/app/actions/history');
-            const result = await deleteAllTransactionsForSymbol(symbol);
+            const result = await deleteAllTransactionsForSymbol(symbol, customGroup);
             if (result.error) {
                 console.error('[handleDeletePosition] Error:', result.error);
             } else {
@@ -3535,7 +3538,7 @@ function ClosedPositionsFullScreen({ onCountChange, hideHeader = false, isBatchE
 
                                             {/* Delete Action */}
                                             <div
-                                                onClick={(e) => { e.stopPropagation(); handleDeletePosition(pos.symbol); }}
+                                                onClick={(e) => { e.stopPropagation(); handleDeletePosition(pos.symbol, pos.customGroup); }}
                                                 style={{
                                                     display: 'flex',
                                                     justifyContent: 'center',
@@ -3567,6 +3570,7 @@ function ClosedPositionsFullScreen({ onCountChange, hideHeader = false, isBatchE
                                                 isBatchEditMode={isBatchEditMode}
                                                 isOwner={isOwner}
                                                 defaultCurrency={pos.currency}
+                                                customGroup={pos.customGroup}
                                             />
                                         )}
                                     </div>
