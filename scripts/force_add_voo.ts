@@ -7,16 +7,16 @@ async function main() {
     try {
         const user = await prisma.user.findFirst({
             where: { email: 'demo@wot.money' },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
-        if (!user || !user.portfolio) {
+        if (!user || !user.Portfolio) {
             throw new Error('User or Portfolio not found');
         }
 
         // Check if asset already exists
         const existing = await prisma.asset.findFirst({
-            where: { portfolioId: user.portfolio.id, symbol: 'VOO' }
+            where: { portfolioId: user.Portfolio.id, symbol: 'VOO' }
         });
 
         if (existing) {
@@ -27,7 +27,7 @@ async function main() {
         // Add VOO
         const newAsset = await prisma.asset.create({
             data: {
-                portfolioId: user.portfolio.id,
+                portfolioId: user.Portfolio.id,
                 symbol: 'VOO',
                 category: 'US_MARKETS',
                 type: 'ETF', // Changed from STOCK to ETF as VOO is an ETF

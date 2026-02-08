@@ -17,7 +17,7 @@ async function main() {
         console.log('❌ Portfolio or user not found.');
 
         // Alternative: Find ANY user to inject Soitec if needed
-        const anyUser = await prisma.user.findFirst({ include: { portfolio: true } });
+        const anyUser = await prisma.user.findFirst({ include: { Portfolio: true } });
         console.log('Alternative user for injection:', anyUser?.username);
     }
 }

@@ -12,7 +12,7 @@ async function main() {
 
         const user = await prisma.user.findUnique({
             where: { email },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
         if (!user) {
@@ -21,7 +21,7 @@ async function main() {
         }
 
         const userId = user.id;
-        const portfolioId = user.portfolio?.id;
+        const portfolioId = user.Portfolio?.id;
 
         if (portfolioId) {
             // Delete Assets

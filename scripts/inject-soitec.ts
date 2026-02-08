@@ -7,20 +7,20 @@ async function main() {
 
     const user = await prisma.user.findFirst({
         where: { username: 'dev1' },
-        include: { portfolio: true }
+        include: { Portfolio: true }
     });
 
-    if (!user || !user.portfolio) {
+    if (!user || !user.Portfolio) {
         console.error('User dev1 or portfolio not found!');
         return;
     }
 
-    console.log(`Found portfolio: ${user.portfolio.id}`);
+    console.log(`Found portfolio: ${user.Portfolio.id}`);
 
     // Create Soitec Asset
     const asset = await prisma.asset.create({
         data: {
-            portfolioId: user.portfolio.id,
+            portfolioId: user.Portfolio.id,
             category: 'EU_MARKETS',
             type: 'STOCK',
             symbol: 'SOI.PA',

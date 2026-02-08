@@ -7,15 +7,15 @@ async function main() {
     console.log('SEARCHING FOR dev1...');
     const user = await prisma.user.findUnique({
         where: { email: 'dev1@wot.money' },
-        include: { portfolio: true }
+        include: { Portfolio: true }
     });
 
-    if (!user || !user.portfolio) {
+    if (!user || !user.Portfolio) {
         console.error('User dev1 not found or has no portfolio');
         return;
     }
 
-    const portfolioId = user.portfolio.id;
+    const portfolioId = user.Portfolio.id;
     console.log(`Found portfolio: ${portfolioId}`);
 
     // Fetch all transactions
@@ -45,7 +45,7 @@ async function main() {
             };
         }
 
-        positions[tx.symbol].transactions.push(tx);
+        positions[tx.symbol].Transaction.push(tx);
 
         if (tx.type === 'BUY' || tx.type === 'DEPOSIT') { // Deposit usually Cash but handle generic
             positions[tx.symbol].quantity += tx.quantity;

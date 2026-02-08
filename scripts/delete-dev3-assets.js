@@ -9,7 +9,7 @@ async function deleteAllAssetsForDev3() {
         // Find dev3 user
         const user = await prisma.user.findUnique({
             where: { username: 'dev3' },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
         if (!user) {

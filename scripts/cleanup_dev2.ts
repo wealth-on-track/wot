@@ -9,7 +9,7 @@ async function cleanUpUser() {
 
     const user = await prisma.user.findUnique({
         where: { email },
-        include: { portfolio: true }
+        include: { Portfolio: true }
     });
 
     if (!user) {
@@ -17,12 +17,12 @@ async function cleanUpUser() {
         return;
     }
 
-    if (!user.portfolio) {
+    if (!user.Portfolio) {
         console.error('User has no portfolio!');
         return;
     }
 
-    const portfolioId = user.portfolio.id;
+    const portfolioId = user.Portfolio.id;
     console.log(`Found portfolio: ${portfolioId}`);
 
     // Delete Transactions (Closed Positions / History)

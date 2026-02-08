@@ -16,7 +16,7 @@ async function resetDevAccounts() {
             console.log(`\nProcessing ${email}...`);
             const user = await prisma.user.findUnique({
                 where: { email },
-                include: { portfolio: true }
+                include: { Portfolio: true }
             });
 
             if (!user) {
@@ -24,12 +24,12 @@ async function resetDevAccounts() {
                 continue;
             }
 
-            if (!user.portfolio) {
+            if (!user.Portfolio) {
                 console.log(`⚠️  Portfolio not found for user: ${email}`);
                 continue;
             }
 
-            const portfolioId = user.portfolio.id;
+            const portfolioId = user.Portfolio.id;
             console.log(`📦 Portfolio Found: ${portfolioId}`);
 
             // 1. Delete Transactions

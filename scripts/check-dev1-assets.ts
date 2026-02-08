@@ -8,29 +8,29 @@ async function main() {
 
     const user = await prisma.user.findUnique({
         where: { email },
-        include: { portfolio: { include: { assets: true, transactions: true } } }
+        include: { Portfolio: { include: { assets: true, transactions: true } } }
     });
 
-    if (!user || !user.portfolio) {
+    if (!user || !user.Portfolio) {
         console.log("User or portfolio not found.");
         return;
     }
 
     console.log(`User: ${user.username} (${user.email})`);
-    console.log(`Portfolio ID: ${user.portfolio.id}`);
+    console.log(`Portfolio ID: ${user.Portfolio.id}`);
 
     console.log("\n--- ASSETS ---");
-    if (user.portfolio.assets.length === 0) {
+    if (user.Portfolio.Asset.length === 0) {
         console.log("No assets found.");
     } else {
-        user.portfolio.assets.forEach(a => {
+        user.Portfolio.Asset.forEach(a => {
             console.log(`[${a.symbol}] Qty: ${a.quantity} | isin: ${a.isin} | Type: ${a.type} | Cat: ${a.category}`);
         });
     }
 
     console.log("\n--- TRANSACTIONS (Last 10) ---");
     const txs = await prisma.assetTransaction.findMany({
-        where: { portfolioId: user.portfolio.id },
+        where: { portfolioId: user.Portfolio.id },
         orderBy: { date: 'desc' },
         take: 10
     });

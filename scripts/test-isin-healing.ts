@@ -27,9 +27,9 @@ async function main() {
                 create: {}
             }
         },
-        include: { portfolio: true }
+        include: { Portfolio: true }
     });
-    const portfolioId = user.portfolio!.id;
+    const portfolioId = user.Portfolio!.id;
 
     // 3. Inject "Broken" Asset (Bad Symbol, Good ISIN)
     console.log(`Injecting broken asset: Symbol=${TEST_SYMBOL}, ISIN=${TEST_ISIN}`);
