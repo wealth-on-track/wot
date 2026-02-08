@@ -40,8 +40,10 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { BENCHMARK_ASSETS } from "@/lib/benchmarkApi";
 import { getPortfolioStyle } from "@/lib/portfolioStyles";
-import { deleteAccount } from "@/lib/actions";
+import { deleteAccount, saveBESData, getBESData } from "@/lib/actions";
 import { signOut } from "next-auth/react";
+// BESPortfolioItem no longer needed - BES shown inline in table
+import { BESMetadata } from "@/lib/besTypes";
 
 // Sortable Row Component for Open Positions Table
 function SortableRow({ children, id, isBatchEditMode }: { children: React.ReactNode, id: string, isBatchEditMode: boolean }) {
@@ -664,15 +666,255 @@ function ImportProgressOverlay({ progress, phase, icon, successStats }: {
 
 // Full Screen Section Components
 
+// BES Expanded Details - Shows funds and contracts when BES row is expanded
+function BESExpandedDetails({ besMeta, besKP, besDK }: { besMeta: BESMetadata; besKP: number; besDK: number }) {
+    const [showContracts, setShowContracts] = React.useState(false);
+    const [fundPrices, setFundPrices] = React.useState<Record<string, number>>({});
+    const [loadingPrices, setLoadingPrices] = React.useState(true);
+    const fmt = (v: number) => new Intl.NumberFormat('tr-TR').format(v);
+
+    // Fetch TEFAS prices on mount
+    React.useEffect(() => {
+        const fetchPrices = async () => {
+            try {
+                const codes = besMeta.katkiPayiFunds?.map(f => f.code) || [];
+                if (codes.length === 0) return;
+
+                const response = await fetch('/api/tefas/batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ codes })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setFundPrices(data.prices || {});
+                }
+            } catch (error) {
+                console.error('Failed to fetch TEFAS prices:', error);
+            } finally {
+                setLoadingPrices(false);
+            }
+        };
+
+        fetchPrices();
+    }, [besMeta.katkiPayiFunds]);
+
+    return (
+        <div style={{ marginLeft: '0px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+            {/* Fon Dağılımı Tablosu */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                    <tr style={{ background: 'var(--bg-secondary)' }}>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Kod</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Fon Adı</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>%</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Avg. Price</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Price</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Katkı Payı</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Devlet Katkısı</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Toplam</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {besMeta.katkiPayiFunds?.map((f: any, idx: number) => {
+                        const kpValue = Math.round(besKP * f.percentage / 100);
+                        const currentPrice = fundPrices[f.code];
+                        return (
+                            <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                                <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--accent)' }}>{f.code}</td>
+                                <td style={{ padding: '8px 12px', color: 'var(--text-primary)' }}>{f.name}</td>
+                                <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>%{f.percentage}</td>
+                                <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{f.avgPrice ? f.avgPrice.toFixed(6) : '-'}</td>
+                                <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{loadingPrices ? '...' : (currentPrice ? currentPrice.toFixed(6) : '-')}</td>
+                                <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{fmt(kpValue)} ₺</td>
+                                <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>-</td>
+                                <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{fmt(kpValue)} ₺</td>
+                            </tr>
+                        );
+                    })}
+                    {/* Devlet Katkısı Fonu */}
+                    <tr style={{ background: 'rgba(34,197,94,0.05)' }}>
+                        <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--success)' }}>AET</td>
+                        <td style={{ padding: '8px 12px', color: 'var(--text-primary)' }}>Devlet Katkısı Fonu</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--success)' }}>100%</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>-</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>-</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>-</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--success)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmt(besDK)} ₺</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--success)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmt(besDK)} ₺</td>
+                    </tr>
+                    {/* Toplam */}
+                    <tr style={{ background: 'var(--bg-secondary)', fontWeight: 700 }}>
+                        <td colSpan={5} style={{ padding: '10px 12px', color: 'var(--text-primary)' }}>TOPLAM</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{fmt(besKP)} ₺</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--success)', fontVariantNumeric: 'tabular-nums' }}>{fmt(besDK)} ₺</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>{fmt(besKP + besDK)} ₺</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            {/* Kontratlar - Collapsible */}
+            <div style={{ borderTop: '1px solid var(--border)' }}>
+                <button
+                    onClick={() => setShowContracts(!showContracts)}
+                    style={{
+                        width: '100%', padding: '10px 12px', background: 'var(--bg-secondary)',
+                        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                        justifyContent: 'space-between', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600
+                    }}
+                >
+                    <span>KONTRATLAR ({besMeta.contracts?.length || 0})</span>
+                    <ChevronDown size={16} style={{ transform: showContracts ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                </button>
+                {showContracts && (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                        <thead>
+                            <tr style={{ background: 'var(--surface)' }}>
+                                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Kontrat</th>
+                                <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Katkı Payı</th>
+                                <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Devlet Katkısı</th>
+                                <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Toplam</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {besMeta.contracts?.map((c: any, idx: number) => (
+                                <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                                    <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>{c.name}</td>
+                                    <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{fmt(c.katkiPayi)} ₺</td>
+                                    <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--success)', fontVariantNumeric: 'tabular-nums' }}>{fmt(c.devletKatkisi)} ₺</td>
+                                    <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>{fmt(c.katkiPayi + c.devletKatkisi)} ₺</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// Inline BES Editor - Clean compact design
+function BESInlineEditor({ initialData, onSave, onCancel }: {
+    initialData: BESMetadata | null;
+    onSave: (data: BESMetadata) => Promise<void>;
+    onCancel: () => void;
+}) {
+    const [contracts, setContracts] = React.useState<Array<{ id: string; name: string; katkiPayi: number; devletKatkisi: number }>>([
+        { id: '1', name: 'Kontrat 1', katkiPayi: 0, devletKatkisi: 0 }
+    ]);
+    const [funds, setFunds] = React.useState<Array<{ code: string; name: string; percentage: number; avgPrice?: number; price?: number }>>([
+        { code: 'AH2', name: 'PPF', percentage: 60 },
+        { code: 'AH5', name: 'Hisse', percentage: 10 },
+        { code: 'BGL', name: 'Altin', percentage: 15 },
+        { code: 'AEA', name: 'Altin Kat.', percentage: 15 },
+    ]);
+    const [saving, setSaving] = React.useState(false);
+
+    React.useEffect(() => {
+        if (initialData) {
+            setContracts(initialData.contracts);
+            setFunds(initialData.katkiPayiFunds);
+        }
+    }, [initialData]);
+
+    const totalPct = funds.reduce((s, f) => s + f.percentage, 0);
+    const valid = Math.abs(totalPct - 100) < 0.01;
+    const totalKP = contracts.reduce((s, c) => s + c.katkiPayi, 0);
+    const totalDK = contracts.reduce((s, c) => s + c.devletKatkisi, 0);
+    const fmt = (v: number) => v ? new Intl.NumberFormat('tr-TR').format(v) : '';
+    const parse = (v: string) => parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
+
+    const save = async () => {
+        if (!valid || !contracts.length) return;
+        setSaving(true);
+        try { await onSave({ contracts, katkiPayiFunds: funds, lastUpdated: new Date().toISOString() }); }
+        finally { setSaving(false); }
+    };
+
+    return (
+        <div style={{ background: 'var(--surface)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(167,139,250,0.05) 100%)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '11px' }}>BES</div>
+                    <div>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>BES Emeklilik</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{contracts.length} kontrat</div>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--accent)' }}>{fmt(totalKP + totalDK)} <span style={{ fontSize: '12px', fontWeight: 500 }}>TL</span></div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                        <button onClick={onCancel} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer' }}>Iptal</button>
+                        <button onClick={save} disabled={!valid || saving} style={{ padding: '6px 16px', borderRadius: '6px', border: 'none', background: valid ? 'var(--accent)' : 'var(--bg-secondary)', color: valid ? '#fff' : 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: valid ? 'pointer' : 'not-allowed' }}>{saving ? '...' : 'Kaydet'}</button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Content - Two framed panels 50/50 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0' }}>
+                {/* LEFT: Contracts Section */}
+                <div style={{ padding: '16px 20px', borderRight: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Kontratlar</span>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{fmt(totalKP)}</span> KP + <span style={{ color: 'var(--success)', fontWeight: 600 }}>{fmt(totalDK)}</span> DK
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {contracts.map((c, i) => (
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 110px 110px 90px 28px', gap: '10px', alignItems: 'center', padding: '10px 12px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                <input value={c.name} onChange={e => { const u = [...contracts]; u[i].name = e.target.value; setContracts(u); }} placeholder="Kontrat adi" style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--surface)', color: 'var(--text-primary)', fontSize: '13px', width: '100%' }} />
+                                <input value={fmt(c.katkiPayi)} onChange={e => { const u = [...contracts]; u[i].katkiPayi = parse(e.target.value); setContracts(u); }} placeholder="Katki P." style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--surface)', color: 'var(--text-primary)', fontSize: '13px', textAlign: 'right' }} />
+                                <input value={fmt(c.devletKatkisi)} onChange={e => { const u = [...contracts]; u[i].devletKatkisi = parse(e.target.value); setContracts(u); }} placeholder="Devlet K." style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--surface)', color: 'var(--text-primary)', fontSize: '13px', textAlign: 'right' }} />
+                                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent)', textAlign: 'right' }}>{fmt(c.katkiPayi + c.devletKatkisi)} ₺</div>
+                                <button onClick={() => setContracts(contracts.filter((_, x) => x !== i))} style={{ padding: '6px', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', opacity: 0.6, fontSize: '16px', lineHeight: 1 }}>×</button>
+                            </div>
+                        ))}
+                    </div>
+                    <button onClick={() => setContracts([...contracts, { id: `${contracts.length + 1}`, name: `Kontrat ${contracts.length + 1}`, katkiPayi: 0, devletKatkisi: 0 }])} style={{ marginTop: '10px', padding: '8px 14px', border: '1px dashed var(--border)', background: 'transparent', color: 'var(--accent)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', borderRadius: '8px', width: '100%' }}>+ Yeni Kontrat</button>
+                </div>
+
+                {/* RIGHT: Funds Section */}
+                <div style={{ padding: '16px 20px', background: 'var(--bg-secondary)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Fon Dagilimi</span>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: valid ? 'var(--success)' : 'var(--danger)', padding: '4px 10px', background: valid ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', borderRadius: '6px' }}>%{totalPct} {valid && '✓'}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {funds.map((f, i) => (
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '60px 1fr 55px 80px 28px', gap: '8px', alignItems: 'center', padding: '10px 12px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                <input value={f.code} onChange={e => { const u = [...funds]; u[i].code = e.target.value; setFunds(u); }} placeholder="Kod" style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg-secondary)', color: 'var(--accent)', fontSize: '12px', fontWeight: 700, textAlign: 'center' }} />
+                                <input value={f.name} onChange={e => { const u = [...funds]; u[i].name = e.target.value; setFunds(u); }} placeholder="Fon adi" style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '12px' }} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>%</span>
+                                    <input type="number" value={f.percentage} onChange={e => { const u = [...funds]; u[i].percentage = parseFloat(e.target.value) || 0; setFunds(u); }} style={{ padding: '6px 4px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '12px', textAlign: 'right', width: '40px' }} />
+                                </div>
+                                <input type="number" step="0.000001" value={f.avgPrice || ''} onChange={e => { const u = [...funds]; u[i].avgPrice = parseFloat(e.target.value) || undefined; setFunds(u); }} placeholder="Avg Price" style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '12px', textAlign: 'right' }} />
+                                <button onClick={() => setFunds(funds.filter((_, x) => x !== i))} style={{ padding: '6px', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', opacity: 0.6, fontSize: '16px', lineHeight: 1 }}>×</button>
+                            </div>
+                        ))}
+                    </div>
+                    <button onClick={() => setFunds([...funds, { code: '', name: '', percentage: 0 }])} style={{ marginTop: '10px', padding: '8px 14px', border: '1px dashed var(--border)', background: 'transparent', color: 'var(--accent)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', borderRadius: '8px', width: '100%' }}>+ Yeni Fon</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // 1. Open Positions - Table Only, No Tabs
 function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalCurrency = 'EUR', onCountChange, closedPositionsCount, isOwner = true }: { assets: any[], exchangeRates?: Record<string, number>, globalCurrency?: string, onCountChange: () => void, closedPositionsCount: number, isOwner?: boolean }) {
-    const dndId = React.useId();
+    // Use stable ID to prevent hydration mismatch with Turbopack
+    const dndId = 'open-positions-dnd';
     const [activePositionTab, setActivePositionTab] = React.useState<'open' | 'closed' | 'import' | 'transactions'>('open');
     const [transViewMode, setTransViewMode] = React.useState<'group' | 'date'>('group');
     const [isBatchEditMode, setIsBatchEditMode] = React.useState(false);
     const [isClosedBatchEditMode, setIsClosedBatchEditMode] = React.useState(false);
     const [editedAssets, setEditedAssets] = React.useState<Record<string, any>>({});
-    const [assets, setAssets] = React.useState(() => initialAssets.filter(a => Math.abs(a.quantity) > 0.000001));
+    const [assets, setAssets] = React.useState(() => initialAssets.filter(a => Math.abs(a.quantity) > 0.000001 || a.type === 'BES'));
     const [expandedAssets, setExpandedAssets] = React.useState<Set<string>>(new Set());
 
     const toggleExpand = (assetId: string) => {
@@ -684,9 +926,12 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         });
     };
 
+    const [selectedAssetId, setSelectedAssetId] = React.useState<string | null>(null);
+
     // Sync state with props when data is refreshed (e.g. after import)
     React.useEffect(() => {
-        setAssets(initialAssets.filter(a => Math.abs(a.quantity) > 0.000001));
+        const filteredAssets = initialAssets.filter(a => Math.abs(a.quantity) > 0.000001 || a.type === 'BES');
+        setAssets(filteredAssets);
     }, [initialAssets]);
 
     const [showSuccessNotification, setShowSuccessNotification] = React.useState(false);
@@ -704,6 +949,34 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         closed: number;
         statement: number;
     } | null>(null);
+
+    // BES State
+    const [showBESEditor, setShowBESEditor] = React.useState(false);
+    const [besMetadata, setBesMetadata] = React.useState<BESMetadata | null>(null);
+
+    // Extract BES asset from assets (if exists)
+    const besAsset = React.useMemo(() => assets.find(a => a.type === 'BES' && a.symbol === 'BES'), [assets]);
+    // Display all assets including BES
+    const displayAssets = React.useMemo(() => assets, [assets]);
+
+    // Load BES metadata from asset
+    React.useEffect(() => {
+        if (besAsset?.metadata) {
+            setBesMetadata(besAsset.metadata as BESMetadata);
+        }
+    }, [besAsset]);
+
+    // Handle BES save
+    const handleBESSave = async (data: BESMetadata) => {
+        const result = await saveBESData(data);
+        if (result.success) {
+            setBesMetadata(data);
+            setShowBESEditor(false); // Close editor after save
+            onCountChange(); // Refresh portfolio
+        } else {
+            throw new Error(result.error);
+        }
+    };
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -744,6 +1017,16 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
 
     // Recalculate total value dynamically based on current prices and rates
     const totalPortfolioValue = assets.reduce((sum, asset) => {
+        // Special handling for BES - value comes from metadata
+        if (asset.type === 'BES' && asset.metadata) {
+            const besMeta = asset.metadata as BESMetadata;
+            const totalKP = besMeta?.contracts?.reduce((s: number, c: any) => s + (c.katkiPayi || 0), 0) || 0;
+            const totalDK = besMeta?.contracts?.reduce((s: number, c: any) => s + (c.devletKatkisi || 0), 0) || 0;
+            const besTotal = totalKP + totalDK;
+            const tryToEur = exchangeRates?.['TRY'] || 1;
+            return sum + (besTotal / tryToEur);
+        }
+
         const price = asset.currentPrice || asset.price || asset.previousClose || 0;
         const quantity = asset.quantity || 0;
         const value = price * quantity;
@@ -1025,6 +1308,25 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                     >
                         Import CSV
                     </button>
+                    {/* Add BES Button */}
+                    {isOwner && (
+                        <button
+                            onClick={() => setShowBESEditor(true)}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                background: showBESEditor ? 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)' : 'transparent',
+                                color: showBESEditor ? 'white' : 'var(--text-muted)',
+                                fontWeight: 700,
+                                fontSize: '13px',
+                                border: showBESEditor ? 'none' : '1px dashed var(--border)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            {besMetadata ? 'BES' : '+ BES'}
+                        </button>
+                    )}
                 </div>
 
                 {/* Spacer */}
@@ -1060,119 +1362,49 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                 </button>
             </div>
 
-            {activePositionTab === 'open' && assets.length === 0 && (
+            {activePositionTab === 'open' && assets.length === 0 && !besMetadata && !showBESEditor && (
                 <div style={{
+                    background: 'var(--surface)',
+                    borderRadius: '16px',
+                    marginTop: '20px',
+                    border: '1px solid var(--border)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding: '80px 20px',
-                    background: 'var(--bg-secondary)',
-                    borderRadius: '16px',
-                    marginTop: '20px',
-                    border: '2px dashed var(--text-muted)',
+                    padding: '60px 20px',
                     textAlign: 'center'
                 }}>
-                    <div style={{
-                        width: '72px',
-                        height: '72px',
-                        borderRadius: '50%',
-                        background: 'rgba(99, 102, 241, 0.1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: '20px',
-                        color: 'var(--accent)',
-                        boxShadow: '0 0 20px rgba(99, 102, 241, 0.15)'
-                    }}>
-                        <Search size={32} />
+                    <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(99, 102, 241, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: 'var(--accent)' }}>
+                        <Search size={28} />
                     </div>
-                    <h3 style={{
-                        fontSize: '20px',
-                        fontWeight: 700,
-                        color: 'var(--text-primary)',
-                        marginBottom: '8px'
-                    }}>
-                        No Open Positions
-                    </h3>
-                    <p style={{
-                        fontSize: '15px',
-                        color: 'var(--text-muted)',
-                        marginBottom: '32px',
-                        maxWidth: '400px',
-                        lineHeight: '1.6'
-                    }}>
-                        Your portfolio is currently empty. Start by adding your first asset using the search bar.
+                    <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>No Open Positions</h3>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '24px', maxWidth: '350px' }}>
+                        Start by adding assets, importing CSV, or adding your BES pension portfolio.
                     </p>
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        <button
-                            onClick={() => {
-                                const input = document.getElementById('global-search-input');
-                                if (input) {
-                                    input.focus();
-                                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                                }
-                            }}
-                            style={{
-                                padding: '12px 28px',
-                                background: 'var(--accent)',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '12px',
-                                fontSize: '15px',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-                                transition: 'all 0.2s',
-                                transform: 'translateY(0)'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = '0 6px 16px rgba(99, 102, 241, 0.4)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)';
-                            }}
-                        >
-                            <Search size={18} /> Search Assets
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+                        <button onClick={() => { const input = document.getElementById('global-search-input'); if (input) { input.focus(); window.scrollTo({ top: 0, behavior: 'smooth' }); } }} style={{ padding: '10px 20px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Search size={16} /> Search Assets
                         </button>
-                        <button
-                            onClick={() => setActivePositionTab('import')}
-                            style={{
-                                padding: '12px 28px',
-                                background: 'var(--bg-secondary)',
-                                color: 'var(--text-primary)',
-                                border: '1px solid var(--border)',
-                                borderRadius: '12px',
-                                fontSize: '15px',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                transition: 'all 0.2s',
-                                transform: 'translateY(0)'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.background = 'var(--bg-hover)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.background = 'var(--bg-secondary)';
-                            }}
-                        >
-                            <Upload size={18} /> Import CSV
+                        <button onClick={() => setActivePositionTab('import')} style={{ padding: '10px 20px', background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Upload size={16} /> Import CSV
                         </button>
                     </div>
                 </div>
             )}
 
-            {activePositionTab === 'open' && assets.length > 0 && (
+            {/* BES Editor - Show when triggered from header button and no assets */}
+            {activePositionTab === 'open' && showBESEditor && !besMetadata && (
+                <div style={{ marginTop: '20px' }}>
+                    <BESInlineEditor
+                        initialData={null}
+                        onSave={handleBESSave}
+                        onCancel={() => setShowBESEditor(false)}
+                    />
+                </div>
+            )}
+
+            {activePositionTab === 'open' && (assets.length > 0 || besMetadata) && (
                 <>
                     {/* Success Notification Toast */}
                     {showSuccessNotification && (
@@ -1195,482 +1427,576 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                         </div>
                     )}
 
-                    <div style={{
-                        background: 'var(--surface)',
-                        borderRadius: '16px',
-                        border: '1px solid var(--border)',
-                        overflow: 'hidden',
-                        boxShadow: 'var(--shadow-md)'
-                    }}>
-                        <DndContext
-                            id={dndId}
-                            sensors={sensors}
-                            collisionDetection={closestCenter}
-                            onDragStart={() => setExpandedAssets(new Set())}
-                            onDragEnd={handleDragEnd}
-                        >
-                            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
-                                <thead>
-                                    <tr style={{ background: 'var(--bg-secondary)', height: sizing.headerHeight }}>
-                                        {/* Drag Handle Header */}
-                                        <th style={{ width: '30px', borderBottom: '1px solid var(--border)' }} />
-                                        {/* Portfolio Icon Header */}
-                                        <th style={{ padding: '0 12px', textAlign: 'center', color: 'var(--text-muted)', width: '60px', borderBottom: '1px solid var(--border)' }}>
-                                            <Wallet size={sizing.iconSize} strokeWidth={2.5} />
-                                        </th>
-                                        {/* Platform Icon Header */}
-                                        <th style={{ padding: '0 12px', textAlign: 'center', color: 'var(--text-muted)', width: '110px', borderBottom: '1px solid var(--border)' }}>
-                                            <Monitor size={sizing.iconSize} strokeWidth={2.5} />
-                                        </th>
-                                        {/* Asset */}
-                                        <th style={{ padding: '0 16px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
-                                            Asset Name
-                                        </th>
-                                        {/* Qty Icon Header */}
-                                        <th style={{ padding: '0 12px', textAlign: 'right', color: 'var(--text-muted)', width: '80px', borderBottom: '1px solid var(--border)' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                                                <Hash size={sizing.iconSize} strokeWidth={2.5} />
-                                            </div>
-                                        </th>
-                                        {/* Price */}
-                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
-                                            <div>Price</div>
-                                            <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost</div>
-                                        </th>
-                                        {/* Total Value Org */}
-                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', minWidth: '100px' }}>
-                                            <div>Value</div>
-                                            <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost</div>
-                                        </th>
-                                        {/* Total Value Global */}
-                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', minWidth: '110px', whiteSpace: 'nowrap' }}>
-                                            <div>Value ({getCurrencySymbol(globalCurrency)})</div>
-                                            <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost ({getCurrencySymbol(globalCurrency)})</div>
-                                        </th>
-                                        {/* Weight */}
-                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
-                                            Weight
-                                        </th>
-                                        {/* P&L */}
-                                        <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', minWidth: '100px', whiteSpace: 'nowrap' }}>
-                                            <div>P&L</div>
-                                            <div style={{ opacity: 0.5, fontWeight: 500 }}>Amt</div>
-                                        </th>
-                                        {/* Delete Action (Batch Mode Only) */}
-                                        <th style={{
-                                            padding: isBatchEditMode ? '0 12px' : '0',
-                                            width: isBatchEditMode ? '60px' : '0px',
-                                            opacity: isBatchEditMode ? 1 : 0,
-                                            transition: 'all 0.3s ease',
-                                            overflow: 'hidden',
-                                            borderBottom: '1px solid var(--border)'
-                                        }} />
-                                        {/* Expand Toggle */}
-                                        <th style={{ width: '30px', borderBottom: '1px solid var(--border)' }} />
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <SortableContext
-                                        items={assets.map(a => a.id)}
-                                        strategy={verticalListSortingStrategy}
-                                    >
-                                        {assets.map((asset, i) => {
-                                            const isLast = i === assets.length - 1;
+                    {/* BES Inline Editor (when adding/editing) */}
+                    {showBESEditor && (
+                        <div style={{ marginBottom: '16px' }}>
+                            <BESInlineEditor
+                                initialData={besMetadata}
+                                onSave={handleBESSave}
+                                onCancel={() => setShowBESEditor(false)}
+                            />
+                        </div>
+                    )}
 
-                                            // Calculations per row for consistent display
-                                            const calculateValues = () => {
-                                                const price = asset.currentPrice || asset.price || asset.previousClose || 0;
-                                                let cost = asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0;
+                    {/* Assets Table (includes BES) */}
+                    {(assets.length > 0 || besMetadata) && !showBESEditor && (
+                        <div style={{
+                            background: 'var(--surface)',
+                            borderRadius: '16px',
+                            border: '1px solid var(--border)',
+                            overflow: 'hidden',
+                            boxShadow: 'var(--shadow-md)'
+                        }}>
+                            <DndContext
+                                id={dndId}
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragStart={() => setExpandedAssets(new Set())}
+                                onDragEnd={handleDragEnd}
+                            >
+                                <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                                    <thead>
+                                        <tr style={{ background: 'var(--bg-secondary)', height: sizing.headerHeight }}>
+                                            {/* Drag Handle Header */}
+                                            <th style={{ width: '30px', borderBottom: '1px solid var(--border)' }} />
+                                            {/* Portfolio Icon Header */}
+                                            <th style={{ padding: '0 12px', textAlign: 'center', color: 'var(--text-muted)', width: '60px', borderBottom: '1px solid var(--border)' }}>
+                                                <Wallet size={sizing.iconSize} strokeWidth={2.5} />
+                                            </th>
+                                            {/* Platform Icon Header */}
+                                            <th style={{ padding: '0 12px', textAlign: 'center', color: 'var(--text-muted)', width: '110px', borderBottom: '1px solid var(--border)' }}>
+                                                <Monitor size={sizing.iconSize} strokeWidth={2.5} />
+                                            </th>
+                                            {/* Asset */}
+                                            <th style={{ padding: '0 16px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                                                Asset Name
+                                            </th>
+                                            {/* Qty Icon Header */}
+                                            <th style={{ padding: '0 12px', textAlign: 'right', color: 'var(--text-muted)', width: '80px', borderBottom: '1px solid var(--border)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                                                    <Hash size={sizing.iconSize} strokeWidth={2.5} />
+                                                </div>
+                                            </th>
+                                            {/* Price */}
+                                            <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                                                <div>Price</div>
+                                                <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost</div>
+                                            </th>
+                                            {/* Total Value Org */}
+                                            <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', minWidth: '100px' }}>
+                                                <div>Value</div>
+                                                <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost</div>
+                                            </th>
+                                            {/* Total Value Global */}
+                                            <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', minWidth: '110px', whiteSpace: 'nowrap' }}>
+                                                <div>Value ({getCurrencySymbol(globalCurrency)})</div>
+                                                <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost ({getCurrencySymbol(globalCurrency)})</div>
+                                            </th>
+                                            {/* Weight */}
+                                            <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                                                Weight
+                                            </th>
+                                            {/* P&L */}
+                                            <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', minWidth: '100px', whiteSpace: 'nowrap' }}>
+                                                <div>P&L</div>
+                                                <div style={{ opacity: 0.5, fontWeight: 500 }}>Amt</div>
+                                            </th>
+                                            {/* Delete Action (Batch Mode Only) */}
+                                            <th style={{
+                                                padding: isBatchEditMode ? '0 12px' : '0',
+                                                width: isBatchEditMode ? '60px' : '0px',
+                                                opacity: isBatchEditMode ? 1 : 0,
+                                                transition: 'all 0.3s ease',
+                                                overflow: 'hidden',
+                                                borderBottom: '1px solid var(--border)'
+                                            }} />
+                                            {/* Expand Toggle */}
+                                            <th style={{ width: '30px', borderBottom: '1px solid var(--border)' }} />
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <SortableContext
+                                            items={displayAssets.map(a => a.id)}
+                                            strategy={verticalListSortingStrategy}
+                                        >
+                                            {displayAssets.map((asset, i) => {
+                                                const isLast = i === displayAssets.length - 1;
 
-                                                // OVERRIDE: Use transaction history average cost if available
-                                                // This ensures the main row matches the transaction grid logic
-                                                if (asset.transactions && asset.transactions.length > 0) {
-                                                    const sorted = [...asset.transactions].sort((a: any, b: any) => new Date(a.date).getTime() - b.date.getTime());
-                                                    let rQty = 0;
-                                                    let tCost = 0;
-                                                    for (const tx of sorted) {
-                                                        const q = Number(tx.quantity);
-                                                        const p = Number(tx.price);
-                                                        if (tx.type === 'BUY') {
-                                                            rQty += q;
-                                                            tCost += (q * p);
-                                                        } else if (tx.type === 'SELL') {
-                                                            const ratio = rQty > 0 ? q / rQty : 0;
-                                                            tCost = tCost * (1 - ratio);
-                                                            rQty -= q;
+                                                // Calculations per row for consistent display
+                                                const calculateValues = () => {
+                                                    const price = asset.currentPrice || asset.price || asset.previousClose || 0;
+                                                    let cost = asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0;
+
+                                                    // OVERRIDE: Use transaction history average cost if available
+                                                    // This ensures the main row matches the transaction grid logic
+                                                    if (asset.transactions && asset.transactions.length > 0) {
+                                                        const sorted = [...asset.transactions].sort((a: any, b: any) => new Date(a.date).getTime() - b.date.getTime());
+                                                        let rQty = 0;
+                                                        let tCost = 0;
+                                                        for (const tx of sorted) {
+                                                            const q = Number(tx.quantity);
+                                                            const p = Number(tx.price);
+                                                            if (tx.type === 'BUY') {
+                                                                rQty += q;
+                                                                tCost += (q * p);
+                                                            } else if (tx.type === 'SELL') {
+                                                                const ratio = rQty > 0 ? q / rQty : 0;
+                                                                tCost = tCost * (1 - ratio);
+                                                                rQty -= q;
+                                                            }
+                                                        }
+                                                        // If we have a remaining position, use the calculated WAC
+                                                        if (rQty > 0.000001) {
+                                                            cost = tCost / rQty;
                                                         }
                                                     }
-                                                    // If we have a remaining position, use the calculated WAC
-                                                    if (rQty > 0.000001) {
-                                                        cost = tCost / rQty;
+                                                    const quantity = asset.quantity || 0;
+                                                    const value = price * quantity;
+                                                    const costValue = cost * quantity;
+
+                                                    const currency = asset.currency || 'EUR';
+
+                                                    // Calculate values in EUR first (Base)
+                                                    let rateToEur = 1;
+                                                    if (currency !== 'EUR') {
+                                                        if (exchangeRates && exchangeRates[currency]) {
+                                                            rateToEur = exchangeRates[currency];
+                                                        }
                                                     }
-                                                }
-                                                const quantity = asset.quantity || 0;
-                                                const value = price * quantity;
-                                                const costValue = cost * quantity;
+                                                    const valueEur = value / rateToEur;
+                                                    const costEur = costValue / rateToEur;
 
-                                                const currency = asset.currency || 'EUR';
-
-                                                // Calculate values in EUR first (Base)
-                                                let rateToEur = 1;
-                                                if (currency !== 'EUR') {
-                                                    if (exchangeRates && exchangeRates[currency]) {
-                                                        rateToEur = exchangeRates[currency];
+                                                    // Convert to Global Currency (e.g. USD) if needed
+                                                    let globalRate = 1;
+                                                    if (globalCurrency !== 'EUR') {
+                                                        if (exchangeRates && exchangeRates[globalCurrency]) {
+                                                            globalRate = exchangeRates[globalCurrency];
+                                                        }
                                                     }
-                                                }
-                                                const valueEur = value / rateToEur;
-                                                const costEur = costValue / rateToEur;
 
-                                                // Convert to Global Currency (e.g. USD) if needed
-                                                let globalRate = 1;
-                                                if (globalCurrency !== 'EUR') {
-                                                    if (exchangeRates && exchangeRates[globalCurrency]) {
-                                                        globalRate = exchangeRates[globalCurrency];
-                                                    }
-                                                }
+                                                    const valueGlobal = valueEur * globalRate;
+                                                    const costGlobal = costEur * globalRate;
+                                                    const plAmount = valueGlobal - costGlobal;
+                                                    const weight = totalPortfolioValue > 0 ? (valueEur / totalPortfolioValue) * 100 : 0;
 
-                                                const valueGlobal = valueEur * globalRate;
-                                                const costGlobal = costEur * globalRate;
-                                                const plAmount = valueGlobal - costGlobal;
-                                                const weight = totalPortfolioValue > 0 ? (valueEur / totalPortfolioValue) * 100 : 0;
+                                                    return { value, costValue, valueGlobal, costGlobal, plAmount, weight, currency, price, cost };
+                                                };
 
-                                                return { value, costValue, valueGlobal, costGlobal, plAmount, weight, currency, price, cost };
-                                            };
+                                                const { value, costValue, valueGlobal, costGlobal, plAmount, weight, currency, price, cost } = calculateValues();
 
-                                            const { value, costValue, valueGlobal, costGlobal, plAmount, weight, currency, price, cost } = calculateValues();
+                                                // BES-specific values
+                                                const isBES = asset.type === 'BES';
+                                                const besMeta = isBES ? asset.metadata as BESMetadata : null;
+                                                const besKP = besMeta?.contracts?.reduce((s: number, c: any) => s + (c.katkiPayi || 0), 0) || 0;
+                                                const besDK = besMeta?.contracts?.reduce((s: number, c: any) => s + (c.devletKatkisi || 0), 0) || 0;
+                                                const besTotal = besKP + besDK;
+                                                const tryToEur = exchangeRates?.['TRY'] || 1;
+                                                const besTotalEur = besTotal / tryToEur;
+                                                const besGlobalRate = (globalCurrency !== 'EUR' && exchangeRates?.[globalCurrency]) ? exchangeRates[globalCurrency] : 1;
+                                                const besTotalGlobal = besTotalEur * besGlobalRate;
+                                                const besWeight = totalPortfolioValue > 0 ? (besTotalEur / totalPortfolioValue) * 100 : 0;
 
-                                            return (
-                                                <React.Fragment key={asset.id}>
-                                                    <SortableRow
-                                                        key={asset.id}
-                                                        id={asset.id}
-                                                        isBatchEditMode={isBatchEditMode}
-                                                    >
-                                                        {/* Portfolio Pill */}
-                                                        <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-                                                            {isBatchEditMode ? (
-                                                                <input
-                                                                    type="text"
-                                                                    value={getCurrentValue(asset.id, 'portfolio', asset.customGroup || 'Main')}
-                                                                    onChange={(e) => {
-                                                                        setEditedAssets(prev => ({
-                                                                            ...prev,
-                                                                            [asset.id]: { ...prev[asset.id], portfolio: e.target.value }
-                                                                        }));
-                                                                    }}
-                                                                    style={{
-                                                                        width: '100%',
-                                                                        padding: sizing.inputPadding,
-                                                                        borderRadius: '6px',
-                                                                        background: 'var(--bg-primary)',
-                                                                        border: '1px solid var(--accent)',
-                                                                        fontSize: sizing.pillFontSize,
-                                                                        fontWeight: 700,
-                                                                        color: 'var(--text-primary)',
-                                                                        textAlign: 'center'
-                                                                    }}
-                                                                />
-                                                            ) : (
-                                                                (() => {
-                                                                    const name = (asset.customGroup || 'Main').toUpperCase();
-                                                                    const style = getPortfolioStyle(name);
-                                                                    return (
-                                                                        <div style={{
-                                                                            display: 'inline-flex', padding: sizing.pillPadding,
+                                                return (
+                                                    <React.Fragment key={asset.id}>
+                                                        <SortableRow
+                                                            key={asset.id}
+                                                            id={asset.id}
+                                                            isBatchEditMode={isBatchEditMode}
+                                                        >
+                                                            {/* Portfolio Pill */}
+                                                            <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                {isBatchEditMode ? (
+                                                                    <input
+                                                                        type="text"
+                                                                        value={getCurrentValue(asset.id, 'portfolio', asset.customGroup || 'Main')}
+                                                                        onChange={(e) => {
+                                                                            setEditedAssets(prev => ({
+                                                                                ...prev,
+                                                                                [asset.id]: { ...prev[asset.id], portfolio: e.target.value }
+                                                                            }));
+                                                                        }}
+                                                                        style={{
+                                                                            width: '100%',
+                                                                            padding: sizing.inputPadding,
                                                                             borderRadius: '6px',
-                                                                            background: style.bg,
-                                                                            border: `1px solid ${style.border}`,
-                                                                            fontSize: sizing.pillFontSize, fontWeight: 700,
-                                                                            color: style.text,
-                                                                            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                                                                            whiteSpace: 'nowrap',
-                                                                            textTransform: 'uppercase',
-                                                                            fontFamily: 'var(--font-mono)'
-                                                                        }}>
-                                                                            {name}
-                                                                        </div>
-                                                                    );
-                                                                })()
-                                                            )}
-                                                        </td>
-                                                        {/* Platform Pill */}
-                                                        <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-                                                            {isBatchEditMode ? (
-                                                                <input
-                                                                    type="text"
-                                                                    value={getCurrentValue(asset.id, 'platform', asset.platform || 'Interactive Brokers')}
-                                                                    onChange={(e) => {
-                                                                        setEditedAssets(prev => ({
-                                                                            ...prev,
-                                                                            [asset.id]: { ...prev[asset.id], platform: e.target.value }
-                                                                        }));
-                                                                    }}
-                                                                    style={{
-                                                                        width: '100%',
-                                                                        padding: sizing.inputPadding,
+                                                                            background: 'var(--bg-primary)',
+                                                                            border: '1px solid var(--accent)',
+                                                                            fontSize: sizing.pillFontSize,
+                                                                            fontWeight: 700,
+                                                                            color: 'var(--text-primary)',
+                                                                            textAlign: 'center'
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    (() => {
+                                                                        const name = (asset.customGroup || 'Main').toUpperCase();
+                                                                        const style = getPortfolioStyle(name);
+                                                                        return (
+                                                                            <div style={{
+                                                                                display: 'inline-flex', padding: sizing.pillPadding,
+                                                                                borderRadius: '6px',
+                                                                                background: style.bg,
+                                                                                border: `1px solid ${style.border}`,
+                                                                                fontSize: sizing.pillFontSize, fontWeight: 700,
+                                                                                color: style.text,
+                                                                                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                                                                                whiteSpace: 'nowrap',
+                                                                                textTransform: 'uppercase',
+                                                                                fontFamily: 'var(--font-mono)'
+                                                                            }}>
+                                                                                {name}
+                                                                            </div>
+                                                                        );
+                                                                    })()
+                                                                )}
+                                                            </td>
+                                                            {/* Platform Pill */}
+                                                            <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                {isBatchEditMode ? (
+                                                                    <input
+                                                                        type="text"
+                                                                        value={getCurrentValue(asset.id, 'platform', asset.platform || 'Interactive Brokers')}
+                                                                        onChange={(e) => {
+                                                                            setEditedAssets(prev => ({
+                                                                                ...prev,
+                                                                                [asset.id]: { ...prev[asset.id], platform: e.target.value }
+                                                                            }));
+                                                                        }}
+                                                                        style={{
+                                                                            width: '100%',
+                                                                            padding: sizing.inputPadding,
+                                                                            borderRadius: '6px',
+                                                                            background: 'var(--bg-primary)',
+                                                                            border: '1px solid var(--accent)',
+                                                                            fontSize: sizing.pillFontSize,
+                                                                            fontWeight: 700,
+                                                                            color: 'var(--text-primary)',
+                                                                            textAlign: 'center'
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    <div style={{
+                                                                        display: 'inline-flex', padding: sizing.pillPadding,
                                                                         borderRadius: '6px',
                                                                         background: 'var(--bg-primary)',
-                                                                        border: '1px solid var(--accent)',
-                                                                        fontSize: sizing.pillFontSize,
-                                                                        fontWeight: 700,
-                                                                        color: 'var(--text-primary)',
-                                                                        textAlign: 'center'
-                                                                    }}
-                                                                />
-                                                            ) : (
-                                                                <div style={{
-                                                                    display: 'inline-flex', padding: sizing.pillPadding,
-                                                                    borderRadius: '6px',
-                                                                    background: 'var(--bg-primary)',
-                                                                    border: '1px solid var(--border)',
-                                                                    fontSize: sizing.pillFontSize, fontWeight: 700,
-                                                                    color: 'var(--text-secondary)',
-                                                                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                                                                }}>
-                                                                    {asset.platform || 'Interactive Brokers'}
+                                                                        border: '1px solid var(--border)',
+                                                                        fontSize: sizing.pillFontSize, fontWeight: 700,
+                                                                        color: 'var(--text-secondary)',
+                                                                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                                                                    }}>
+                                                                        {asset.platform || 'Interactive Brokers'}
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                            {/* Asset (Logo + Name) */}
+                                                            <td style={{ padding: `${sizing.rowPadding} ${sizing.rowPaddingLR}`, verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                                    {isBES ? (
+                                                                        <div style={{
+                                                                            width: `${sizing.logoSize}px`, height: `${sizing.logoSize}px`,
+                                                                            borderRadius: '12px',
+                                                                            background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+                                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                            color: 'white', fontWeight: 700, fontSize: '10px',
+                                                                            flexShrink: 0, cursor: 'pointer',
+                                                                            boxShadow: '0 2px 8px rgba(139, 92, 246, 0.3)'
+                                                                        }}
+                                                                            onClick={() => toggleExpand(asset.id)}
+                                                                        >
+                                                                            BES
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div style={{
+                                                                            width: `${sizing.logoSize}px`, height: `${sizing.logoSize}px`,
+                                                                            borderRadius: '50%', overflow: 'hidden',
+                                                                            background: '#fff',
+                                                                            border: '1px solid var(--border)',
+                                                                            flexShrink: 0,
+                                                                            padding: '2px',
+                                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+                                                                            cursor: 'default'
+                                                                        }}>
+                                                                            <img
+                                                                                src={getLogoUrl(asset.symbol, asset.type || 'STOCK', asset.exchange, asset.country) || undefined}
+                                                                                alt={asset.symbol}
+                                                                                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
+                                                                                onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random` }}
+                                                                            />
+                                                                        </div>
+                                                                    )}
+                                                                    <div style={{ flex: 1 }}>
+                                                                        {isBatchEditMode ? (
+                                                                            <>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={getCurrentValue(asset.id, 'name', asset.name || asset.symbol)}
+                                                                                    onChange={(e) => {
+                                                                                        setEditedAssets(prev => ({
+                                                                                            ...prev,
+                                                                                            [asset.id]: { ...prev[asset.id], name: e.target.value }
+                                                                                        }));
+                                                                                    }}
+                                                                                    style={{
+                                                                                        width: '100%',
+                                                                                        padding: '2px 4px',
+                                                                                        marginBottom: '2px',
+                                                                                        borderRadius: '4px',
+                                                                                        background: 'var(--bg-primary)',
+                                                                                        border: '1px solid var(--accent)',
+                                                                                        fontSize: '14px',
+                                                                                        fontWeight: 700,
+                                                                                        color: 'var(--text-primary)'
+                                                                                    }}
+                                                                                />
+                                                                                <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500, marginTop: '2px' }}>{asset.symbol}</div>
+                                                                            </>
+                                                                        ) : (
+                                                                            <div
+                                                                                style={{ cursor: isBES ? 'pointer' : 'default' }}
+                                                                                onClick={() => {
+                                                                                    if (isBES) {
+                                                                                        setShowBESEditor(true);
+                                                                                    }
+                                                                                }}
+                                                                            >
+                                                                                <div style={{ fontSize: sizing.assetNameSize, fontWeight: 700, color: isBES ? 'var(--accent)' : 'var(--text-primary)' }}>{asset.name || asset.symbol}</div>
+                                                                                <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500 }}>{isBES ? `${besMeta?.contracts?.length || 0} kontrat` : asset.symbol}</div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                            )}
-                                                        </td>
-                                                        {/* Asset (Logo + Name) */}
-                                                        <td style={{ padding: `${sizing.rowPadding} ${sizing.rowPaddingLR}`, verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                                <div style={{
-                                                                    width: `${sizing.logoSize}px`, height: `${sizing.logoSize}px`,
-                                                                    borderRadius: '50%', overflow: 'hidden',
-                                                                    background: '#fff',
-                                                                    border: '1px solid var(--border)',
-                                                                    flexShrink: 0,
-                                                                    padding: '2px',
-                                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
-                                                                }}>
-                                                                    <img
-                                                                        src={getLogoUrl(asset.symbol, asset.type || 'STOCK', asset.exchange, asset.country) || undefined}
-                                                                        alt={asset.symbol}
-                                                                        style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
-                                                                        onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random` }}
+                                                            </td>
+                                                            {/* Quantity */}
+                                                            <td style={{ padding: `${sizing.rowPaddingLR} 12px`, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                {isBES ? (
+                                                                    <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-muted)' }}>-</div>
+                                                                ) : isBatchEditMode ? (
+                                                                    <input
+                                                                        type="number"
+                                                                        value={getCurrentValue(asset.id, 'quantity', asset.quantity)}
+                                                                        onChange={(e) => {
+                                                                            setEditedAssets(prev => ({
+                                                                                ...prev,
+                                                                                [asset.id]: { ...prev[asset.id], quantity: parseFloat(e.target.value) || 0 }
+                                                                            }));
+                                                                        }}
+                                                                        style={{
+                                                                            width: '100%',
+                                                                            padding: '4px 8px',
+                                                                            borderRadius: '6px',
+                                                                            background: 'var(--bg-primary)',
+                                                                            border: '1px solid var(--accent)',
+                                                                            fontSize: '14px',
+                                                                            fontWeight: 700,
+                                                                            color: 'var(--text-primary)',
+                                                                            textAlign: 'right'
+                                                                        }}
                                                                     />
-                                                                </div>
-                                                                <div style={{ flex: 1 }}>
-                                                                    {isBatchEditMode ? (
-                                                                        <>
+                                                                ) : (
+                                                                    <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                        {formatNumber(asset.quantity, asset.quantity % 1 === 0 ? 0 : 2)}
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                            {/* Price / Cost */}
+                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                {isBES ? (
+                                                                    <>
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-muted)' }}>-</div>
+                                                                        <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px' }}>-</div>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                            {getCurrencySymbol(currency)}{formatNumber(price)}
+                                                                        </div>
+                                                                        {isBatchEditMode ? (
                                                                             <input
-                                                                                type="text"
-                                                                                value={getCurrentValue(asset.id, 'name', asset.name || asset.symbol)}
+                                                                                type="number"
+                                                                                step="0.01"
+                                                                                value={getCurrentValue(asset.id, 'averageBuyPrice', cost)}
                                                                                 onChange={(e) => {
                                                                                     setEditedAssets(prev => ({
                                                                                         ...prev,
-                                                                                        [asset.id]: { ...prev[asset.id], name: e.target.value }
+                                                                                        [asset.id]: { ...prev[asset.id], averageBuyPrice: parseFloat(e.target.value) || 0 }
                                                                                     }));
                                                                                 }}
                                                                                 style={{
                                                                                     width: '100%',
                                                                                     padding: '2px 4px',
-                                                                                    marginBottom: '2px',
+                                                                                    marginTop: '2px',
                                                                                     borderRadius: '4px',
                                                                                     background: 'var(--bg-primary)',
                                                                                     border: '1px solid var(--accent)',
-                                                                                    fontSize: '14px',
-                                                                                    fontWeight: 700,
-                                                                                    color: 'var(--text-primary)'
+                                                                                    fontSize: '12px',
+                                                                                    fontWeight: 500,
+                                                                                    color: 'var(--text-primary)',
+                                                                                    textAlign: 'right'
                                                                                 }}
                                                                             />
-                                                                            <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500, marginTop: '2px' }}>{asset.symbol}</div>
-                                                                        </>
-                                                                    ) : (
-                                                                        <>
-                                                                            <div style={{ fontSize: sizing.assetNameSize, fontWeight: 700, color: 'var(--text-primary)' }}>{asset.name || asset.symbol}</div>
-                                                                            <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500 }}>{asset.symbol}</div>
-                                                                        </>
-                                                                    )}
+                                                                        ) : (
+                                                                            <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                                                                                {getCurrencySymbol(currency)}{formatNumber(cost)}
+                                                                            </div>
+                                                                        )}
+                                                                    </>
+                                                                )}
+                                                            </td>
+                                                            {/* Value / Cost (Local) */}
+                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                {isBES ? (
+                                                                    <>
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-muted)' }}>-</div>
+                                                                        <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px' }}>-</div>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                            {currency !== globalCurrency && value > 0 ? `${getCurrencySymbol(currency)}${formatNumber(value, 0)}` : '-'}
+                                                                        </div>
+                                                                        <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                                                                            {currency !== globalCurrency && costValue > 0 ? `${getCurrencySymbol(currency)}${formatNumber(costValue, 0)}` : '-'}
+                                                                        </div>
+                                                                    </>
+                                                                )}
+                                                            </td>
+                                                            {/* Value / Cost (Global) */}
+                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                {isBES ? (
+                                                                    <>
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                            {getCurrencySymbol(globalCurrency)}{formatNumber(besTotalGlobal, 0)}
+                                                                        </div>
+                                                                        <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500 }}>-</div>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                            {valueGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(valueGlobal, 0)}` : '-'}
+                                                                        </div>
+                                                                        <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                                                                            {costGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(costGlobal, 0)}` : '-'}
+                                                                        </div>
+                                                                    </>
+                                                                )}
+                                                            </td>
+                                                            {/* Weight */}
+                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                    {isBES ? `${Math.round(besWeight)}%` : `${Math.round(weight)}%`}
                                                                 </div>
-                                                            </div>
-                                                        </td>
-                                                        {/* Quantity */}
-                                                        <td style={{ padding: `${sizing.rowPaddingLR} 12px`, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-                                                            {isBatchEditMode ? (
-                                                                <input
-                                                                    type="number"
-                                                                    value={getCurrentValue(asset.id, 'quantity', asset.quantity)}
-                                                                    onChange={(e) => {
-                                                                        setEditedAssets(prev => ({
-                                                                            ...prev,
-                                                                            [asset.id]: { ...prev[asset.id], quantity: parseFloat(e.target.value) || 0 }
-                                                                        }));
-                                                                    }}
-                                                                    style={{
-                                                                        width: '100%',
-                                                                        padding: '4px 8px',
-                                                                        borderRadius: '6px',
-                                                                        background: 'var(--bg-primary)',
-                                                                        border: '1px solid var(--accent)',
-                                                                        fontSize: '14px',
-                                                                        fontWeight: 700,
-                                                                        color: 'var(--text-primary)',
-                                                                        textAlign: 'right'
-                                                                    }}
-                                                                />
-                                                            ) : (
-                                                                <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                                    {formatNumber(asset.quantity, asset.quantity % 1 === 0 ? 0 : 2)}
-                                                                </div>
-                                                            )}
-                                                        </td>
-                                                        {/* Price / Cost */}
-                                                        <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-                                                            <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                                {getCurrencySymbol(currency)}{formatNumber(price)}
-                                                            </div>
-                                                            {isBatchEditMode ? (
-                                                                <input
-                                                                    type="number"
-                                                                    step="0.01"
-                                                                    value={getCurrentValue(asset.id, 'averageBuyPrice', cost)}
-                                                                    onChange={(e) => {
-                                                                        setEditedAssets(prev => ({
-                                                                            ...prev,
-                                                                            [asset.id]: { ...prev[asset.id], averageBuyPrice: parseFloat(e.target.value) || 0 }
-                                                                        }));
-                                                                    }}
-                                                                    style={{
-                                                                        width: '100%',
-                                                                        padding: '2px 4px',
-                                                                        marginTop: '2px',
-                                                                        borderRadius: '4px',
-                                                                        background: 'var(--bg-primary)',
-                                                                        border: '1px solid var(--accent)',
-                                                                        fontSize: '12px',
-                                                                        fontWeight: 500,
-                                                                        color: 'var(--text-primary)',
-                                                                        textAlign: 'right'
-                                                                    }}
-                                                                />
-                                                            ) : (
-                                                                <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
-                                                                    {getCurrencySymbol(currency)}{formatNumber(cost)}
-                                                                </div>
-                                                            )}
-                                                        </td>
-                                                        {/* Value / Cost (Local) */}
-                                                        <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-                                                            <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                                {currency !== globalCurrency && value > 0 ? `${getCurrencySymbol(currency)}${formatNumber(value, 0)}` : '-'}
-                                                            </div>
-                                                            <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
-                                                                {currency !== globalCurrency && costValue > 0 ? `${getCurrencySymbol(currency)}${formatNumber(costValue, 0)}` : '-'}
-                                                            </div>
-                                                        </td>
-                                                        {/* Value / Cost (Global) */}
-                                                        <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-                                                            <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                                {valueGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(valueGlobal, 0)}` : '-'}
-                                                            </div>
-                                                            <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
-                                                                {costGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(costGlobal, 0)}` : '-'}
-                                                            </div>
-                                                        </td>
-                                                        {/* Weight */}
-                                                        <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-                                                            <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
-                                                                {Math.round(weight)}%
-                                                            </div>
-                                                        </td>
-                                                        {/* P&L */}
-                                                        <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-                                                            <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: (asset.plPercentage || 0) >= 0 ? '#34d399' : '#f87171', fontVariantNumeric: 'tabular-nums' }}>
-                                                                {(asset.plPercentage || 0) >= 0 ? '+' : ''}{Math.round(asset.plPercentage || 0)}%
-                                                            </div>
-                                                            <div style={{ fontSize: sizing.smallNumberSize, color: plAmount >= 0 ? '#34d399' : '#f87171', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                                                                {plAmount >= 0 ? '+' : ''}{getCurrencySymbol(globalCurrency)}{formatNumber(plAmount, 0)}
-                                                            </div>
-                                                        </td>
-                                                        {/* Delete Action Button */}
-                                                        <td style={{
-                                                            padding: isBatchEditMode ? sizing.rowPadding : 0,
-                                                            width: isBatchEditMode ? '60px' : '0px',
-                                                            maxWidth: isBatchEditMode ? '60px' : '0px',
-                                                            opacity: isBatchEditMode ? 1 : 0,
-                                                            textAlign: 'center',
-                                                            verticalAlign: 'middle',
-                                                            borderBottom: isLast ? 'none' : '1px solid var(--border)',
-                                                            transition: 'all 0.3s ease',
-                                                            overflow: 'hidden',
-                                                            visibility: isBatchEditMode ? 'visible' : 'hidden'
-                                                        }}>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDelete(asset.id);
-                                                                }}
-                                                                style={{
-                                                                    background: 'var(--bg-secondary)',
-                                                                    border: '1px solid var(--border)',
-                                                                    borderRadius: '8px',
-                                                                    width: '32px', height: '32px',
-                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                    cursor: 'pointer',
-                                                                    color: '#ef4444',
-                                                                    transition: 'all 0.2s',
-                                                                    opacity: isBatchEditMode ? 1 : 0,
-                                                                    transform: isBatchEditMode ? 'scale(1)' : 'scale(0.8)'
-                                                                }}
-                                                                onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.background = '#fee2e2';
-                                                                    e.currentTarget.style.borderColor = '#ef4444';
-                                                                }}
-                                                                onMouseLeave={(e) => {
-                                                                    e.currentTarget.style.background = 'var(--bg-secondary)';
-                                                                    e.currentTarget.style.borderColor = 'var(--border)';
-                                                                }}
-                                                                title="Delete Position"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </td>
-                                                        <td
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                toggleExpand(asset.id);
-                                                            }}
-                                                            style={{
-                                                                padding: 0,
-                                                                width: '30px',
+                                                            </td>
+                                                            {/* P&L */}
+                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                {isBES ? (
+                                                                    <>
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-muted)' }}>-</div>
+                                                                        <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px' }}>-</div>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: (asset.plPercentage || 0) >= 0 ? '#34d399' : '#f87171', fontVariantNumeric: 'tabular-nums' }}>
+                                                                            {(asset.plPercentage || 0) >= 0 ? '+' : ''}{Math.round(asset.plPercentage || 0)}%
+                                                                        </div>
+                                                                        <div style={{ fontSize: sizing.smallNumberSize, color: plAmount >= 0 ? '#34d399' : '#f87171', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                                                            {plAmount >= 0 ? '+' : ''}{getCurrencySymbol(globalCurrency)}{formatNumber(plAmount, 0)}
+                                                                        </div>
+                                                                    </>
+                                                                )}
+                                                            </td>
+                                                            {/* Delete Action Button */}
+                                                            <td style={{
+                                                                padding: isBatchEditMode ? sizing.rowPadding : 0,
+                                                                width: isBatchEditMode ? '60px' : '0px',
+                                                                maxWidth: isBatchEditMode ? '60px' : '0px',
+                                                                opacity: isBatchEditMode ? 1 : 0,
                                                                 textAlign: 'center',
                                                                 verticalAlign: 'middle',
-                                                                borderBottom: isLast && !expandedAssets.has(asset.id) ? 'none' : '1px solid var(--border)',
-                                                                cursor: 'pointer',
-                                                                color: 'var(--text-secondary)'
-                                                            }}
-                                                        >
-                                                            {expandedAssets.has(asset.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                        </td>
-                                                    </SortableRow>
+                                                                borderBottom: isLast ? 'none' : '1px solid var(--border)',
+                                                                transition: 'all 0.3s ease',
+                                                                overflow: 'hidden',
+                                                                visibility: isBatchEditMode ? 'visible' : 'hidden'
+                                                            }}>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDelete(asset.id);
+                                                                    }}
+                                                                    style={{
+                                                                        background: 'var(--bg-secondary)',
+                                                                        border: '1px solid var(--border)',
+                                                                        borderRadius: '8px',
+                                                                        width: '32px', height: '32px',
+                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                        cursor: 'pointer',
+                                                                        color: '#ef4444',
+                                                                        transition: 'all 0.2s',
+                                                                        opacity: isBatchEditMode ? 1 : 0,
+                                                                        transform: isBatchEditMode ? 'scale(1)' : 'scale(0.8)'
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        e.currentTarget.style.background = '#fee2e2';
+                                                                        e.currentTarget.style.borderColor = '#ef4444';
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        e.currentTarget.style.background = 'var(--bg-secondary)';
+                                                                        e.currentTarget.style.borderColor = 'var(--border)';
+                                                                    }}
+                                                                    title="Delete Position"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </td>
+                                                            <td
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    toggleExpand(asset.id);
+                                                                }}
+                                                                style={{
+                                                                    padding: 0,
+                                                                    width: '30px',
+                                                                    textAlign: 'center',
+                                                                    verticalAlign: 'middle',
+                                                                    borderBottom: isLast && !expandedAssets.has(asset.id) ? 'none' : '1px solid var(--border)',
+                                                                    cursor: 'pointer',
+                                                                    color: 'var(--text-secondary)'
+                                                                }}
+                                                            >
+                                                                {expandedAssets.has(asset.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                            </td>
+                                                        </SortableRow>
 
-                                                    {
-                                                        expandedAssets.has(asset.id) && (
-                                                            <tr style={{ background: 'var(--bg-secondary)' }}>
-                                                                <td colSpan={100} style={{ padding: '0 0.8rem 0.8rem 0.8rem', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-                                                                    <div style={{ marginTop: '0.8rem' }}>
-                                                                        <TransactionHistory
-                                                                            symbol={asset.symbol}
-                                                                            transactions={asset.transactions || []}
-                                                                            onUpdate={onCountChange}
-                                                                            isBatchEditMode={isBatchEditMode}
-                                                                            isOwner={isOwner}
-                                                                            defaultCurrency={asset.currency}
-                                                                        />
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        )
-                                                    }
-                                                </React.Fragment>
-                                            );
-                                        })}
-                                    </SortableContext>
-                                </tbody>
-                            </table>
-                        </DndContext>
-                    </div >
+                                                        {
+                                                            expandedAssets.has(asset.id) && (
+                                                                <tr style={{ background: 'var(--bg-secondary)' }}>
+                                                                    <td colSpan={100} style={{ padding: '0 0.8rem 0.8rem 0.8rem', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                        <div style={{ marginTop: '0.8rem' }}>
+                                                                            {isBES && besMeta ? (
+                                                                                <BESExpandedDetails besMeta={besMeta} besKP={besKP} besDK={besDK} />
+                                                                            ) : (
+                                                                                <TransactionHistory
+                                                                                    symbol={asset.symbol}
+                                                                                    transactions={asset.transactions || []}
+                                                                                    onUpdate={onCountChange}
+                                                                                    isBatchEditMode={isBatchEditMode}
+                                                                                    isOwner={isOwner}
+                                                                                    defaultCurrency={asset.currency}
+                                                                                />
+                                                                            )}
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            )
+                                                        }
+                                                    </React.Fragment>
+                                                );
+                                            })}
+                                        </SortableContext>
+                                    </tbody>
+                                </table>
+                            </DndContext>
+                        </div >
+                    )}
                 </>
             )
             }

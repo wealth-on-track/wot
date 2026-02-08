@@ -80,7 +80,8 @@ export type ActivityAction =
     | 'CREATE' | 'UPDATE' | 'DELETE' | 'VIEW'
     | 'QUERY' | 'SELECT'
     | 'NAVIGATE'
-    | 'PRICE_UPDATE' | 'SYNC' | 'EXPORT' | 'LOGO_FETCH';
+    | 'PRICE_UPDATE' | 'SYNC' | 'EXPORT' | 'LOGO_FETCH'
+    | 'BES_UPDATE';
 
 export interface ActivityDetails {
     userId?: string;

@@ -18,4 +18,5 @@ export interface AssetDisplay {
     customGroup?: string | null;
     logoUrl?: string | null;
     updatedAt?: Date | string;
+    metadata?: any;  // For BES and other special asset types
 }

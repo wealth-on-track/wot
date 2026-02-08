@@ -68,14 +68,22 @@ export async function register(prevState: any, formData: FormData) {
         const username = await generateUniqueUsername(email);
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        const now = new Date();
+        // @ts-ignore - Prisma Client type mismatch workaround
         const newUser = await prisma.user.create({
             data: {
+                id: crypto.randomUUID(), // Explicit ID workaround
                 username,
                 email,
                 password: hashedPassword,
-                portfolio: {
+                createdAt: now,
+                updatedAt: now,
+                Portfolio: { // Capitalized Relation workaround
                     create: {
+                        id: crypto.randomUUID(),
                         isPublic: true,
+                        createdAt: now,
+                        updatedAt: now,
                     },
                 },
             },
@@ -192,14 +200,14 @@ export async function addAsset(prevState: string | undefined, formData: FormData
     try {
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            include: { portfolio: true },
+            include: { Portfolio: true },
         });
 
-        if (!user || !user.portfolio) return "Portfolio not found";
+        if (!user || !user.Portfolio) return "Portfolio not found";
 
         // Get minimum sortOrder to place new asset at the top
         const minSortOrder = await prisma.asset.findFirst({
-            where: { portfolioId: user.portfolio.id },
+            where: { portfolioId: user.Portfolio.id },
             orderBy: { sortOrder: 'asc' },
             select: { sortOrder: true }
         });
@@ -212,7 +220,7 @@ export async function addAsset(prevState: string | undefined, formData: FormData
 
         const newAsset = await prisma.asset.create({
             data: {
-                portfolioId: user.portfolio.id,
+                portfolioId: user.Portfolio.id,
                 symbol,
                 category,  // NEW: 8-category system
                 type,      // Legacy field for backward compatibility
@@ -263,13 +271,13 @@ export async function deleteAsset(assetId: string) {
         // Verify ownership
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
-        if (!user?.portfolio) return { error: "Portfolio not found" };
+        if (!user?.Portfolio) return { error: "Portfolio not found" };
 
         const asset = await prisma.asset.findUnique({ where: { id: assetId } });
-        if (!asset || asset.portfolioId !== user.portfolio.id) {
+        if (!asset || asset.portfolioId !== user.Portfolio.id) {
             return { error: "Unauthorized" };
         }
 
@@ -306,9 +314,9 @@ export async function getOpenPositions() {
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
             include: {
-                portfolio: {
+                Portfolio: {
                     include: {
-                        assets: {
+                        Asset: {
                             orderBy: { sortOrder: 'asc' }
                         }
                     }
@@ -316,15 +324,15 @@ export async function getOpenPositions() {
             }
         });
 
-        if (!user?.portfolio) return [];
+        if (!user?.Portfolio) return [];
 
         // Process assets through getPortfolioMetrics to get current prices and values
         const { getPortfolioMetrics } = await import('@/lib/portfolio');
-        const { assetsWithValues } = await getPortfolioMetrics(user.portfolio.assets, undefined, false, user.id);
+        const { assetsWithValues } = await getPortfolioMetrics(user.Portfolio.Asset, undefined, false, user.id);
 
         // Fetch transactions separately
         const transactions = await prisma.assetTransaction.findMany({
-            where: { portfolioId: user.portfolio.id },
+            where: { portfolioId: user.Portfolio.id },
             orderBy: { date: 'desc' }
         });
 
@@ -380,13 +388,13 @@ export async function updateAsset(assetId: string, data: { quantity: number; buy
     try {
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
-        if (!user?.portfolio) return { error: "Portfolio not found" };
+        if (!user?.Portfolio) return { error: "Portfolio not found" };
 
         const asset = await prisma.asset.findUnique({ where: { id: assetId } });
-        if (!asset || asset.portfolioId !== user.portfolio.id) {
+        if (!asset || asset.portfolioId !== user.Portfolio.id) {
             return { error: "Unauthorized" };
         }
 
@@ -448,10 +456,10 @@ export async function reorderAssets(assetIds: string[]) {
     try {
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
-        if (!user?.portfolio) return { error: "Portfolio not found" };
+        if (!user?.Portfolio) return { error: "Portfolio not found" };
 
         // Update sortOrder for each asset
         await Promise.all(
@@ -459,7 +467,7 @@ export async function reorderAssets(assetIds: string[]) {
                 prisma.asset.updateMany({
                     where: {
                         id,
-                        portfolioId: user.portfolio!.id // Verify ownership
+                        portfolioId: user.Portfolio!.id // Verify ownership
                     },
                     data: { sortOrder: index }
                 })
@@ -483,23 +491,23 @@ export async function refreshPortfolioPrices() {
         const userWithAssets = await prisma.user.findUnique({
             where: { id: session.user.id },
             include: {
-                portfolio: {
+                Portfolio: {
                     include: {
-                        assets: true
+                        Asset: true
                     }
                 }
             }
         });
 
-        if (!userWithAssets || !userWithAssets.portfolio) return { error: "User not found" };
+        if (!userWithAssets || !userWithAssets.Portfolio) return { error: "User not found" };
 
         const { getPortfolioMetrics } = await import('@/lib/portfolio');
-        const { totalValueEUR } = await getPortfolioMetrics(userWithAssets.portfolio.assets, undefined, true);
+        const { totalValueEUR } = await getPortfolioMetrics(userWithAssets.Portfolio.Asset, undefined, true);
 
         // Save snapshot for history
-        if (userWithAssets.portfolio) {
+        if (userWithAssets.Portfolio) {
             const { savePortfolioSnapshot } = await import('@/lib/portfolio-history');
-            await savePortfolioSnapshot(userWithAssets.portfolio.id, totalValueEUR);
+            await savePortfolioSnapshot(userWithAssets.Portfolio.id, totalValueEUR);
         }
 
         revalidatePath(`/${userWithAssets.username}`);
@@ -682,12 +690,12 @@ export async function getTransactions() {
     try {
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
-        if (!user?.portfolio) return [];
+        if (!user?.Portfolio) return [];
 
         const transactions = await prisma.assetTransaction.findMany({
-            where: { portfolioId: user.portfolio.id },
+            where: { portfolioId: user.Portfolio.id },
             orderBy: { date: 'desc' }
         });
         return transactions;
@@ -698,8 +706,9 @@ export async function getTransactions() {
 }
 
 /**
- * Delete user account and all associated data
- * This permanently removes: User, Portfolio, Assets, Transactions, Goals, Snapshots
+ * Delete user account and ALL associated data permanently
+ * Uses transaction to ensure atomic deletion - all or nothing
+ * Cascade delete handles: Portfolio → Assets, Transactions, Goals, Snapshots
  */
 export async function deleteAccount(): Promise<{ success: boolean; error?: string }> {
     const session = await auth();
@@ -710,58 +719,233 @@ export async function deleteAccount(): Promise<{ success: boolean; error?: strin
     try {
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
         if (!user) {
             return { success: false, error: "User not found" };
         }
 
+        const portfolio = (user as { Portfolio?: { id: string } }).Portfolio;
+        const portfolioId = portfolio?.id;
+
         // Track account deletion before deleting (for audit trail)
         await trackActivity('AUTH', 'DELETE_ACCOUNT', {
             userId: user.id,
             username: user.username,
-            details: { email: user.email }
+            details: {
+                email: user.email,
+                portfolioId: portfolioId,
+                deletedAt: new Date().toISOString()
+            }
         });
 
-        // Delete in correct order due to foreign key constraints:
-        if (user.portfolio) {
-            const portfolioId = user.portfolio.id;
+        // Use transaction for atomic deletion - ensures ALL data is deleted
+        await prisma.$transaction(async (tx) => {
+            if (portfolioId) {
+                // 1. Delete all Assets (includes BES, stocks, funds, etc.)
+                const deletedAssets = await tx.asset.deleteMany({
+                    where: { portfolioId }
+                });
+                console.log(`[deleteAccount] Deleted ${deletedAssets.count} assets`);
 
-            // 1. Delete Assets (no cascade on Portfolio relation)
-            await prisma.asset.deleteMany({
-                where: { portfolioId }
+                // 2. Delete all Asset Transactions (BES işlemleri dahil)
+                const deletedTransactions = await tx.assetTransaction.deleteMany({
+                    where: { portfolioId }
+                });
+                console.log(`[deleteAccount] Deleted ${deletedTransactions.count} transactions`);
+
+                // 3. Delete all Goals
+                const deletedGoals = await tx.goal.deleteMany({
+                    where: { portfolioId }
+                });
+                console.log(`[deleteAccount] Deleted ${deletedGoals.count} goals`);
+
+                // 4. Delete all Portfolio Snapshots
+                const deletedSnapshots = await tx.portfolioSnapshot.deleteMany({
+                    where: { portfolioId }
+                });
+                console.log(`[deleteAccount] Deleted ${deletedSnapshots.count} snapshots`);
+
+                // 5. Delete Portfolio
+                await tx.portfolio.delete({
+                    where: { id: portfolioId }
+                });
+                console.log(`[deleteAccount] Deleted portfolio ${portfolioId}`);
+            }
+
+            // 6. Delete User (this triggers cascade for any remaining relations)
+            await tx.user.delete({
+                where: { id: user.id }
             });
+            console.log(`[deleteAccount] Deleted user ${user.id} (${user.email})`);
+        }, {
+            timeout: 30000, // 30 second timeout for large portfolios
+            maxWait: 10000, // Max 10 seconds to acquire lock
+        });
 
-            // 2. Delete Goals
-            await prisma.goal.deleteMany({
-                where: { portfolioId }
+        console.log(`[deleteAccount] Successfully deleted account for ${user.email}`);
+        return { success: true };
+
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("[deleteAccount] Failed:", errorMessage);
+        return { success: false, error: `Failed to delete account: ${errorMessage}` };
+    }
+}
+
+// ============================================
+// BES (Bireysel Emeklilik Sistemi) Actions
+// ============================================
+
+import { BESMetadata, calculateBESTotals } from '@/lib/besTypes';
+
+export async function saveBESData(metadata: BESMetadata): Promise<{ success: boolean; error?: string }> {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) {
+            return { success: false, error: "Unauthorized" };
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            include: { Portfolio: true }
+        });
+
+        if (!user?.Portfolio) {
+            return { success: false, error: "Portfolio not found" };
+        }
+
+        const portfolioId = user.Portfolio.id;
+        const totals = calculateBESTotals(metadata);
+
+        // Check if BES asset already exists
+        const existingBES = await prisma.asset.findFirst({
+            where: {
+                portfolioId,
+                symbol: 'BES',
+                type: 'BES'
+            }
+        });
+
+        if (existingBES) {
+            // Update existing BES asset
+            await prisma.asset.update({
+                where: { id: existingBES.id },
+                data: {
+                    quantity: 1,
+                    buyPrice: totals.grandTotal,
+                    metadata: metadata as any,
+                    updatedAt: new Date()
+                }
             });
-
-            // 3. Delete Portfolio Snapshots
-            await prisma.portfolioSnapshot.deleteMany({
-                where: { portfolioId }
-            });
-
-            // 4. Delete Asset Transactions
-            await prisma.assetTransaction.deleteMany({
-                where: { portfolioId }
-            });
-
-            // 5. Delete Portfolio itself
-            await prisma.portfolio.delete({
-                where: { id: portfolioId }
+        } else {
+            // Create new BES asset
+            await prisma.asset.create({
+                data: {
+                    portfolioId,
+                    symbol: 'BES',
+                    name: 'BES Emeklilik',
+                    type: 'BES',
+                    category: 'BES',
+                    quantity: 1,
+                    buyPrice: totals.grandTotal,
+                    currency: 'TRY',
+                    exchange: 'BES',
+                    sector: 'Pension',
+                    country: 'Turkey',
+                    metadata: metadata as any,
+                    sortOrder: -1000 // Put BES at the top
+                }
             });
         }
 
-        // 6. Delete User
-        await prisma.user.delete({
-            where: { id: user.id }
+        // Track activity
+        await trackActivity('ASSET', 'BES_UPDATE', {
+            userId: user.id,
+            username: user.username,
+            details: {
+                contractCount: metadata.contracts.length,
+                totalValue: totals.grandTotal
+            }
         });
 
+        revalidatePath(`/${user.username}`);
         return { success: true };
+
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("[saveBESData] Failed:", errorMessage);
+        return { success: false, error: errorMessage };
+    }
+}
+
+export async function getBESData(): Promise<BESMetadata | null> {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) {
+            return null;
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            include: { Portfolio: true }
+        });
+
+        if (!user?.Portfolio) {
+            return null;
+        }
+
+        const besAsset = await prisma.asset.findFirst({
+            where: {
+                portfolioId: user.Portfolio.id,
+                symbol: 'BES',
+                type: 'BES'
+            }
+        });
+
+        if (!besAsset?.metadata) {
+            return null;
+        }
+
+        return besAsset.metadata as unknown as BESMetadata;
+
     } catch (error) {
-        console.error("[deleteAccount] Error:", error);
-        return { success: false, error: "Failed to delete account" };
+        console.error("[getBESData] Failed:", error);
+        return null;
+    }
+}
+
+export async function deleteBESData(): Promise<{ success: boolean; error?: string }> {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) {
+            return { success: false, error: "Unauthorized" };
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            include: { Portfolio: true }
+        });
+
+        if (!user?.Portfolio) {
+            return { success: false, error: "Portfolio not found" };
+        }
+
+        await prisma.asset.deleteMany({
+            where: {
+                portfolioId: user.Portfolio.id,
+                symbol: 'BES',
+                type: 'BES'
+            }
+        });
+
+        revalidatePath(`/${user.username}`);
+        return { success: true };
+
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("[deleteBESData] Failed:", errorMessage);
+        return { success: false, error: errorMessage };
     }
 }

@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  // Schema version: 1.1 -- Force Vercel Refresh
 }
 
 datasource db {
@@ -8,173 +7,67 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String     @id @default(cuid())
-  username  String     @unique
-  email     String     @unique
-  password  String
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  preferences Json?
-  portfolio Portfolio?
-  aliases   AssetAlias[]
-}
+model ApiRequestLog {
+  id         String   @id @default(cuid())
+  provider   String
+  endpoint   String
+  params     String
+  status     String
+  statusCode Int?
+  duration   Int?
+  error      String?
+  userId     String?
+  createdAt  DateTime @default(now())
 
-model Portfolio {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  isPublic  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  assets    Asset[]
-  goals     Goal[]
-  user      User     @relation(fields: [userId], references: [id])
-  snapshots   PortfolioSnapshot[]
-  transactions AssetTransaction[]
-}
-
-model PortfolioSnapshot {
-  id          String   @id @default(cuid())
-  portfolioId String
-  date        DateTime // Normalized to midnight
-  totalValue  Float    // Total value in EUR
-  createdAt   DateTime @default(now())
-
-  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
-
-  @@unique([portfolioId, date])
-}
-
-
-model Goal {
-  id            String    @id @default(cuid())
-  portfolioId   String
-  name          String
-  type          String?   @default("USER")
-  targetAmount  Float
-  currentAmount Float     @default(0)
-  currency      String    @default("EUR")
-  deadline      DateTime?
-  isCompleted   Boolean   @default(false)
-  icon          String?   @default("target")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  portfolio     Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
-}
-
-
-enum AssetCategory {
-  BIST
-  TEFAS
-  US_MARKETS
-  EU_MARKETS
-  CRYPTO
-  COMMODITIES
-  FX
-  CASH
-  BENCHMARK
-}
-
-model Asset {
-  id           String        @id @default(cuid())
-  portfolioId  String
-  category     AssetCategory @default(US_MARKETS)  // New 8-category system
-  type         String                              // Legacy field for backward compatibility
-  symbol       String
-  name         String?       // User's custom name (editable)
-  originalName String?       // Original name from search API (immutable)
-  isin         String?       // International Securities Identification Number
-  quantity     Float
-  buyPrice     Float
-  currency     String
-  exchange     String
-  sector       String
-  country      String
-  customSector String?     // User manual override
-  customCountry String?    // User manual override
-  customCurrency String?   // User manual override (e.g. Force EUR view for USD asset)
-  customType   String?     // User manual override
-  customExchange String?   // User manual override
-  platform     String?
-  logoUrl      String?
-  sortOrder    Int?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  customGroup  String?
-  portfolio    Portfolio     @relation(fields: [portfolioId], references: [id])
-
-  // Performance indexes
-  @@index([portfolioId, sortOrder])  // Fast portfolio asset fetching with ordering
-  @@index([portfolioId, createdAt])  // Alternative ordering by creation date
-  @@index([symbol])                  // Fast symbol lookups for price updates
-  @@index([category])                // Group by category queries
-}
-
-model BenchmarkCache {
-  id        String   @id @default(cuid())
-  symbol    String
-  period    String   // 1D, 1W, 1M, YTD, 1Y, ALL
-  data      Json     // Stored as JSON blob for performance
-  updatedAt DateTime @updatedAt
-
-  @@unique([symbol, period])
-}
-
-model BenchmarkPrice {
-  id        String   @id @default(cuid())
-  symbol    String   // ^GSPC, ^IXIC, ^DJI, XU100.IS, ^FTSE, ^GDAXI
-  date      DateTime // Normalized to midnight
-  price     Float    // Closing price
-  createdAt DateTime @default(now())
-
-  @@unique([symbol, date])
-  @@index([symbol, date])
-}
-
-model PriceCache {
-  symbol      String   @id
-  previousClose Float
-  currency    String
-  sector      String?
-  country     String?
-  tradeTime   DateTime?  // Actual time of the trade/quote
-  source      String?    // YAHOO, TEFAS, etc.
-  lastRequestedBy String? // Username of requester
-  
-  updatedAt   DateTime @updatedAt
-}
-
-model ExchangeRate {
-  currency  String   @id
-  rate      Float
-  updatedAt DateTime @updatedAt
+  @@index([createdAt])
+  @@index([provider, status])
 }
 
 model ApiUsage {
   id           String   @id @default(cuid())
-  provider     String   // "YAHOO", "ALPHA", "FINNHUB"
-  dateKey      String   // "YYYY-MM-DD" for easy aggregation
+  provider     String
+  dateKey      String
   successCount Int      @default(0)
   errorCount   Int      @default(0)
   lastUpdated  DateTime @updatedAt
-  
+
   @@unique([provider, dateKey])
 }
 
-model ApiRequestLog {
-  id          String   @id @default(cuid())
-  provider    String   // YAHOO, TEFAS, etc.
-  endpoint    String   // quote, chart, search
-  params      String   // Target symbol(s)
-  status      String   // SUCCESS, ERROR
-  statusCode  Int?     // HTTP Status
-  duration    Int?     // ms
-  error       String?  // Error message
-  userId      String?  // Initiating user (optional)
-  createdAt   DateTime @default(now())
+model Asset {
+  id             String        @id @default(cuid())
+  portfolioId    String
+  category       AssetCategory @default(US_MARKETS)
+  type           String
+  symbol         String
+  name           String?
+  originalName   String?
+  quantity       Float
+  buyPrice       Float
+  currency       String
+  exchange       String
+  sector         String
+  country        String
+  customSector   String?
+  customCountry  String?
+  customCurrency String?
+  customType     String?
+  customExchange String?
+  platform       String?
+  logoUrl        String?
+  sortOrder      Int?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  customGroup    String?
+  isin           String?
+  metadata       Json?
+  Portfolio      Portfolio     @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
 
-  @@index([createdAt])
-  @@index([provider, status])
+  @@unique([portfolioId, isin])
+  @@index([category])
+  @@index([portfolioId, createdAt])
+  @@index([portfolioId, sortOrder])
+  @@index([symbol])
 }
 
 model AssetPriceHistory {
@@ -189,75 +82,158 @@ model AssetPriceHistory {
   @@index([symbol, date])
 }
 
-model SystemActivityLog {
-  id            String   @id @default(cuid())
-  activityType  String   // AUTH, ASSET, SEARCH, PORTFOLIO, NAVIGATION, SYSTEM
-  action        String   // LOGIN, LOGOUT, CREATE, UPDATE, DELETE, VIEW, QUERY, etc.
-  userId        String?  // User who performed the action (null for system events)
-  username      String?  // Denormalized for easy display
-  targetType    String?  // Asset, Goal, User, Portfolio, etc.
-  targetId      String?  // ID of the affected entity
-  details       Json?    // Additional context (search query, changes made, etc.)
-  ipAddress     String?  // User IP
-  userAgent     String?  // Browser/client info
-  duration      Int?     // ms (for operations that have duration)
-  status        String   @default("SUCCESS") // SUCCESS, ERROR, PENDING
-  errorMessage  String?  // Error details if status=ERROR
-  createdAt     DateTime @default(now())
+model AssetTransaction {
+  id               String    @id @default(cuid())
+  portfolioId      String
+  symbol           String
+  name             String?
+  type             String
+  quantity         Float
+  price            Float
+  currency         String
+  fee              Float     @default(0)
+  date             DateTime
+  exchange         String?
+  platform         String?
+  externalId       String?
+  realizedPnl      Float?
+  snapshotAvgCost  Float?
+  snapshotQuantity Float?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  customGroup      String?
+  Portfolio        Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
 
+  @@unique([portfolioId, externalId])
+  @@index([portfolioId, date])
+  @@index([portfolioId, symbol])
+  @@index([portfolioId, type])
+}
+
+model BenchmarkCache {
+  id        String   @id @default(cuid())
+  symbol    String
+  period    String
+  data      Json
+  updatedAt DateTime @updatedAt
+
+  @@unique([symbol, period])
+}
+
+model BenchmarkPrice {
+  id        String   @id @default(cuid())
+  symbol    String
+  date      DateTime
+  price     Float
+  createdAt DateTime @default(now())
+
+  @@unique([symbol, date])
+  @@index([symbol, date])
+}
+
+model ExchangeRate {
+  currency  String   @id
+  rate      Float
+  updatedAt DateTime @updatedAt
+}
+
+model Goal {
+  id            String    @id @default(cuid())
+  portfolioId   String
+  name          String
+  type          String?   @default("USER")
+  targetAmount  Float
+  currentAmount Float     @default(0)
+  currency      String    @default("EUR")
+  deadline      DateTime?
+  isCompleted   Boolean   @default(false)
+  icon          String?   @default("target")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  Portfolio     Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+}
+
+model Portfolio {
+  id                String              @id @default(cuid())
+  userId            String              @unique
+  isPublic          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  Asset             Asset[]
+  AssetTransaction  AssetTransaction[]
+  Goal              Goal[]
+  User              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  PortfolioSnapshot PortfolioSnapshot[]
+}
+
+model PortfolioSnapshot {
+  id          String    @id @default(cuid())
+  portfolioId String
+  date        DateTime
+  totalValue  Float
+  createdAt   DateTime  @default(now())
+  Portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, date])
+}
+
+model PriceCache {
+  symbol          String    @id
+  previousClose   Float
+  currency        String
+  sector          String?
+  country         String?
+  tradeTime       DateTime?
+  source          String?
+  lastRequestedBy String?
+  updatedAt       DateTime  @updatedAt
+
+  @@index([updatedAt])
+  @@index([source])
+}
+
+model SystemActivityLog {
+  id           String   @id @default(cuid())
+  activityType String
+  action       String
+  userId       String?
+  username     String?
+  targetType   String?
+  targetId     String?
+  details      Json?
+  ipAddress    String?
+  userAgent    String?
+  duration     Int?
+  status       String   @default("SUCCESS")
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  @@index([activityType, action])
   @@index([createdAt])
   @@index([userId, createdAt])
-  @@index([activityType, action])
   @@index([username, createdAt])
 }
 
-model AssetTransaction {
-  id          String   @id @default(cuid())
-  portfolioId String
-  symbol      String
-  name        String?  // Snapshot of name at time of trade
-  type        String   // BUY, SELL
-  quantity    Float
-  price       Float
-  currency    String
-  fee         Float    @default(0)
-  date        DateTime
-  exchange    String?
-  platform    String?  // e.g. "DeGiro"
-  customGroup String?  // User assigned group/account name
-  externalId  String?  // Source system ID (e.g. Order ID)
-
-  // P&L info
-  // For a SELL transaction: The realized P&L based on the AvgCost at that moment.
-  realizedPnl   Float? 
-  // For context: what was the AvgCost/Quantity before this trade?
-  snapshotAvgCost Float? 
-  snapshotQuantity Float?
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
-
-  @@index([portfolioId, symbol])
-  @@index([portfolioId, date])
-  @@index([portfolioId, type])
-  @@unique([portfolioId, externalId]) // Prevent duplicate imports
+model User {
+  id          String     @id @default(cuid())
+  username    String     @unique
+  email       String     @unique
+  password    String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  preferences Json?
+  Portfolio   Portfolio?
 }
 
-// Insights model removed for rollback
-
-model AssetAlias {
-  id            String   @id @default(cuid())
-  userId        String
-  sourceString  String   // The exact string from CSV (e.g. "WISDOMTREE NASDAQ 3X")
-  platform      String?  // Optional context (e.g. "DEGIRO")
-  resolvedSymbol String  // The correct Yahoo Symbol (e.g. "QQQ3.L")
-  isVerified    Boolean  @default(false) // True if user manually confirmed
-  updatedAt     DateTime @updatedAt
-
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, sourceString, platform]) // Ensure unique mapping per input
-  @@index([userId, sourceString])
+enum AssetCategory {
+  BIST
+  TEFAS
+  US_MARKETS
+  EU_MARKETS
+  CRYPTO
+  COMMODITIES
+  FX
+  CASH
+  BENCHMARK
+  BES
 }

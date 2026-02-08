@@ -1,57 +1,202 @@
 import { getMarketPrice, convertCurrency, getAssetName } from "@/services/marketData";
 import { prisma } from "@/lib/prisma";
 import { cleanAssetName } from "@/lib/companyNames";
-
-
 import { AssetDisplay } from "@/lib/types";
-import { calculateMarketStatus } from "@/lib/market-timing";
 
-// function estimateFallbackState removed. Using shared calculateMarketStatus logic.
+/**
+ * Portfolio Metrics Calculator
+ * - Batch processing for performance
+ * - Background updates for non-blocking operations
+ * - Type-safe asset processing
+ */
 
-// ... imports
+// Type definitions for better type safety
+interface AssetInput {
+    id: string;
+    symbol: string;
+    name: string | null;
+    type: string;
+    category?: string;
+    quantity: number;
+    buyPrice: number;
+    currency: string;
+    exchange: string;
+    sector: string;
+    country: string;
+    customSector?: string | null;
+    customCountry?: string | null;
+    customCurrency?: string | null;
+    customType?: string | null;
+    customExchange?: string | null;
+    platform?: string | null;
+    customGroup?: string | null;
+    logoUrl?: string | null;
+    originalName?: string | null;
+    metadata?: any;
+}
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-export async function getPortfolioMetrics(assets: any[], customRates?: Record<string, number>, forceRefresh: boolean = false, userId: string = 'System'): Promise<{ totalValueEUR: number, assetsWithValues: AssetDisplay[] }> {
-    const BATCH_SIZE = 50;
+// Background update queue to prevent memory leaks
+const pendingUpdates: Array<() => Promise<void>> = [];
+let isProcessingUpdates = false;
+
+/**
+ * Queue a database update to run in the background
+ * Prevents blocking the main response while ensuring updates complete
+ */
+function queueBackgroundUpdate(updateFn: () => Promise<void>): void {
+    pendingUpdates.push(updateFn);
+    processBackgroundUpdates();
+}
+
+async function processBackgroundUpdates(): Promise<void> {
+    if (isProcessingUpdates || pendingUpdates.length === 0) return;
+
+    isProcessingUpdates = true;
+
+    // Process updates in batches to avoid overwhelming the database
+    while (pendingUpdates.length > 0) {
+        const batch = pendingUpdates.splice(0, 10);
+        try {
+            await Promise.allSettled(batch.map(fn => fn()));
+        } catch (e) {
+            // Silently handle - these are non-critical background updates
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('[Portfolio] Background update batch error:', e);
+            }
+        }
+    }
+
+    isProcessingUpdates = false;
+}
+
+const BATCH_SIZE = 50;
+
+export async function getPortfolioMetrics(
+    assets: AssetInput[],
+    customRates?: Record<string, number>,
+    forceRefresh: boolean = false,
+    userId: string = 'System'
+): Promise<{ totalValueEUR: number; assetsWithValues: AssetDisplay[] }> {
+    if (!assets || assets.length === 0) {
+        return { totalValueEUR: 0, assetsWithValues: [] };
+    }
+
     const assetsWithValues: AssetDisplay[] = [];
 
     // Import Batch Function
     const { getBatchMarketPrices } = await import('@/services/marketData');
 
-    // Process in batches
+    // Process in batches for memory efficiency
     for (let i = 0; i < assets.length; i += BATCH_SIZE) {
         const batch = assets.slice(i, i + BATCH_SIZE);
 
         // 1. Pre-fetch Market Data for the entire batch
         const marketDataBatch = await getBatchMarketPrices(
-            batch.map((a: any) => ({ symbol: a.symbol, type: a.type, exchange: a.exchange, category: a.category })),
+            batch.map(a => ({
+                symbol: a.symbol,
+                type: a.type,
+                exchange: a.exchange,
+                category: a.category
+            })),
             forceRefresh
         );
 
-        // 2. Process assets using pre-fetched data
-        const batchResults = await Promise.all(batch.map((asset: any) =>
-            processAsset(asset, customRates, forceRefresh, userId, marketDataBatch[asset.symbol])
-        ));
+        // 2. Process assets using pre-fetched data with error isolation
+        const batchResults = await Promise.allSettled(
+            batch.map(asset =>
+                processAsset(asset, customRates, forceRefresh, userId, marketDataBatch[asset.symbol])
+            )
+        );
 
-        assetsWithValues.push(...batchResults);
+        // 3. Collect successful results, log failures
+        for (let j = 0; j < batchResults.length; j++) {
+            const result = batchResults[j];
+            if (result.status === 'fulfilled') {
+                assetsWithValues.push(result.value);
+            } else {
+                console.error(`[Portfolio] Failed to process asset ${batch[j].symbol}:`, result.reason);
+                // Add a fallback entry so the asset isn't lost
+                assetsWithValues.push(createFallbackAssetDisplay(batch[j]));
+            }
+        }
     }
 
     const totalPortfolioValueEUR = assetsWithValues.reduce((sum, asset) => sum + asset.totalValueEUR, 0);
 
     return {
         totalValueEUR: totalPortfolioValueEUR,
-        assetsWithValues: assetsWithValues
+        assetsWithValues
+    };
+}
+
+/**
+ * Create a fallback display for assets that failed processing
+ */
+function createFallbackAssetDisplay(asset: AssetInput): AssetDisplay {
+    return {
+        id: asset.id,
+        symbol: asset.symbol,
+        name: asset.name || asset.symbol,
+        type: asset.type,
+        quantity: asset.quantity,
+        buyPrice: asset.buyPrice,
+        currency: asset.currency,
+        previousClose: asset.buyPrice, // Use buy price as fallback
+        totalValueEUR: 0, // Will be recalculated on next refresh
+        plPercentage: 0,
+        exchange: asset.exchange,
+        sector: asset.sector || '',
+        country: asset.country || '',
+        logoUrl: asset.logoUrl || undefined,
+        platform: asset.platform || undefined,
+        customGroup: asset.customGroup || undefined,
+        metadata: asset.metadata,
     };
 }
 
 import { PriceResult } from "@/services/marketData";
 
-async function processAsset(asset: any, customRates: Record<string, number> | undefined, forceRefresh: boolean, userId: string, preFetchedPrice?: PriceResult | null): Promise<AssetDisplay> {
-    // ... name repair logic ...
+/**
+ * Process a single asset and calculate its display values
+ * Uses background updates to prevent blocking
+ */
+async function processAsset(
+    asset: AssetInput,
+    customRates: Record<string, number> | undefined,
+    forceRefresh: boolean,
+    userId: string,
+    preFetchedPrice?: PriceResult | null
+): Promise<AssetDisplay> {
+    // Special handling for BES assets - value comes from metadata
+    if (asset.type === 'BES' && asset.metadata) {
+        const besMeta = asset.metadata;
+        const totalKP = besMeta?.contracts?.reduce((s: number, c: any) => s + (c.katkiPayi || 0), 0) || 0;
+        const totalDK = besMeta?.contracts?.reduce((s: number, c: any) => s + (c.devletKatkisi || 0), 0) || 0;
+        const besTotal = totalKP + totalDK;
 
-    // ... (keep auto-repair name logic same as existing if possible, or omit for brevity if not changing) ...
-    // Since we are replacing the function signature, we need to keep the body.
-    // For brevity of this tool call, I will perform a targeted replace on the signature and the getMarketPrice call.
+        // Convert TRY to EUR
+        const tryToEur = await convertCurrency(besTotal, 'TRY', 'EUR', customRates);
+
+        return {
+            id: asset.id,
+            symbol: asset.symbol,
+            name: asset.name || 'BES Emeklilik',
+            type: asset.type,
+            quantity: 1,
+            buyPrice: besTotal,
+            currency: 'TRY',
+            previousClose: besTotal,
+            totalValueEUR: tryToEur,
+            plPercentage: 0,
+            exchange: '',
+            sector: 'Retirement',
+            country: 'TR',
+            logoUrl: asset.logoUrl || undefined,
+            platform: asset.platform || 'Anadolu Hayat',
+            customGroup: asset.customGroup || 'Emeklilik',
+            metadata: asset.metadata,
+        };
+    }
 
     // 0. Lazy Name Repair & Cleaning
     let assetName = asset.name;
@@ -61,20 +206,27 @@ async function processAsset(asset: any, customRates: Record<string, number> | un
             const fetchedName = await getAssetName(asset.symbol, asset.type);
             if (fetchedName) {
                 assetName = fetchedName;
-                prisma.asset.update({
-                    where: { id: asset.id },
-                    data: { name: fetchedName }
-                }).catch(err => console.warn('[Portfolio] Name auto-repair failed:', err));
+                // Queue background update instead of fire-and-forget
+                queueBackgroundUpdate(async () => {
+                    await prisma.asset.update({
+                        where: { id: asset.id },
+                        data: { name: fetchedName }
+                    });
+                });
             }
-        } catch (e) { }
+        } catch {
+            // Silently continue - name is optional
+        }
     } else {
         const cleanName = cleanAssetName(assetName);
         if (cleanName !== assetName) {
             assetName = cleanName;
-            prisma.asset.update({
-                where: { id: asset.id },
-                data: { name: cleanName }
-            }).catch(err => console.warn('[Portfolio] Name clean auto-repair failed:', err));
+            queueBackgroundUpdate(async () => {
+                await prisma.asset.update({
+                    where: { id: asset.id },
+                    data: { name: cleanName }
+                });
+            });
         }
     }
 
@@ -85,52 +237,52 @@ async function processAsset(asset: any, customRates: Record<string, number> | un
         priceData = await getMarketPrice(asset.symbol, asset.type, asset.exchange, forceRefresh, userId, asset.category);
     }
 
-    const previousClose = (asset.type === 'CASH' || asset.symbol === 'EUR') ? 1 : (priceData ? priceData.price : asset.buyPrice);
+    const previousClose = (asset.type === 'CASH' || asset.symbol === 'EUR')
+        ? 1
+        : (priceData?.price ?? asset.buyPrice);
 
     // ------------------------------------------------------------------
-    // 1. DATA RECONCILLIATION (System vs User)
+    // 1. DATA RECONCILIATION (System vs User)
     // ------------------------------------------------------------------
-    // We now have strict separation:
-    // - asset.currency/type/exchange -> SYSTEM TRUTH (matches API/Price Source)
-    // - asset.customCurrency etc. -> USER PREFERENCE (matches Display)
-
-    const systemCurrency = asset.currency; // The currency the PRICE is in
+    const systemCurrency = asset.currency;
     const systemType = asset.type;
     const systemExchange = asset.exchange;
 
     // Detect if API has better data for System fields (Non-destructive update)
     if (priceData) {
         // Update Metadata (Sector/Country) only if missing
-        if ((!asset.sector && priceData.sector) || (!asset.country && priceData.country)) {
-            prisma.asset.update({
-                where: { id: asset.id },
-                data: {
-                    sector: asset.sector || priceData.sector,
-                    country: asset.country || priceData.country
-                }
-            }).catch(e => console.warn('[Portfolio] Metadata enrich failed', e));
+        const needsMetadataUpdate =
+            (!asset.sector && priceData.sector) ||
+            (!asset.country && priceData.country);
+
+        if (needsMetadataUpdate) {
+            const updateData = {
+                sector: asset.sector || priceData.sector,
+                country: asset.country || priceData.country
+            };
+            queueBackgroundUpdate(async () => {
+                await prisma.asset.update({
+                    where: { id: asset.id },
+                    data: updateData
+                });
+            });
         }
 
-        // Update Currency safely?
-        // Only valid if we trust the API 100%. For now, let's stick to the "Suffix Rules" 
-        // we implemented before, or rely on the user having set the correct System Currency initially.
-        // Actually, with customCurrency available, we CAN allow the system to self-correct 
-        // the `currency` field to match the API, because the User's preference is safe in `customCurrency`.
-
-        // AUTO-CORRECT SYSTEM CURRENCY (Now safe to do!)
+        // AUTO-CORRECT SYSTEM CURRENCY (Safe with customCurrency separation)
         if (priceData.currency && priceData.currency !== systemCurrency) {
-            // Exceptions: TEFAS (Must be TRY), CASH (Self)
             const isTefas = asset.type === 'TEFAS' || asset.type === 'FON';
             const isCash = asset.type === 'CASH';
 
             if (!isTefas && !isCash) {
-                console.log(`[Portfolio] Auto-aligning System Currency for ${asset.symbol}: ${systemCurrency} -> ${priceData.currency}`);
-                // We update the DB so next fetch is accurate, but for THIS render we use the new data
-                prisma.asset.update({
-                    where: { id: asset.id },
-                    data: { currency: priceData.currency }
-                }).catch(e => console.warn('[Portfolio] Currency align failed', e));
-                // (Note: We continue using 'activeCurrency' derived below for calculations)
+                if (process.env.NODE_ENV === 'development') {
+                    console.log(`[Portfolio] Auto-aligning currency for ${asset.symbol}: ${systemCurrency} -> ${priceData.currency}`);
+                }
+                queueBackgroundUpdate(async () => {
+                    await prisma.asset.update({
+                        where: { id: asset.id },
+                        data: { currency: priceData!.currency }
+                    });
+                });
             }
         }
     }
@@ -140,10 +292,7 @@ async function processAsset(asset: any, customRates: Record<string, number> | un
     // ------------------------------------------------------------------
     const displayType = asset.customType || systemType;
     const displayExchange = asset.customExchange || systemExchange;
-
-    // Currency is special: It affects Value Calculation
     const displayCurrency = asset.customCurrency || systemCurrency;
-    // Effect: We have a Price in systemCurrency. We want to show Value in displayCurrency.
 
     // ------------------------------------------------------------------
     // 3. PERSIST LOGO URL (If missing)
@@ -155,9 +304,16 @@ async function processAsset(asset: any, customRates: Record<string, number> | un
             const generatedUrl = getLogoUrl(asset.symbol, displayType, displayExchange, asset.customCountry || asset.country);
             if (generatedUrl) {
                 resolvedLogoUrl = generatedUrl;
-                prisma.asset.update({ where: { id: asset.id }, data: { logoUrl: generatedUrl } }).catch(() => { });
+                queueBackgroundUpdate(async () => {
+                    await prisma.asset.update({
+                        where: { id: asset.id },
+                        data: { logoUrl: generatedUrl }
+                    });
+                });
             }
-        } catch (e) { }
+        } catch {
+            // Logo is optional, continue without it
+        }
     }
 
     // ------------------------------------------------------------------
@@ -241,6 +397,7 @@ async function processAsset(asset: any, customRates: Record<string, number> | un
         logoUrl: resolvedLogoUrl,
         platform: asset.platform || undefined,
         customGroup: asset.customGroup || undefined,
-        updatedAt: priceData?.timestamp
+        updatedAt: priceData?.timestamp,
+        metadata: asset.metadata,
     };
 }
