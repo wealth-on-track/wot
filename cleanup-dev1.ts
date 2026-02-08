@@ -7,26 +7,26 @@ async function cleanupDev1() {
         // Find dev1 user
         const user = await prisma.user.findUnique({
             where: { username: 'dev1' },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
-        if (!user || !user.portfolio) {
+        if (!user || !user.Portfolio) {
             console.log('❌ dev1 user or portfolio not found');
             return;
         }
 
         console.log(`✅ Found dev1 user (${user.email})`);
-        console.log(`📦 Portfolio ID: ${user.portfolio.id}`);
+        console.log(`📦 Portfolio ID: ${user.Portfolio.id}`);
 
         // Delete all transactions
         const deletedTransactions = await prisma.assetTransaction.deleteMany({
-            where: { portfolioId: user.portfolio.id }
+            where: { portfolioId: user.Portfolio.id }
         });
         console.log(`🗑️  Deleted ${deletedTransactions.count} transactions`);
 
         // Delete all assets
         const deletedAssets = await prisma.asset.deleteMany({
-            where: { portfolioId: user.portfolio.id }
+            where: { portfolioId: user.Portfolio.id }
         });
         console.log(`🗑️  Deleted ${deletedAssets.count} assets`);
 
