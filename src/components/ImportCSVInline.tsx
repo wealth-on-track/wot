@@ -69,10 +69,12 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
 
     const IMPORT_PHASES = [
         { progress: 15, message: "Validating assets...", icon: "🔍" },
-        { progress: 35, message: "Resolving symbols...", icon: "🔗" },
-        { progress: 55, message: "Creating positions...", icon: "📊" },
-        { progress: 75, message: "Processing transactions...", icon: "💰" },
-        { progress: 100, message: "Installing...", icon: "✨" }, // Use "Installing" as final phase
+        { progress: 30, message: "Resolving symbols...", icon: "🔗" },
+        { progress: 45, message: "Creating positions...", icon: "📊" },
+        { progress: 60, message: "Processing transactions...", icon: "💰" },
+        { progress: 70, message: "Saving to database...", icon: "💾" },
+        { progress: 80, message: "Syncing data...", icon: "🔄" },
+        { progress: 100, message: "Complete!", icon: "✅" },
     ];
 
     // Calculate updated avgBuyPrice for a row based on edited transaction costs
@@ -724,23 +726,80 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
             });
 
             console.log('[ImportCSVInline] Calling executeImport...');
+
+            // Phase 4: Saving to database (70%)
+            setImportPhase(4);
+            setImportProgress(70);
+
             const result = await executeImport(assetsToImport, transactionsToImport, selectedPortfolioId || undefined, targetPortfolioName);
             console.log('[ImportCSVInline] executeImport result:', result);
             setImportResult(result);
 
-            // Force progress to 100% and wait for animation
-            setImportPhase(IMPORT_PHASES.length - 1); // Set to final phase ("Installing...")
+            // Calculate counts for later
+            const openCount = resolvedAssets.filter(r => categorizeRow(r) === 'open').length;
+            const closedCount = resolvedAssets.filter(r => categorizeRow(r) === 'closed').length;
+            const statementCount = resolvedAssets.filter(r => categorizeRow(r) === 'statement').length;
+
+            // Phase 5: Syncing data (80%)
+            setImportPhase(5);
+            setImportProgress(80);
+
+            // Trigger router refresh
+            router.refresh();
+
+            // CRITICAL: Poll for data to ensure it's ready before transitioning
+            // This prevents showing empty Open Positions page
+            if (openCount > 0) {
+                const { getOpenPositions } = await import('@/lib/actions');
+                let attempts = 0;
+                const maxAttempts = 30; // 15 seconds max (30 * 500ms)
+
+                console.log('[ImportCSVInline] Waiting for data to be ready...');
+
+                const waitForData = async (): Promise<boolean> => {
+                    try {
+                        const positions = await getOpenPositions();
+                        if (positions && positions.length > 0) {
+                            console.log(`[ImportCSVInline] Data ready! Found ${positions.length} positions`);
+                            return true;
+                        }
+                    } catch (e) {
+                        console.warn('[ImportCSVInline] Poll error:', e);
+                    }
+
+                    attempts++;
+                    // Gradually increase progress during polling (80 -> 95)
+                    const progressIncrement = Math.min(95, 80 + (attempts * 0.5));
+                    setImportProgress(progressIncrement);
+
+                    if (attempts < maxAttempts) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        return waitForData();
+                    }
+
+                    console.warn('[ImportCSVInline] Max polling attempts reached');
+                    return false;
+                };
+
+                await waitForData();
+
+                // Extra refresh to ensure UI has latest data
+                router.refresh();
+                await new Promise(resolve => setTimeout(resolve, 300));
+            } else {
+                // No open positions expected, wait a bit
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            }
+
+            // Phase 6: Complete! (100%) - Only now show 100%
+            setImportPhase(6);
             setImportProgress(100);
 
-            // Wait for 100% to be visible and animation to complete
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            // Brief pause to show 100% complete
+            await new Promise(resolve => setTimeout(resolve, 800));
 
-            router.refresh();
+            // Only now call onSuccess - data is guaranteed to be ready
             if (onSuccess) {
-                const openCount = resolvedAssets.filter(r => categorizeRow(r) === 'open').length;
-                const closedCount = resolvedAssets.filter(r => categorizeRow(r) === 'closed').length;
-                const statementCount = resolvedAssets.filter(r => categorizeRow(r) === 'statement').length;
-
                 onSuccess({ open: openCount, closed: closedCount, statement: statementCount });
             }
         } catch (e) {
@@ -1570,11 +1629,11 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <div style={{ fontSize: '14px', animation: 'spin 1.5s linear infinite' }}>
+                                                <div style={{ fontSize: '14px', animation: importProgress < 100 ? 'spin 1.5s linear infinite' : 'none' }}>
                                                     {IMPORT_PHASES[importPhase]?.icon || "⏳"}
                                                 </div>
-                                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                                    Installing...
+                                                <span style={{ fontSize: '13px', fontWeight: 600, color: importProgress >= 100 ? 'var(--accent)' : 'var(--text-primary)' }}>
+                                                    {IMPORT_PHASES[importPhase]?.message || "Installing..."}
                                                 </span>
                                             </div>
                                             <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)' }}>
@@ -1591,7 +1650,7 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                                             <div style={{
                                                 height: '100%',
                                                 width: `${importProgress}%`,
-                                                background: 'var(--accent)',
+                                                background: importProgress >= 100 ? '#22c55e' : 'var(--accent)',
                                                 borderRadius: '2px',
                                                 transition: 'width 0.3s ease-out'
                                             }} />

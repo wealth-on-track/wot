@@ -2201,36 +2201,10 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                     <div style={{ marginTop: '0', width: '100%' }}>
                         <ImportCSVInline
 
-                            onSuccess={async (stats) => {
+                            onSuccess={() => {
+                                // Data is guaranteed to be ready - ImportCSVInline polls until confirmed
                                 onCountChange();
-
-                                // Poll for data update if we expect open positions
-                                if (stats && stats.open > 0) {
-                                    const { getOpenPositions } = await import('@/lib/actions');
-                                    let attempts = 0;
-                                    const maxAttempts = 20; // 10 seconds max (20 * 500ms)
-
-                                    const checkData = async () => {
-                                        try {
-                                            const positions = await getOpenPositions();
-                                            // If we found positions, or we ran out of attempts, switch tab
-                                            if ((positions && positions.length > 0) || attempts >= maxAttempts) {
-                                                setActivePositionTab('open');
-                                            } else {
-                                                attempts++;
-                                                setTimeout(checkData, 500);
-                                            }
-                                        } catch (e) {
-                                            console.error("Polling error:", e);
-                                            setActivePositionTab('open'); // Fallback
-                                        }
-                                    };
-
-                                    checkData();
-                                } else {
-                                    // No open positions to wait for, switch immediately
-                                    setActivePositionTab('open');
-                                }
+                                setActivePositionTab('open');
                             }}
                             onCancel={() => setActivePositionTab('open')}
                         />
