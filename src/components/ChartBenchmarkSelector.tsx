@@ -39,8 +39,14 @@ export const ChartBenchmarkSelector: React.FC<ChartBenchmarkSelectorProps> = ({
 
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-                    <div className="absolute top-[115%] left-0 w-[170px] bg-[var(--surface)] border border-[var(--border)] rounded-xl p-2 z-50 shadow-xl max-h-[300px] overflow-y-auto">
+                    <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)} />
+                    <div className="absolute top-[115%] left-0 w-[200px] border rounded-xl p-2 z-[101] max-h-[320px] overflow-y-auto"
+                        style={{
+                            backgroundColor: 'var(--surface)',
+                            borderColor: 'var(--border)',
+                            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
+                        }}
+                    >
                         <div className="text-[10px] uppercase font-bold text-[var(--text-muted)] px-2 py-1">
                             Overlay
                         </div>

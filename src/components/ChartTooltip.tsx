@@ -43,7 +43,7 @@ export const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, lab
         const rentYears = (projectedVal / 12000).toFixed(1);
 
         return (
-            <div className="bg-slate-900/90 backdrop-blur-md border border-violet-500/30 rounded-xl p-4 shadow-2xl text-white min-w-[220px]">
+            <div className="bg-slate-900 border border-violet-500 rounded-xl p-4 shadow-2xl text-white min-w-[220px]" style={{ zIndex: 1000 }}>
                 <p className="text-sm text-slate-400 mb-3 font-semibold border-b border-white/10 pb-2">
                     {formatTooltipDate(label || '')}
                 </p>
@@ -103,7 +103,7 @@ export const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, lab
     });
 
     return (
-        <div className="bg-slate-900/85 backdrop-blur-md border border-white/10 rounded-xl p-3 shadow-2xl text-white min-w-[200px]">
+        <div className="bg-slate-900 border border-slate-700 rounded-xl p-3 shadow-2xl text-white min-w-[200px]" style={{ zIndex: 1000 }}>
             <p className="text-xs text-slate-400 mb-2 font-medium">
                 {formatTooltipDate(label || '')}
             </p>

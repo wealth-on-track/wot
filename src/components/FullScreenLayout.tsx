@@ -33,7 +33,8 @@ import { ShareHub } from "./share/ShareHub";
 import { TransactionHistory } from '@/components/TransactionHistory';
 import { InsightsTab } from "./InsightsTab";
 import { AllocationCard } from "./PortfolioSidebarComponents";
-import { PortfolioPerformanceChart } from "./PortfolioPerformanceChart";
+import { PerformanceChart } from "./charts/PerformanceChart";
+import { VisionChart } from "./charts/VisionChart";
 import { usePrivacy } from "@/context/PrivacyContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useCurrency } from "@/context/CurrencyContext";
@@ -41,6 +42,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { BENCHMARK_ASSETS } from "@/lib/benchmarkApi";
 import { getPortfolioStyle } from "@/lib/portfolioStyles";
 import { deleteAccount, saveBESData, getBESData } from "@/lib/actions";
+import { lookupTefasFund } from "@/app/actions/search";
 import { signOut } from "next-auth/react";
 // BESPortfolioItem no longer needed - BES shown inline in table
 import { BESMetadata } from "@/lib/besTypes";
@@ -711,9 +713,7 @@ function BESExpandedDetails({ besMeta, besKP, besDK }: { besMeta: BESMetadata; b
                         <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>%</th>
                         <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Avg. Price</th>
                         <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Price</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Katkı Payı</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Devlet Katkısı</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Toplam</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Value</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -724,32 +724,24 @@ function BESExpandedDetails({ besMeta, besKP, besDK }: { besMeta: BESMetadata; b
                             <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
                                 <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--accent)' }}>{f.code}</td>
                                 <td style={{ padding: '8px 12px', color: 'var(--text-primary)' }}>{f.name}</td>
-                                <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>%{f.percentage}</td>
+                                <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>{f.percentage}%</td>
                                 <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{f.avgPrice ? f.avgPrice.toFixed(6) : '-'}</td>
                                 <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{loadingPrices ? '...' : (currentPrice ? currentPrice.toFixed(6) : '-')}</td>
-                                <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{fmt(kpValue)} ₺</td>
-                                <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>-</td>
                                 <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{fmt(kpValue)} ₺</td>
                             </tr>
                         );
                     })}
-                    {/* Devlet Katkısı Fonu */}
-                    <tr style={{ background: 'rgba(34,197,94,0.05)' }}>
+                    {/* Devlet Katkısı Fonu - AET */}
+                    <tr style={{ background: 'rgba(34,197,94,0.05)', borderLeft: '3px solid var(--success)' }}>
                         <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--success)' }}>AET</td>
-                        <td style={{ padding: '8px 12px', color: 'var(--text-primary)' }}>Devlet Katkısı Fonu</td>
+                        <td style={{ padding: '8px 12px', color: 'var(--text-primary)' }}>
+                            Devlet Katkısı Fonu
+                            <span style={{ marginLeft: '8px', fontSize: '10px', background: 'rgba(34,197,94,0.15)', color: 'var(--success)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>DK</span>
+                        </td>
                         <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--success)' }}>100%</td>
                         <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>-</td>
                         <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>-</td>
-                        <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)' }}>-</td>
                         <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--success)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmt(besDK)} ₺</td>
-                        <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--success)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmt(besDK)} ₺</td>
-                    </tr>
-                    {/* Toplam */}
-                    <tr style={{ background: 'var(--bg-secondary)', fontWeight: 700 }}>
-                        <td colSpan={5} style={{ padding: '10px 12px', color: 'var(--text-primary)' }}>TOPLAM</td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{fmt(besKP)} ₺</td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--success)', fontVariantNumeric: 'tabular-nums' }}>{fmt(besDK)} ₺</td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>{fmt(besKP + besDK)} ₺</td>
                     </tr>
                 </tbody>
             </table>
@@ -795,20 +787,72 @@ function BESExpandedDetails({ besMeta, besKP, besDK }: { besMeta: BESMetadata; b
 }
 
 // Inline BES Editor - Clean compact design
-function BESInlineEditor({ initialData, onSave, onCancel }: {
+function BESInlineEditor({ initialData, onSave, onCancel, availablePortfolios = [], availablePlatforms = [] }: {
     initialData: BESMetadata | null;
-    onSave: (data: BESMetadata) => Promise<void>;
+    onSave: (data: BESMetadata, portfolio: string, platform: string) => Promise<void>;
     onCancel: () => void;
+    availablePortfolios?: { id: string; name: string }[];
+    availablePlatforms?: string[];
 }) {
     const [contracts, setContracts] = React.useState<Array<{ id: string; name: string; katkiPayi: number; devletKatkisi: number }>>([
-        { id: '1', name: 'Kontrat 1', katkiPayi: 0, devletKatkisi: 0 }
+        { id: '1', name: 'BEH 1', katkiPayi: 0, devletKatkisi: 0 }
     ]);
-    const [funds, setFunds] = React.useState<Array<{ code: string; name: string; percentage: number; avgPrice?: number; price?: number }>>([
-        { code: 'AH2', name: 'PPF', percentage: 60 },
-        { code: 'AH5', name: 'Hisse', percentage: 10 },
-        { code: 'BGL', name: 'Altin', percentage: 15 },
-        { code: 'AEA', name: 'Altin Kat.', percentage: 15 },
+    const [funds, setFunds] = React.useState<Array<{ code: string; name: string; percentage: number; price?: number }>>([
+        { code: '', name: '', percentage: 25 },
+        { code: '', name: '', percentage: 25 },
+        { code: '', name: '', percentage: 25 },
+        { code: '', name: '', percentage: 25 },
     ]);
+
+    const [loadingFund, setLoadingFund] = React.useState<number | null>(null);
+    const [portfolioName, setPortfolioName] = React.useState('');
+    const [platformName, setPlatformName] = React.useState('');
+    const [showPortfolioDropdown, setShowPortfolioDropdown] = React.useState(false);
+    const [showPlatformDropdown, setShowPlatformDropdown] = React.useState(false);
+    const [validationErrors, setValidationErrors] = React.useState({ portfolio: false, platform: false });
+
+    // Get display value for fund (CODE - NAME or just what user typed)
+    const getFundDisplay = (fund: { code: string; name: string }) => {
+        if (fund.code && fund.name) return `${fund.code} - ${fund.name}`;
+        return fund.code;
+    };
+
+    // Handle fund input change - extract code and lookup from TEFAS
+    const handleFundInputChange = async (index: number, value: string) => {
+        // Extract code from input (first word before " - " or entire input if no dash)
+        const code = value.split(' - ')[0].toUpperCase().trim();
+
+        const u = [...funds];
+        // If user is clearing or typing new code, reset name
+        if (!value || !value.includes(' - ')) {
+            u[index].code = code;
+            u[index].name = '';
+            u[index].price = undefined;
+        }
+        setFunds(u);
+
+        // Only search if code is 3-4 characters and doesn't already have a name
+        if (code.length >= 3 && code.length <= 4 && !value.includes(' - ')) {
+            setLoadingFund(index);
+            try {
+                const result = await lookupTefasFund(code);
+                if (result) {
+                    setFunds(prev => {
+                        const updated = [...prev];
+                        if (updated[index].code === code) {
+                            updated[index].name = result.name;
+                            updated[index].price = result.price;
+                        }
+                        return updated;
+                    });
+                }
+            } catch (e) {
+                console.error('Fund lookup error:', e);
+            } finally {
+                setLoadingFund(null);
+            }
+        }
+    };
     const [saving, setSaving] = React.useState(false);
 
     React.useEffect(() => {
@@ -826,9 +870,14 @@ function BESInlineEditor({ initialData, onSave, onCancel }: {
     const parse = (v: string) => parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
 
     const save = async () => {
+        // Validate portfolio and platform
+        const errors = { portfolio: !portfolioName.trim(), platform: !platformName.trim() };
+        setValidationErrors(errors);
+        if (errors.portfolio || errors.platform) return;
         if (!valid || !contracts.length) return;
+
         setSaving(true);
-        try { await onSave({ contracts, katkiPayiFunds: funds, lastUpdated: new Date().toISOString() }); }
+        try { await onSave({ contracts, katkiPayiFunds: funds, lastUpdated: new Date().toISOString() }, portfolioName.trim(), platformName.trim()); }
         finally { setSaving(false); }
     };
 
@@ -836,17 +885,93 @@ function BESInlineEditor({ initialData, onSave, onCancel }: {
         <div style={{ background: 'var(--surface)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(167,139,250,0.05) 100%)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '11px' }}>BES</div>
-                    <div>
-                        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>BES Emeklilik</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{contracts.length} kontrat</div>
+                {/* Left: BES Info */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '11px' }}>BES</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>BES Emeklilik</span>
+                        <span style={{ color: 'var(--border)', fontSize: '14px' }}>|</span>
+                        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{contracts.length} BEH</span>
+                        <span style={{ color: 'var(--border)', fontSize: '14px' }}>|</span>
+                        <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--accent)' }}>{fmt(totalKP + totalDK)} TL</span>
                     </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--accent)' }}>{fmt(totalKP + totalDK)} <span style={{ fontSize: '12px', fontWeight: 500 }}>TL</span></div>
+
+                {/* Right: Portfolio, Platform, Buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {/* Portfolio Input */}
+                    <div style={{ position: 'relative' }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            borderRadius: '8px',
+                            border: `2px solid ${validationErrors.portfolio ? '#ef4444' : 'var(--border)'}`,
+                            background: 'var(--bg-primary)',
+                            height: '32px',
+                            animation: validationErrors.portfolio ? 'shake 0.5s ease' : 'none',
+                            boxShadow: validationErrors.portfolio ? '0 0 0 3px rgba(239, 68, 68, 0.15)' : 'none'
+                        }}>
+                            <div style={{ background: 'rgba(120, 120, 120, 0.08)', height: '100%', display: 'flex', alignItems: 'center', padding: '0 8px', borderRight: '1px solid var(--border)', borderRadius: '6px 0 0 6px' }}>
+                                <label style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>PORTFOLIO</label>
+                            </div>
+                            <input
+                                type="text"
+                                placeholder={validationErrors.portfolio ? "Required!" : "Select..."}
+                                value={portfolioName}
+                                onFocus={() => setShowPortfolioDropdown(true)}
+                                onBlur={() => setTimeout(() => setShowPortfolioDropdown(false), 200)}
+                                onChange={(e) => { setPortfolioName(e.target.value); if (e.target.value.trim()) setValidationErrors(p => ({ ...p, portfolio: false })); }}
+                                style={{ border: 'none', background: 'transparent', color: validationErrors.portfolio ? '#ef4444' : 'var(--text-primary)', fontSize: '12px', fontWeight: 600, outline: 'none', width: '90px', padding: '0 8px' }}
+                            />
+                        </div>
+                        {showPortfolioDropdown && availablePortfolios.length > 0 && (
+                            <div style={{ position: 'absolute', top: '100%', left: 0, width: '150px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: 'var(--shadow-md)', zIndex: 50, marginTop: '4px', padding: '4px' }}>
+                                {availablePortfolios.filter(p => p.name.toLowerCase().includes(portfolioName.toLowerCase())).map(p => (
+                                    <div key={p.id} onClick={() => { setPortfolioName(p.name); setShowPortfolioDropdown(false); setValidationErrors(prev => ({ ...prev, portfolio: false })); }} style={{ padding: '6px 8px', fontSize: '12px', color: 'var(--text-primary)', borderRadius: '4px', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>{p.name}</div>
+                                ))}
+                            </div>
+                        )}
                     </div>
+
+                    <span style={{ color: 'var(--border)', opacity: 0.5 }}>|</span>
+
+                    {/* Platform Input */}
+                    <div style={{ position: 'relative' }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            borderRadius: '8px',
+                            border: `2px solid ${validationErrors.platform ? '#ef4444' : 'var(--border)'}`,
+                            background: 'var(--bg-primary)',
+                            height: '32px',
+                            animation: validationErrors.platform ? 'shake 0.5s ease' : 'none',
+                            boxShadow: validationErrors.platform ? '0 0 0 3px rgba(239, 68, 68, 0.15)' : 'none'
+                        }}>
+                            <div style={{ background: 'rgba(120, 120, 120, 0.08)', height: '100%', display: 'flex', alignItems: 'center', padding: '0 8px', borderRight: '1px solid var(--border)', borderRadius: '6px 0 0 6px' }}>
+                                <label style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>PLATFORM</label>
+                            </div>
+                            <input
+                                type="text"
+                                placeholder={validationErrors.platform ? "Required!" : "e.g. Anadolu..."}
+                                value={platformName}
+                                onFocus={() => setShowPlatformDropdown(true)}
+                                onBlur={() => setTimeout(() => setShowPlatformDropdown(false), 200)}
+                                onChange={(e) => { setPlatformName(e.target.value); if (e.target.value.trim()) setValidationErrors(p => ({ ...p, platform: false })); }}
+                                style={{ border: 'none', background: 'transparent', color: validationErrors.platform ? '#ef4444' : 'var(--text-primary)', fontSize: '12px', fontWeight: 600, outline: 'none', width: '90px', padding: '0 8px' }}
+                            />
+                        </div>
+                        {showPlatformDropdown && availablePlatforms.length > 0 && (
+                            <div style={{ position: 'absolute', top: '100%', left: 0, width: '150px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: 'var(--shadow-md)', zIndex: 50, marginTop: '4px', padding: '4px' }}>
+                                {availablePlatforms.filter(p => p.toLowerCase().includes(platformName.toLowerCase())).map(p => (
+                                    <div key={p} onClick={() => { setPlatformName(p); setShowPlatformDropdown(false); setValidationErrors(prev => ({ ...prev, platform: false })); }} style={{ padding: '6px 8px', fontSize: '12px', color: 'var(--text-primary)', borderRadius: '4px', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>{p}</div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <span style={{ color: 'var(--border)', opacity: 0.5 }}>|</span>
+
+                    {/* Buttons */}
                     <div style={{ display: 'flex', gap: '6px' }}>
                         <button onClick={onCancel} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer' }}>Iptal</button>
                         <button onClick={save} disabled={!valid || saving} style={{ padding: '6px 16px', borderRadius: '6px', border: 'none', background: valid ? 'var(--accent)' : 'var(--bg-secondary)', color: valid ? '#fff' : 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: valid ? 'pointer' : 'not-allowed' }}>{saving ? '...' : 'Kaydet'}</button>
@@ -857,25 +982,35 @@ function BESInlineEditor({ initialData, onSave, onCancel }: {
             {/* Content - Two framed panels 50/50 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0' }}>
                 {/* LEFT: Contracts Section */}
-                <div style={{ padding: '16px 20px', borderRight: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Kontratlar</span>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{fmt(totalKP)}</span> KP + <span style={{ color: 'var(--success)', fontWeight: 600 }}>{fmt(totalDK)}</span> DK
-                        </div>
+                <div style={{ padding: '12px 16px', borderRight: '1px solid var(--border)' }}>
+                    <div style={{ marginBottom: '8px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bireysel Emeklilik Hesaplari</span>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* Table Container */}
+                    <div style={{ background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                        {/* Header Row */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '0.7fr 1fr 1fr 1fr 20px', gap: '8px', padding: '8px 12px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                            <div>Hesap</div>
+                            <div style={{ textAlign: 'right' }}>Katki Payi</div>
+                            <div style={{ textAlign: 'right' }}>Devlet Katkisi</div>
+                            <div style={{ textAlign: 'right' }}>Toplam</div>
+                            <div></div>
+                        </div>
+                        {/* Data Rows */}
                         {contracts.map((c, i) => (
-                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 110px 110px 90px 28px', gap: '10px', alignItems: 'center', padding: '10px 12px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                <input value={c.name} onChange={e => { const u = [...contracts]; u[i].name = e.target.value; setContracts(u); }} placeholder="Kontrat adi" style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--surface)', color: 'var(--text-primary)', fontSize: '13px', width: '100%' }} />
-                                <input value={fmt(c.katkiPayi)} onChange={e => { const u = [...contracts]; u[i].katkiPayi = parse(e.target.value); setContracts(u); }} placeholder="Katki P." style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--surface)', color: 'var(--text-primary)', fontSize: '13px', textAlign: 'right' }} />
-                                <input value={fmt(c.devletKatkisi)} onChange={e => { const u = [...contracts]; u[i].devletKatkisi = parse(e.target.value); setContracts(u); }} placeholder="Devlet K." style={{ padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--surface)', color: 'var(--text-primary)', fontSize: '13px', textAlign: 'right' }} />
-                                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent)', textAlign: 'right' }}>{fmt(c.katkiPayi + c.devletKatkisi)} ₺</div>
-                                <button onClick={() => setContracts(contracts.filter((_, x) => x !== i))} style={{ padding: '6px', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', opacity: 0.6, fontSize: '16px', lineHeight: 1 }}>×</button>
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '0.7fr 1fr 1fr 1fr 20px', gap: '8px', alignItems: 'center', padding: '8px 12px', borderBottom: i < contracts.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                                <input value={c.name} onChange={e => { const u = [...contracts]; u[i].name = e.target.value; setContracts(u); }} style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '5px', background: 'var(--surface)', color: 'var(--text-primary)', fontSize: '12px', width: '100%', minWidth: 0, boxSizing: 'border-box' }} />
+                                <input value={fmt(c.katkiPayi)} onChange={e => { const u = [...contracts]; u[i].katkiPayi = parse(e.target.value); setContracts(u); }} style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '5px', background: 'var(--surface)', color: 'var(--text-primary)', fontSize: '12px', textAlign: 'right', width: '100%', minWidth: 0, boxSizing: 'border-box' }} />
+                                <input value={fmt(c.devletKatkisi)} onChange={e => { const u = [...contracts]; u[i].devletKatkisi = parse(e.target.value); setContracts(u); }} style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '5px', background: 'var(--surface)', color: 'var(--text-primary)', fontSize: '12px', textAlign: 'right', width: '100%', minWidth: 0, boxSizing: 'border-box' }} />
+                                <div style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '5px', background: 'var(--surface)', fontSize: '12px', fontWeight: 600, color: 'var(--accent)', textAlign: 'right', minWidth: 0, boxSizing: 'border-box' }}>{fmt(c.katkiPayi + c.devletKatkisi)} ₺</div>
+                                <button onClick={() => setContracts(contracts.filter((_, x) => x !== i))} style={{ padding: '2px', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', opacity: 0.5, fontSize: '14px', lineHeight: 1 }}>×</button>
                             </div>
                         ))}
+                        {/* Add Button */}
+                        <div style={{ padding: '8px 12px', borderTop: contracts.length > 0 ? '1px solid var(--border)' : 'none' }}>
+                            <button onClick={() => setContracts([...contracts, { id: `${contracts.length + 1}`, name: `BEH ${contracts.length + 1}`, katkiPayi: 0, devletKatkisi: 0 }])} style={{ padding: '6px 12px', border: '1px dashed var(--border)', background: 'transparent', color: 'var(--accent)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', borderRadius: '5px', width: '100%' }}>+ Yeni Hesap</button>
+                        </div>
                     </div>
-                    <button onClick={() => setContracts([...contracts, { id: `${contracts.length + 1}`, name: `Kontrat ${contracts.length + 1}`, katkiPayi: 0, devletKatkisi: 0 }])} style={{ marginTop: '10px', padding: '8px 14px', border: '1px dashed var(--border)', background: 'transparent', color: 'var(--accent)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', borderRadius: '8px', width: '100%' }}>+ Yeni Kontrat</button>
                 </div>
 
                 {/* RIGHT: Funds Section */}
@@ -886,15 +1021,20 @@ function BESInlineEditor({ initialData, onSave, onCancel }: {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {funds.map((f, i) => (
-                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '60px 1fr 55px 80px 28px', gap: '8px', alignItems: 'center', padding: '10px 12px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                                <input value={f.code} onChange={e => { const u = [...funds]; u[i].code = e.target.value; setFunds(u); }} placeholder="Kod" style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg-secondary)', color: 'var(--accent)', fontSize: '12px', fontWeight: 700, textAlign: 'center' }} />
-                                <input value={f.name} onChange={e => { const u = [...funds]; u[i].name = e.target.value; setFunds(u); }} placeholder="Fon adi" style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '12px' }} />
+                            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 55px 80px 24px', gap: '8px', alignItems: 'center', padding: '8px 12px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                                <input
+                                    value={loadingFund === i ? `${f.code} - Araniyor...` : getFundDisplay(f)}
+                                    onChange={e => handleFundInputChange(i, e.target.value)}
+                                    placeholder="Fon kodu girin (orn: AH2)"
+                                    disabled={loadingFund === i}
+                                    style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '12px', fontStyle: loadingFund === i ? 'italic' : 'normal' }}
+                                />
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                                     <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>%</span>
                                     <input type="number" value={f.percentage} onChange={e => { const u = [...funds]; u[i].percentage = parseFloat(e.target.value) || 0; setFunds(u); }} style={{ padding: '6px 4px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '12px', textAlign: 'right', width: '40px' }} />
                                 </div>
-                                <input type="number" step="0.000001" value={f.avgPrice || ''} onChange={e => { const u = [...funds]; u[i].avgPrice = parseFloat(e.target.value) || undefined; setFunds(u); }} placeholder="Avg Price" style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '12px', textAlign: 'right' }} />
-                                <button onClick={() => setFunds(funds.filter((_, x) => x !== i))} style={{ padding: '6px', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', opacity: 0.6, fontSize: '16px', lineHeight: 1 }}>×</button>
+                                <div style={{ padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg-secondary)', fontSize: '11px', color: f.price ? 'var(--accent)' : 'var(--text-muted)', textAlign: 'right', fontWeight: f.price ? 600 : 400 }}>{f.price ? f.price.toFixed(6) : 'Fiyat'}</div>
+                                <button onClick={() => setFunds(funds.filter((_, x) => x !== i))} style={{ padding: '4px', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', opacity: 0.5, fontSize: '14px', lineHeight: 1 }}>×</button>
                             </div>
                         ))}
                     </div>
@@ -966,9 +1106,26 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         }
     }, [besAsset]);
 
+    // Extract unique portfolios and platforms from assets
+    const availablePortfolios = React.useMemo(() => {
+        const portfolioSet = new Set<string>();
+        assets.forEach(a => {
+            if (a.customGroup) portfolioSet.add(a.customGroup);
+        });
+        return Array.from(portfolioSet).map(name => ({ id: name, name }));
+    }, [assets]);
+
+    const availablePlatforms = React.useMemo(() => {
+        const platforms = new Set<string>();
+        assets.forEach(a => {
+            if (a.platform) platforms.add(a.platform);
+        });
+        return Array.from(platforms);
+    }, [assets]);
+
     // Handle BES save
-    const handleBESSave = async (data: BESMetadata) => {
-        const result = await saveBESData(data);
+    const handleBESSave = async (data: BESMetadata, portfolio: string, platform: string) => {
+        const result = await saveBESData(data, portfolio, platform);
         if (result.success) {
             setBesMetadata(data);
             setShowBESEditor(false); // Close editor after save
@@ -1393,18 +1550,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                 </div>
             )}
 
-            {/* BES Editor - Show when triggered from header button and no assets */}
-            {activePositionTab === 'open' && showBESEditor && !besMetadata && (
-                <div style={{ marginTop: '20px' }}>
-                    <BESInlineEditor
-                        initialData={null}
-                        onSave={handleBESSave}
-                        onCancel={() => setShowBESEditor(false)}
-                    />
-                </div>
-            )}
-
-            {activePositionTab === 'open' && (assets.length > 0 || besMetadata) && (
+            {activePositionTab === 'open' && (assets.length > 0 || besMetadata || showBESEditor) && (
                 <>
                     {/* Success Notification Toast */}
                     {showSuccessNotification && (
@@ -1434,6 +1580,8 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                 initialData={besMetadata}
                                 onSave={handleBESSave}
                                 onCancel={() => setShowBESEditor(false)}
+                                availablePortfolios={availablePortfolios}
+                                availablePlatforms={availablePlatforms}
                             />
                         </div>
                     )}
@@ -1751,16 +1899,9 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                                 <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500, marginTop: '2px' }}>{asset.symbol}</div>
                                                                             </>
                                                                         ) : (
-                                                                            <div
-                                                                                style={{ cursor: isBES ? 'pointer' : 'default' }}
-                                                                                onClick={() => {
-                                                                                    if (isBES) {
-                                                                                        setShowBESEditor(true);
-                                                                                    }
-                                                                                }}
-                                                                            >
-                                                                                <div style={{ fontSize: sizing.assetNameSize, fontWeight: 700, color: isBES ? 'var(--accent)' : 'var(--text-primary)' }}>{asset.name || asset.symbol}</div>
-                                                                                <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500 }}>{isBES ? `${besMeta?.contracts?.length || 0} kontrat` : asset.symbol}</div>
+                                                                            <div>
+                                                                                <div style={{ fontSize: sizing.assetNameSize, fontWeight: 700, color: isBES ? 'var(--accent)' : 'var(--text-primary)' }}>{isBES ? 'BES' : (asset.name || asset.symbol)}</div>
+                                                                                {!isBES && <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500 }}>{asset.symbol}</div>}
                                                                             </div>
                                                                         )}
                                                                     </div>
@@ -1802,7 +1943,9 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                             <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
                                                                 {isBES ? (
                                                                     <>
-                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-muted)' }}>-</div>
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                            ₺{formatNumber(besTotal, 0)}
+                                                                        </div>
                                                                         <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px' }}>-</div>
                                                                     </>
                                                                 ) : (
@@ -1904,11 +2047,11 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                     </>
                                                                 )}
                                                             </td>
-                                                            {/* Delete Action Button */}
+                                                            {/* Action Buttons (Edit for BES + Delete) */}
                                                             <td style={{
                                                                 padding: isBatchEditMode ? sizing.rowPadding : 0,
-                                                                width: isBatchEditMode ? '60px' : '0px',
-                                                                maxWidth: isBatchEditMode ? '60px' : '0px',
+                                                                width: isBatchEditMode ? (isBES ? '80px' : '60px') : '0px',
+                                                                maxWidth: isBatchEditMode ? (isBES ? '80px' : '60px') : '0px',
                                                                 opacity: isBatchEditMode ? 1 : 0,
                                                                 textAlign: 'center',
                                                                 verticalAlign: 'middle',
@@ -1917,35 +2060,68 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                 overflow: 'hidden',
                                                                 visibility: isBatchEditMode ? 'visible' : 'hidden'
                                                             }}>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleDelete(asset.id);
-                                                                    }}
-                                                                    style={{
-                                                                        background: 'var(--bg-secondary)',
-                                                                        border: '1px solid var(--border)',
-                                                                        borderRadius: '8px',
-                                                                        width: '32px', height: '32px',
-                                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                                        cursor: 'pointer',
-                                                                        color: '#ef4444',
-                                                                        transition: 'all 0.2s',
-                                                                        opacity: isBatchEditMode ? 1 : 0,
-                                                                        transform: isBatchEditMode ? 'scale(1)' : 'scale(0.8)'
-                                                                    }}
-                                                                    onMouseEnter={(e) => {
-                                                                        e.currentTarget.style.background = '#fee2e2';
-                                                                        e.currentTarget.style.borderColor = '#ef4444';
-                                                                    }}
-                                                                    onMouseLeave={(e) => {
-                                                                        e.currentTarget.style.background = 'var(--bg-secondary)';
-                                                                        e.currentTarget.style.borderColor = 'var(--border)';
-                                                                    }}
-                                                                    title="Delete Position"
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </button>
+                                                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                                                    {/* Edit Button for BES */}
+                                                                    {isBES && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setShowBESEditor(true);
+                                                                            }}
+                                                                            style={{
+                                                                                background: 'var(--bg-secondary)',
+                                                                                border: '1px solid var(--border)',
+                                                                                borderRadius: '8px',
+                                                                                width: '32px', height: '32px',
+                                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                                cursor: 'pointer',
+                                                                                color: 'var(--accent)',
+                                                                                transition: 'all 0.2s'
+                                                                            }}
+                                                                            onMouseEnter={(e) => {
+                                                                                e.currentTarget.style.background = 'var(--accent-muted)';
+                                                                                e.currentTarget.style.borderColor = 'var(--accent)';
+                                                                            }}
+                                                                            onMouseLeave={(e) => {
+                                                                                e.currentTarget.style.background = 'var(--bg-secondary)';
+                                                                                e.currentTarget.style.borderColor = 'var(--border)';
+                                                                            }}
+                                                                            title="Edit BES"
+                                                                        >
+                                                                            <Pencil size={16} />
+                                                                        </button>
+                                                                    )}
+                                                                    {/* Delete Button */}
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleDelete(asset.id);
+                                                                        }}
+                                                                        style={{
+                                                                            background: 'var(--bg-secondary)',
+                                                                            border: '1px solid var(--border)',
+                                                                            borderRadius: '8px',
+                                                                            width: '32px', height: '32px',
+                                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                            cursor: 'pointer',
+                                                                            color: '#ef4444',
+                                                                            transition: 'all 0.2s',
+                                                                            opacity: isBatchEditMode ? 1 : 0,
+                                                                            transform: isBatchEditMode ? 'scale(1)' : 'scale(0.8)'
+                                                                        }}
+                                                                        onMouseEnter={(e) => {
+                                                                            e.currentTarget.style.background = '#fee2e2';
+                                                                            e.currentTarget.style.borderColor = '#ef4444';
+                                                                        }}
+                                                                        onMouseLeave={(e) => {
+                                                                            e.currentTarget.style.background = 'var(--bg-secondary)';
+                                                                            e.currentTarget.style.borderColor = 'var(--border)';
+                                                                        }}
+                                                                        title="Delete Position"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </div>
                                                             </td>
                                                             <td
                                                                 onClick={(e) => {
@@ -2069,7 +2245,13 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
 // 2. Allocations - Single Card with Side Options
 function AllocationsFullScreen({ assets, exchangeRates }: { assets: any[], exchangeRates?: Record<string, number> }) {
     const [selectedType, setSelectedType] = React.useState('Type');
+    const [expandedCategory, setExpandedCategory] = React.useState<string | null>(null);
     const { showAmounts } = usePrivacy();
+
+    // Reset expanded category when view changes
+    React.useEffect(() => {
+        setExpandedCategory(null);
+    }, [selectedType]);
 
     // Process assets to include totalValueEUR for the chart
     const processedAssets = React.useMemo(() => {
@@ -2213,6 +2395,42 @@ function AllocationsFullScreen({ assets, exchangeRates }: { assets: any[], excha
     const totalVal = chartData.reduce((sum, item) => sum + item.value, 0);
     const [hoveredSlice, setHoveredSlice] = React.useState<string | null>(null);
 
+    // Helper to get assets for a specific category (for drill-down)
+    const getAssetsForCategory = (categoryName: string) => {
+        if (categoryName === 'Other') {
+            const topNames = rawChartData.slice(0, 5).map(d => d.name);
+            return processedAssets.filter(asset => {
+                let assetCategory = 'Unknown';
+                switch (selectedType) {
+                    case "Portfolio": assetCategory = asset.customGroup || asset.ownerCode || 'Main'; break;
+                    case "Type": assetCategory = (asset.symbol === 'EUR' || asset.type === 'Cash') ? 'Cash' : (asset.type || 'Uncategorized'); break;
+                    case "Exchange": assetCategory = asset.exchange || 'Unknown'; break;
+                    case "Currency": assetCategory = asset.currency || 'Unknown'; break;
+                    case "Country": assetCategory = asset.country || 'Unknown'; break;
+                    case "Sector": assetCategory = asset.sector || 'Unknown'; break;
+                    case "Platform": assetCategory = asset.platform || 'Unknown'; break;
+                }
+                return !topNames.includes(assetCategory);
+            });
+        }
+
+        return processedAssets.filter(asset => {
+            switch (selectedType) {
+                case "Portfolio": return (asset.customGroup || asset.ownerCode || 'Main').toLowerCase() === categoryName.toLowerCase();
+                case "Type": {
+                    const typeName = (asset.symbol === 'EUR' || asset.type === 'Cash') ? 'Cash' : (asset.type || 'Uncategorized');
+                    return typeName === categoryName;
+                }
+                case "Exchange": return (asset.exchange || 'Unknown') === categoryName;
+                case "Currency": return (asset.currency || 'Unknown') === categoryName;
+                case "Country": return (asset.country || 'Unknown') === categoryName;
+                case "Sector": return (asset.sector || 'Unknown') === categoryName;
+                case "Platform": return (asset.platform || 'Unknown') === categoryName;
+                default: return false;
+            }
+        }).sort((a, b) => b.totalValueEUR - a.totalValueEUR);
+    };
+
     return (
         <div style={{ padding: '24px 40px 40px 40px', maxWidth: '1200px', margin: '0 auto' }}>
             {/* Premium Header Card - Compact Single Line */}
@@ -2353,68 +2571,191 @@ function AllocationsFullScreen({ assets, exchangeRates }: { assets: any[], excha
                         }}>
                             Distribution
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             {chartData.map((item) => {
                                 const pct = totalVal > 0 ? (item.value / totalVal) * 100 : 0;
                                 const isHovered = hoveredSlice === item.name;
+                                const isExpanded = expandedCategory === item.name;
+                                const categoryAssets = isExpanded ? getAssetsForCategory(item.name) : [];
 
                                 return (
-                                    <div
-                                        key={item.name}
-                                        onMouseEnter={() => setHoveredSlice(item.name)}
-                                        onMouseLeave={() => setHoveredSlice(null)}
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            padding: '8px 10px',
-                                            cursor: 'pointer',
-                                            background: isHovered ? 'var(--bg-secondary)' : 'transparent',
-                                            border: isHovered ? '1px solid var(--border)' : '1px solid transparent',
-                                            borderRadius: '8px',
-                                            transition: 'all 0.2s'
-                                        }}
-                                    >
-                                        {/* Left: Color + Name */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-                                            <div style={{
-                                                width: '8px',
-                                                height: '8px',
-                                                borderRadius: '2px',
-                                                backgroundColor: item.color,
-                                                flexShrink: 0
-                                            }}></div>
-                                            <span style={{
-                                                fontSize: '12px',
-                                                fontWeight: 700,
-                                                color: 'var(--text-primary)',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap'
-                                            }}>{item.name}</span>
+                                    <div key={item.name} style={{ display: 'flex', flexDirection: 'column' }}>
+                                        {/* Category Header */}
+                                        <div
+                                            onClick={() => setExpandedCategory(isExpanded ? null : item.name)}
+                                            onMouseEnter={() => setHoveredSlice(item.name)}
+                                            onMouseLeave={() => setHoveredSlice(null)}
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                padding: '8px 10px',
+                                                cursor: 'pointer',
+                                                background: isExpanded ? 'var(--bg-secondary)' : isHovered ? 'var(--bg-secondary)' : 'transparent',
+                                                border: isExpanded ? '1px solid var(--accent)' : isHovered ? '1px solid var(--border)' : '1px solid transparent',
+                                                borderRadius: isExpanded ? '8px 8px 0 0' : '8px',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            {/* Left: Chevron + Color + Name */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                                                <ChevronDown
+                                                    size={12}
+                                                    style={{
+                                                        color: 'var(--text-muted)',
+                                                        transition: 'transform 0.2s ease',
+                                                        transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                                                        flexShrink: 0
+                                                    }}
+                                                />
+                                                <div style={{
+                                                    width: '8px',
+                                                    height: '8px',
+                                                    borderRadius: '2px',
+                                                    backgroundColor: item.color,
+                                                    flexShrink: 0
+                                                }}></div>
+                                                <span style={{
+                                                    fontSize: '12px',
+                                                    fontWeight: isExpanded ? 800 : 700,
+                                                    color: isExpanded ? 'var(--accent)' : 'var(--text-primary)',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap'
+                                                }}>{item.name}</span>
+                                            </div>
+
+                                            {/* Right: Amount + Percentage */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                                                <span style={{
+                                                    fontSize: '11px',
+                                                    fontWeight: 600,
+                                                    color: 'var(--text-muted)',
+                                                    fontVariantNumeric: 'tabular-nums'
+                                                }}>
+                                                    {showAmounts
+                                                        ? `€${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(item.value)}`
+                                                        : '***'}
+                                                </span>
+                                                <span style={{
+                                                    fontSize: '13px',
+                                                    fontWeight: 800,
+                                                    color: isExpanded ? 'var(--accent)' : 'var(--accent)',
+                                                    fontVariantNumeric: 'tabular-nums',
+                                                    minWidth: '40px',
+                                                    textAlign: 'right'
+                                                }}>{Math.round(pct)}%</span>
+                                            </div>
                                         </div>
 
-                                        {/* Right: Amount + Percentage */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                                            <span style={{
-                                                fontSize: '11px',
-                                                fontWeight: 600,
-                                                color: 'var(--text-muted)',
-                                                fontVariantNumeric: 'tabular-nums'
+                                        {/* Expanded Assets List */}
+                                        {isExpanded && (
+                                            <div style={{
+                                                background: 'var(--surface)',
+                                                border: '1px solid var(--accent)',
+                                                borderTop: 'none',
+                                                borderRadius: '0 0 8px 8px',
+                                                padding: '8px',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '4px'
                                             }}>
-                                                {showAmounts
-                                                    ? `€${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(item.value)}`
-                                                    : '***'}
-                                            </span>
-                                            <span style={{
-                                                fontSize: '13px',
-                                                fontWeight: 800,
-                                                color: 'var(--accent)',
-                                                fontVariantNumeric: 'tabular-nums',
-                                                minWidth: '40px',
-                                                textAlign: 'right'
-                                            }}>{Math.round(pct)}%</span>
-                                        </div>
+                                                {categoryAssets.length === 0 ? (
+                                                    <div style={{
+                                                        padding: '8px',
+                                                        fontSize: '11px',
+                                                        color: 'var(--text-muted)',
+                                                        textAlign: 'center'
+                                                    }}>
+                                                        No assets found
+                                                    </div>
+                                                ) : (
+                                                    categoryAssets.slice(0, 8).map((asset, assetIndex) => {
+                                                        const assetPct = totalValueEUR > 0 ? (asset.totalValueEUR / totalValueEUR) * 100 : 0;
+                                                        return (
+                                                            <div
+                                                                key={asset.id || assetIndex}
+                                                                style={{
+                                                                    display: 'flex',
+                                                                    justifyContent: 'space-between',
+                                                                    alignItems: 'center',
+                                                                    padding: '6px 8px',
+                                                                    borderRadius: '6px',
+                                                                    background: 'var(--bg-primary)',
+                                                                    transition: 'all 0.15s ease'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    (e.currentTarget as HTMLElement).style.background = 'var(--bg-secondary)';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    (e.currentTarget as HTMLElement).style.background = 'var(--bg-primary)';
+                                                                }}
+                                                            >
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                                                                    <div style={{
+                                                                        width: '24px',
+                                                                        height: '24px',
+                                                                        borderRadius: '6px',
+                                                                        background: `${item.color}20`,
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        flexShrink: 0
+                                                                    }}>
+                                                                        <span style={{
+                                                                            fontSize: '9px',
+                                                                            fontWeight: 800,
+                                                                            color: item.color
+                                                                        }}>
+                                                                            {(asset.symbol || asset.name || '?').substring(0, 3)}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                                                        <span style={{
+                                                                            fontSize: '11px',
+                                                                            fontWeight: 700,
+                                                                            color: 'var(--text-primary)',
+                                                                            whiteSpace: 'nowrap',
+                                                                            overflow: 'hidden',
+                                                                            textOverflow: 'ellipsis'
+                                                                        }}>
+                                                                            {asset.symbol || asset.name}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                                                    <span style={{
+                                                                        fontSize: '11px',
+                                                                        fontWeight: 700,
+                                                                        color: 'var(--text-primary)',
+                                                                        fontVariantNumeric: 'tabular-nums'
+                                                                    }}>
+                                                                        {showAmounts ? `€${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(asset.totalValueEUR)}` : '***'}
+                                                                    </span>
+                                                                    <span style={{
+                                                                        fontSize: '10px',
+                                                                        color: 'var(--text-muted)',
+                                                                        fontVariantNumeric: 'tabular-nums'
+                                                                    }}>
+                                                                        {assetPct.toFixed(1)}%
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })
+                                                )}
+                                                {categoryAssets.length > 8 && (
+                                                    <div style={{
+                                                        padding: '4px',
+                                                        fontSize: '10px',
+                                                        color: 'var(--text-muted)',
+                                                        textAlign: 'center'
+                                                    }}>
+                                                        +{categoryAssets.length - 8} more
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -2426,40 +2767,11 @@ function AllocationsFullScreen({ assets, exchangeRates }: { assets: any[], excha
     );
 }
 
-// 3. Performance - Chart Only, No Tabs
-function PerformanceFullScreen({ username, totalValueEUR, assets }: { username: string, totalValueEUR: number, assets?: any[] }) {
-    // Select ALL benchmarks by default
+// 3. Performance - New Clean Component
+function PerformanceFullScreen({ username, totalValueEUR }: { username: string, totalValueEUR: number }) {
     const allBenchmarkIds = React.useMemo(() => BENCHMARK_ASSETS.map(b => b.id), []);
     const [selectedBenchmarks, setSelectedBenchmarks] = React.useState<string[]>(allBenchmarkIds);
     const [isPortfolioVisible, setIsPortfolioVisible] = React.useState(true);
-    const { showAmounts } = usePrivacy();
-
-    // Calculate performance stats
-    const [performanceStats, setPerformanceStats] = React.useState({
-        changePercent: 0,
-        change: 0
-    });
-
-    React.useEffect(() => {
-        const fetchPerformanceData = async () => {
-            try {
-                const response = await fetch(`/api/portfolio/${username}/history?period=1D`);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.data && data.data.length > 0) {
-                        const latest = data.data[data.data.length - 1];
-                        const first = data.data[0];
-                        const changePercent = ((latest.value - first.value) / first.value) * 100;
-                        const change = totalValueEUR * (changePercent / 100);
-                        setPerformanceStats({ changePercent, change });
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching performance data:', error);
-            }
-        };
-        fetchPerformanceData();
-    }, [username, totalValueEUR]);
 
     const handleToggleBenchmark = (id: string) => {
         setSelectedBenchmarks(prev =>
@@ -2467,100 +2779,16 @@ function PerformanceFullScreen({ username, totalValueEUR, assets }: { username: 
         );
     };
 
-    const isPositive = performanceStats.changePercent >= 0;
-
     return (
-        <div style={{ padding: '24px 40px 40px 40px', maxWidth: '1200px', margin: '0 auto' }}>
-            {/* Premium Header Card - Compact Single Line */}
-            <div style={{
-                marginBottom: '24px',
-                padding: '12px 24px',
-                background: 'var(--surface)',
-                borderRadius: '12px',
-                border: '1px solid var(--border)',
-                boxShadow: '0 2px 8px -2px rgba(0, 0, 0, 0.03)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px'
-            }}>
-                {/* Icon */}
-                <div style={{
-                    width: '36px', height: '36px', borderRadius: '10px',
-                    background: 'var(--bg-primary)', border: '1px solid var(--border)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'var(--text-primary)',
-                    flexShrink: 0
-                }}>
-                    <TrendingUp size={18} strokeWidth={2} />
-                </div>
-
-                {/* Title */}
-                <h1 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                    Performance
-                </h1>
-
-                {/* Spacer */}
-                <div style={{ flex: 1 }} />
-
-                {/* Stats on Right (Single Line) */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                    {/* Change Stats (Row) */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{
-                            fontSize: '15px',
-                            fontWeight: 800,
-                            color: isPositive ? 'var(--success)' : 'var(--danger)',
-                            fontVariantNumeric: 'tabular-nums'
-                        }}>
-                            {isPositive ? '▲' : '▼'}{Math.abs(performanceStats.changePercent).toFixed(2)}%
-                        </span>
-                        <span style={{
-                            fontSize: '15px',
-                            fontWeight: 600,
-                            color: isPositive ? 'var(--success)' : 'var(--danger)',
-                            fontVariantNumeric: 'tabular-nums',
-                            opacity: 0.9
-                        }}>
-                            {showAmounts
-                                ? `${isPositive ? '+' : ''}€${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(Math.abs(performanceStats.change))}`
-                                : '***'}
-                        </span>
-                    </div>
-
-                    {/* Divider */}
-                    <div style={{ width: '1px', height: '24px', background: 'var(--border)' }} />
-
-                    {/* Total Wealth (Row) */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                            Total Wealth:
-                        </span>
-                        <span style={{
-                            fontSize: '20px',
-                            fontWeight: 800,
-                            color: 'var(--text-primary)',
-                            fontVariantNumeric: 'tabular-nums',
-                            lineHeight: 1
-                        }}>
-                            {showAmounts
-                                ? `€${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(totalValueEUR)}`
-                                : '***'}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <PortfolioPerformanceChart
+        <div style={{ padding: '24px 40px 40px 40px', maxWidth: '1400px', margin: '0 auto', height: 'calc(100vh - 80px)' }}>
+            <PerformanceChart
                 username={username}
                 totalValueEUR={totalValueEUR}
                 selectedBenchmarks={selectedBenchmarks}
                 isPortfolioVisible={isPortfolioVisible}
                 onToggleBenchmark={handleToggleBenchmark}
                 onTogglePortfolio={() => setIsPortfolioVisible(!isPortfolioVisible)}
-                showHistoryList={false}
-                showTabs={false}
-                showPortfolioValue={false}
-                layoutMode="fullscreen"
+                defaultRange="1Y"
             />
         </div>
     );
@@ -2601,53 +2829,13 @@ function InsightsFullScreen({ username }: { username: string }) {
     );
 }
 
-// 5. Vision - My Wealth Projection
+// 5. Vision - New Clean Component
 function VisionFullScreen({ username, totalValueEUR }: { username: string, totalValueEUR: number }) {
-    const [selectedBenchmarks, setSelectedBenchmarks] = React.useState<string[]>([]);
-    const [isPortfolioVisible, setIsPortfolioVisible] = React.useState(true);
-
     return (
-        <div style={{ padding: '24px 40px 40px 40px', maxWidth: '1200px', margin: '0 auto' }}>
-            {/* Premium Header Card - Matching Other Pages */}
-            <div style={{
-                marginBottom: '24px',
-                padding: '12px 24px',
-                background: 'var(--surface)',
-                borderRadius: '12px',
-                border: '1px solid var(--border)',
-                boxShadow: '0 2px 8px -2px rgba(0, 0, 0, 0.03)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px'
-            }}>
-                <div style={{
-                    width: '36px', height: '36px', borderRadius: '10px',
-                    background: 'var(--bg-primary)', border: '1px solid var(--border)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'var(--text-primary)',
-                    flexShrink: 0
-                }}>
-                    <Eye size={18} strokeWidth={2} />
-                </div>
-                <h1 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                    My Wealth Projection
-                </h1>
-            </div>
-
-            <PortfolioPerformanceChart
+        <div style={{ padding: '24px 40px 40px 40px', maxWidth: '1400px', margin: '0 auto', height: 'calc(100vh - 80px)' }}>
+            <VisionChart
                 username={username}
                 totalValueEUR={totalValueEUR}
-                selectedBenchmarks={selectedBenchmarks}
-                isPortfolioVisible={isPortfolioVisible}
-                onToggleBenchmark={(id) => setSelectedBenchmarks(prev =>
-                    prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]
-                )}
-                onTogglePortfolio={() => setIsPortfolioVisible(!isPortfolioVisible)}
-                defaultRange="ALL"
-                showHistoryList={false}
-                showTabs={false}
-                layoutMode="fullscreen"
-                initialView="vision"
             />
         </div>
     );

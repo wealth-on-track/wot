@@ -8,7 +8,7 @@ async function main() {
         where: {
             username: 'dev1'
         },
-        include: { portfolio: true }
+        include: { Portfolio: true }
     });
 
     if (!user) {
@@ -16,7 +16,7 @@ async function main() {
         // Fallback
         const userByEmail = await prisma.user.findFirst({
             where: { email: { startsWith: 'dev1' } },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
         if (!userByEmail) {
             console.log('User dev1 not found.');
@@ -31,12 +31,12 @@ async function main() {
 }
 
 async function wipe(user: any) {
-    if (!user.portfolio) {
+    if (!user.Portfolio) {
         console.log('User has no portfolio.');
         return;
     }
 
-    const portfolioId = user.portfolio.id;
+    const portfolioId = user.Portfolio.id;
     console.log(`Wiping data for portfolio ${portfolioId} (${user.username})...`);
 
     // Delete Transactions

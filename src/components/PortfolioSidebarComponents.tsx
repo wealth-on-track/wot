@@ -261,12 +261,20 @@ const ALL_ALLOCATION_VIEWS = [
 export function AllocationCard({ assets, totalValueEUR, isBlurred = false, exchangeRates, onFilterSelect, activeFilters, variant = 'default', selectedView, isFullScreen = false }: AllocationCardProps) {
     const [hoveredSlice, setHoveredSlice] = useState<string | null>(null);
     const [allocationView, setAllocationView] = useState(selectedView || "Portfolio");
+    const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
     useEffect(() => {
         if (selectedView) {
             setAllocationView(selectedView);
+            setExpandedCategory(null);
         }
     }, [selectedView]);
+
+    // Handler to change view and reset expanded category
+    const handleViewChange = (newView: string) => {
+        setAllocationView(newView);
+        setExpandedCategory(null);
+    };
 
     const [viewOrder, setViewOrder] = useState(['Portfolio', 'Type', 'Exchange', 'Currency', 'Country', 'Sector', 'Platform', 'Positions']);
     const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
@@ -405,6 +413,45 @@ export function AllocationCard({ assets, totalValueEUR, isBlurred = false, excha
     const chartData = processChartData();
     const totalVal = chartData.reduce((sum, item) => sum + item.value, 0);
 
+    // Helper to get assets for a specific category (for drill-down)
+    const getAssetsForCategory = (categoryName: string) => {
+        if (categoryName === (t('Other') || 'Other')) {
+            // For "Other" category, get all assets not in top 5
+            const topNames = rawChartData.slice(0, 5).map(d => d.name);
+            return assets.filter(asset => {
+                let assetCategory = 'Unknown';
+                switch (allocationView) {
+                    case "Portfolio": assetCategory = asset.customGroup || asset.ownerCode || 'Main'; break;
+                    case "Type": assetCategory = (asset.symbol === 'EUR' || asset.type === 'Cash') ? 'Cash' : (asset.type || 'Uncategorized'); break;
+                    case "Exchange": assetCategory = asset.exchange || 'Unknown'; break;
+                    case "Currency": assetCategory = asset.currency || 'Unknown'; break;
+                    case "Country": assetCategory = asset.country || getCountryFromExchange(asset.exchange); break;
+                    case "Sector": assetCategory = asset.sector || 'Unknown'; break;
+                    case "Platform": assetCategory = asset.platform || 'Unknown'; break;
+                    case "Positions": assetCategory = asset.symbol || asset.name || 'Unknown'; break;
+                }
+                return !topNames.includes(assetCategory);
+            });
+        }
+
+        return assets.filter(asset => {
+            switch (allocationView) {
+                case "Portfolio": return (asset.customGroup || asset.ownerCode || 'Main').toLowerCase() === categoryName.toLowerCase();
+                case "Type": {
+                    const typeName = (asset.symbol === 'EUR' || asset.type === 'Cash') ? 'Cash' : (asset.type || 'Uncategorized');
+                    return typeName === categoryName;
+                }
+                case "Exchange": return (asset.exchange || 'Unknown') === categoryName;
+                case "Currency": return (asset.currency || 'Unknown') === categoryName;
+                case "Country": return (asset.country || getCountryFromExchange(asset.exchange)) === categoryName;
+                case "Sector": return (asset.sector || 'Unknown') === categoryName;
+                case "Platform": return (asset.platform || 'Unknown') === categoryName;
+                case "Positions": return (asset.symbol || asset.name || 'Unknown') === categoryName;
+                default: return false;
+            }
+        }).sort((a, b) => b.totalValueEUR - a.totalValueEUR);
+    };
+
     const hoveredItem = hoveredSlice ? chartData.find(i => i.name === hoveredSlice) : null;
     const hoveredValue = hoveredItem ? convert(hoveredItem.value) : displayBalance;
     const hoveredPct = hoveredItem ? (hoveredItem.value / totalVal * 100) : null;
@@ -459,7 +506,7 @@ export function AllocationCard({ assets, totalValueEUR, isBlurred = false, excha
                             {groups[mobilePage].map(view => (
                                 <button
                                     key={view}
-                                    onClick={() => setAllocationView(view)}
+                                    onClick={() => handleViewChange(view)}
                                     style={{
                                         background: 'transparent',
                                         border: 'none',
@@ -579,66 +626,178 @@ export function AllocationCard({ assets, totalValueEUR, isBlurred = false, excha
                             </div>
                         </div>
 
-                        {/* Breakdown List (Legend) - Ultra Compact */}
+                        {/* Breakdown List (Legend) - With Drill-Down */}
                         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                             {chartData.slice(0, 8).map((item, index) => {
                                 const pct = totalVal > 0 ? (item.value / totalVal) * 100 : 0;
                                 const activeFilterValue = activeFilters?.[allocationView] || null;
                                 const isSelected = activeFilterValue === item.name;
                                 const isHovered = hoveredSlice === item.name;
+                                const isExpanded = expandedCategory === item.name;
+                                const categoryAssets = isExpanded ? getAssetsForCategory(item.name) : [];
 
                                 return (
-                                    <div
-                                        key={item.name}
-                                        onClick={() => onFilterSelect?.(allocationView, item.name)}
-                                        onMouseEnter={() => setHoveredSlice(item.name)}
-                                        onMouseLeave={() => setHoveredSlice(null)}
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            padding: '0.35rem 0.5rem',
-                                            cursor: 'pointer',
-                                            background: isSelected ? 'rgba(99, 102, 241, 0.12)' : isHovered ? 'var(--bg-secondary)' : 'var(--surface)',
-                                            border: isSelected ? '1px solid var(--accent)' : isHovered ? '1px solid var(--border)' : '1px solid var(--border-light)',
-                                            borderRadius: '6px',
-                                            transition: 'all 0.2s',
-                                            opacity: hoveredSlice && hoveredSlice !== item.name ? 0.4 : 1
-                                        }}
-                                    >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                    <div key={item.name} style={{ display: 'flex', flexDirection: 'column' }}>
+                                        {/* Category Header */}
+                                        <div
+                                            onClick={() => setExpandedCategory(isExpanded ? null : item.name)}
+                                            onMouseEnter={() => setHoveredSlice(item.name)}
+                                            onMouseLeave={() => setHoveredSlice(null)}
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                padding: '0.35rem 0.5rem',
+                                                cursor: 'pointer',
+                                                background: isExpanded ? 'var(--bg-secondary)' : isSelected ? 'rgba(99, 102, 241, 0.12)' : isHovered ? 'var(--bg-secondary)' : 'var(--surface)',
+                                                border: isExpanded ? '1px solid var(--accent)' : isSelected ? '1px solid var(--accent)' : isHovered ? '1px solid var(--border)' : '1px solid var(--border-light)',
+                                                borderRadius: isExpanded ? '6px 6px 0 0' : '6px',
+                                                transition: 'all 0.2s',
+                                                opacity: hoveredSlice && hoveredSlice !== item.name && !isExpanded ? 0.4 : 1
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <ChevronDown
+                                                    size={12}
+                                                    style={{
+                                                        color: 'var(--text-muted)',
+                                                        transition: 'transform 0.2s ease',
+                                                        transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)'
+                                                    }}
+                                                />
+                                                <div style={{
+                                                    width: '0.6rem',
+                                                    height: '0.6rem',
+                                                    borderRadius: '2px',
+                                                    backgroundColor: item.color,
+                                                }}></div>
+                                                <span style={{
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: isExpanded ? 800 : 700,
+                                                    color: isExpanded ? 'var(--accent)' : isSelected ? 'var(--accent)' : 'var(--text-primary)',
+                                                }}>{item.name}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <span style={{
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 600,
+                                                    color: 'var(--text-muted)',
+                                                    fontVariantNumeric: 'tabular-nums'
+                                                }}>
+                                                    {showAmounts
+                                                        ? `${sym}${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(convert(item.value))}`
+                                                        : '****'}
+                                                </span>
+                                                <span style={{
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: 800,
+                                                    color: isExpanded ? 'var(--accent)' : 'var(--text-primary)',
+                                                    fontVariantNumeric: 'tabular-nums',
+                                                    minWidth: '32px',
+                                                    textAlign: 'right'
+                                                }}>{Math.round(pct)}%</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Expanded Assets List (Mobile) */}
+                                        {isExpanded && (
                                             <div style={{
-                                                width: '0.6rem',
-                                                height: '0.6rem',
-                                                borderRadius: '2px',
-                                                backgroundColor: item.color,
-                                            }}></div>
-                                            <span style={{
-                                                fontSize: '0.75rem',
-                                                fontWeight: 700,
-                                                color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
-                                            }}>{item.name}</span>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <span style={{
-                                                fontSize: '0.75rem',
-                                                fontWeight: 600,
-                                                color: 'var(--text-muted)',
-                                                fontVariantNumeric: 'tabular-nums'
+                                                background: 'var(--surface)',
+                                                border: '1px solid var(--accent)',
+                                                borderTop: 'none',
+                                                borderRadius: '0 0 6px 6px',
+                                                padding: '0.4rem',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '0.2rem'
                                             }}>
-                                                {showAmounts
-                                                    ? `${sym}${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(convert(item.value))}`
-                                                    : '****'}
-                                            </span>
-                                            <span style={{
-                                                fontSize: '0.8rem',
-                                                fontWeight: 800,
-                                                color: 'var(--text-primary)',
-                                                fontVariantNumeric: 'tabular-nums',
-                                                minWidth: '32px',
-                                                textAlign: 'right'
-                                            }}>{Math.round(pct)}%</span>
-                                        </div>
+                                                {categoryAssets.length === 0 ? (
+                                                    <div style={{
+                                                        padding: '0.4rem',
+                                                        fontSize: '0.7rem',
+                                                        color: 'var(--text-muted)',
+                                                        textAlign: 'center'
+                                                    }}>
+                                                        No assets found
+                                                    </div>
+                                                ) : (
+                                                    categoryAssets.slice(0, 6).map((asset, assetIndex) => {
+                                                        const assetPct = totalValueEUR > 0 ? (asset.totalValueEUR / totalValueEUR) * 100 : 0;
+                                                        return (
+                                                            <div
+                                                                key={asset.id || assetIndex}
+                                                                style={{
+                                                                    display: 'flex',
+                                                                    justifyContent: 'space-between',
+                                                                    alignItems: 'center',
+                                                                    padding: '0.3rem 0.4rem',
+                                                                    borderRadius: '4px',
+                                                                    background: 'var(--bg-secondary)'
+                                                                }}
+                                                            >
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0, flex: 1 }}>
+                                                                    <div style={{
+                                                                        width: '20px',
+                                                                        height: '20px',
+                                                                        borderRadius: '4px',
+                                                                        background: `${item.color}20`,
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        flexShrink: 0
+                                                                    }}>
+                                                                        <span style={{
+                                                                            fontSize: '0.55rem',
+                                                                            fontWeight: 800,
+                                                                            color: item.color
+                                                                        }}>
+                                                                            {(asset.symbol || asset.name || '?').substring(0, 3)}
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style={{
+                                                                        fontSize: '0.7rem',
+                                                                        fontWeight: 600,
+                                                                        color: 'var(--text-primary)',
+                                                                        whiteSpace: 'nowrap',
+                                                                        overflow: 'hidden',
+                                                                        textOverflow: 'ellipsis'
+                                                                    }}>
+                                                                        {asset.symbol || asset.name}
+                                                                    </span>
+                                                                </div>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                                                                    <span style={{
+                                                                        fontSize: '0.7rem',
+                                                                        fontWeight: 700,
+                                                                        color: 'var(--text-primary)',
+                                                                        fontVariantNumeric: 'tabular-nums'
+                                                                    }}>
+                                                                        {showAmounts ? `${sym}${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(convert(asset.totalValueEUR))}` : '****'}
+                                                                    </span>
+                                                                    <span style={{
+                                                                        fontSize: '0.6rem',
+                                                                        color: 'var(--text-muted)',
+                                                                        fontVariantNumeric: 'tabular-nums'
+                                                                    }}>
+                                                                        {assetPct.toFixed(1)}%
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })
+                                                )}
+                                                {categoryAssets.length > 6 && (
+                                                    <div style={{
+                                                        padding: '0.25rem',
+                                                        fontSize: '0.65rem',
+                                                        color: 'var(--text-muted)',
+                                                        textAlign: 'center'
+                                                    }}>
+                                                        +{categoryAssets.length - 6} more
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -801,7 +960,7 @@ export function AllocationCard({ assets, totalValueEUR, isBlurred = false, excha
                                         justifyContent: 'center'
                                     }}>
                                         <button
-                                            onClick={() => setAllocationView(view)}
+                                            onClick={() => handleViewChange(view)}
                                             title={view}
                                             style={{
                                                 background: allocationView === view ? 'rgba(79, 70, 229, 0.1)' : 'transparent',
@@ -900,54 +1059,195 @@ export function AllocationCard({ assets, totalValueEUR, isBlurred = false, excha
                             const activeFilterValue = activeFilters?.[allocationView] || null;
                             const isSelected = activeFilterValue === item.name;
                             const isHovered = hoveredSlice === item.name;
+                            const isExpanded = expandedCategory === item.name;
+                            const categoryAssets = isExpanded ? getAssetsForCategory(item.name) : [];
 
                             return (
-                                <div
-                                    key={item.name}
-                                    onClick={() => onFilterSelect?.(allocationView, item.name)}
-                                    onMouseEnter={() => setHoveredSlice(item.name)}
-                                    onMouseLeave={() => setHoveredSlice(null)}
-                                    title={t('click_to_filter')}
-                                    style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        opacity: hoveredSlice && hoveredSlice !== item.name ? 0.3 : 1,
-                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        width: '100%',
-                                        padding: '0.35rem 0.6rem',
-                                        cursor: 'pointer',
-                                        background: isSelected ? 'rgba(99, 102, 241, 0.12)' : isHovered ? 'var(--bg-secondary)' : 'transparent',
-                                        border: isSelected ? '1px solid var(--accent)' : isHovered ? '1px solid var(--border)' : '1px solid transparent',
-                                        borderRadius: '12px',
-                                        transform: isHovered ? 'translateX(4px)' : 'none'
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                <div key={item.name} style={{ display: 'flex', flexDirection: 'column' }}>
+                                    {/* Category Header */}
+                                    <div
+                                        onClick={() => setExpandedCategory(isExpanded ? null : item.name)}
+                                        onMouseEnter={() => setHoveredSlice(item.name)}
+                                        onMouseLeave={() => setHoveredSlice(null)}
+                                        title={t('click_to_expand') || 'Click to see assets'}
+                                        style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            opacity: hoveredSlice && hoveredSlice !== item.name && !isExpanded ? 0.3 : 1,
+                                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            width: '100%',
+                                            padding: '0.35rem 0.6rem',
+                                            cursor: 'pointer',
+                                            background: isExpanded ? 'var(--bg-secondary)' : isSelected ? 'rgba(99, 102, 241, 0.12)' : isHovered ? 'var(--bg-secondary)' : 'transparent',
+                                            border: isExpanded ? '1px solid var(--accent)' : isSelected ? '1px solid var(--accent)' : isHovered ? '1px solid var(--border)' : '1px solid transparent',
+                                            borderRadius: isExpanded ? '12px 12px 0 0' : '12px',
+                                            transform: isHovered && !isExpanded ? 'translateX(4px)' : 'none'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                            <ChevronDown
+                                                size={14}
+                                                style={{
+                                                    color: 'var(--text-muted)',
+                                                    transition: 'transform 0.2s ease',
+                                                    transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)'
+                                                }}
+                                            />
+                                            <div style={{
+                                                width: '0.6rem',
+                                                height: '0.6rem',
+                                                borderRadius: '3px',
+                                                backgroundColor: item.color,
+                                                boxShadow: isSelected || isHovered || isExpanded ? `0 0 12px ${item.color}60` : 'none',
+                                                transition: 'all 0.2s'
+                                            }}></div>
+                                            <span style={{
+                                                fontSize: '0.8rem',
+                                                fontWeight: isSelected || isHovered || isExpanded ? 800 : 600,
+                                                color: isExpanded ? 'var(--accent)' : isSelected ? 'var(--accent)' : 'var(--text-primary)',
+                                                transition: 'all 0.2s'
+                                            }}>{item.name}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span style={{
+                                                fontSize: '0.8rem',
+                                                fontWeight: 800,
+                                                color: isExpanded ? 'var(--accent)' : isSelected ? 'var(--accent)' : 'var(--text-muted)',
+                                                fontVariantNumeric: 'tabular-nums'
+                                            }}>{Math.round(pct)}%</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Expanded Assets List */}
+                                    {isExpanded && (
                                         <div style={{
-                                            width: '0.6rem',
-                                            height: '0.6rem',
-                                            borderRadius: '3px',
-                                            backgroundColor: item.color,
-                                            boxShadow: isSelected || isHovered ? `0 0 12px ${item.color}60` : 'none',
-                                            transition: 'all 0.2s'
-                                        }}></div>
-                                        <span style={{
-                                            fontSize: '0.8rem',
-                                            fontWeight: isSelected || isHovered ? 800 : 600,
-                                            color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
-                                            transition: 'all 0.2s'
-                                        }}>{item.name}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <span style={{
-                                            fontSize: '0.8rem',
-                                            fontWeight: 800,
-                                            color: isSelected ? 'var(--accent)' : 'var(--text-muted)',
-                                            fontVariantNumeric: 'tabular-nums'
-                                        }}>{Math.round(pct)}%</span>
-                                        {isSelected && <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--accent)' }}></div>}
-                                    </div>
+                                            background: 'var(--bg-secondary)',
+                                            border: '1px solid var(--accent)',
+                                            borderTop: 'none',
+                                            borderRadius: '0 0 12px 12px',
+                                            padding: '0.5rem',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '0.25rem',
+                                            animation: 'fadeIn 0.2s ease-out'
+                                        }}>
+                                            {categoryAssets.length === 0 ? (
+                                                <div style={{
+                                                    padding: '0.5rem',
+                                                    fontSize: '0.75rem',
+                                                    color: 'var(--text-muted)',
+                                                    textAlign: 'center'
+                                                }}>
+                                                    No assets found
+                                                </div>
+                                            ) : (
+                                                categoryAssets.slice(0, 8).map((asset, assetIndex) => {
+                                                    const assetPct = totalValueEUR > 0 ? (asset.totalValueEUR / totalValueEUR) * 100 : 0;
+                                                    return (
+                                                        <div
+                                                            key={asset.id || assetIndex}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onFilterSelect?.(allocationView, item.name);
+                                                            }}
+                                                            style={{
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center',
+                                                                padding: '0.4rem 0.5rem',
+                                                                borderRadius: '8px',
+                                                                background: 'var(--surface)',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.15s ease'
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                (e.currentTarget as HTMLElement).style.background = 'var(--bg-primary)';
+                                                                (e.currentTarget as HTMLElement).style.transform = 'translateX(2px)';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                (e.currentTarget as HTMLElement).style.background = 'var(--surface)';
+                                                                (e.currentTarget as HTMLElement).style.transform = 'none';
+                                                            }}
+                                                        >
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1 }}>
+                                                                <div style={{
+                                                                    width: '24px',
+                                                                    height: '24px',
+                                                                    borderRadius: '6px',
+                                                                    background: `${item.color}20`,
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    flexShrink: 0
+                                                                }}>
+                                                                    <span style={{
+                                                                        fontSize: '0.65rem',
+                                                                        fontWeight: 800,
+                                                                        color: item.color
+                                                                    }}>
+                                                                        {(asset.symbol || asset.name || '?').substring(0, 3)}
+                                                                    </span>
+                                                                </div>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                                                    <span style={{
+                                                                        fontSize: '0.75rem',
+                                                                        fontWeight: 700,
+                                                                        color: 'var(--text-primary)',
+                                                                        whiteSpace: 'nowrap',
+                                                                        overflow: 'hidden',
+                                                                        textOverflow: 'ellipsis'
+                                                                    }}>
+                                                                        {asset.symbol || asset.name}
+                                                                    </span>
+                                                                    {asset.name && asset.symbol && asset.name !== asset.symbol && (
+                                                                        <span style={{
+                                                                            fontSize: '0.65rem',
+                                                                            color: 'var(--text-muted)',
+                                                                            whiteSpace: 'nowrap',
+                                                                            overflow: 'hidden',
+                                                                            textOverflow: 'ellipsis'
+                                                                        }}>
+                                                                            {asset.name.length > 20 ? asset.name.substring(0, 20) + '...' : asset.name}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
+                                                                <span style={{
+                                                                    fontSize: '0.75rem',
+                                                                    fontWeight: 800,
+                                                                    color: 'var(--text-primary)',
+                                                                    fontVariantNumeric: 'tabular-nums'
+                                                                }}>
+                                                                    {isBlurred ? '****' : `${sym}${new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(convert(asset.totalValueEUR))}`}
+                                                                </span>
+                                                                <span style={{
+                                                                    fontSize: '0.65rem',
+                                                                    color: 'var(--text-muted)',
+                                                                    fontVariantNumeric: 'tabular-nums'
+                                                                }}>
+                                                                    {assetPct.toFixed(1)}%
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                            {categoryAssets.length > 8 && (
+                                                <div style={{
+                                                    padding: '0.35rem',
+                                                    fontSize: '0.7rem',
+                                                    color: 'var(--text-muted)',
+                                                    textAlign: 'center',
+                                                    borderTop: '1px solid var(--border)',
+                                                    marginTop: '0.25rem'
+                                                }}>
+                                                    +{categoryAssets.length - 8} more assets
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

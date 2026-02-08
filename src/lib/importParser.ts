@@ -21,7 +21,7 @@
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { parseKrakenTransactions } from './krakenParser';
-import { parseIsBankTXT, detectIsBank } from './isBankParser';
+import { parseIsBankTXT, detectIsBank, detectIsBankPreciousMetals, parseIsBankPreciousMetals } from './isBankParser';
 
 // Unified threshold for quantity comparisons (positions with qty <= this are considered closed)
 const QUANTITY_THRESHOLD = 0.000001;
@@ -57,7 +57,7 @@ export interface ParsedTransaction {
     name?: string;       // Product name from CSV (used for validation in import.ts)
     type: TransactionType;
     quantity: number;
-    price: number;
+    price: number;       // Unit price per item (0 if unknown)
     currency: string;
     date: Date;
     originalDateStr?: string;
@@ -66,6 +66,15 @@ export interface ParsedTransaction {
     externalId?: string;
     fee: number;
     isin?: string;       // ISIN for resolution in import.ts
+    needsCostInput?: boolean;  // True if this BUY transaction needs manual cost input
+    totalCost?: number;        // Total cost for this transaction (for avg calculation)
+    // Price validation (populated after Yahoo comparison)
+    priceValidation?: {
+        yahooPrice: number;      // Price from Yahoo Finance for this date
+        deviation: number;       // Percentage deviation (positive = parsed higher, negative = parsed lower)
+        isWarning: boolean;      // True if deviation > 15%
+        isCritical: boolean;     // True if deviation > 30%
+    };
 }
 
 export type TransactionType = 'BUY' | 'SELL' | 'DEPOSIT' | 'WITHDRAWAL' | 'DIVIDEND' | 'COUPON' | 'INTEREST' | 'FEE' | 'FX' | 'STAKING';
@@ -943,8 +952,25 @@ function parseRow(
  * Parse CSV content
  */
 export function parseCSV(content: string, platform?: string): ParseResult {
-    // Check for İş Bank TXT format (before Papa Parse)
-    // Check for İş Bank TXT format (before Papa Parse)
+    // Check for İş Bank Precious Metals format FIRST (HESAP ÖZETI for XAU/XPT)
+    const preciousMetalType = detectIsBankPreciousMetals(content);
+    if (preciousMetalType) {
+        const { rows, transactions, processedCount, closedPositionCount } = parseIsBankPreciousMetals(content, preciousMetalType);
+        return {
+            success: true,
+            rows,
+            transactions,
+            closedPositionCount,
+            detectedColumns: {},
+            unmappedColumns: [],
+            errors: [],
+            totalRows: processedCount,
+            skippedRows: 0,
+            detectedFormat: 'isbank'
+        };
+    }
+
+    // Check for İş Bank Investment Account TXT format (PORTFÖY/EKSTRE)
     const isIsBank = detectIsBank(content);
 
     if (isIsBank || platform?.toLowerCase().includes('is bank')) {
@@ -1151,17 +1177,100 @@ export function parseExcel(buffer: ArrayBuffer, platform?: string): ParseResult 
 }
 
 /**
+ * Try to read file content with different encodings
+ * Turkish bank files often use Windows-1254 encoding
+ */
+async function readFileWithEncoding(file: File): Promise<string> {
+    const buffer = await file.arrayBuffer();
+
+    // First try UTF-8
+    const utf8Content = new TextDecoder('utf-8').decode(buffer);
+
+    // Check if this looks like a Turkish bank file with encoding issues
+    // These are telltale signs of Windows-1254/ISO-8859-9 being read as UTF-8
+    const hasTurkishMojibake = /[›‹˝ˆ¸˛÷ﬁﬂ«»È]/.test(utf8Content.slice(0, 2000));
+    const looksLikeTurkishBank = /YATIRIM|PORTF|BANKASI|HESABI|EKSTRE/i.test(utf8Content.slice(0, 3000));
+
+    // If it has Turkish mojibake, try Windows-1254 encoding
+    if (hasTurkishMojibake && looksLikeTurkishBank) {
+        try {
+            // Try Windows-1254 (Turkish) encoding
+            const win1254Content = new TextDecoder('windows-1254').decode(buffer);
+
+            // Check if the Windows-1254 version has proper Turkish characters
+            const hasProperTurkish = /[İıŞşĞğÜüÖöÇç]/.test(win1254Content.slice(0, 2000));
+
+            if (hasProperTurkish) {
+                console.log('[parseFile] Detected Windows-1254 encoded Turkish file, using proper encoding');
+                return win1254Content;
+            }
+        } catch {
+            // TextDecoder might not support windows-1254 in some environments
+            console.warn('[parseFile] Windows-1254 decoder not available, using UTF-8 with character mapping');
+        }
+    }
+
+    // Fall back to UTF-8 (character mapping in parser will handle mojibake)
+    return utf8Content;
+}
+
+/**
+ * Parse PDF file via server-side API
+ * PDF parsing requires Node.js environment (pdf-parse uses pdfjs-dist worker)
+ */
+async function parsePDFViaAPI(file: File): Promise<ParseResult> {
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/parse-pdf', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            return {
+                success: false,
+                rows: [],
+                transactions: [],
+                detectedColumns: {},
+                unmappedColumns: [],
+                errors: [`PDF API hatası: ${response.statusText}`],
+                totalRows: 0,
+                skippedRows: 0
+            };
+        }
+
+        return await response.json();
+    } catch (error: any) {
+        return {
+            success: false,
+            rows: [],
+            transactions: [],
+            detectedColumns: {},
+            unmappedColumns: [],
+            errors: [`PDF parse hatası: ${error.message}`],
+            totalRows: 0,
+            skippedRows: 0
+        };
+    }
+}
+
+/**
  * Detect file type and parse accordingly
  */
 export async function parseFile(file: File, platform?: string): Promise<ParseResult> {
     const extension = file.name.split('.').pop()?.toLowerCase();
 
     if (extension === 'csv' || extension === 'txt') {
-        const content = await file.text();
+        const content = await readFileWithEncoding(file);
         return parseCSV(content, platform);
     } else if (extension === 'xlsx' || extension === 'xls') {
         const buffer = await file.arrayBuffer();
         return parseExcel(buffer, platform);
+    } else if (extension === 'pdf') {
+        // PDF parsing requires server-side processing
+        return parsePDFViaAPI(file);
     } else {
         return {
             success: false,
@@ -1169,9 +1278,10 @@ export async function parseFile(file: File, platform?: string): Promise<ParseRes
             transactions: [],
             detectedColumns: {},
             unmappedColumns: [],
-            errors: [`Unsupported file type: .${extension}. Please use CSV or Excel files.`],
+            errors: [`Unsupported file type: .${extension}. Please use CSV, Excel, or PDF files.`],
             totalRows: 0,
             skippedRows: 0
         };
     }
 }
+

@@ -51,20 +51,20 @@ export async function GET(
         const user = await prisma.user.findUnique({
             where: { username },
             include: {
-                portfolio: {
+                Portfolio: {
                     include: {
-                        assets: true
+                        Asset: true
                     }
                 }
             }
         });
 
-        if (!user || !user.portfolio) {
+        if (!user || !user.Portfolio) {
             log('ERROR: User or portfolio not found');
             return NextResponse.json({ error: 'Portfolio not found' }, { status: 404 });
         }
 
-        log(`DEBUG: Found user, assets count: ${user.portfolio.assets.length}`);
+        log(`DEBUG: Found user, assets count: ${user.Portfolio.Asset.length}`);
 
         // 1. Fetch Real Snapshots from DB
         let snapshots: any[] = [];
@@ -74,7 +74,7 @@ export async function GET(
             if ((prisma as any).portfolioSnapshot) {
                 snapshots = await prisma.portfolioSnapshot.findMany({
                     where: {
-                        portfolioId: user.portfolio!.id,
+                        portfolioId: user.Portfolio!.id,
                         date: { gte: startDate }
                     },
                     orderBy: { date: 'asc' },
@@ -111,8 +111,8 @@ export async function GET(
 
             let fallbackValue = 0;
             try {
-                if (user.portfolio && user.portfolio.assets) {
-                    fallbackValue = user.portfolio.assets.reduce((sum, asset) => {
+                if (user.Portfolio && user.Portfolio.Asset) {
+                    fallbackValue = user.Portfolio.Asset.reduce((sum, asset) => {
                         // Use buyPrice as proxy for value if no snapshots exist
                         // Check for nulls just in case, though schema says required
                         const val = (Number(asset.quantity) || 0) * (Number(asset.buyPrice) || 0);

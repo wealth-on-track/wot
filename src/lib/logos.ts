@@ -12,6 +12,12 @@ export const getLogoUrl = (symbol: string, type: string, exchange?: string, coun
         return null;
     }
 
+    // 0.5 BES (Bireysel Emeklilik Sistemi) - Turkish Individual Pension System
+    if (t === 'BES' || s.includes('BES') || ex === 'AHE') {
+        // Pension/retirement fund icon
+        return 'https://img.icons8.com/fluency/96/money-bag.png';
+    }
+
     // 1. CRYPTO: Use CoinCap (Symbol-based)
     if (t === 'CRYPTO') {
         // CoinCap uses lowercase symbols (btc, eth, sol)
@@ -85,9 +91,10 @@ export const getLogoUrl = (symbol: string, type: string, exchange?: string, coun
             'XAGTRY': 'https://img.icons8.com/fluency/96/silver-bars.png',
             'SI': 'https://img.icons8.com/fluency/96/silver-bars.png',
 
-            'PLATINUM': 'https://img.icons8.com/fluency/96/platinum.png',
-            'XPT': 'https://img.icons8.com/fluency/96/platinum.png',
-            'PL': 'https://img.icons8.com/fluency/96/platinum.png',
+            'PLATINUM': 'https://img.icons8.com/fluency/96/silver-bars.png',
+            'XPT': 'https://img.icons8.com/fluency/96/silver-bars.png',
+            'XPTTRY': 'https://img.icons8.com/fluency/96/silver-bars.png',
+            'PL': 'https://img.icons8.com/fluency/96/silver-bars.png',
 
             'PALLADIUM': 'https://img.icons8.com/fluency/96/diamonds.png',
             'XPD': 'https://img.icons8.com/fluency/96/diamonds.png',

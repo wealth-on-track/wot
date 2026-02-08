@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { TrendingUp, Target, PieChart, ArrowRight, Check } from "lucide-react";
+import { TrendingUp, Target, PieChart, ArrowRight, Check, LogOut } from "lucide-react";
+import { handleSignOut } from "@/lib/authActions";
 
 interface LandingPageProps {
     isLoggedIn: boolean;
@@ -135,28 +136,61 @@ export function LandingPage({ isLoggedIn, username, userEmail }: LandingPageProp
 
                         {/* CTA Buttons */}
                         {isLoggedIn ? (
-                            <Link
-                                href={`/${username}`}
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.75rem',
-                                    padding: isMobile ? '0.9rem 1.75rem' : '1rem 2rem',
-                                    fontSize: isMobile ? '0.95rem' : '1.05rem',
-                                    fontWeight: 600,
-                                    background: 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '12px',
-                                    textDecoration: 'none',
-                                    boxShadow: '0 4px 20px var(--accent-glow)',
-                                    transition: 'all 0.3s ease',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Go to My Portfolio
-                                <ArrowRight size={20} />
-                            </Link>
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: isMobile ? 'column' : 'row',
+                                alignItems: 'center',
+                                gap: '1rem',
+                                justifyContent: isMobile ? 'center' : 'flex-start'
+                            }}>
+                                <Link
+                                    href={`/${username}`}
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.75rem',
+                                        padding: isMobile ? '0.9rem 1.75rem' : '1rem 2rem',
+                                        fontSize: isMobile ? '0.95rem' : '1.05rem',
+                                        fontWeight: 600,
+                                        background: 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '12px',
+                                        textDecoration: 'none',
+                                        boxShadow: '0 4px 20px var(--accent-glow)',
+                                        transition: 'all 0.3s ease',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Go to My Portfolio
+                                    <ArrowRight size={20} />
+                                </Link>
+
+                                {/* Logout Button */}
+                                <form action={handleSignOut} style={{ margin: 0 }}>
+                                    <button
+                                        type="submit"
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '0.5rem',
+                                            padding: '0.8rem 1.5rem',
+                                            fontSize: '0.9rem',
+                                            fontWeight: 600,
+                                            background: 'transparent',
+                                            color: 'var(--text-secondary)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '12px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                        }}
+                                    >
+                                        <LogOut size={18} />
+                                        Log Out
+                                    </button>
+                                </form>
+                            </div>
                         ) : (
                             <div style={{
                                 display: 'flex',
@@ -270,15 +304,16 @@ export function LandingPage({ isLoggedIn, username, userEmail }: LandingPageProp
                         </div>
                     </div>
                 </div>
-            </section>
+            </section >
 
             {/* Features Section */}
-            <section style={{
+            < section style={{
                 padding: isMobile ? '4rem 1rem' : '6rem 2rem',
                 background: 'var(--bg-secondary)',
                 borderTop: '1px solid var(--border)',
                 borderBottom: '1px solid var(--border)'
-            }}>
+            }
+            }>
                 <div style={{
                     maxWidth: '1200px',
                     margin: '0 auto'
@@ -583,10 +618,10 @@ export function LandingPage({ isLoggedIn, username, userEmail }: LandingPageProp
                         </div>
                     </div>
                 </div>
-            </section>
+            </section >
 
             {/* Screenshots Showcase */}
-            <section style={{
+            < section style={{
                 padding: isMobile ? '4rem 1rem' : '6rem 2rem'
             }}>
                 <div style={{
@@ -665,17 +700,17 @@ export function LandingPage({ isLoggedIn, username, userEmail }: LandingPageProp
                         </div>
                     </div>
                 </div>
-            </section>
+            </section >
 
             {/* Final CTA */}
-            <section style={{
+            < section style={{
                 padding: isMobile ? '4rem 1rem' : '6rem 2rem',
                 background: 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
                 position: 'relative',
                 overflow: 'hidden'
             }}>
                 {/* Background Pattern */}
-                <div style={{
+                < div style={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
@@ -686,7 +721,7 @@ export function LandingPage({ isLoggedIn, username, userEmail }: LandingPageProp
                     backgroundSize: '30px 30px'
                 }} />
 
-                <div style={{
+                < div style={{
                     maxWidth: '800px',
                     margin: '0 auto',
                     textAlign: 'center',
@@ -711,32 +746,34 @@ export function LandingPage({ isLoggedIn, username, userEmail }: LandingPageProp
                         Join thousands of investors building wealth with smart portfolio tracking
                     </p>
 
-                    {!isLoggedIn && (
-                        <Link
-                            href="/login"
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '0.75rem',
-                                padding: isMobile ? '1rem 2rem' : '1.2rem 2.5rem',
-                                fontSize: isMobile ? '1rem' : '1.1rem',
-                                fontWeight: 600,
-                                background: 'white',
-                                color: 'var(--accent)',
-                                border: 'none',
-                                borderRadius: '12px',
-                                textDecoration: 'none',
-                                boxShadow: '0 8px 30px rgba(0,0,0,0.2)',
-                                transition: 'all 0.3s ease'
-                            }}
-                        >
-                            Start Free Today
-                            <ArrowRight size={20} />
-                        </Link>
-                    )}
-                </div>
-            </section>
-        </div>
+                    {
+                        !isLoggedIn && (
+                            <Link
+                                href="/login"
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '0.75rem',
+                                    padding: isMobile ? '1rem 2rem' : '1.2rem 2.5rem',
+                                    fontSize: isMobile ? '1rem' : '1.1rem',
+                                    fontWeight: 600,
+                                    background: 'white',
+                                    color: 'var(--accent)',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    textDecoration: 'none',
+                                    boxShadow: '0 8px 30px rgba(0,0,0,0.2)',
+                                    transition: 'all 0.3s ease'
+                                }}
+                            >
+                                Start Free Today
+                                <ArrowRight size={20} />
+                            </Link>
+                        )
+                    }
+                </div >
+            </section >
+        </div >
     );
 }

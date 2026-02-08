@@ -57,10 +57,10 @@ export async function calculateInsights(username: string): Promise<InsightsData>
         // 1. Get User with Portfolio
         const user = await prisma.user.findUnique({
             where: { username },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
-        if (!user || !user.portfolio) {
+        if (!user || !user.Portfolio) {
             // Check if user exists but has no portfolio (edge case)
             if (!user) throw new Error("User not found");
 
@@ -86,7 +86,7 @@ export async function calculateInsights(username: string): Promise<InsightsData>
 
         // 2. Get Assets
         const dbAssets = await prisma.asset.findMany({
-            where: { portfolioId: user.portfolio.id }
+            where: { portfolioId: user.Portfolio.id }
         });
 
         if (dbAssets.length === 0) {

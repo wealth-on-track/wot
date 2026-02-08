@@ -17,10 +17,10 @@ export async function getGoals() {
 
     const portfolio = await prisma.portfolio.findUnique({
         where: { userId },
-        include: { goals: { orderBy: { createdAt: 'asc' } } }
+        include: { Goal: { orderBy: { createdAt: 'asc' } } }
     });
 
-    return portfolio?.goals || [];
+    return portfolio?.Goal || [];
 }
 
 

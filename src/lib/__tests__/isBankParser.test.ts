@@ -166,6 +166,29 @@ describe('Is Bank Detection', () => {
         expect(detectIsBank(SAMPLE_CONTENT)).toBe(true);
     });
 
+    it('should detect heavily corrupted content', () => {
+        const corrupted = " Altn Fonu\nPORTFOY ... BANKASI";
+        expect(detectIsBank(corrupted)).toBe(true); // Should pass thanks to relaxed detection
+    });
+
+    it('should clean specific corrupted names', () => {
+        // We need to export cleanIsBankName or test it via parsing
+        // Since it's internal, we'll test via parseIsBankTXT
+        const content = `
+        TÜRKİYE İŞ BANKASI A.Ş.
+
+        YATIRIM HESABI PORTFOY RAPORU
+        
+        KIYMET TANIMI
+        ----
+         Altn Fonu  822  1000  0  0  0
+        `;
+        const result = parseIsBankTXT(content);
+        const row = result.rows.find(r => r.symbol === '822');
+        expect(row).toBeDefined();
+        expect(row?.name).toBe('İş Altın Fonu');
+    });
+
     it('should return false for random content', () => {
         expect(detectIsBank('Some other bank content')).toBe(false);
     });

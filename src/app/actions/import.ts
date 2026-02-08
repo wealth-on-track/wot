@@ -128,7 +128,8 @@ function calculateSimilarity(name1: string, name2: string): number {
         'USD', 'EUR', 'GBP', 'TRY', 'CAD', 'AUD', 'JPY', // Currencies
         'CLASS', 'SERIES', 'ACC', 'DIST', 'HEDGED', 'DAILY', // Variants
         'GROUP', 'HOLDINGS', 'HOLDING', 'PARTNERS', 'CAPITAL', 'FINANCIAL', 'SOLUTIONS', // Corporate generic
-        'GLOBAL', 'INTERNATIONAL', 'PHYSICAL' // Descriptors (Physical is key for Silver vs Physical Silver logic)
+        'GLOBAL', 'INTERNATIONAL', 'PHYSICAL', // Descriptors (Physical is key for Silver vs Physical Silver logic)
+        'ADR', 'GDR', 'ON', 'THE', 'OF', 'AND', 'FOR' // ADR/GDR prefixes and common connector words
     ]);
 
     // Tokenize: Upper case, remove non-alphanumeric, split by space, remove short/stopwords
@@ -222,17 +223,17 @@ export async function resolveImportSymbols(assets: ImportAsset[]): Promise<Resol
     const user = await prisma.user.findUnique({
         where: { id: userId },
         include: {
-            portfolio: {
-                include: { assets: true }
+            Portfolio: {
+                include: { Asset: true }
             }
         }
     });
 
-    if (!user?.portfolio) {
+    if (!user?.Portfolio) {
         return { success: false, resolved: [], errors: ['Portfolio not found'] };
     }
 
-    const existingAssets = user.portfolio.assets;
+    const existingAssets = user.Portfolio.Asset;
 
     // SIMPLE & CORRECT: Build lookup maps from EXISTING ASSETS in database
     // No need for separate AssetAlias table - we already have the data!
@@ -860,7 +861,7 @@ export async function executeImport(
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        include: { portfolio: true }
+        include: { Portfolio: true }
     });
 
     if (!user) {
@@ -868,7 +869,7 @@ export async function executeImport(
     }
 
     // Use provided portfolioId or fall back to user's default portfolio
-    const targetPortfolioId = portfolioId || user.portfolio?.id;
+    const targetPortfolioId = portfolioId || user.Portfolio?.id;
 
     if (!targetPortfolioId) {
         return { success: false, added: 0, updated: 0, skipped: 0, errors: ['Portfolio not found'] };
@@ -878,22 +879,26 @@ export async function executeImport(
     // We do this just in case the UI is stale or user double-clicked
     const currentPortfolio = await prisma.portfolio.findUnique({
         where: { id: targetPortfolioId },
-        include: { assets: true }
+        include: { Asset: true }
     });
 
     // Map for quick lookup of ALREADY EXISTING assets in DB
     const dbAssetMap = new Map<string, string>(); // Symbol -> ID
-    const dbIsinMap = new Map<string, string>(); // ISIN -> ID
+    const dbIsinMap = new Map<string, string>(); // ISIN -> ID (simple key matching DB unique constraint)
+    const dbIsinMapWithGroup = new Map<string, string>(); // ISIN+CustomGroup+Platform -> ID (for group-aware lookup)
 
-    if (currentPortfolio?.assets) {
-        for (const asset of currentPortfolio.assets) {
+    if (currentPortfolio?.Asset) {
+        for (const asset of currentPortfolio.Asset) {
             // Composite Key: Symbol + CustomGroup + Platform
             const key = `${asset.symbol.toUpperCase()}|${asset.customGroup || ''}|${asset.platform || ''}`;
             dbAssetMap.set(key, asset.id);
 
             if (asset.isin) {
+                // Simple ISIN key - matches DB unique constraint [portfolioId, isin]
+                dbIsinMap.set(asset.isin.toUpperCase(), asset.id);
+                // Full composite key for group-aware lookup
                 const isinKey = `${asset.isin.toUpperCase()}|${asset.customGroup || ''}|${asset.platform || ''}`;
-                dbIsinMap.set(isinKey, asset.id);
+                dbIsinMapWithGroup.set(isinKey, asset.id);
             }
         }
     }
@@ -921,7 +926,19 @@ export async function executeImport(
         if (asset.name) {
             assetMap.set(asset.name.toUpperCase(), asset);
         }
+        // Map by resolvedName for better matching
+        if (asset.resolvedName && asset.resolvedName !== asset.name) {
+            assetMap.set(asset.resolvedName.toUpperCase(), asset);
+        }
+        // For FUND types, also extract fund code from name if present (e.g., "Katkı Fonu (AET)" -> "AET")
+        if (asset.resolvedType === 'FUND' || asset.type === 'FUND') {
+            const fundCodeMatch = (asset.name || asset.resolvedName || '').match(/\(([A-Z0-9]+)\)/);
+            if (fundCodeMatch) {
+                assetMap.set(fundCodeMatch[1].toUpperCase(), asset);
+            }
+        }
     }
+    console.log(`[Import] Built assetMap with ${assetMap.size} keys for ${assets.length} assets`);
 
     // Get minimum sortOrder for new assets
     const minSortOrder = await prisma.asset.findFirst({
@@ -941,16 +958,25 @@ export async function executeImport(
             }
 
             // IDEMPOTENCY CHECK
-            // Check if asset already exists in our fresh DB map using COMPOSITE KEY
+            // First check by ISIN (matches DB unique constraint [portfolioId, isin])
+            // Then fall back to composite key lookup
             let existingAssetId: string | undefined;
-            const lookupKey = `${asset.resolvedSymbol.toUpperCase()}|${customGroupName || ''}|${asset.platform || ''}`;
 
-            if (dbAssetMap.has(lookupKey)) {
-                existingAssetId = dbAssetMap.get(lookupKey);
-            } else if (asset.isin) {
-                const isinKey = `${asset.isin.toUpperCase()}|${customGroupName || ''}|${asset.platform || ''}`;
-                if (dbIsinMap.has(isinKey)) {
-                    existingAssetId = dbIsinMap.get(isinKey);
+            // Priority 1: Check by ISIN with group-aware lookup (same ISIN can exist in different portfolios)
+            if (asset.isin) {
+                const isinLookupKey = `${asset.isin.toUpperCase()}|${customGroupName || ''}|${asset.platform || ''}`;
+                if (dbIsinMapWithGroup.has(isinLookupKey)) {
+                    existingAssetId = dbIsinMapWithGroup.get(isinLookupKey);
+                    console.log(`[Import] Found existing asset by ISIN+Group: ${isinLookupKey} -> ${existingAssetId}`);
+                }
+            }
+
+            // Priority 2: Check by composite key (symbol + customGroup + platform)
+            if (!existingAssetId) {
+                const lookupKey = `${asset.resolvedSymbol.toUpperCase()}|${customGroupName || ''}|${asset.platform || ''}`;
+                if (dbAssetMap.has(lookupKey)) {
+                    existingAssetId = dbAssetMap.get(lookupKey);
+                    console.log(`[Import] Found existing asset by composite key: ${lookupKey} -> ${existingAssetId}`);
                 }
             }
 
@@ -1006,7 +1032,7 @@ export async function executeImport(
 
                 if (asset.isin) {
                     const newIsinKey = `${asset.isin.toUpperCase()}|${newAsset.customGroup || ''}|${newAsset.platform || ''}`;
-                    dbIsinMap.set(newIsinKey, newAsset.id);
+                    dbIsinMapWithGroup.set(newIsinKey, newAsset.id);
                 }
 
                 added++;
@@ -1017,7 +1043,7 @@ export async function executeImport(
 
                 if (targetId) {
                     // Update existing asset
-                    const existingAsset = currentPortfolio?.assets.find(a => a.id === targetId);
+                    const existingAsset = currentPortfolio?.Asset.find(a => a.id === targetId);
 
                     // Logic to decide if we should overwrite the name
                     // 1. If existing name is just the symbol (e.g. "BTC"), it's likely unresolved.
@@ -1092,7 +1118,7 @@ export async function executeImport(
 
                 if (targetId) {
                     // Update to 0 quantity (Closed)
-                    const existingAsset = currentPortfolio?.assets.find(a => a.id === targetId);
+                    const existingAsset = currentPortfolio?.Asset.find(a => a.id === targetId);
 
                     // Logic to decide if we should overwrite the name (Same as update block)
                     const isNameGeneric = existingAsset && existingAsset.name === existingAsset.symbol;

@@ -7,13 +7,13 @@ export async function GET() {
     try {
         // Bypass auth for debug
         const user = await prisma.user.findFirst({
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
-        if (!user?.portfolio) return NextResponse.json({ error: 'Portfolio not found' });
+        if (!user?.Portfolio) return NextResponse.json({ error: 'Portfolio not found' });
 
         const assets = await prisma.asset.findMany({
-            where: { portfolioId: user.portfolio.id },
+            where: { portfolioId: user.Portfolio.id },
             select: { symbol: true, quantity: true, customGroup: true, id: true }
         });
 
@@ -21,7 +21,7 @@ export async function GET() {
         // But we WANT to check if customGroup exists. 
         // We'll try to select it. If it fails, we know runtime is stale.
         const transactions = await prisma.assetTransaction.findMany({
-            where: { portfolioId: user.portfolio.id },
+            where: { portfolioId: user.Portfolio.id },
             // select: { symbol: true, quantity: true, type: true, customGroup: true, date: true } // Commented out to just get all and see what happens or specific
         });
 

@@ -56,13 +56,19 @@ export function getSearchSymbol(symbol: string, type: string, exchange?: string 
 
     // 3. Commodities
     if (s === 'XAU') return 'GC=F';
-    // REMOVED dangerous GAUTRY -> GC=F mapping. 
-    // GAUTRY is calculated synthetically via derivedQuote. 
+    if (s === 'XPT' || s === 'XPT-USD') return 'PL=F'; // Platinum Futures
+    // REMOVED dangerous GAUTRY -> GC=F mapping.
+    // GAUTRY is calculated synthetically via derivedQuote.
     // Mapping it here causes fallback to USD Futures price (treated as TRY) if synthetic calc fails.
-    // if (s === 'GAUTRY') return 'GC=F'; 
+    // if (s === 'GAUTRY') return 'GC=F';
     // if (s === 'XAGTRY') return 'SI=F';
 
-    // 4. Default
+    // 4. Normalize Platinum TRY variants to canonical XPTTRY
+    // Supported: XPTTRY, XPTgTRY, XPT-TRY, XPTGTRY, PLTTRY
+    const platinumTryVariants = ['XPTTRY', 'XPTGTRY', 'XPT-TRY', 'XPTG-TRY', 'PLTTRY'];
+    if (platinumTryVariants.includes(s) || s === 'XPT TRY' || s === 'XPTG TRY') return 'XPTTRY';
+
+    // 5. Default
     return s;
 }
 
@@ -83,6 +89,7 @@ export async function getAssetName(symbol: string, type: string, exchange?: stri
 
         if (symbol === 'GAUTRY') return "GR Altın";
         if (symbol === 'XAGTRY') return "GR Gümüş";
+        if (symbol === 'XPTTRY' || symbol === 'XPTgTRY' || symbol === 'XPT-TRY' || symbol === 'XPTGTRY' || symbol === 'PLTTRY') return "GR Platin";
 
         const results = await searchYahoo(searchSymbol);
 
@@ -208,7 +215,9 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                 if (symbol.endsWith('-EUR')) finalCurrency = 'EUR';
                 if (symbol.endsWith('-USD')) finalCurrency = 'USD';
                 if (symbol.endsWith('-TRY')) finalCurrency = 'TRY';
-                if (symbol === 'GAUTRY' || symbol === 'XAGTRY' || symbol === 'AET') finalCurrency = 'TRY';
+                // Platinum TRY variants: XPTTRY, XPTgTRY, XPT-TRY, XPTGTRY, PLTTRY
+                const platinumTryCheck = ['XPTTRY', 'XPTGTRY', 'XPT-TRY', 'XPTG-TRY', 'PLTTRY'].includes(symbol.toUpperCase());
+                if (symbol === 'GAUTRY' || symbol === 'XAGTRY' || symbol === 'AET' || platinumTryCheck) finalCurrency = 'TRY';
 
                 // 3. Invalid Cache Check (Price 0)
                 // If price is 0 (and not CASH), assume data is broken/delisted/error and try fresh fetch
@@ -236,11 +245,14 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
         }
     }
 
-    // CASH assets always have a price of 1.0 (relative to themselves)
+    // CASH and BES (pension) assets always have a price of 1.0 (relative to themselves)
     // The valuation logic converts this 1.0 * quantity (which is the amount) to the target currency.
-    if (type === 'CASH') {
+    // BES = Bireysel Emeklilik Sistemi (Turkish Individual Pension System)
+    // BES contract value is calculated from transaction history, not market price
+    if (type === 'CASH' || type === 'BES') {
         return {
             price: 1.0,
+            currency: type === 'BES' ? 'TRY' : undefined,
             timestamp: new Date().toLocaleString('tr-TR')
         };
     }
@@ -411,22 +423,55 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
         const computedState = calculateMarketStatus(symbol, exchange, type);
 
         let derivedQuote: any = null;
-        if (symbol === 'GAUTRY' || symbol === 'XAGTRY') {
+        // Normalize XPTTRY variants
+        const normalizedSymbol = getSearchSymbol(symbol, type);
+        const isXptTry = normalizedSymbol === 'XPTTRY';
+
+        // PLATINUM TRY: Try Investing.com SPOT first, fallback to Yahoo FUTURES
+        if (isXptTry) {
             try {
-                const isGold = symbol === 'GAUTRY';
+                const { getPlatinumSpotTRY } = await import('./investingApi');
+                console.log(`[MarketData] Trying Investing.com SPOT for ${symbol}...`);
+                const investingQuote = await getPlatinumSpotTRY();
+
+                if (investingQuote && investingQuote.price > 0) {
+                    console.log(`[MarketData] Investing.com SPOT success: ${investingQuote.price} TRY/gram`);
+                    // Investing.com returns GRAM price directly - store as-is, skip gram conversion
+                    derivedQuote = {
+                        symbol: 'XPTTRY',
+                        regularMarketPrice: investingQuote.price,
+                        currency: 'TRY',
+                        regularMarketTime: investingQuote.timestamp,
+                        regularMarketPreviousClose: investingQuote.price,
+                        source: 'INVESTING_SPOT',
+                        _isGramPrice: true
+                    };
+                }
+            } catch (err) {
+                console.warn(`[MarketData] Investing.com failed for ${symbol}, falling back to Yahoo Futures`, err);
+            }
+        }
+
+        // GOLD, SILVER, or PLATINUM (fallback): Use Yahoo Futures + USDTRY
+        if (!derivedQuote && (symbol === 'GAUTRY' || symbol === 'XAGTRY' || isXptTry)) {
+            try {
+                // Gold = GC=F, Silver = SI=F, Platinum = PL=F
+                const futuresSymbol = symbol === 'GAUTRY' ? 'GC=F' : (symbol === 'XAGTRY' ? 'SI=F' : 'PL=F');
+                console.log(`[MarketData] Using Yahoo FUTURES (${futuresSymbol}) for ${symbol}...`);
                 const [commodity, usdtry] = await Promise.all([
-                    getYahooQuote(isGold ? 'GC=F' : 'SI=F'),
+                    getYahooQuote(futuresSymbol),
                     getYahooQuote('USDTRY=X')
                 ]);
                 const commodityPrice = commodity?.regularMarketPrice;
                 const parity = usdtry?.regularMarketPrice;
                 if (commodityPrice && parity) {
                     derivedQuote = {
-                        symbol: symbol,
+                        symbol: isXptTry ? 'XPTTRY' : symbol,
                         regularMarketPrice: (commodityPrice * parity) / 1, // Store Ounce * Parity, applyAdjustments will do / 31.103
                         currency: 'TRY',
                         regularMarketTime: commodity?.regularMarketTime || new Date(),
-                        regularMarketPreviousClose: (commodity?.regularMarketPreviousClose || commodityPrice) * (usdtry?.regularMarketPreviousClose || parity)
+                        regularMarketPreviousClose: (commodity?.regularMarketPreviousClose || commodityPrice) * (usdtry?.regularMarketPreviousClose || parity),
+                        source: 'YAHOO_FUTURES'
                     };
                     // Note: applyAdjustments will handle / 31.103 at the common point below
                 }
@@ -515,6 +560,8 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                 let adjusted = p;
                 if (symbol === 'GAUTRY') adjusted = adjusted / 31.1034768;
                 if (symbol === 'XAGTRY') adjusted = adjusted / 31.1034768;
+                // Platinum: Only convert to gram if NOT already gram price (Investing.com returns gram directly)
+                if (isXptTry && !quote._isGramPrice) adjusted = adjusted / 31.1034768;
                 if (symbol === 'RABO') adjusted = adjusted / 100.0;
                 return adjusted;
             };
@@ -647,9 +694,12 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
             if (symbol.endsWith('-EUR')) finalCurrency = 'EUR';
             if (symbol.endsWith('-USD')) finalCurrency = 'USD';
             if (symbol.endsWith('-TRY')) finalCurrency = 'TRY';
-            if (symbol === 'GAUTRY' || symbol === 'XAGTRY' || symbol === 'AET') finalCurrency = 'TRY';
+            if (symbol === 'GAUTRY' || symbol === 'XAGTRY' || symbol === 'AET' || isXptTry) finalCurrency = 'TRY';
 
-            // SAVE TO CACHE (YAHOO)
+            // Determine source for cache
+            const cacheSource = derivedQuote?.source || (derivedQuote ? 'YAHOO_SYNTHETIC' : 'YAHOO');
+
+            // SAVE TO CACHE
             await prisma.priceCache.upsert({
                 where: { symbol },
                 create: {
@@ -660,7 +710,7 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                     country: profileData?.country || 'Unknown',
                     tradeTime: quote.regularMarketTime ? new Date(quote.regularMarketTime) : new Date(),
                     updatedAt: new Date(),
-                    source: derivedQuote ? 'YAHOO_SYNTHETIC' : 'YAHOO',
+                    source: cacheSource,
                     lastRequestedBy: userId
                 },
                 update: {
@@ -670,7 +720,7 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                     country: profileData?.country,
                     tradeTime: quote.regularMarketTime ? new Date(quote.regularMarketTime) : new Date(),
                     updatedAt: new Date(),
-                    source: derivedQuote ? 'YAHOO_SYNTHETIC' : 'YAHOO',
+                    source: cacheSource,
                     lastRequestedBy: userId
                 }
             });
@@ -706,10 +756,13 @@ export async function getBatchMarketPrices(assets: { symbol: string, type: strin
         const yahooMap: Record<string, string> = {}; // Search Symbol -> Original Symbol
 
         for (const a of assets) {
-            // Skip non-market assets from batching loop (Cash, TEFAS etc handled separately or ignored here)
+            // Skip non-market assets from batching loop (Cash, BES, TEFAS etc handled separately or ignored here)
             // Also skip if Exchange is explicitly TEFAS (even if type is FUND)
-            // Skip Synthetic Assets (GAUTRY, XAGTRY) as they require multi-step calculation (Gold * USDTRY)
-            if (a.type === 'CASH' || a.type === 'TEFAS' || a.type === 'FON' || a.exchange === 'TEFAS' || a.symbol === 'GAUTRY' || a.symbol === 'XAGTRY') continue;
+            // Skip Synthetic Assets (GAUTRY, XAGTRY, XPTTRY) as they require multi-step calculation (Commodity * USDTRY)
+            // BES = Turkish Pension System - not tradeable on markets
+            const platinumTryVariants = ['XPTTRY', 'XPTGTRY', 'XPT-TRY', 'XPTG-TRY', 'PLTTRY'];
+            const isPlatinumTry = platinumTryVariants.includes(a.symbol.toUpperCase());
+            if (a.type === 'CASH' || a.type === 'BES' || a.type === 'TEFAS' || a.type === 'FON' || a.exchange === 'TEFAS' || a.symbol === 'GAUTRY' || a.symbol === 'XAGTRY' || isPlatinumTry) continue;
 
             const searchSym = getSearchSymbol(a.symbol, a.type, a.exchange);
             yahooSymbols.push(searchSym);
@@ -748,7 +801,8 @@ export async function getBatchMarketPrices(assets: { symbol: string, type: strin
             if (originalSym.endsWith('-EUR')) batchCurrency = 'EUR';
             if (originalSym.endsWith('-USD')) batchCurrency = 'USD';
             if (originalSym.endsWith('-TRY')) batchCurrency = 'TRY';
-            if (originalSym === 'GAUTRY' || originalSym === 'XAGTRY' || originalSym === 'AET') batchCurrency = 'TRY';
+            const batchPlatinumTryCheck = ['XPTTRY', 'XPTGTRY', 'XPT-TRY', 'XPTG-TRY', 'PLTTRY'].includes(originalSym.toUpperCase());
+            if (originalSym === 'GAUTRY' || originalSym === 'XAGTRY' || originalSym === 'AET' || batchPlatinumTryCheck) batchCurrency = 'TRY';
 
 
             results[originalSym] = {

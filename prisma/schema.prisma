@@ -63,7 +63,7 @@ model Asset {
   metadata       Json?
   Portfolio      Portfolio     @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
 
-  @@unique([portfolioId, isin])
+  @@unique([portfolioId, isin, customGroup])
   @@index([category])
   @@index([portfolioId, createdAt])
   @@index([portfolioId, sortOrder])

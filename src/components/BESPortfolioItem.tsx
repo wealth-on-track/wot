@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Pencil, Building2 } from 'lucide-react';
-import { BESMetadata, calculateBESTotals, DEVLET_KATKISI_FUND } from '@/lib/besTypes';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, ChevronRight, Pencil, Building2, RefreshCw } from 'lucide-react';
+import { BESMetadata, calculateBESTotals, BESFundWithPrice } from '@/lib/besTypes';
+import { getBESFundPrices } from '@/app/actions/marketData';
 
 interface BESPortfolioItemProps {
   metadata: BESMetadata;
@@ -21,8 +22,35 @@ export function BESPortfolioItem({
 }: BESPortfolioItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showContracts, setShowContracts] = useState(false);
+  const [fundPrices, setFundPrices] = useState<Record<string, BESFundWithPrice>>({});
+  const [isLoadingPrices, setIsLoadingPrices] = useState(false);
 
   const totals = calculateBESTotals(metadata);
+
+  // Fetch fund prices when expanded
+  useEffect(() => {
+    if (isExpanded && Object.keys(fundPrices).length === 0) {
+      fetchFundPrices();
+    }
+  }, [isExpanded]);
+
+  const fetchFundPrices = async () => {
+    setIsLoadingPrices(true);
+    try {
+      // Get all unique fund codes (katkiPayi funds + AET for devlet katkisi)
+      const fundCodes = [...new Set([
+        ...metadata.katkiPayiFunds.map(f => f.code),
+        'AET' // Devlet Katkisi fund
+      ])];
+
+      const prices = await getBESFundPrices(fundCodes);
+      setFundPrices(prices);
+    } catch (error) {
+      console.error('[BES] Failed to fetch fund prices:', error);
+    } finally {
+      setIsLoadingPrices(false);
+    }
+  };
 
   // Format currency
   const formatValue = (valueTRY: number, showTRY = false) => {
@@ -94,20 +122,12 @@ export function BESPortfolioItem({
             }}>
               BES
             </div>
-            <div>
-              <div style={{
-                fontSize: '15px',
-                fontWeight: 600,
-                color: 'var(--text-primary)'
-              }}>
-                BES Emeklilik
-              </div>
-              <div style={{
-                fontSize: '13px',
-                color: 'var(--text-muted)'
-              }}>
-                {totals.contractCount} kontrat
-              </div>
+            <div style={{
+              fontSize: '15px',
+              fontWeight: 600,
+              color: 'var(--text-primary)'
+            }}>
+              BES
             </div>
           </div>
         </div>
@@ -182,125 +202,184 @@ export function BESPortfolioItem({
               color: 'var(--text-muted)',
               marginBottom: '12px',
               textTransform: 'uppercase',
-              letterSpacing: '0.5px'
+              letterSpacing: '0.5px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
             }}>
-              Katki Payi Fonlari
-              <span style={{
-                marginLeft: '8px',
-                fontWeight: 400,
-                textTransform: 'none',
-                letterSpacing: 'normal'
-              }}>
-                ({formatValue(totals.totalKatkiPayi)})
-              </span>
+              <div>
+                <div>
+                  Katki Payi Fonlari
+                  <span style={{
+                    marginLeft: '8px',
+                    fontWeight: 400,
+                    textTransform: 'none',
+                    letterSpacing: 'normal'
+                  }}>
+                    ({formatValue(totals.totalKatkiPayi)})
+                  </span>
+                </div>
+                <div style={{
+                  fontSize: '12px',
+                  fontWeight: 400,
+                  textTransform: 'none',
+                  letterSpacing: 'normal',
+                  marginTop: '4px',
+                  color: 'var(--success)'
+                }}>
+                  + Devlet Katkisi: {formatValue(totals.totalDevletKatkisi)}
+                </div>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fetchFundPrices();
+                }}
+                disabled={isLoadingPrices}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: isLoadingPrices ? 'wait' : 'pointer',
+                  padding: '4px',
+                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '12px'
+                }}
+              >
+                <RefreshCw size={14} style={{ animation: isLoadingPrices ? 'spin 1s linear infinite' : 'none' }} />
+                {isLoadingPrices ? 'Yukleniyor...' : 'Fiyatlari Guncelle'}
+              </button>
             </div>
             <div style={{
               display: 'flex',
               flexDirection: 'column',
               gap: '8px'
             }}>
-              {totals.katkiPayiFundBreakdown.map((fund, index) => (
-                <div key={index} style={{
-                  display: 'grid',
-                  gridTemplateColumns: '60px 1fr 80px 120px',
-                  alignItems: 'center',
-                  padding: '10px 16px',
-                  background: 'var(--surface)',
-                  borderRadius: '8px',
-                  gap: '12px'
-                }}>
-                  <div style={{
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: 'var(--accent)'
+              {totals.katkiPayiFundBreakdown.map((fund, index) => {
+                const priceData = fundPrices[fund.code];
+                return (
+                  <div key={index} style={{
+                    display: 'grid',
+                    gridTemplateColumns: '60px 1fr 80px 100px 120px',
+                    alignItems: 'center',
+                    padding: '10px 16px',
+                    background: 'var(--surface)',
+                    borderRadius: '8px',
+                    gap: '12px'
                   }}>
-                    {fund.code}
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: 'var(--accent)'
+                    }}>
+                      {fund.code}
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: 'var(--text-primary)'
+                    }}>
+                      {priceData?.name || fund.name}
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: 'var(--text-muted)',
+                      textAlign: 'right'
+                    }}>
+                      {formatPercentage(fund.percentage)}
+                    </div>
+                    <div style={{
+                      fontSize: '13px',
+                      color: priceData?.currentPrice ? 'var(--text-primary)' : 'var(--text-muted)',
+                      textAlign: 'right',
+                      fontVariantNumeric: 'tabular-nums'
+                    }}>
+                      {priceData?.currentPrice
+                        ? `₺${priceData.currentPrice.toFixed(6)}`
+                        : isLoadingPrices ? '...' : '-'
+                      }
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      textAlign: 'right',
+                      fontVariantNumeric: 'tabular-nums'
+                    }}>
+                      {formatValue(fund.value)}
+                    </div>
                   </div>
-                  <div style={{
-                    fontSize: '14px',
-                    color: 'var(--text-primary)'
-                  }}>
-                    {fund.name}
-                  </div>
-                  <div style={{
-                    fontSize: '14px',
-                    color: 'var(--text-muted)',
-                    textAlign: 'right'
-                  }}>
-                    {formatPercentage(fund.percentage)}
-                  </div>
-                  <div style={{
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: 'var(--text-primary)',
-                    textAlign: 'right',
-                    fontVariantNumeric: 'tabular-nums'
-                  }}>
-                    {formatValue(fund.value)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+                );
+              })}
 
-          {/* Devlet Katkisi */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{
-              fontSize: '13px',
-              fontWeight: 600,
-              color: 'var(--text-muted)',
-              marginBottom: '12px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}>
-              Devlet Katkisi
-              <span style={{
-                marginLeft: '8px',
-                fontWeight: 400,
-                textTransform: 'none',
-                letterSpacing: 'normal'
-              }}>
-                ({formatValue(totals.totalDevletKatkisi)})
-              </span>
-            </div>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '60px 1fr 80px 120px',
-              alignItems: 'center',
-              padding: '10px 16px',
-              background: 'var(--surface)',
-              borderRadius: '8px',
-              gap: '12px'
-            }}>
-              <div style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: 'var(--success)'
-              }}>
-                AET
-              </div>
-              <div style={{
-                fontSize: '14px',
-                color: 'var(--text-primary)'
-              }}>
-                Katki Fonu (Devlet)
-              </div>
-              <div style={{
-                fontSize: '14px',
-                color: 'var(--text-muted)',
-                textAlign: 'right'
-              }}>
-                100%
-              </div>
-              <div style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                textAlign: 'right',
-                fontVariantNumeric: 'tabular-nums'
-              }}>
-                {formatValue(totals.totalDevletKatkisi)}
-              </div>
+              {/* Devlet Katkisi - AET Fund */}
+              {(() => {
+                const aetPrice = fundPrices['AET'];
+                return (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '60px 1fr 80px 100px 120px',
+                    alignItems: 'center',
+                    padding: '10px 16px',
+                    background: 'var(--surface)',
+                    borderRadius: '8px',
+                    gap: '12px',
+                    borderLeft: '3px solid var(--success)'
+                  }}>
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: 'var(--success)'
+                    }}>
+                      AET
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: 'var(--text-primary)'
+                    }}>
+                      <span>{aetPrice?.name || 'Devlet Katkisi Fonu'}</span>
+                      <span style={{
+                        marginLeft: '8px',
+                        fontSize: '11px',
+                        color: 'var(--success)',
+                        background: 'var(--success-muted)',
+                        padding: '2px 6px',
+                        borderRadius: '4px'
+                      }}>
+                        DK
+                      </span>
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: 'var(--text-muted)',
+                      textAlign: 'right'
+                    }}>
+                      100%
+                    </div>
+                    <div style={{
+                      fontSize: '13px',
+                      color: aetPrice?.currentPrice ? 'var(--text-primary)' : 'var(--text-muted)',
+                      textAlign: 'right',
+                      fontVariantNumeric: 'tabular-nums'
+                    }}>
+                      {aetPrice?.currentPrice
+                        ? `₺${aetPrice.currentPrice.toFixed(6)}`
+                        : isLoadingPrices ? '...' : '-'
+                      }
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      textAlign: 'right',
+                      fontVariantNumeric: 'tabular-nums'
+                    }}>
+                      {formatValue(totals.totalDevletKatkisi)}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

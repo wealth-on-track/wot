@@ -45,7 +45,7 @@ export async function GET(request: Request) {
       // Fetch all portfolios with their assets
       const portfolios = await prisma.portfolio.findMany({
         include: {
-          assets: true,
+          Asset: true,
         },
       });
 
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
       const allSymbols = Array.from(
         new Set(
           portfolios.flatMap(p =>
-            p.assets.map(a => a.symbol)
+            p.Asset.map(a => a.symbol)
           )
         )
       );
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
           // Calculate total value in EUR
           let totalValueEUR = 0;
 
-          for (const asset of portfolio.assets) {
+          for (const asset of portfolio.Asset) {
             const currentPrice = priceMap.get(asset.symbol);
             if (!currentPrice) {
               console.warn(`[CRON] No price found for ${asset.symbol}`);

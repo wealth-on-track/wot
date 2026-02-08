@@ -24,10 +24,10 @@ export async function GET(request: Request) {
     // Find user's portfolio
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: { portfolio: true },
+      include: { Portfolio: true },
     });
 
-    if (!user || !user.portfolio) {
+    if (!user || !user.Portfolio) {
       return NextResponse.json({ error: 'Portfolio not found' }, { status: 404 });
     }
 
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
     // Fetch snapshots
     const snapshots = await prisma.portfolioSnapshot.findMany({
       where: {
-        portfolioId: user.portfolio.id,
+        portfolioId: user.Portfolio.id,
         date: {
           gte: startDate,
         },

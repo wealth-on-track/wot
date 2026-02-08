@@ -89,3 +89,21 @@ export function createEmptyBESMetadata(): BESMetadata {
     lastUpdated: new Date().toISOString()
   };
 }
+
+// BES Fund with fetched price data
+export interface BESFundWithPrice extends BESFund {
+  currentPrice?: number;
+  priceDate?: string;
+  change24h?: number;
+  changePercent?: number;
+}
+
+// Calculate totals with current prices
+export interface BESTotalsWithPrices {
+  totalKatkiPayi: number;
+  totalDevletKatkisi: number;
+  grandTotal: number;
+  katkiPayiFundBreakdown: (BESFundWithPrice & { value: number })[];
+  devletKatkisiFundBreakdown: (BESFundWithPrice & { value: number })[];
+  contractCount: number;
+}

@@ -14,10 +14,10 @@ export default async function UsersPage() {
     const users = await prisma.user.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
-            portfolio: {
+            Portfolio: {
                 include: {
                     _count: {
-                        select: { assets: true }
+                        select: { Asset: true }
                     }
                 }
             }
@@ -52,10 +52,10 @@ export default async function UsersPage() {
                                 </td>
                                 <td style={{ padding: '0.6rem 0.75rem' }}>{u.email}</td>
                                 <td style={{ padding: '0.6rem 0.75rem', textAlign: 'center', fontWeight: 'bold' }}>
-                                    {u.portfolio?._count.assets || 0}
+                                    {u.Portfolio?._count.Asset || 0}
                                 </td>
                                 <td style={{ padding: '0.6rem 0.75rem', textAlign: 'center' }}>
-                                    {u.portfolio?.isPublic ?
+                                    {u.Portfolio?.isPublic ?
                                         <span style={{ color: '#4caf50', background: 'rgba(76, 175, 80, 0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600 }}>Public</span>
                                         :
                                         <span style={{ color: '#94a3b8', background: 'rgba(148, 163, 184, 0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600 }}>Private</span>

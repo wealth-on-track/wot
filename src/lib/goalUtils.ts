@@ -76,14 +76,18 @@ export async function ensureThresholdGoal(portfolioId: string, currentTotalValue
         }
     } else {
         // Create new system goal
+        // @ts-ignore - Prisma Client type mismatch workaround
         await prisma.goal.create({
             data: {
+                id: crypto.randomUUID(),
                 portfolioId,
                 name: defaultName,
                 type: systemTag,
                 targetAmount: Math.round(target),
                 currentAmount: Math.round(currentTotalValue),
-                currency: "EUR"
+                currency: "EUR",
+                createdAt: new Date(),
+                updatedAt: new Date(),
             }
         });
     }

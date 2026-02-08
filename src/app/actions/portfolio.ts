@@ -11,7 +11,7 @@ export async function getUserPortfolios() {
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        include: { portfolio: true }
+        include: { Portfolio: true }
     });
 
     if (!user) {
@@ -20,9 +20,9 @@ export async function getUserPortfolios() {
 
     // For now, return the user's default portfolio
     // In future when you support multiple portfolios, fetch them all here
-    const portfolios = user.portfolio ? [{
-        id: user.portfolio.id,
-        name: `${user.username}'s Portfolio`, // Default name
+    const portfolios = user.Portfolio ? [{
+        id: user.Portfolio.id,
+        name: user.username, // Just username
         isDefault: true
     }] : [];
 

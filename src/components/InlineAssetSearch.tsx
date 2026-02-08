@@ -135,13 +135,14 @@ export function InlineAssetSearch() {
                 const categoryPriority: Record<AssetCategory, number> = {
                     'BIST': 1,
                     'TEFAS': 2,
-                    'US_MARKETS': 3,
-                    'EU_MARKETS': 4,
-                    'CRYPTO': 5,
-                    'COMMODITIES': 6,
-                    'FX': 7,
-                    'CASH': 8,
-                    'BENCHMARK': 9
+                    'BES': 3,
+                    'US_MARKETS': 4,
+                    'EU_MARKETS': 5,
+                    'CRYPTO': 6,
+                    'COMMODITIES': 7,
+                    'FX': 8,
+                    'CASH': 9,
+                    'BENCHMARK': 10
                 };
 
                 results.sort((a, b) => {
@@ -459,145 +460,211 @@ export function InlineAssetSearch() {
                     boxShadow: 'var(--shadow-lg)'
                 }}>
                     {searchResults.length > 0 ? (
-                        searchResults.map((option, idx) => {
-                            const category = option.category || 'US_MARKETS';
-                            return (
-                                <button
-                                    key={idx}
-                                    type="button"
-                                    onClick={() => handleSelectSymbol(option)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.4rem 0.8rem',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.5rem',
-                                        background: `${CATEGORY_COLORS[category]}08`,
-                                        border: 'none',
-                                        borderBottom: idx < searchResults.length - 1 ? '1px solid var(--border)' : 'none',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        textAlign: 'left',
-                                        height: '34px',
-                                        borderLeft: `3px solid ${CATEGORY_COLORS[category]}`
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = `${CATEGORY_COLORS[category]}15`;
-                                        e.currentTarget.style.borderLeft = `3px solid ${CATEGORY_COLORS[category]}`;
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = `${CATEGORY_COLORS[category]}08`;
-                                        e.currentTarget.style.borderLeft = `3px solid ${CATEGORY_COLORS[category]}`;
-                                    }}
-                                >
-                                    {/* 1. Flag/Logo - FIXED WIDTH */}
-                                    <span style={{
-                                        width: '24px',
-                                        flexShrink: 0,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}>
-                                        {(() => {
-                                            if (option.type === 'CASH' || option.type === 'CURRENCY' || option.type === 'CRYPTO') {
-                                                const url = getLogoUrl(option.symbol, option.type, option.exchange, option.country);
-                                                if (url) return <img src={url} alt={option.symbol} style={{ width: '18px', height: '18px', objectFit: 'contain' }} />;
-                                            }
-                                            return <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{getCountryFlag(option.country)}</span>;
-                                        })()}
-                                    </span>
-
-                                    {/* 2. Asset Name - FIXED WIDTH */}
-                                    <span style={{
-                                        width: '140px',
-                                        fontSize: '0.7rem',
-                                        color: 'var(--text-secondary)',
-                                        fontWeight: 500,
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        textAlign: 'left'
-                                    }}>
-                                        {option.fullName}
-                                    </span>
-
-                                    {/* Separator */}
-                                    <span style={{ color: 'var(--border)', fontSize: '0.65rem', flexShrink: 0 }}>|</span>
-
-                                    {/* 3. Ticker - FIXED WIDTH */}
-                                    <span style={{
-                                        width: '85px',
-                                        fontSize: '0.7rem',
-                                        fontWeight: 700,
-                                        color: 'var(--text-primary)',
-                                        whiteSpace: 'nowrap',
-                                        textAlign: 'left',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis'
-                                    }}>
-                                        {option.symbol}
-                                    </span>
-
-                                    {/* 4. Spacer - Takes remaining space */}
-                                    <div style={{ flex: 1, minWidth: '0.5rem' }} />
-
-                                    {/* 5. Type - FIXED WIDTH */}
-                                    <span style={{
-                                        width: '40px',
-                                        fontSize: '0.6rem',
-                                        color: 'var(--text-muted)',
-                                        fontWeight: 600,
-                                        textTransform: 'uppercase',
-                                        whiteSpace: 'nowrap',
-                                        textAlign: 'right',
-                                        overflow: 'hidden'
-                                    }}>
-                                        {option.type}
-                                    </span>
-
-                                    {/* Separator */}
-                                    <span style={{ color: 'var(--border)', fontSize: '0.6rem' }}>•</span>
-
-                                    {/* 6. Exchange - FIXED WIDTH */}
-                                    <span style={{
-                                        width: '50px',
-                                        fontSize: '0.6rem',
-                                        color: 'var(--text-muted)',
-                                        fontWeight: 600,
-                                        textTransform: 'uppercase',
-                                        whiteSpace: 'nowrap',
-                                        textAlign: 'right',
-                                        overflow: 'hidden'
-                                    }}>
-                                        {(() => {
-                                            const ex = option.exchange?.toUpperCase() || '';
-                                            if (ex.includes('BORSA') || ex.includes('ISTANBUL')) return 'BIST';
-                                            return option.exchange;
-                                        })()}
-                                    </span>
-
-                                    {/* 7. Category Badge - FIXED WIDTH */}
-                                    <div style={{
-                                        width: '70px',
-                                        display: 'flex',
-                                        justifyContent: 'flex-end'
-                                    }}>
-                                        <div style={{
-                                            fontSize: '0.5rem',
-                                            fontWeight: 800,
-                                            padding: '0.05rem 0.2rem',
-                                            borderRadius: '0.2rem',
-                                            background: `${CATEGORY_COLORS[category]}20`,
-                                            color: CATEGORY_COLORS[category],
-                                            whiteSpace: 'nowrap',
-                                            textTransform: 'uppercase',
+                        <>
+                            {/* Table Header */}
+                            <div style={{
+                                width: '100%',
+                                padding: '0.3rem 0 0.3rem 0.5rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                background: 'var(--bg-secondary)',
+                                borderBottom: '1px solid var(--border)',
+                                position: 'sticky',
+                                top: 0,
+                                zIndex: 1,
+                                boxSizing: 'border-box'
+                            }}>
+                                <span style={{ width: '154px', fontSize: '0.5rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'left' }}>Asset</span>
+                                <span style={{ width: '75px', fontSize: '0.5rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'left' }}>Ticker</span>
+                                <span style={{ width: '70px', fontSize: '0.5rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'left' }}>Type</span>
+                                <span style={{ width: '75px', fontSize: '0.5rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'left', marginLeft: '0.5rem' }}>Exchange</span>
+                                <span style={{ width: '32px', fontSize: '0.5rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'left', marginLeft: '1rem' }}>Currency</span>
+                                <span style={{ width: '75px', fontSize: '0.5rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right', marginLeft: '2rem' }}>Category</span>
+                                <span style={{ flex: 1, fontSize: '0.5rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right', paddingRight: '0.3rem' }}>Source</span>
+                            </div>
+                            {searchResults.map((option, idx) => {
+                                const category = option.category || 'US_MARKETS';
+                                return (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => handleSelectSymbol(option)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.4rem 0 0.4rem 0.5rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.3rem',
+                                            background: `${CATEGORY_COLORS[category]}08`,
+                                            border: 'none',
+                                            borderBottom: idx < searchResults.length - 1 ? '1px solid var(--border)' : 'none',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            textAlign: 'left',
+                                            height: '34px',
+                                            borderLeft: `3px solid ${CATEGORY_COLORS[category]}`
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = `${CATEGORY_COLORS[category]}15`;
+                                            e.currentTarget.style.borderLeft = `3px solid ${CATEGORY_COLORS[category]}`;
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = `${CATEGORY_COLORS[category]}08`;
+                                            e.currentTarget.style.borderLeft = `3px solid ${CATEGORY_COLORS[category]}`;
+                                        }}
+                                    >
+                                        {/* 1. Flag/Logo - FIXED WIDTH */}
+                                        <span style={{
+                                            width: '24px',
+                                            flexShrink: 0,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
                                         }}>
-                                            {category.replace('_', ' ')}
+                                            {(() => {
+                                                if (option.type === 'CASH' || option.type === 'CURRENCY' || option.type === 'CRYPTO') {
+                                                    const url = getLogoUrl(option.symbol, option.type, option.exchange, option.country);
+                                                    if (url) return <img src={url} alt={option.symbol} style={{ width: '18px', height: '18px', objectFit: 'contain' }} />;
+                                                }
+                                                return <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{getCountryFlag(option.country)}</span>;
+                                            })()}
+                                        </span>
+
+                                        {/* 2. Asset Name - FIXED WIDTH */}
+                                        <span style={{
+                                            width: '130px',
+                                            fontSize: '0.7rem',
+                                            color: 'var(--text-secondary)',
+                                            fontWeight: 500,
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            textAlign: 'left'
+                                        }}>
+                                            {option.fullName}
+                                        </span>
+
+                                        {/* 3. Ticker - FIXED WIDTH */}
+                                        <span style={{
+                                            width: '75px',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 700,
+                                            color: 'var(--text-primary)',
+                                            whiteSpace: 'nowrap',
+                                            textAlign: 'left',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis'
+                                        }}>
+                                            {option.symbol}
+                                        </span>
+
+                                        {/* 4. Type - FIXED WIDTH */}
+                                        <span style={{
+                                            width: '70px',
+                                            fontSize: '0.6rem',
+                                            color: 'var(--text-muted)',
+                                            fontWeight: 600,
+                                            textTransform: 'uppercase',
+                                            whiteSpace: 'nowrap',
+                                            textAlign: 'left',
+                                            overflow: 'hidden'
+                                        }}>
+                                            {option.type}
+                                        </span>
+
+                                        {/* 5. Exchange - FIXED WIDTH */}
+                                        <span style={{
+                                            width: '75px',
+                                            fontSize: '0.6rem',
+                                            color: 'var(--text-muted)',
+                                            fontWeight: 600,
+                                            textTransform: 'uppercase',
+                                            whiteSpace: 'nowrap',
+                                            textAlign: 'left',
+                                            overflow: 'hidden',
+                                            marginLeft: '0.5rem'
+                                        }}>
+                                            {(() => {
+                                                const ex = option.exchange?.toUpperCase() || '';
+                                                if (ex.includes('BORSA') || ex.includes('ISTANBUL')) return 'BIST';
+                                                return option.exchange;
+                                            })()}
+                                        </span>
+
+                                        {/* 6. Currency - FIXED WIDTH */}
+                                        <span style={{
+                                            width: '32px',
+                                            fontSize: '0.6rem',
+                                            color: 'var(--text-muted)',
+                                            fontWeight: 600,
+                                            textTransform: 'uppercase',
+                                            whiteSpace: 'nowrap',
+                                            textAlign: 'left',
+                                            overflow: 'hidden',
+                                            marginLeft: '1rem'
+                                        }}>
+                                            {option.currency}
+                                        </span>
+
+                                        {/* 7. Category Badge - FIXED WIDTH */}
+                                        <div style={{
+                                            width: '75px',
+                                            display: 'flex',
+                                            justifyContent: 'flex-end',
+                                            marginLeft: '2.5rem'
+                                        }}>
+                                            <div style={{
+                                                fontSize: '0.5rem',
+                                                fontWeight: 800,
+                                                padding: '0.05rem 0.2rem',
+                                                borderRadius: '0.2rem',
+                                                background: `${CATEGORY_COLORS[category]}20`,
+                                                color: CATEGORY_COLORS[category],
+                                                whiteSpace: 'nowrap',
+                                                textTransform: 'uppercase',
+                                            }}>
+                                                {category.replace('_', ' ')}
+                                            </div>
                                         </div>
-                                    </div>
-                                </button>
-                            );
-                        })
+
+                                        {/* 8. Source Column - Always show data source */}
+                                        <div style={{
+                                            flex: 1,
+                                            display: 'flex',
+                                            justifyContent: 'flex-end',
+                                            paddingRight: '0.3rem'
+                                        }}>
+                                            {(() => {
+                                                const source = option.source || 'YAHOO';
+                                                const sourceConfig: Record<string, { label: string; bg: string; color: string; border: string }> = {
+                                                    'INVESTING': { label: 'Investing.com', bg: 'rgba(236, 72, 153, 0.12)', color: '#EC4899', border: 'rgba(236, 72, 153, 0.25)' },
+                                                    'TEFAS': { label: 'TEFAS', bg: 'rgba(16, 185, 129, 0.12)', color: '#10B981', border: 'rgba(16, 185, 129, 0.25)' },
+                                                    'YAHOO': { label: 'Yahoo', bg: 'rgba(139, 92, 246, 0.12)', color: '#8B5CF6', border: 'rgba(139, 92, 246, 0.25)' },
+                                                    'MANUAL': { label: 'Manual', bg: 'rgba(107, 114, 128, 0.12)', color: '#6B7280', border: 'rgba(107, 114, 128, 0.25)' }
+                                                };
+                                                const config = sourceConfig[source] || sourceConfig['YAHOO'];
+                                                return (
+                                                    <div style={{
+                                                        fontSize: '0.45rem',
+                                                        fontWeight: 700,
+                                                        padding: '0.1rem 0.25rem',
+                                                        borderRadius: '0.2rem',
+                                                        background: config.bg,
+                                                        color: config.color,
+                                                        whiteSpace: 'nowrap',
+                                                        letterSpacing: '0.02em',
+                                                        border: `1px solid ${config.border}`
+                                                    }}>
+                                                        {config.label}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </>
                     ) : (
                         <div style={{
                             padding: '1.5rem 2rem 2rem 2rem',

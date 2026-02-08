@@ -44,9 +44,9 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
         include: {
-            portfolio: {
+            Portfolio: {
                 include: {
-                    assets: {
+                    Asset: {
                         select: { symbol: true, type: true, exchange: true, category: true, quantity: true, customGroup: true, logoUrl: true }
                     }
                 }
@@ -54,13 +54,13 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
         }
     });
 
-    if (!user?.portfolio) return [];
+    if (!user?.Portfolio) return [];
 
     // Map assets for type lookup and quantity check using COMPOSITE KEY
     const assetMap = new Map<string, { type: string, exchange: string, category: string, customGroup?: string, logoUrl?: string }>();
     const quantityMap = new Map<string, number>();
 
-    user.portfolio.assets.forEach(a => {
+    user.Portfolio.Asset.forEach(a => {
         const key = `${a.symbol}|${a.customGroup || ''}`;
         assetMap.set(key, {
             type: a.type,
@@ -74,7 +74,7 @@ export async function getClosedPositions(): Promise<ClosedPosition[]> {
 
     // Get all transactions
     const transactions = await prisma.assetTransaction.findMany({
-        where: { portfolioId: user.portfolio.id },
+        where: { portfolioId: user.Portfolio.id },
         orderBy: { date: 'asc' }
     });
 
@@ -209,16 +209,16 @@ export async function deleteTransaction(transactionId: string) {
     try {
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
-        if (!user?.portfolio) return { error: "Portfolio not found" };
+        if (!user?.Portfolio) return { error: "Portfolio not found" };
 
         const transaction = await prisma.assetTransaction.findUnique({
             where: { id: transactionId }
         });
 
-        if (!transaction || transaction.portfolioId !== user.portfolio.id) {
+        if (!transaction || transaction.portfolioId !== user.Portfolio.id) {
             return { error: "Unauthorized" };
         }
 
@@ -240,14 +240,14 @@ export async function deleteAllTransactionsForSymbol(symbol: string) {
     try {
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
-        if (!user?.portfolio) return { error: "Portfolio not found" };
+        if (!user?.Portfolio) return { error: "Portfolio not found" };
 
         await prisma.assetTransaction.deleteMany({
             where: {
-                portfolioId: user.portfolio.id,
+                portfolioId: user.Portfolio.id,
                 symbol: symbol
             }
         });
@@ -277,14 +277,14 @@ export async function addTransaction(data: {
     try {
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
-        if (!user?.portfolio) return { error: "Portfolio not found" };
+        if (!user?.Portfolio) return { error: "Portfolio not found" };
 
         const transaction = await prisma.assetTransaction.create({
             data: {
-                portfolioId: user.portfolio.id,
+                portfolioId: user.Portfolio.id,
                 symbol: data.symbol,
                 type: data.type,
                 quantity: data.quantity,
@@ -318,16 +318,16 @@ export async function updateTransaction(transactionId: string, data: {
     try {
         const user = await prisma.user.findUnique({
             where: { email: session.user.email },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
-        if (!user?.portfolio) return { error: "Portfolio not found" };
+        if (!user?.Portfolio) return { error: "Portfolio not found" };
 
         const transaction = await prisma.assetTransaction.findUnique({
             where: { id: transactionId }
         });
 
-        if (!transaction || transaction.portfolioId !== user.portfolio.id) {
+        if (!transaction || transaction.portfolioId !== user.Portfolio.id) {
             return { error: "Unauthorized" };
         }
 

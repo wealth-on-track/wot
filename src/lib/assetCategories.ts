@@ -8,6 +8,7 @@
 export type AssetCategory =
   | 'BIST'          // Borsa Istanbul stocks
   | 'TEFAS'         // Turkish mutual funds
+  | 'BES'           // Bireysel Emeklilik Sistemi (pension contracts)
   | 'US_MARKETS'    // NASDAQ, NYSE, AMEX
   | 'EU_MARKETS'    // European exchanges (Paris, Amsterdam, Frankfurt, Milan, London, Madrid, Lisbon, Swiss)
   | 'CRYPTO'        // Cryptocurrencies
@@ -38,6 +39,7 @@ export type LegacyAssetType =
 export const CATEGORY_EXCHANGES: Record<AssetCategory, string[]> = {
   BIST: ['BIST', 'IST', 'Istanbul'],
   TEFAS: ['TEFAS'],
+  BES: ['BES', 'AHE'],
   US_MARKETS: ['NASDAQ', 'NYSE', 'AMEX', 'NYQ', 'NMS', 'NGM'],
   EU_MARKETS: [
     // Euronext Amsterdam
@@ -138,6 +140,7 @@ export const YAHOO_SUFFIX_MAP: Record<string, string> = {
 export const CATEGORY_CURRENCY: Record<AssetCategory, string> = {
   BIST: 'TRY',
   TEFAS: 'TRY',
+  BES: 'TRY',
   US_MARKETS: 'USD',
   EU_MARKETS: 'EUR',  // Can be overridden for LSE (GBP), SWX (CHF)
   CRYPTO: 'USD',      // Depends on pair
@@ -225,8 +228,13 @@ export function getAssetCategory(
   // PHASE 1: Explicit Type Checks (Highest Priority)
   // ============================================
 
-  // TEFAS - Explicit check first
-  if (type === 'TEFAS' || type === 'FON' || upperExchange === 'TEFAS') {
+  // BES - Bireysel Emeklilik Sistemi (pension contract)
+  if (type === 'BES') {
+    return 'BES';
+  }
+
+  // TEFAS - Explicit check first (includes FUND type for mutual funds)
+  if (type === 'TEFAS' || type === 'FON' || type === 'FUND' || upperExchange === 'TEFAS') {
     return 'TEFAS';
   }
 
@@ -240,7 +248,21 @@ export function getAssetCategory(
     return 'BENCHMARK';
   }
 
+  // COMMODITIES - Check BEFORE FX to prevent 6-letter commodity symbols from being misclassified
+  // (GAUTRY, XPTTRY are 6 letters and would match FX pattern /^[A-Z]{3}[A-Z]{3}$/)
+  if (type === 'GOLD' || type === 'COMMODITY') {
+    return 'COMMODITIES';
+  }
+
+  // Turkish-specific commodities (Gold, Silver, Platinum in TRY)
+  // Must be checked BEFORE FX pattern match
+  const platinumTryVariants = ['XPTTRY', 'XPTGTRY', 'XPT-TRY', 'XPTG-TRY', 'PLTTRY'];
+  if (upperSymbol === 'GAUTRY' || upperSymbol === 'XAGTRY' || upperSymbol === 'AET' || platinumTryVariants.includes(upperSymbol)) {
+    return 'COMMODITIES';
+  }
+
   // FX - Currency pairs (check symbol patterns)
+  // Note: This comes AFTER commodity checks to prevent GAUTRY/XPTTRY misclassification
   if (type === 'CURRENCY' || upperSymbol.includes('=X') ||
     /^[A-Z]{3}[A-Z]{3}$/.test(upperSymbol) || // EURUSD, USDTRY format
     (upperSymbol.includes('USD') && upperSymbol.includes('TRY')) ||
@@ -252,16 +274,6 @@ export function getAssetCategory(
   if (type === 'CRYPTO' || upperSymbol.includes('-USD') || upperSymbol.includes('-EUR') ||
     upperSymbol.includes('-BTC') || upperSymbol.includes('-USDT')) {
     return 'CRYPTO';
-  }
-
-  // COMMODITIES - Type check
-  if (type === 'GOLD' || type === 'COMMODITY') {
-    return 'COMMODITIES';
-  }
-
-  // Turkish-specific commodities
-  if (upperSymbol === 'GAUTRY' || upperSymbol === 'XAGTRY' || upperSymbol === 'AET') {
-    return 'COMMODITIES';
   }
 
   // ============================================
@@ -370,6 +382,7 @@ export function categoryToLegacyType(category: AssetCategory): LegacyAssetType {
     case 'EU_MARKETS':
       return 'STOCK';
     case 'TEFAS':
+    case 'BES':
       return 'FUND';
     case 'CRYPTO':
       return 'CRYPTO';
@@ -407,10 +420,17 @@ export function getYahooSearchSymbol(category: AssetCategory, symbol: string, ex
       // Special handling for Turkish commodities
       if (symbol === 'GAUTRY') return 'GC=F'; // Gold futures
       if (symbol === 'XAGTRY') return 'SI=F'; // Silver futures
+      // Platinum TRY variants
+      const platinumVariants = ['XPTTRY', 'XPTGTRY', 'XPT-TRY', 'XPTG-TRY', 'PLTTRY'];
+      if (platinumVariants.includes(symbol.toUpperCase())) return 'PL=F'; // Platinum futures
+      if (symbol === 'XPT' || symbol === 'XPT-USD') return 'PL=F'; // Platinum USD
       return symbol;
 
     case 'TEFAS':
       return symbol; // TEFAS doesn't use Yahoo
+
+    case 'BES':
+      return symbol; // BES doesn't use Yahoo
 
     case 'CASH':
       return symbol; // Cash doesn't need price lookup
@@ -443,6 +463,9 @@ export function getCategoryDefaults(category: AssetCategory, symbol?: string): {
     case 'TEFAS':
       return { sector: 'Fund', country: 'Turkey', currency: 'TRY', exchange: 'TEFAS' };
 
+    case 'BES':
+      return { sector: 'Pension', country: 'Turkey', currency: 'TRY', exchange: 'BES' };
+
     case 'US_MARKETS':
       return { sector: 'Unknown', country: 'United States', currency: 'USD', exchange: undefined };
 
@@ -469,12 +492,16 @@ export function getCategoryDefaults(category: AssetCategory, symbol?: string): {
       let commodityCurrency = 'USD'; // Default to USD (international standard)
       if (symbol) {
         const upperSymbol = symbol.toUpperCase();
-        if (upperSymbol === 'GAUTRY' || upperSymbol === 'XAGTRY' || upperSymbol.endsWith('TRY')) {
+        // Platinum TRY variants
+        const platinumTrySymbols = ['XPTTRY', 'XPTGTRY', 'XPT-TRY', 'XPTG-TRY', 'PLTTRY'];
+        if (upperSymbol === 'GAUTRY' || upperSymbol === 'XAGTRY' || platinumTrySymbols.includes(upperSymbol) || upperSymbol.endsWith('TRY')) {
           commodityCurrency = 'TRY'; // Turkish commodity pricing
         } else if (upperSymbol === 'XAU' || upperSymbol.startsWith('XAU')) {
           commodityCurrency = 'XAU'; // Gold in ounces
         } else if (upperSymbol === 'XAG' || upperSymbol.startsWith('XAG')) {
           commodityCurrency = 'XAG'; // Silver in ounces
+        } else if (upperSymbol === 'XPT' || upperSymbol === 'XPT-USD') {
+          commodityCurrency = 'USD'; // Platinum in USD
         }
       }
 
@@ -513,6 +540,7 @@ export function getCategoryDefaults(category: AssetCategory, symbol?: string): {
 export const CATEGORY_DISPLAY_NAMES: Record<AssetCategory, string> = {
   BIST: 'Borsa Istanbul',
   TEFAS: 'TEFAS Funds',
+  BES: 'BES Pension',
   US_MARKETS: 'US Markets',
   EU_MARKETS: 'European Markets',
   CRYPTO: 'Cryptocurrencies',
@@ -528,6 +556,7 @@ export const CATEGORY_DISPLAY_NAMES: Record<AssetCategory, string> = {
 export const CATEGORY_COLORS: Record<AssetCategory, string> = {
   BIST: '#E74C3C',        // Red
   TEFAS: '#3498DB',       // Blue
+  BES: '#8B5CF6',         // Purple (gradient base for BES)
   US_MARKETS: '#2ECC71',  // Green
   EU_MARKETS: '#9B59B6',  // Purple
   CRYPTO: '#F39C12',      // Orange

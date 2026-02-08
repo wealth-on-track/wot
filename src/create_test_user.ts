@@ -20,7 +20,7 @@ async function main() {
             username,
             email,
             password: hashedPassword,
-            portfolio: {
+            Portfolio: {
                 create: {
                     isPublic: true
                 }

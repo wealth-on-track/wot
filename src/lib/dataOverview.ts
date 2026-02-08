@@ -107,9 +107,9 @@ export async function getDataOverview(): Promise<DataOverviewRow[]> {
     // Fetch all users with their portfolios and assets
     const users = await prisma.user.findMany({
         include: {
-            portfolio: {
+            Portfolio: {
                 include: {
-                    assets: true
+                    Asset: true
                 }
             }
         }
@@ -117,7 +117,7 @@ export async function getDataOverview(): Promise<DataOverviewRow[]> {
 
     // Get all unique symbols from assets
     const allSymbols = users.flatMap(u =>
-        u.portfolio?.assets.map(a => a.symbol) || []
+        u.Portfolio?.Asset.map(a => a.symbol) || []
     );
     const uniqueSymbols = [...new Set(allSymbols)];
 
@@ -154,9 +154,9 @@ export async function getDataOverview(): Promise<DataOverviewRow[]> {
     const rows: DataOverviewRow[] = [];
 
     for (const user of users) {
-        if (!user.portfolio) continue;
+        if (!user.Portfolio) continue;
 
-        for (const asset of user.portfolio.assets) {
+        for (const asset of user.Portfolio.Asset) {
             const price = priceCacheMap.get(asset.symbol);
             const history = historyStatsMap.get(asset.symbol);
             const apiCall = apiCallsMap.get(asset.symbol);

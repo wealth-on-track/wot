@@ -122,6 +122,25 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
         });
     }
 
+    // PLATINUM / PLATİN Special Handling
+    const platinumKeywords = ["PLATIN", "PLATİN", "PLATINUM", "XPT", "XPTTRY", "XPTGTRY", "XPT-TRY", "XPTG-TRY", "PLTTRY"];
+    const shouldInjectPlatinum = platinumKeywords.some(k => upperQuery.includes(k) || k.startsWith(upperQuery));
+    if (shouldInjectPlatinum) {
+        const platinumType = 'COMMODITY' as const;
+        mappedResults.unshift({
+            symbol: 'XPTTRY',
+            fullName: 'GR Platin',
+            exchange: 'Commodity',  // Default exchange for commodities
+            category: 'COMMODITIES',
+            type: platinumType,
+            currency: 'TRY',  // Priced in Turkish Lira (from Investing.com spot)
+            country: 'Global',  // All commodities are Global
+            sector: 'Commodity',
+            source: 'INVESTING' as const,  // Sourced from Investing.com
+            rawName: 'GR PLATIN'
+        });
+    }
+
     // FX / Currency Pair Special Handling
     // Check if query looks like a currency pair (EURUSD, EUR USD, EUR/USD)
     const fxKeywords = ["EUR", "USD", "TRY", "GBP", "JPY", "CHF", "CAD", "AUD"];
@@ -217,6 +236,29 @@ export async function searchSymbolsAction(query: string): Promise<SymbolOption[]
     });
 
     return finalResults;
+}
+
+/**
+ * Look up a single TEFAS fund by code
+ * Returns fund info with name and current price
+ */
+export async function lookupTefasFund(code: string): Promise<{ code: string; name: string; price: number } | null> {
+    if (!code || code.length < 2 || code.length > 4) return null;
+
+    try {
+        const tefasFund = await getTefasFundInfo(code.toUpperCase().trim());
+        if (tefasFund) {
+            return {
+                code: tefasFund.code,
+                name: tefasFund.title,
+                price: tefasFund.price
+            };
+        }
+        return null;
+    } catch (e) {
+        console.error('TEFAS lookup error:', e);
+        return null;
+    }
 }
 
 /**

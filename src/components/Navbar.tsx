@@ -159,7 +159,7 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
 
                     {/* SEARCH: Aligned to right of Main Content (Performance Card) */}
                     <div style={{
-                        width: '450px', // Fixed width for stability
+                        width: '680px', // Wider for source column
                         display: 'flex',
                         alignItems: 'center',
                         flexShrink: 0
@@ -171,21 +171,14 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                         )}
                     </div>
 
-                    {/* GAP: Matches Dashboard Layout Gap (1.5rem) */}
+                    {/* RIGHT COLUMN: Action Buttons - Close to search bar */}
                     <div style={{
-                        width: '1.5rem',
-                        flexShrink: 0
-                    }} />
-
-                    {/* RIGHT COLUMN: Action Buttons (Aligned with Sidebar) */}
-                    <div style={{
-                        width: '380px',
-                        flexShrink: 0,
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'flex-end', // Right aligned
+                        justifyContent: 'flex-end',
                         height: '100%',
-                        gap: '0.75rem'
+                        gap: '0.75rem',
+                        marginLeft: '1rem'
                     }}>
                         {/* Admin Button: Visible to everyone in Local Dev, restricted in Prod */}
                         {session?.user?.email && (

@@ -29,6 +29,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
     const decodedUsername = decodeURIComponent(username);
 
+    // @ts-ignore - Prisma Client type mismatch workaround
     let user = await prisma.user.findFirst({
         where: {
             OR: [
@@ -37,35 +38,59 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             ]
         },
         include: {
-            portfolio: {
+            Portfolio: { // Capitalized Relation workaround
                 include: {
-                    assets: {
+                    Asset: { // Capitalized Relation workaround
                         orderBy: [
                             { sortOrder: 'asc' },
                             { createdAt: 'desc' }  // Newest assets first
                         ]
                     },
-                    goals: { orderBy: { createdAt: 'asc' } }
+                    Goal: { orderBy: { createdAt: 'asc' } } // Capitalized
                 }
             }
         }
     });
 
-    if (!user || !user.portfolio) {
+    // Workaround: Map capitalized Portfolio back to lowercase property for compatibility
+    if (user && (user as any).Portfolio) {
+        (user as any).portfolio = (user as any).Portfolio;
+        // Map capitalized relations
+        if ((user as any).portfolio.Asset) {
+            (user as any).portfolio.assets = (user as any).portfolio.Asset;
+        }
+        if ((user as any).portfolio.Goal) {
+            (user as any).portfolio.goals = (user as any).portfolio.Goal;
+        }
+    }
+
+    if (!user || !(user as any).portfolio) {
         console.warn(`[Dashboard] User not found by username "${decodedUsername}". Trying email fallback...`);
+        // @ts-ignore - Prisma Client type mismatch workaround
         const fallbackUser = await prisma.user.findFirst({
             where: { email: decodedUsername },
             include: {
-                portfolio: {
+                Portfolio: { // Capitalized Relation workaround
                     include: {
-                        assets: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }] },
-                        goals: { orderBy: { createdAt: 'asc' } }
+                        Asset: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }] },
+                        Goal: { orderBy: { createdAt: 'asc' } }
                     }
                 }
             }
         });
 
-        if (!fallbackUser || !fallbackUser.portfolio) {
+        if (fallbackUser && (fallbackUser as any).Portfolio) {
+            (fallbackUser as any).portfolio = (fallbackUser as any).Portfolio;
+            // Map capitalized relations
+            if ((fallbackUser as any).portfolio.Asset) {
+                (fallbackUser as any).portfolio.assets = (fallbackUser as any).portfolio.Asset;
+            }
+            if ((fallbackUser as any).portfolio.Goal) {
+                (fallbackUser as any).portfolio.goals = (fallbackUser as any).portfolio.Goal;
+            }
+        }
+
+        if (!fallbackUser || !(fallbackUser as any).portfolio) {
             // User not found - redirect to login with error
             redirect('/login?error=UserNotFound');
         }
@@ -79,8 +104,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     // Exception: demo portfolio is publicly accessible
     if (!isOwner && decodedUsername.toLowerCase() !== 'demo') {
         // User is trying to view someone else's portfolio - redirect to login
-        // User is trying to view someone else's portfolio - redirect to home (avoids login loop)
-        redirect('/');
+        // User is trying to view someone else's portfolio - redirect to login
+        redirect('/login');
     }
 
     // PERFORMANCE OPTIMIZATION: Fetch exchange rates and process portfolio in parallel
@@ -92,7 +117,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
                 // Use emergency fallback rates for initial calculation if needed
                 const emergencyRates: Record<string, number> = { EUR: 1, USD: 1.09, TRY: 37.5, GBP: 0.85, JPY: 160, CHF: 0.95 };
                 const result = await getPortfolioMetricsOptimized(
-                    user.portfolio!.assets,
+                    (user as any).portfolio!.assets,
                     emergencyRates,
                     false,
                     session?.user?.name || session?.user?.email || 'System'
@@ -113,7 +138,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         assetsWithValues = portfolioResult.assetsWithValues;
     } else {
         // Fallback: Show assets with buy prices to prevent page crash
-        assetsWithValues = user.portfolio!.assets.map(a => ({
+        // Fallback: Show assets with buy prices to prevent page crash
+        assetsWithValues = (user as any).portfolio!.assets.map((a: any) => ({
             ...a,
             name: a.name || a.symbol,
             currentPrice: a.buyPrice,
@@ -128,12 +154,12 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
     // "Next Threshold" Goal Logic - Run in background (don't block page load)
     // Fire-and-forget: ensureThresholdGoal updates DB, next page load will show updated goals
-    import("@/lib/goalUtils").then(m => m.ensureThresholdGoal(user.portfolio!.id, totalPortfolioValueEUR)).catch(() => { });
+    import("@/lib/goalUtils").then(m => m.ensureThresholdGoal((user as any).portfolio!.id, totalPortfolioValueEUR)).catch(() => { });
 
     // FETCH TRANSACTIONS & ATTACH TO ASSETS (Server-Side)
     // This allows FullScreenLayout to display transaction history for open positions
     const transactions = await prisma.assetTransaction.findMany({
-        where: { portfolioId: user.portfolio!.id },
+        where: { portfolioId: (user as any).portfolio!.id },
         orderBy: { date: 'desc' }
     });
 
@@ -158,7 +184,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
 
     // Use goals from initial query (already fetched with user.portfolio.goals)
-    const displayedGoals = user.portfolio!.goals;
+    const displayedGoals = (user as any).portfolio!.goals;
 
     return (
         <ClientWrapper

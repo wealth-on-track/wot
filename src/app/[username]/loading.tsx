@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2, TrendingUp, PieChart, Wallet, BarChart3, Shield } from "lucide-react";
 
 const LOADING_PHASES = [
@@ -15,12 +15,12 @@ const LOADING_PHASES = [
 export default function Loading() {
     const [currentPhase, setCurrentPhase] = useState(0);
     const [progress, setProgress] = useState(0);
+    const currentPhaseRef = useRef(0);
 
     useEffect(() => {
-        // Smooth progress animation
         const progressInterval = setInterval(() => {
             setProgress(prev => {
-                const targetProgress = LOADING_PHASES[currentPhase]?.progress || 100;
+                const targetProgress = LOADING_PHASES[currentPhaseRef.current]?.progress || 100;
                 if (prev < targetProgress) {
                     return Math.min(prev + 2, targetProgress);
                 }
@@ -28,11 +28,12 @@ export default function Loading() {
             });
         }, 40);
 
-        // Phase progression
         const phaseInterval = setInterval(() => {
             setCurrentPhase(prev => {
                 if (prev < LOADING_PHASES.length - 1) {
-                    return prev + 1;
+                    const next = prev + 1;
+                    currentPhaseRef.current = next;
+                    return next;
                 }
                 return prev;
             });
@@ -42,7 +43,7 @@ export default function Loading() {
             clearInterval(progressInterval);
             clearInterval(phaseInterval);
         };
-    }, [currentPhase]);
+    }, []);
 
     const CurrentIcon = LOADING_PHASES[currentPhase]?.icon || Loader2;
     const message = LOADING_PHASES[currentPhase]?.message || "Loading...";

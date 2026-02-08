@@ -21,21 +21,21 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
             ]
         },
         include: {
-            portfolio: {
+            Portfolio: {
                 include: {
-                    assets: {
+                    Asset: {
                         orderBy: [
                             { sortOrder: 'asc' },
                             { createdAt: 'desc' }  // Newest assets first
                         ]
                     },
-                    goals: { orderBy: { createdAt: 'asc' } }
+                    Goal: { orderBy: { createdAt: 'asc' } }
                 }
             }
         }
     });
 
-    if (!user || !user.portfolio) {
+    if (!user || !user.Portfolio) {
         notFound();
     }
 
@@ -58,7 +58,7 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
                 // Use emergency fallback rates for initial calculation if needed
                 const emergencyRates: Record<string, number> = { EUR: 1, USD: 1.09, TRY: 37.5, GBP: 0.85, JPY: 160, CHF: 0.95 };
                 const result = await getPortfolioMetricsOptimized(
-                    user.portfolio!.assets,
+                    user.Portfolio!.Asset,
                     emergencyRates,
                     false,
                     session?.user?.name || session?.user?.email || 'System'
@@ -79,7 +79,7 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
         assetsWithValues = portfolioResult.assetsWithValues;
     } else {
         // Fallback: Show assets with buy prices to prevent page crash
-        assetsWithValues = user.portfolio!.assets.map(a => ({
+        assetsWithValues = user.Portfolio!.Asset.map(a => ({
             ...a,
             name: a.name || a.symbol,
             currentPrice: a.buyPrice,
@@ -93,10 +93,10 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
     }
 
     // "Next Threshold" Goal Logic - Run in background (don't block page load)
-    import("@/lib/goalUtils").then(m => m.ensureThresholdGoal(user.portfolio!.id, totalPortfolioValueEUR)).catch(() => { });
+    import("@/lib/goalUtils").then(m => m.ensureThresholdGoal(user.Portfolio!.id, totalPortfolioValueEUR)).catch(() => { });
 
     // Use goals from initial query (already fetched)
-    const displayedGoals = user.portfolio.goals;
+    const displayedGoals = user.Portfolio.Goal;
 
     return (
         <MobileClientWrapper

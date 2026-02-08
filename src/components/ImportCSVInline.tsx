@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, FileSpreadsheet, Check, Loader2, ArrowRight, Lock, Cloud, Database, AlertCircle, Pencil } from "lucide-react";
+import { Upload, FileSpreadsheet, Check, Loader2, ArrowRight, Lock, Cloud, Database, AlertCircle, Pencil, ChevronDown, ChevronUp } from "lucide-react";
 import { parseFile, ParseResult, ParsedTransaction } from "@/lib/importParser";
 import { resolveImportSymbols, executeImport, ResolvedAsset, ImportAsset } from "@/app/actions/import";
 import { getUserPortfolios } from "@/app/actions/portfolio";
+import { getMarketPriceAction } from "@/app/actions/marketData";
 import { useRouter } from "next/navigation";
 
 // Unified threshold for quantity comparisons (positions with qty <= this are considered closed)
@@ -29,13 +30,23 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
     // Edit mode state
     const [isEditMode, setIsEditMode] = useState(false);
     const [editedRows, setEditedRows] = useState<Map<number, { name?: string; quantity?: number; exchange?: string; country?: string; sector?: string }>>(new Map());
+    // Transaction editing (for İş Bank precious metals with missing costs)
+    const [editedTransactionCosts, setEditedTransactionCosts] = useState<Map<string, number>>(new Map()); // externalId -> totalCost
+    const [editedTransactionQtys, setEditedTransactionQtys] = useState<Map<string, number>>(new Map()); // externalId -> quantity
+    const [editedTransactionPrices, setEditedTransactionPrices] = useState<Map<string, number>>(new Map()); // externalId -> unit price
+    const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set()); // symbol -> expanded
+    // Price validation against Yahoo Finance
+    const [priceValidation, setPriceValidation] = useState<Map<string, { yahooPrice: number; deviation: number; isWarning: boolean; isCritical: boolean }>>(new Map()); // externalId -> validation
+    const [isValidatingPrices, setIsValidatingPrices] = useState(false);
+    // Current market prices for preview (symbol -> price)
+    const [currentPrices, setCurrentPrices] = useState<Map<string, number>>(new Map());
     const [importResult, setImportResult] = useState<{ added: number; updated: number; skipped: number; errors: string[] } | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [analyzeProgress, setAnalyzeProgress] = useState(0);
     const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>('');
     const [targetPortfolioName, setTargetPortfolioName] = useState<string>('');
     const [availablePortfolios, setAvailablePortfolios] = useState<{ id: string; name: string; isDefault?: boolean }[]>([]);
-    const [platformOverride, setPlatformOverride] = useState<string | null>(null);
+    // platformOverride removed - customPlatformName is used directly
     const [customPlatformName, setCustomPlatformName] = useState<string>('');
     const [importProgress, setImportProgress] = useState(0);
     const [importPhase, setImportPhase] = useState(0);
@@ -64,9 +75,122 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
         { progress: 100, message: "Installing...", icon: "✨" }, // Use "Installing" as final phase
     ];
 
-    // ... (rest of component) ...
+    // Calculate updated avgBuyPrice for a row based on edited transaction costs
+    const getUpdatedBuyPrice = useCallback((rowSymbol: string): number | null => {
+        if (!transactions || transactions.length === 0) return null;
 
+        // Get transactions for this symbol
+        const rowTransactions = transactions.filter(tx => tx.symbol === rowSymbol);
+        if (rowTransactions.length === 0) return null;
 
+        // Check if any transaction has edited cost
+        let hasEditedCost = false;
+        for (const tx of rowTransactions) {
+            if (tx.externalId && editedTransactionCosts.has(tx.externalId)) {
+                hasEditedCost = true;
+                break;
+            }
+        }
+        if (!hasEditedCost) return null;
+
+        // Calculate total cost and quantity for BUY transactions
+        let totalCost = 0;
+        let totalQty = 0;
+
+        for (const tx of rowTransactions) {
+            if (tx.type === 'BUY') {
+                const editedCost = tx.externalId ? editedTransactionCosts.get(tx.externalId) : undefined;
+                const cost = editedCost !== undefined ? editedCost : (tx.totalCost || 0);
+                totalCost += cost;
+                totalQty += tx.quantity;
+            }
+        }
+
+        return totalQty > 0 ? totalCost / totalQty : 0;
+    }, [transactions, editedTransactionCosts]);
+
+    // Get transactions that need cost input for a given symbol
+    const getTransactionsNeedingCost = useCallback((rowSymbol: string): ParsedTransaction[] => {
+        if (!transactions) {
+            console.log('[ImportCSV] getTransactionsNeedingCost: no transactions');
+            return [];
+        }
+        const needsCost = transactions.filter(tx =>
+            tx.symbol === rowSymbol &&
+            tx.type === 'BUY' &&
+            tx.needsCostInput
+        );
+        console.log(`[ImportCSV] getTransactionsNeedingCost(${rowSymbol}): found ${needsCost.length} transactions needing cost, total tx: ${transactions.length}`);
+        if (transactions.length > 0 && needsCost.length === 0) {
+            // Debug: show why no matches
+            const symbolMatches = transactions.filter(tx => tx.symbol === rowSymbol);
+            const buyMatches = transactions.filter(tx => tx.symbol === rowSymbol && tx.type === 'BUY');
+            console.log(`  - Symbol matches: ${symbolMatches.length}, BUY matches: ${buyMatches.length}`);
+            buyMatches.forEach(tx => console.log(`    - ${tx.originalDateStr}: needsCostInput=${tx.needsCostInput}, price=${tx.price}`));
+        }
+        return needsCost;
+    }, [transactions]);
+
+    // Validate transaction prices against Yahoo Finance
+    const validatePricesAgainstYahoo = useCallback(async (txList: ParsedTransaction[]) => {
+        if (txList.length === 0) return;
+
+        setIsValidatingPrices(true);
+        console.log('[ImportCSV] Validating prices against Yahoo for', txList.length, 'transactions');
+
+        try {
+            const response = await fetch('/api/validate-prices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    transactions: txList.map(tx => ({
+                        // Handle both Date objects and ISO strings (from JSON serialization)
+                        date: tx.date instanceof Date ? tx.date.toISOString() : tx.date,
+                        price: tx.price,
+                        symbol: tx.symbol,
+                        externalId: tx.externalId
+                    }))
+                })
+            });
+
+            if (!response.ok) {
+                console.error('[ImportCSV] Price validation failed:', response.status);
+                return;
+            }
+
+            const data = await response.json();
+            console.log('[ImportCSV] Validation results:', data.results?.length || 0, 'items');
+
+            if (data.results && data.results.length > 0) {
+                const validationMap = new Map<string, { yahooPrice: number; deviation: number; isWarning: boolean; isCritical: boolean }>();
+                for (const result of data.results) {
+                    if (result.externalId) {
+                        validationMap.set(result.externalId, {
+                            yahooPrice: result.yahooPrice,
+                            deviation: result.deviation,
+                            isWarning: result.isWarning,
+                            isCritical: result.isCritical
+                        });
+                    }
+                }
+                setPriceValidation(validationMap);
+
+                // Log warnings
+                const warnings = data.results.filter((r: any) => r.isWarning);
+                const critical = data.results.filter((r: any) => r.isCritical);
+                if (warnings.length > 0) {
+                    console.log(`[ImportCSV] ⚠️ ${warnings.length} price warnings (>15% deviation)`);
+                }
+                if (critical.length > 0) {
+                    console.log(`[ImportCSV] 🚨 ${critical.length} CRITICAL price deviations (>30%)`);
+                }
+            }
+        } catch (error) {
+            console.error('[ImportCSV] Error validating prices:', error);
+        } finally {
+            setIsValidatingPrices(false);
+        }
+    }, []);
 
     useEffect(() => {
         const loadPortfolios = async () => {
@@ -105,61 +229,88 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
 
             setParseResult(result);
             if (result.transactions) {
+                console.log('[ImportCSV] Setting transactions:', result.transactions.length);
+                result.transactions.forEach((tx, i) => {
+                    if (tx.needsCostInput) {
+                        console.log(`  [${i}] ${tx.symbol} ${tx.originalDateStr} needsCostInput=true`);
+                    }
+                });
                 setTransactions(result.transactions);
+
+                // Validate prices against Yahoo Finance for İş Bank precious metals
+                // Include ALL transactions (even with price=0) so we can show reference prices
+                const preciousMetalsTx = result.transactions.filter(tx =>
+                    tx.symbol === 'GAUTRY' || tx.symbol === 'XPTTRY'
+                );
+                if (preciousMetalsTx.length > 0) {
+                    validatePricesAgainstYahoo(preciousMetalsTx);
+                }
             }
 
-            if (result.success && result.rows.length > 0) {
+            if (result.success && (result.rows.length > 0 || result.transactions.length > 0)) {
+                console.log('[ImportCSV] Parse success. Rows:', result.rows.length, 'Transactions:', result.transactions.length);
                 setStep('preview');
 
-                // Start background Yahoo resolution to get tickers for preview
-                const importAssets: ImportAsset[] = result.rows.map(row => ({
-                    symbol: row.symbol,
-                    isin: row.isin,
-                    name: row.name,
-                    quantity: row.quantity,
-                    buyPrice: row.buyPrice,
-                    currency: row.currency as 'USD' | 'EUR' | 'TRY',
-                    type: row.type,
-                    platform: row.platform,
-                    exchange: row.exchange // CSV exchange (e.g., Reference Exchange from Degiro)
-                }));
+                // Auto-set platform name from parsed data if not already set (e.g., BES PDF)
+                if (!customPlatformName && result.rows.length > 0 && result.rows[0].platform) {
+                    setCustomPlatformName(result.rows[0].platform);
+                    console.log('[ImportCSV] Auto-set platform name:', result.rows[0].platform);
+                }
 
-                // Fire and forget - resolve in background
-                resolveImportSymbols(importAssets).then(resolveResult => {
-                    if (resolveResult.success) {
-                        const newTickerMap = new Map<string, { ticker: string; name: string; logoUrl?: string; exchange?: string; country?: string; sector?: string; category?: string }>();
-                        resolveResult.resolved.forEach(asset => {
-                            const data = {
-                                ticker: asset.resolvedSymbol,
-                                name: asset.resolvedName,
-                                logoUrl: asset.logoUrl,
-                                exchange: asset.exchange,
-                                country: asset.country,
-                                sector: asset.sector,
-                                category: asset.category
-                            };
-                            // Map by ISIN (primary key for matching)
-                            if (asset.isin) {
-                                newTickerMap.set(asset.isin, data);
-                            }
-                            // Also map by original symbol
-                            if (asset.symbol) {
-                                newTickerMap.set(asset.symbol, data);
-                            }
-                        });
-                        setTickerMap(newTickerMap);
-                    }
-                }).catch(err => {
-                    console.warn('[ImportCSV] Background ticker resolution failed:', err);
-                });
+                // Start background Yahoo resolution to get tickers for preview
+                if (result.rows.length > 0) {
+                    const importAssets: ImportAsset[] = result.rows.map(row => ({
+                        symbol: row.symbol,
+                        isin: row.isin,
+                        name: row.name,
+                        quantity: row.quantity,
+                        buyPrice: row.buyPrice,
+                        currency: row.currency as 'USD' | 'EUR' | 'TRY',
+                        type: row.type,
+                        platform: row.platform,
+                        exchange: row.exchange // CSV exchange (e.g., Reference Exchange from Degiro)
+                    }));
+
+                    // Fire and forget - resolve in background
+                    resolveImportSymbols(importAssets).then(resolveResult => {
+                        if (resolveResult.success) {
+                            const newTickerMap = new Map<string, { ticker: string; name: string; logoUrl?: string; exchange?: string; country?: string; sector?: string; category?: string }>();
+                            resolveResult.resolved.forEach(asset => {
+                                const data = {
+                                    ticker: asset.resolvedSymbol,
+                                    name: asset.resolvedName,
+                                    logoUrl: asset.logoUrl,
+                                    exchange: asset.exchange,
+                                    country: asset.country,
+                                    sector: asset.sector,
+                                    category: asset.category
+                                };
+                                // Map by ISIN (primary key for matching)
+                                if (asset.isin) {
+                                    newTickerMap.set(asset.isin, data);
+                                }
+                                // Also map by original symbol
+                                if (asset.symbol) {
+                                    newTickerMap.set(asset.symbol, data);
+                                }
+                            });
+                            setTickerMap(newTickerMap);
+                        }
+                    }).catch(err => {
+                        console.warn('[ImportCSV] Background ticker resolution failed:', err);
+                    });
+                }
             } else if (result.errors.length > 0) {
+                console.error('[ImportCSV] Parse errors:', result.errors);
                 setError(result.errors.join('\n'));
                 setStep('upload');
             } else {
+                console.error('[ImportCSV] No valid data found');
                 setError('No valid data found in file');
                 setStep('upload');
             }
         } catch (e) {
+            console.error('[ImportCSV] Exception:', e);
             setError(`Failed to parse file: ${e}`);
             setStep('upload');
         }
@@ -171,7 +322,8 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
             'text/csv': ['.csv'],
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
             'application/vnd.ms-excel': ['.xls'],
-            'text/plain': ['.txt']
+            'text/plain': ['.txt'],
+            'application/pdf': ['.pdf']
         },
         maxFiles: 1
     });
@@ -297,6 +449,40 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
         };
     }, [step, importPhase]);
 
+    // Fetch current market prices for preview
+    useEffect(() => {
+        if (step !== 'preview' || !parseResult?.rows.length) return;
+
+        const fetchPrices = async () => {
+            const newPrices = new Map<string, number>();
+            const symbols = [...new Set(parseResult.rows.map(r => r.symbol))];
+
+            // Fetch prices in parallel (limit concurrency)
+            const batchSize = 5;
+            for (let i = 0; i < symbols.length; i += batchSize) {
+                const batch = symbols.slice(i, i + batchSize);
+                await Promise.all(batch.map(async (symbol) => {
+                    try {
+                        const row = parseResult.rows.find(r => r.symbol === symbol);
+                        const type = row?.type || 'STOCK';
+                        const result = await getMarketPriceAction(symbol, type);
+                        if (result?.price && result.price > 0) {
+                            newPrices.set(symbol, result.price);
+                        }
+                    } catch (error) {
+                        console.error(`Failed to fetch price for ${symbol}:`, error);
+                    }
+                }));
+            }
+
+            if (newPrices.size > 0) {
+                setCurrentPrices(newPrices);
+            }
+        };
+
+        fetchPrices();
+    }, [step, parseResult?.rows]);
+
     const handleProceedToResolve = async () => {
         setStep('resolving');
         setError(null);
@@ -312,7 +498,7 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                     buyPrice: row.buyPrice,
                     currency: row.currency as 'USD' | 'EUR' | 'TRY',
                     type: row.type,
-                    platform: platformOverride === 'Custom' ? customPlatformName : (platformOverride || row.platform),
+                    platform: customPlatformName || row.platform,
                     exchange: edited?.exchange ?? row.exchange // CSV exchange, can be edited
                 };
             });
@@ -339,7 +525,9 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                     // This applies whether the asset exists or not:
                     // - If exists: Update to 0 quantity (mark as closed)
                     // - If new: Create with 0 quantity (historical closed position)
-                    if (updatedAsset.quantity === 0 || updatedAsset.quantity <= QUANTITY_THRESHOLD) {
+                    // Exception: BES contracts are always open (pension contracts are always active)
+                    const isBES = updatedAsset.resolvedType === 'BES' || (updatedAsset as any).type === 'BES';
+                    if (!isBES && (updatedAsset.quantity === 0 || updatedAsset.quantity <= QUANTITY_THRESHOLD)) {
                         return { ...updatedAsset, action: 'close' as const };
                     }
                     return updatedAsset;
@@ -381,10 +569,13 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
 
         // Validation
         const isPortfolioEmpty = !targetPortfolioName || targetPortfolioName.trim() === '';
-        const isPlatformEmpty = !customPlatformName || customPlatformName.trim() === '';
+        // Platform can come from customPlatformName OR from parsed data (e.g., BES PDF)
+        const hasPlatformInData = parseResult?.rows?.some(r => r.platform && r.platform.trim() !== '');
+        const isPlatformEmpty = (!customPlatformName || customPlatformName.trim() === '') && !hasPlatformInData;
 
         console.log('[ImportCSVInline] isPortfolioEmpty:', isPortfolioEmpty);
         console.log('[ImportCSVInline] isPlatformEmpty:', isPlatformEmpty);
+        console.log('[ImportCSVInline] hasPlatformInData:', hasPlatformInData);
 
         if (isPortfolioEmpty || isPlatformEmpty) {
             console.log('[ImportCSVInline] Validation failed, setting errors');
@@ -408,17 +599,19 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
         setError(null);
 
         try {
-            // Fallback: If resolvedAssets is empty (e.g. running from Preview/Map step), construct it from tickerMap
+            // Fallback: If resolvedAssets is empty (e.g. running from Preview/Map step), construct it from parseResult
             let assetsToImport = resolvedAssets;
 
-            if (assetsToImport.length === 0 && tickerMap.size > 0 && parseResult?.rows) {
-                console.log('[ImportCSVInline] resolvedAssets empty, constructing from tickerMap...');
+            if (assetsToImport.length === 0 && parseResult?.rows && parseResult.rows.length > 0) {
+                console.log('[ImportCSVInline] resolvedAssets empty, constructing from parseResult.rows...');
                 assetsToImport = parseResult.rows.map((row, idx) => {
                     const edited = editedRows.get(idx);
-                    // Try resolving by ISIN first, then Symbol
-                    const resolvedData = (row.isin && tickerMap.get(row.isin)) || tickerMap.get(row.symbol);
+                    // Try resolving by ISIN first, then Symbol (if tickerMap has data)
+                    const resolvedData = tickerMap.size > 0
+                        ? ((row.isin && tickerMap.get(row.isin)) || tickerMap.get(row.symbol))
+                        : null;
 
-                    // Determining resolved symbol/name
+                    // Determining resolved symbol/name - use original data if no resolution
                     const resolvedSymbol = resolvedData?.ticker || row.symbol;
                     const resolvedName = resolvedData?.name || edited?.name || row.name || row.symbol;
 
@@ -428,7 +621,52 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                     // Determine action based on quantity
                     // Note: 'add' will be converted to 'update' in executeImport if asset exists
                     // Using 0.000001 threshold to match parser
-                    const action = (quantity > 0.000001) ? 'add' : 'close';
+                    // BES contracts are always 'add' (pension contracts are always active)
+                    const action = (row.type === 'BES' || quantity > 0.000001) ? 'add' : 'close';
+
+                    // Determine category - FUND type gets TEFAS category, BES gets BES category
+                    const category = row.type === 'FUND'
+                        ? 'TEFAS'
+                        : row.type === 'BES'
+                            ? 'BES'
+                            : (resolvedData?.category || 'UNKNOWN');
+
+                    // Recalculate avgBuyPrice if any transaction edits exist for this symbol
+                    let buyPrice = row.buyPrice;
+                    const symbolTxs = transactions.filter(tx => tx.symbol === row.symbol && tx.type === 'BUY');
+                    if (symbolTxs.length > 0) {
+                        const hasEdits = symbolTxs.some(tx =>
+                            tx.externalId && (
+                                editedTransactionPrices.has(tx.externalId) ||
+                                editedTransactionCosts.has(tx.externalId) ||
+                                editedTransactionQtys.has(tx.externalId)
+                            )
+                        );
+
+                        if (hasEdits) {
+                            // Recalculate average buy price from edited transactions
+                            let totalCost = 0;
+                            let totalQty = 0;
+
+                            for (const tx of symbolTxs) {
+                                const editedQty = tx.externalId ? editedTransactionQtys.get(tx.externalId) : undefined;
+                                const editedPrice = tx.externalId ? editedTransactionPrices.get(tx.externalId) : undefined;
+                                const editedCost = tx.externalId ? editedTransactionCosts.get(tx.externalId) : undefined;
+
+                                const txQty = editedQty !== undefined ? editedQty : tx.quantity;
+                                const txPrice = editedPrice !== undefined ? editedPrice : tx.price;
+                                const txCost = editedCost !== undefined ? editedCost : (txPrice * txQty);
+
+                                totalCost += txCost;
+                                totalQty += txQty;
+                            }
+
+                            if (totalQty > 0) {
+                                buyPrice = totalCost / totalQty;
+                                console.log(`[ImportCSVInline] Recalculated avgBuyPrice for ${row.symbol}: ${buyPrice.toFixed(2)} (totalCost=${totalCost.toFixed(2)}, totalQty=${totalQty.toFixed(4)})`);
+                            }
+                        }
+                    }
 
                     return {
                         symbol: row.symbol,
@@ -437,27 +675,56 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                         resolvedName: resolvedName,
                         resolvedType: row.type || 'STOCK',
                         quantity: quantity,
-                        buyPrice: row.buyPrice,
+                        buyPrice: buyPrice,
                         resolvedCurrency: (row.currency as any) || 'EUR',
-                        exchange: edited?.exchange || resolvedData?.exchange || row.exchange,
-                        country: edited?.country || resolvedData?.country,
-                        sector: edited?.sector || resolvedData?.sector,
-                        category: resolvedData?.category || 'UNKNOWN',
+                        exchange: edited?.exchange || resolvedData?.exchange || row.exchange || 'TEFAS',
+                        country: edited?.country || resolvedData?.country || 'TR',
+                        sector: edited?.sector || resolvedData?.sector || 'Pension Fund',
+                        category: category,
                         confidence: row.confidence || 80,
                         warnings: row.warnings || [],
                         action: action,
-                        matchSource: 'SEARCH',
+                        matchSource: resolvedData ? 'SEARCH' : 'DIRECT',
                         isin: row.isin,
                         logoUrl: resolvedData?.logoUrl,
-                        platform: platformOverride === 'Custom' ? customPlatformName : (platformOverride || row.platform)
+                        platform: customPlatformName || row.platform
                     } as ResolvedAsset;
                 });
-                console.log('[ImportCSVInline] Constructed', assetsToImport.length, 'assets from tickerMap');
+                console.log('[ImportCSVInline] Constructed', assetsToImport.length, 'assets from parseResult');
             }
 
             console.log('[ImportCSVInline] Sending assets to import:', assetsToImport.map(a => ({ symbol: a.resolvedSymbol, quantity: a.quantity, action: a.action })));
+
+            // Apply edited transaction values before importing
+            const transactionsToImport = transactions.map(tx => {
+                if (!tx.externalId) return tx;
+
+                const editedQty = editedTransactionQtys.get(tx.externalId);
+                const editedPrice = editedTransactionPrices.get(tx.externalId);
+                const editedCost = editedTransactionCosts.get(tx.externalId);
+
+                // If any edits exist, create a modified transaction
+                if (editedQty !== undefined || editedPrice !== undefined || editedCost !== undefined) {
+                    const newQty = editedQty !== undefined ? editedQty : tx.quantity;
+                    const newPrice = editedPrice !== undefined ? editedPrice : tx.price;
+                    const newTotalCost = editedCost !== undefined ? editedCost : (newPrice * newQty);
+
+                    console.log(`[ImportCSVInline] Applying edits to ${tx.externalId}: qty=${newQty}, price=${newPrice}, totalCost=${newTotalCost}`);
+
+                    return {
+                        ...tx,
+                        quantity: newQty,
+                        price: newPrice,
+                        totalCost: newTotalCost,
+                        needsCostInput: false // Clear the flag since user provided the value
+                    };
+                }
+
+                return tx;
+            });
+
             console.log('[ImportCSVInline] Calling executeImport...');
-            const result = await executeImport(assetsToImport, transactions, selectedPortfolioId || undefined, targetPortfolioName);
+            const result = await executeImport(assetsToImport, transactionsToImport, selectedPortfolioId || undefined, targetPortfolioName);
             console.log('[ImportCSVInline] executeImport result:', result);
             setImportResult(result);
 
@@ -484,6 +751,11 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
     };
 
     const categorizeRow = (row: any): 'open' | 'closed' | 'statement' | 'dividend' => {
+        // BES type always → Open (pension contracts are always active)
+        if (row.type && row.type.toUpperCase() === 'BES') {
+            return 'open';
+        }
+
         // CASH type always → Statement (EUR, USD, etc.)
         if (row.type && row.type.toUpperCase() === 'CASH') {
             return 'statement';
@@ -780,7 +1052,7 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                                     marginBottom: '16px',
                                     textAlign: 'center'
                                 }}>
-                                    Supports CSV, Excel, TXT from major brokers
+                                    Supports CSV, Excel, TXT, PDF (BES) from major brokers
                                 </p>
 
                                 <div style={{ marginTop: '16px' }}>
@@ -1243,6 +1515,46 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                             </div>
                         </div>
 
+                        {/* Price Validation Warnings for Precious Metals */}
+                        {priceValidation.size > 0 && (() => {
+                            const warnings = Array.from(priceValidation.values()).filter(v => v.isWarning);
+                            const critical = Array.from(priceValidation.values()).filter(v => v.isCritical);
+
+                            if (warnings.length === 0) return null;
+
+                            return (
+                                <div style={{
+                                    padding: '10px 14px',
+                                    marginBottom: '8px',
+                                    borderRadius: '8px',
+                                    background: critical.length > 0 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(245, 158, 11, 0.08)',
+                                    border: `1px solid ${critical.length > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px'
+                                }}>
+                                    <AlertCircle size={18} color={critical.length > 0 ? '#ef4444' : '#f59e0b'} />
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                            color: critical.length > 0 ? '#ef4444' : '#f59e0b'
+                                        }}>
+                                            {critical.length > 0
+                                                ? `🚨 ${critical.length} işlemde fiyat sapması çok yüksek (>30%)`
+                                                : `⚠️ ${warnings.length} işlemde fiyat sapması yüksek (>15%)`}
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                            PDF'deki fiyatlar Yahoo Finance ile karşılaştırıldı. Büyük sapmalar import hatası olabilir.
+                                        </div>
+                                    </div>
+                                    {isValidatingPrices && (
+                                        <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                                    )}
+                                </div>
+                            );
+                        })()}
+
                         {/* Ticker Resolution Progress Bar OR Installing Bar */}
                         {(!hideResolveBar || step === 'importing') && (
                             <div style={{
@@ -1413,7 +1725,7 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                                         }}>
                                             Asset
                                         </th>
-                                        {['Qty', 'Price', 'Currency', 'Type', 'Exchange', 'Country', 'Sector', 'Category', 'Conf.'].map(h => (
+                                        {['Qty', 'Current', 'Avg Cost', 'Currency', 'Type', 'Exchange', 'Country', 'Sector', 'Category', 'Conf.', ''].map(h => (
                                             <th key={h} style={{
                                                 padding: '8px',
                                                 textAlign: 'right',
@@ -1446,7 +1758,8 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                                             // Row 2: Ticker
 
                                             return (
-                                                <tr key={idx} style={{
+                                                <React.Fragment key={idx}>
+                                                <tr style={{
                                                     borderBottom: '1px solid var(--border)',
                                                     background: colors.bg,
                                                     transition: 'background 0.2s'
@@ -1584,7 +1897,9 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                                                                                 );
                                                                             } else {
                                                                                 // No ISIN: Show symbol-currency while loading
-                                                                                const showPair = row.currency && row.currency !== row.symbol;
+                                                                                // Skip currency suffix for commodity symbols (GAUTRY, XPTTRY already include TRY)
+                                                                                const isCommodity = ['GAUTRY', 'XPTTRY', 'XAGTRY'].includes(row.symbol?.toUpperCase() || '');
+                                                                                const showPair = !isCommodity && row.currency && row.currency !== row.symbol;
                                                                                 return <span>{row.symbol}{showPair ? `-${row.currency}` : ''}</span>;
                                                                             }
                                                                         }
@@ -1604,8 +1919,10 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                                                                         } else {
                                                                             // No ISIN (Kraken etc.): Show "Ticker-Currency" (e.g., BTC-EUR)
                                                                             // Skip if ticker already contains currency suffix (resolved crypto like BTC-EUR)
+                                                                            // Skip currency suffix for commodity symbols (GAUTRY, XPTTRY already include TRY)
                                                                             const alreadyHasSuffix = ticker.includes('-');
-                                                                            const showPair = !alreadyHasSuffix && row.currency && row.currency !== ticker;
+                                                                            const isCommodity = ['GAUTRY', 'XPTTRY', 'XAGTRY'].includes(ticker?.toUpperCase() || '');
+                                                                            const showPair = !alreadyHasSuffix && !isCommodity && row.currency && row.currency !== ticker;
                                                                             return <span>{ticker}{showPair ? `-${row.currency}` : ''}</span>;
                                                                         }
                                                                     })()}
@@ -1647,6 +1964,23 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                                                             category === 'closed' ? '-' : formatNumber(editedRows.get(row.originalIndex)?.quantity ?? row.quantity, -1)
                                                         )}
                                                     </td>
+                                                    {/* Current Price */}
+                                                    <td style={{
+                                                        padding: '6px 8px',
+                                                        textAlign: 'right',
+                                                        fontFamily: 'monospace',
+                                                        color: 'var(--text-secondary)',
+                                                        fontSize: '11px'
+                                                    }}>
+                                                        {(() => {
+                                                            const currentPrice = currentPrices.get(row.symbol);
+                                                            if (currentPrices.size === 0) {
+                                                                return <Loader2 size={10} className="animate-spin" style={{ opacity: 0.4 }} />;
+                                                            }
+                                                            return currentPrice && currentPrice > 0 ? formatNumber(currentPrice, 2) : '-';
+                                                        })()}
+                                                    </td>
+                                                    {/* Avg Cost */}
                                                     <td style={{
                                                         padding: '6px 8px',
                                                         textAlign: 'right',
@@ -1654,7 +1988,15 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                                                         color: 'var(--text-primary)',
                                                         fontSize: '11px'
                                                     }}>
-                                                        {formatNumber(row.buyPrice, 2)}
+                                                        {(() => {
+                                                            const updatedPrice = getUpdatedBuyPrice(row.symbol);
+                                                            const displayPrice = updatedPrice !== null ? updatedPrice : row.buyPrice;
+                                                            return (
+                                                                <span style={{ color: updatedPrice !== null ? 'var(--success)' : displayPrice === 0 ? 'var(--warning)' : 'inherit' }}>
+                                                                    {displayPrice === 0 ? '-' : formatNumber(displayPrice, 2)}
+                                                                </span>
+                                                            );
+                                                        })()}
                                                     </td>
                                                     <td style={{
                                                         padding: '6px 8px',
@@ -1823,7 +2165,411 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                                                             {row.confidence}%
                                                         </span>
                                                     </td>
+                                                    {/* Expand button column */}
+                                                    <td style={{ padding: '6px 8px', textAlign: 'center', width: '40px' }}>
+                                                        {(() => {
+                                                            const rowTransactions = transactions.filter(tx => tx.symbol === row.symbol);
+                                                            const hasTransactions = rowTransactions.length > 0;
+                                                            const isExpanded = expandedRows.has(row.symbol);
+                                                            const needsCostTxs = getTransactionsNeedingCost(row.symbol);
+                                                            const hasNeedsCost = needsCostTxs.length > 0;
+
+                                                            if (!hasTransactions) return null;
+
+                                                            return (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const newExpanded = new Set(expandedRows);
+                                                                        if (isExpanded) {
+                                                                            newExpanded.delete(row.symbol);
+                                                                        } else {
+                                                                            newExpanded.add(row.symbol);
+                                                                        }
+                                                                        setExpandedRows(newExpanded);
+                                                                    }}
+                                                                    style={{
+                                                                        background: 'transparent',
+                                                                        border: 'none',
+                                                                        borderRadius: '4px',
+                                                                        padding: '4px',
+                                                                        cursor: 'pointer',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        color: hasNeedsCost ? '#991b1b' : 'var(--text-muted)',
+                                                                        transition: 'color 0.2s'
+                                                                    }}
+                                                                    title={`${rowTransactions.length} işlem`}
+                                                                >
+                                                                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                                </button>
+                                                            );
+                                                        })()}
+                                                    </td>
                                                 </tr>
+                                                {/* Expandable transaction details row */}
+                                                {expandedRows.has(row.symbol) && (
+                                                    <tr>
+                                                        <td colSpan={12} style={{
+                                                            padding: '0',
+                                                            background: 'var(--bg-secondary)',
+                                                            borderBottom: '2px solid var(--accent)'
+                                                        }}>
+                                                            <div style={{
+                                                                padding: '12px 16px',
+                                                                fontSize: '11px'
+                                                            }}>
+                                                                {/* Show ALL transactions for this symbol */}
+                                                                {(() => {
+                                                                    const allTxs = transactions.filter(tx => tx.symbol === row.symbol)
+                                                                        .sort((a, b) => {
+                                                                            const dateA = a.date instanceof Date ? a.date : new Date(a.date);
+                                                                            const dateB = b.date instanceof Date ? b.date : new Date(b.date);
+                                                                            return dateB.getTime() - dateA.getTime(); // Most recent first
+                                                                        });
+
+                                                                    if (allTxs.length === 0) return null;
+
+                                                                    // Calculate running balances in chronological order (oldest first)
+                                                                    const chronologicalTxs = [...allTxs].sort((a, b) => {
+                                                                        const dateA = a.date instanceof Date ? a.date : new Date(a.date);
+                                                                        const dateB = b.date instanceof Date ? b.date : new Date(b.date);
+                                                                        return dateA.getTime() - dateB.getTime();
+                                                                    });
+
+                                                                    const balanceMap = new Map<string, number>();
+                                                                    let runningQty = 0;
+                                                                    chronologicalTxs.forEach(tx => {
+                                                                        const editedQty = tx.externalId ? editedTransactionQtys.get(tx.externalId) : undefined;
+                                                                        const qty = editedQty !== undefined ? editedQty : tx.quantity;
+                                                                        if (tx.type === 'BUY') {
+                                                                            runningQty += qty;
+                                                                        } else if (tx.type === 'SELL') {
+                                                                            runningQty -= qty;
+                                                                        }
+                                                                        if (tx.externalId) {
+                                                                            balanceMap.set(tx.externalId, runningQty);
+                                                                        }
+                                                                    });
+
+                                                                    return (
+                                                                        <div>
+                                                                            <div style={{
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                gap: '8px',
+                                                                                marginBottom: '8px',
+                                                                                color: 'var(--text-secondary)'
+                                                                            }}>
+                                                                                <Database size={14} />
+                                                                                <span style={{ fontWeight: 600 }}>
+                                                                                    Tüm İşlemler ({allTxs.length})
+                                                                                </span>
+                                                                            </div>
+
+                                                                            {/* Transaction table header */}
+                                                                            <div style={{
+                                                                                display: 'grid',
+                                                                                gridTemplateColumns: '28px 80px 50px 80px 90px 90px 85px 85px',
+                                                                                gap: '8px',
+                                                                                padding: '6px 10px',
+                                                                                background: 'var(--bg-primary)',
+                                                                                borderRadius: '4px 4px 0 0',
+                                                                                border: '1px solid var(--border)',
+                                                                                borderBottom: 'none',
+                                                                                fontSize: '9px',
+                                                                                fontWeight: 700,
+                                                                                color: 'var(--text-muted)',
+                                                                                textTransform: 'uppercase'
+                                                                            }}>
+                                                                                <span>#</span>
+                                                                                <span>Tarih</span>
+                                                                                <span>Tip</span>
+                                                                                <span style={{ textAlign: 'right' }}>Miktar</span>
+                                                                                <span style={{ textAlign: 'right' }}>Birim Fiyat</span>
+                                                                                <span style={{ textAlign: 'right' }}>Toplam</span>
+                                                                                <span style={{ textAlign: 'right' }}>Bakiye</span>
+                                                                                <span style={{ textAlign: 'right' }}>Ref. Price</span>
+                                                                            </div>
+
+                                                                            {/* Transaction rows */}
+                                                                            <div style={{
+                                                                                display: 'flex',
+                                                                                flexDirection: 'column',
+                                                                                border: '1px solid var(--border)',
+                                                                                borderRadius: '0 0 4px 4px',
+                                                                                maxHeight: '200px',
+                                                                                overflowY: 'auto'
+                                                                            }}>
+                                                                                {allTxs.map((tx, i) => {
+                                                                                    // Row number: oldest = 1, newest = total count
+                                                                                    const rowNumber = allTxs.length - i;
+
+                                                                                    // Get edited values or use original
+                                                                                    const editedQty = tx.externalId ? editedTransactionQtys.get(tx.externalId) : undefined;
+                                                                                    const editedPrice = tx.externalId ? editedTransactionPrices.get(tx.externalId) : undefined;
+                                                                                    const editedCost = tx.externalId ? editedTransactionCosts.get(tx.externalId) : undefined;
+
+                                                                                    const displayQty = editedQty !== undefined ? editedQty : tx.quantity;
+                                                                                    // Calculate totalCost: prioritize editedCost, then editedPrice * qty, then original
+                                                                                    const totalCost = editedCost !== undefined
+                                                                                        ? editedCost
+                                                                                        : editedPrice !== undefined
+                                                                                            ? editedPrice * displayQty
+                                                                                            : (tx.totalCost || tx.price * tx.quantity);
+                                                                                    // Calculate unitPrice: prioritize editedPrice, then derive from totalCost
+                                                                                    const unitPrice = editedPrice !== undefined
+                                                                                        ? editedPrice
+                                                                                        : (displayQty > 0 ? totalCost / displayQty : tx.price);
+
+                                                                                    // Get balance from balanceMap (calculated in chronological order)
+                                                                                    const balance = tx.externalId ? balanceMap.get(tx.externalId) || 0 : 0;
+
+                                                                                    const isBuy = tx.type === 'BUY';
+                                                                                    const isSell = tx.type === 'SELL';
+                                                                                    const hasWarning = tx.externalId && priceValidation.has(tx.externalId) && priceValidation.get(tx.externalId)!.isWarning;
+                                                                                    const isCritical = hasWarning && priceValidation.get(tx.externalId!)!.isCritical;
+                                                                                    // needsCost is false if user provided either editedPrice OR editedCost
+                                                                                    const needsCost = tx.needsCostInput && editedCost === undefined && editedPrice === undefined;
+
+                                                                                    // Get reference price from priceValidation (Yahoo price)
+                                                                                    const refPriceData = tx.externalId ? priceValidation.get(tx.externalId) : undefined;
+                                                                                    const refPrice = refPriceData?.yahooPrice;
+
+                                                                                    return (
+                                                                                        <div
+                                                                                            key={tx.externalId || i}
+                                                                                            style={{
+                                                                                                display: 'grid',
+                                                                                                gridTemplateColumns: '28px 80px 50px 80px 90px 90px 85px 85px',
+                                                                                                gap: '8px',
+                                                                                                padding: '6px 10px',
+                                                                                                background: needsCost ? 'rgba(153, 27, 27, 0.15)' : // Burgundy/bordo for missing cost
+                                                                                                           isCritical ? 'rgba(239, 68, 68, 0.08)' :
+                                                                                                           hasWarning ? 'rgba(245, 158, 11, 0.08)' :
+                                                                                                           i % 2 === 0 ? 'var(--bg-primary)' : 'transparent',
+                                                                                                borderBottom: i < allTxs.length - 1 ? '1px solid var(--border)' : 'none',
+                                                                                                borderLeft: needsCost ? '3px solid #991b1b' : 'none', // Burgundy left border
+                                                                                                fontSize: '10px',
+                                                                                                alignItems: 'center'
+                                                                                            }}
+                                                                                        >
+                                                                                            {/* Row number badge */}
+                                                                                            <span style={{
+                                                                                                display: 'flex',
+                                                                                                alignItems: 'center',
+                                                                                                justifyContent: 'center',
+                                                                                                width: '20px',
+                                                                                                height: '20px',
+                                                                                                borderRadius: '50%',
+                                                                                                background: 'var(--bg-tertiary)',
+                                                                                                color: 'var(--text-muted)',
+                                                                                                fontSize: '9px',
+                                                                                                fontWeight: 600
+                                                                                            }}>
+                                                                                                {rowNumber}
+                                                                                            </span>
+                                                                                            <span style={{ color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                                                                                                {tx.originalDateStr || (tx.date instanceof Date ? tx.date.toLocaleDateString('tr-TR') : new Date(tx.date).toLocaleDateString('tr-TR'))}
+                                                                                            </span>
+                                                                                            <span style={{
+                                                                                                padding: '2px 6px',
+                                                                                                borderRadius: '3px',
+                                                                                                fontSize: '9px',
+                                                                                                fontWeight: 700,
+                                                                                                background: isBuy ? 'rgba(34, 197, 94, 0.15)' :
+                                                                                                           isSell ? 'rgba(239, 68, 68, 0.15)' :
+                                                                                                           'rgba(100, 116, 139, 0.15)',
+                                                                                                color: isBuy ? '#22c55e' :
+                                                                                                       isSell ? '#ef4444' :
+                                                                                                       '#64748b'
+                                                                                            }}>
+                                                                                                {tx.type}
+                                                                                            </span>
+                                                                                            {/* Quantity - editable when isEditMode */}
+                                                                                            {isEditMode && tx.externalId ? (
+                                                                                                <input
+                                                                                                    type="number"
+                                                                                                    step="0.0001"
+                                                                                                    value={editedQty !== undefined ? editedQty : tx.quantity}
+                                                                                                    onChange={(e) => {
+                                                                                                        const newMap = new Map(editedTransactionQtys);
+                                                                                                        newMap.set(tx.externalId!, parseFloat(e.target.value) || 0);
+                                                                                                        setEditedTransactionQtys(newMap);
+                                                                                                    }}
+                                                                                                    style={{
+                                                                                                        width: '100%',
+                                                                                                        padding: '2px 4px',
+                                                                                                        textAlign: 'right',
+                                                                                                        fontFamily: 'monospace',
+                                                                                                        fontSize: '10px',
+                                                                                                        border: '1px solid var(--accent)',
+                                                                                                        borderRadius: '3px',
+                                                                                                        background: 'var(--bg-primary)',
+                                                                                                        color: isBuy ? '#22c55e' : isSell ? '#ef4444' : 'var(--text-primary)'
+                                                                                                    }}
+                                                                                                />
+                                                                                            ) : (
+                                                                                                <span style={{
+                                                                                                    textAlign: 'right',
+                                                                                                    fontFamily: 'monospace',
+                                                                                                    color: isBuy ? '#22c55e' : isSell ? '#ef4444' : 'var(--text-primary)'
+                                                                                                }}>
+                                                                                                    {isBuy ? '+' : isSell ? '-' : ''}{formatNumber(displayQty, 4)}
+                                                                                                </span>
+                                                                                            )}
+                                                                                            {/* Unit price - editable when isEditMode */}
+                                                                                            {isEditMode && tx.externalId ? (
+                                                                                                <input
+                                                                                                    type="number"
+                                                                                                    step="0.01"
+                                                                                                    value={editedPrice !== undefined ? editedPrice : unitPrice}
+                                                                                                    onChange={(e) => {
+                                                                                                        const newMap = new Map(editedTransactionPrices);
+                                                                                                        newMap.set(tx.externalId!, parseFloat(e.target.value) || 0);
+                                                                                                        setEditedTransactionPrices(newMap);
+                                                                                                    }}
+                                                                                                    style={{
+                                                                                                        width: '100%',
+                                                                                                        padding: '2px 4px',
+                                                                                                        textAlign: 'right',
+                                                                                                        fontFamily: 'monospace',
+                                                                                                        fontSize: '10px',
+                                                                                                        border: '1px solid var(--accent)',
+                                                                                                        borderRadius: '3px',
+                                                                                                        background: 'var(--bg-primary)',
+                                                                                                        color: needsCost ? '#991b1b' : 'var(--text-primary)'
+                                                                                                    }}
+                                                                                                />
+                                                                                            ) : (
+                                                                                                <span style={{
+                                                                                                    textAlign: 'right',
+                                                                                                    fontFamily: 'monospace',
+                                                                                                    color: needsCost ? '#991b1b' : 'var(--text-primary)',
+                                                                                                    fontWeight: needsCost ? 700 : 400
+                                                                                                }}>
+                                                                                                    {needsCost ? '?' : formatNumber(unitPrice, 2)}
+                                                                                                    {hasWarning && (
+                                                                                                        <span style={{
+                                                                                                            marginLeft: '4px',
+                                                                                                            color: isCritical ? '#ef4444' : '#f59e0b',
+                                                                                                            fontSize: '9px'
+                                                                                                        }}>
+                                                                                                            ⚠
+                                                                                                        </span>
+                                                                                                    )}
+                                                                                                </span>
+                                                                                            )}
+                                                                                            <span style={{
+                                                                                                textAlign: 'right',
+                                                                                                fontFamily: 'monospace',
+                                                                                                color: needsCost ? '#991b1b' : 'var(--text-secondary)',
+                                                                                                fontWeight: needsCost ? 700 : 400
+                                                                                            }}>
+                                                                                                {needsCost ? '?' : formatNumber(totalCost, 2)}
+                                                                                            </span>
+                                                                                            <span style={{
+                                                                                                textAlign: 'right',
+                                                                                                fontFamily: 'monospace',
+                                                                                                fontWeight: 600,
+                                                                                                color: 'var(--accent)'
+                                                                                            }}>
+                                                                                                {formatNumber(balance, 4)} Gr
+                                                                                            </span>
+                                                                                            {/* Reference Price from Yahoo */}
+                                                                                            <span style={{
+                                                                                                textAlign: 'right',
+                                                                                                fontFamily: 'monospace',
+                                                                                                fontSize: '9px',
+                                                                                                color: refPrice ? 'var(--text-secondary)' : 'var(--text-muted)'
+                                                                                            }}>
+                                                                                                {isValidatingPrices ? (
+                                                                                                    <Loader2 size={10} className="animate-spin" style={{ opacity: 0.4 }} />
+                                                                                                ) : refPrice ? (
+                                                                                                    formatNumber(refPrice, 2)
+                                                                                                ) : '-'}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })()}
+
+                                                                {/* Show transactions with validation warnings */}
+                                                                {(() => {
+                                                                    const validatedTxs = transactions.filter(tx =>
+                                                                        tx.symbol === row.symbol &&
+                                                                        tx.type === 'BUY' &&
+                                                                        tx.price > 0 &&
+                                                                        tx.externalId &&
+                                                                        priceValidation.has(tx.externalId) &&
+                                                                        priceValidation.get(tx.externalId)!.isWarning
+                                                                    );
+
+                                                                    if (validatedTxs.length === 0) return null;
+
+                                                                    return (
+                                                                        <div style={{ marginTop: '12px' }}>
+                                                                            <div style={{
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                gap: '8px',
+                                                                                marginBottom: '8px',
+                                                                                color: '#f59e0b'
+                                                                            }}>
+                                                                                <AlertCircle size={14} />
+                                                                                <span style={{ fontWeight: 600 }}>
+                                                                                    Fiyat sapması yüksek olan işlemler (Yahoo karşılaştırması):
+                                                                                </span>
+                                                                            </div>
+                                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                                                {validatedTxs.map((tx, i) => {
+                                                                                    const val = priceValidation.get(tx.externalId!)!;
+                                                                                    return (
+                                                                                        <div
+                                                                                            key={tx.externalId || i}
+                                                                                            style={{
+                                                                                                display: 'flex',
+                                                                                                alignItems: 'center',
+                                                                                                gap: '12px',
+                                                                                                padding: '6px 10px',
+                                                                                                background: val.isCritical ? 'rgba(239, 68, 68, 0.08)' : 'rgba(245, 158, 11, 0.08)',
+                                                                                                borderRadius: '4px',
+                                                                                                border: `1px solid ${val.isCritical ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                                                                                                fontSize: '10px'
+                                                                                            }}
+                                                                                        >
+                                                                                            <span style={{ color: 'var(--text-secondary)', minWidth: '70px' }}>
+                                                                                                {tx.originalDateStr}
+                                                                                            </span>
+                                                                                            <span style={{ fontFamily: 'monospace', minWidth: '70px' }}>
+                                                                                                PDF: {formatNumber(tx.price, 0)} TL
+                                                                                            </span>
+                                                                                            <span style={{ fontFamily: 'monospace', minWidth: '70px', color: '#3b82f6' }}>
+                                                                                                Yahoo: {formatNumber(val.yahooPrice, 0)} TL
+                                                                                            </span>
+                                                                                            <span style={{
+                                                                                                fontWeight: 700,
+                                                                                                color: val.isCritical ? '#ef4444' : '#f59e0b',
+                                                                                                minWidth: '50px'
+                                                                                            }}>
+                                                                                                {val.deviation > 0 ? '+' : ''}{val.deviation.toFixed(1)}%
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })()}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                </React.Fragment>
                                             );
                                         })}
                                 </tbody>

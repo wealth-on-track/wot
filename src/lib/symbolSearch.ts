@@ -10,7 +10,7 @@ export interface SymbolOption {
     country?: string;
     sector?: string;
     rawName?: string;
-    source?: 'TEFAS' | 'YAHOO' | 'MANUAL';
+    source?: 'TEFAS' | 'YAHOO' | 'MANUAL' | 'INVESTING';
 }
 
 export function getCountryFlag(countryCode?: string): string {

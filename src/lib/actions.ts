@@ -621,10 +621,22 @@ export async function getAutocompleteSuggestions(): Promise<{ portfolios: string
             return { portfolios: [], platforms: [] };
         }
 
-        // Get all distinct customGroup (Portfolio) and platform values from all assets
-        // We'll use raw query for better performance
+        // Get user's portfolio ID
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            include: { Portfolio: { select: { id: true } } }
+        });
+
+        if (!user?.Portfolio?.id) {
+            return { portfolios: [], platforms: [] };
+        }
+
+        const portfolioId = user.Portfolio.id;
+
+        // Get all distinct customGroup (Portfolio) and platform values from user's assets
         const portfolios = await prisma.asset.findMany({
             where: {
+                portfolioId: portfolioId,
                 customGroup: { not: null }
             },
             select: {
@@ -635,6 +647,7 @@ export async function getAutocompleteSuggestions(): Promise<{ portfolios: string
 
         const platforms = await prisma.asset.findMany({
             where: {
+                portfolioId: portfolioId,
                 platform: { not: null }
             },
             select: {
@@ -800,7 +813,7 @@ export async function deleteAccount(): Promise<{ success: boolean; error?: strin
 
 import { BESMetadata, calculateBESTotals } from '@/lib/besTypes';
 
-export async function saveBESData(metadata: BESMetadata): Promise<{ success: boolean; error?: string }> {
+export async function saveBESData(metadata: BESMetadata, portfolioName?: string, platform?: string): Promise<{ success: boolean; error?: string }> {
     try {
         const session = await auth();
         if (!session?.user?.id) {
@@ -816,13 +829,12 @@ export async function saveBESData(metadata: BESMetadata): Promise<{ success: boo
             return { success: false, error: "Portfolio not found" };
         }
 
-        const portfolioId = user.Portfolio.id;
         const totals = calculateBESTotals(metadata);
 
         // Check if BES asset already exists
         const existingBES = await prisma.asset.findFirst({
             where: {
-                portfolioId,
+                portfolioId: user.Portfolio.id,
                 symbol: 'BES',
                 type: 'BES'
             }
@@ -836,6 +848,8 @@ export async function saveBESData(metadata: BESMetadata): Promise<{ success: boo
                     quantity: 1,
                     buyPrice: totals.grandTotal,
                     metadata: metadata as any,
+                    platform: platform || existingBES.platform,
+                    customGroup: portfolioName || existingBES.customGroup,
                     updatedAt: new Date()
                 }
             });
@@ -843,7 +857,7 @@ export async function saveBESData(metadata: BESMetadata): Promise<{ success: boo
             // Create new BES asset
             await prisma.asset.create({
                 data: {
-                    portfolioId,
+                    portfolioId: user.Portfolio.id,
                     symbol: 'BES',
                     name: 'BES Emeklilik',
                     type: 'BES',
@@ -854,6 +868,8 @@ export async function saveBESData(metadata: BESMetadata): Promise<{ success: boo
                     exchange: 'BES',
                     sector: 'Pension',
                     country: 'Turkey',
+                    platform: platform,
+                    customGroup: portfolioName,
                     metadata: metadata as any,
                     sortOrder: -1000 // Put BES at the top
                 }
