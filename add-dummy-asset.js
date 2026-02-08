@@ -4,10 +4,10 @@ const prisma = new PrismaClient();
 async function main() {
     const user = await prisma.user.findUnique({
         where: { username: 'dev1' },
-        include: { portfolio: true }
+        include: { Portfolio: true }
     });
 
-    if (!user || !user.portfolio) {
+    if (!user || !user.Portfolio) {
         console.error('User dev1 not found');
         return;
     }
@@ -16,7 +16,7 @@ async function main() {
 
     await prisma.asset.create({
         data: {
-            portfolioId: user.portfolio.id,
+            portfolioId: user.Portfolio.id,
             symbol: 'AAPL',
             name: 'Apple Inc.',
             type: 'STOCK',
@@ -33,7 +33,7 @@ async function main() {
     // Add another one
     await prisma.asset.create({
         data: {
-            portfolioId: user.portfolio.id,
+            portfolioId: user.Portfolio.id,
             symbol: 'BTC-USD',
             name: 'Bitcoin',
             type: 'CRYPTO',

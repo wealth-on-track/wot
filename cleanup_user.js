@@ -9,7 +9,7 @@ async function cleanUser(email) {
     try {
         const user = await prisma.user.findUnique({
             where: { email },
-            include: { portfolio: true }
+            include: { Portfolio: true }
         });
 
         if (!user) {
@@ -17,16 +17,16 @@ async function cleanUser(email) {
             return;
         }
 
-        if (!user.portfolio) {
+        if (!user.Portfolio) {
             console.log(`❌ Portfolio not found for: ${email}`);
             return;
         }
 
-        console.log(`✅ Found Portfolio: ${user.portfolio.id}`);
+        console.log(`✅ Found Portfolio: ${user.Portfolio.id}`);
 
         // Check counts
-        const assetCount = await prisma.asset.count({ where: { portfolioId: user.portfolio.id } });
-        const txCount = await prisma.assetTransaction.count({ where: { portfolioId: user.portfolio.id } });
+        const assetCount = await prisma.asset.count({ where: { portfolioId: user.Portfolio.id } });
+        const txCount = await prisma.assetTransaction.count({ where: { portfolioId: user.Portfolio.id } });
 
         console.log(`📊 Current Status:`);
         console.log(`- Assets: ${assetCount}`);
@@ -36,12 +36,12 @@ async function cleanUser(email) {
             console.log('🗑️  Deleting all data...');
 
             const deletedTx = await prisma.assetTransaction.deleteMany({
-                where: { portfolioId: user.portfolio.id }
+                where: { portfolioId: user.Portfolio.id }
             });
             console.log(`✅ Deleted ${deletedTx.count} transactions`);
 
             const deletedAssets = await prisma.asset.deleteMany({
-                where: { portfolioId: user.portfolio.id }
+                where: { portfolioId: user.Portfolio.id }
             });
             console.log(`✅ Deleted ${deletedAssets.count} assets`);
 
