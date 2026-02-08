@@ -834,8 +834,10 @@ export async function deleteAccount(): Promise<{ success: boolean; error?: strin
 import { BESMetadata, calculateBESTotals } from '@/lib/besTypes';
 
 export async function saveBESData(metadata: BESMetadata, portfolioName?: string, platform?: string): Promise<{ success: boolean; error?: string }> {
+    console.log('[saveBESData] Called with:', { portfolioName, platform, contractCount: metadata?.contracts?.length });
     try {
         const session = await auth();
+        console.log('[saveBESData] Session:', session?.user?.id ? 'OK' : 'NO SESSION');
         if (!session?.user?.id) {
             return { success: false, error: "Unauthorized" };
         }

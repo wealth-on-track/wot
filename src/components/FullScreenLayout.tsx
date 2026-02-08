@@ -869,16 +869,38 @@ function BESInlineEditor({ initialData, onSave, onCancel, availablePortfolios = 
     const fmt = (v: number) => v ? new Intl.NumberFormat('tr-TR').format(v) : '';
     const parse = (v: string) => parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
 
+    const [saveError, setSaveError] = React.useState<string | null>(null);
+
     const save = async () => {
+        setSaveError(null);
+
         // Validate portfolio and platform
         const errors = { portfolio: !portfolioName.trim(), platform: !platformName.trim() };
         setValidationErrors(errors);
-        if (errors.portfolio || errors.platform) return;
-        if (!valid || !contracts.length) return;
+        if (errors.portfolio || errors.platform) {
+            setSaveError('Portfolio ve Platform adı gerekli!');
+            return;
+        }
+        if (!valid) {
+            setSaveError(`Fon yüzdeleri toplamı %100 olmalı! (Şu an: %${totalPct.toFixed(0)})`);
+            return;
+        }
+        if (!contracts.length) {
+            setSaveError('En az bir BEH sözleşmesi ekleyin!');
+            return;
+        }
 
         setSaving(true);
-        try { await onSave({ contracts, katkiPayiFunds: funds, lastUpdated: new Date().toISOString() }, portfolioName.trim(), platformName.trim()); }
-        finally { setSaving(false); }
+        console.log('[BESInlineEditor] Calling onSave with:', { portfolioName, platformName, contractCount: contracts.length });
+        try {
+            await onSave({ contracts, katkiPayiFunds: funds, lastUpdated: new Date().toISOString() }, portfolioName.trim(), platformName.trim());
+            console.log('[BESInlineEditor] Save successful!');
+        } catch (err: any) {
+            console.error('[BESInlineEditor] Save error:', err);
+            setSaveError(err.message || 'Kaydetme hatası!');
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
@@ -971,10 +993,17 @@ function BESInlineEditor({ initialData, onSave, onCancel, availablePortfolios = 
 
                     <span style={{ color: 'var(--border)', opacity: 0.5 }}>|</span>
 
+                    {/* Error Message */}
+                    {saveError && (
+                        <div style={{ padding: '4px 10px', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', fontSize: '11px', fontWeight: 600 }}>
+                            {saveError}
+                        </div>
+                    )}
+
                     {/* Buttons */}
                     <div style={{ display: 'flex', gap: '6px' }}>
                         <button onClick={onCancel} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer' }}>Iptal</button>
-                        <button onClick={save} disabled={!valid || saving} style={{ padding: '6px 16px', borderRadius: '6px', border: 'none', background: valid ? 'var(--accent)' : 'var(--bg-secondary)', color: valid ? '#fff' : 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: valid ? 'pointer' : 'not-allowed' }}>{saving ? '...' : 'Kaydet'}</button>
+                        <button onClick={save} disabled={saving} style={{ padding: '6px 16px', borderRadius: '6px', border: 'none', background: valid ? 'var(--accent)' : 'var(--bg-secondary)', color: valid ? '#fff' : 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>{saving ? '...' : 'Kaydet'}</button>
                     </div>
                 </div>
             </div>
@@ -1125,13 +1154,15 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
 
     // Handle BES save
     const handleBESSave = async (data: BESMetadata, portfolio: string, platform: string) => {
+        console.log('[handleBESSave] Calling saveBESData...');
         const result = await saveBESData(data, portfolio, platform);
+        console.log('[handleBESSave] Result:', result);
         if (result.success) {
             setBesMetadata(data);
             setShowBESEditor(false); // Close editor after save
             onCountChange(); // Refresh portfolio
         } else {
-            throw new Error(result.error);
+            throw new Error(result.error || 'Unknown error');
         }
     };
 
