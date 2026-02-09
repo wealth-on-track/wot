@@ -84,21 +84,13 @@ export const MobileAssetCard = memo(function MobileAssetCard({
     const currentPrice = asset.currentPrice || asset.buyPrice || 0;
     const totalCost = asset.buyPrice * asset.quantity;
 
-    // BES-specific value calculation from metadata (same as web)
-    const besValue = useMemo(() => {
-        if (asset.type !== 'BES' || !asset.metadata) return 0;
-        const meta = asset.metadata as any;
-        const besKP = meta?.contracts?.reduce((s: number, c: any) => s + (c.katkiPayi || 0), 0) || 0;
-        const besDK = meta?.contracts?.reduce((s: number, c: any) => s + (c.devletKatkisi || 0), 0) || 0;
-        return besKP + besDK;
-    }, [asset.type, asset.metadata]);
-
     // When user selects EUR, use totalValueEUR directly (already in EUR)
     // Only convert when a different currency is selected
-    // For BES, use the calculated besValue converted to EUR
-    const displayTotalValue = asset.type === 'BES'
-        ? (besValue / (rates['TRY'] || 38.5)) * (rates[currency] || 1)
-        : (currency === 'EUR' ? asset.totalValueEUR : convert(asset.totalValueEUR, 'EUR'));
+    // Server already calculated totalValueEUR correctly for ALL assets (including BES)
+    // using real exchange rates, so we just use that value directly
+    const displayTotalValue = currency === 'EUR'
+        ? asset.totalValueEUR
+        : convert(asset.totalValueEUR, 'EUR');
 
     // For cost, we need to convert from asset's original currency to display currency
     const displayTotalCost = currency === 'ORG'
