@@ -66,6 +66,43 @@ async function processAssetFast(
     // Use name as-is (no repair)
     const assetName = asset.name || asset.symbol;
 
+    // SPECIAL HANDLING FOR BES (Turkish Individual Pension System)
+    // BES value is calculated from metadata.contracts, not market price
+    if (asset.type === 'BES' && asset.metadata) {
+        const besMeta = asset.metadata as any;
+        const totalKP = besMeta?.contracts?.reduce((s: number, c: any) => s + (c.katkiPayi || 0), 0) || 0;
+        const totalDK = besMeta?.contracts?.reduce((s: number, c: any) => s + (c.devletKatkisi || 0), 0) || 0;
+        const besTotalTRY = totalKP + totalDK;
+
+        // Convert TRY to EUR
+        const tryToEur = customRates?.['TRY'] || 38.5; // Fallback rate
+        const totalValueEUR = besTotalTRY / tryToEur;
+
+        // Calculate P&L based on total contributions vs current value
+        const totalContributions = besMeta?.contracts?.reduce((s: number, c: any) => s + (c.katkiPayi || 0), 0) || 0;
+        const totalCostEUR = totalContributions / tryToEur;
+        const plValueEUR = totalValueEUR - totalCostEUR;
+        const plPercentage = totalCostEUR > 0 ? ((totalValueEUR / totalCostEUR - 1) * 100) : 0;
+
+        return {
+            ...asset,
+            name: assetName,
+            currentPrice: besTotalTRY,
+            previousClose: besTotalTRY,
+            totalValueInAssetCurrency: besTotalTRY,
+            totalCostInAssetCurrency: totalContributions,
+            totalValueEUR,
+            totalCostEUR,
+            plValueEUR,
+            plPercentage,
+            dailyChange: 0,
+            dailyChangePercentage: 0,
+            marketState: 'CLOSED',
+            nextOpen: null,
+            nextClose: null,
+        };
+    }
+
     // 1. Get Price (Use Pre-fetched OR Individual Fallback)
     let priceData = preFetchedPrice;
     if (!priceData) {

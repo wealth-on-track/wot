@@ -108,27 +108,23 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         redirect('/login');
     }
 
-    // PERFORMANCE OPTIMIZATION: Fetch exchange rates and process portfolio in parallel
-    // This reduces total loading time by ~40% (from sequential to parallel execution)
-    const [rates, portfolioResult] = await Promise.all([
-        getExchangeRates(),
-        (async () => {
-            try {
-                // Use emergency fallback rates for initial calculation if needed
-                const emergencyRates: Record<string, number> = { EUR: 1, USD: 1.09, TRY: 37.5, GBP: 0.85, JPY: 160, CHF: 0.95 };
-                const result = await getPortfolioMetricsOptimized(
-                    (user as any).portfolio!.assets,
-                    emergencyRates,
-                    false,
-                    session?.user?.name || session?.user?.email || 'System'
-                );
-                return { success: true as const, totalValueEUR: result.totalValueEUR, assetsWithValues: result.assetsWithValues };
-            } catch (e) {
-                console.error("Critical: Failed to calculate portfolio metrics", e);
-                return { success: false as const, error: e };
-            }
-        })()
-    ]);
+    // Fetch exchange rates first, then calculate portfolio with REAL rates
+    // This ensures server-side values match client-side recalculations
+    const rates = await getExchangeRates();
+
+    let portfolioResult: { success: true; totalValueEUR: number; assetsWithValues: any[] } | { success: false; error: unknown };
+    try {
+        const result = await getPortfolioMetricsOptimized(
+            (user as any).portfolio!.assets,
+            rates,  // Use REAL rates, not emergency fallback
+            false,
+            session?.user?.name || session?.user?.email || 'System'
+        );
+        portfolioResult = { success: true as const, totalValueEUR: result.totalValueEUR, assetsWithValues: result.assetsWithValues };
+    } catch (e) {
+        console.error("Critical: Failed to calculate portfolio metrics", e);
+        portfolioResult = { success: false as const, error: e };
+    }
 
     let totalPortfolioValueEUR = 0;
     let assetsWithValues: any[] = [];

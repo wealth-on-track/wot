@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ChevronDown, TrendingUp, TrendingDown, Weight, List, History } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
 import type { AssetDisplay } from "@/lib/types";
@@ -55,15 +55,21 @@ export function MobileAssetList({
     const [showFilterMenu, setShowFilterMenu] = useState(false);
     const [orderedIds, setOrderedIds] = useState<string[]>([]);
 
-    // Filter for open positions (quantity > 0) - same logic as web
-    const openAssets = useMemo(() => assets.filter(a => Math.abs(a.quantity) > 0.000001), [assets]);
+    // Filter for open positions (quantity > 0) OR BES assets - same logic as web
+    const openAssets = useMemo(() => assets.filter(a => Math.abs(a.quantity) > 0.000001 || a.type === 'BES'), [assets]);
 
-    // Initialize order when assets change
-    useMemo(() => {
-        if (openAssets.length > 0 && orderedIds.length !== openAssets.length) {
-            setOrderedIds(openAssets.map(a => a.id));
+    // Sync orderedIds with server-provided order when assets change
+    // This ensures drag-drop changes from web view are reflected in mobile
+    useEffect(() => {
+        if (openAssets.length > 0) {
+            const serverOrder = openAssets.map(a => a.id);
+            // Only update if the order actually differs (ignoring just length changes)
+            const orderChanged = serverOrder.some((id, idx) => orderedIds[idx] !== id);
+            if (orderedIds.length !== serverOrder.length || orderChanged) {
+                setOrderedIds(serverOrder);
+            }
         }
-    }, [openAssets.length]);
+    }, [openAssets]);
 
     // DnD with long press (500ms delay)
     const sensors = useSensors(
@@ -75,14 +81,23 @@ export function MobileAssetList({
         })
     );
 
-    const handleDragEnd = (event: DragEndEvent) => {
+    const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;
         if (over && active.id !== over.id) {
             setOrderedIds((items) => {
                 const oldIndex = items.indexOf(active.id as string);
                 const newIndex = items.indexOf(over.id as string);
                 if (oldIndex === -1 || newIndex === -1) return items;
-                return arrayMove(items, oldIndex, newIndex);
+                const newOrder = arrayMove(items, oldIndex, newIndex);
+
+                // Persist new order to database (same as web view)
+                const saveOrder = async () => {
+                    const { reorderAssets } = await import('@/lib/actions');
+                    await reorderAssets(newOrder);
+                };
+                saveOrder();
+
+                return newOrder;
             });
         }
     };

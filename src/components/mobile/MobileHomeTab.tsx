@@ -108,8 +108,8 @@ export function MobileHomeTab({
         return { periodReturnEUR: returnEUR, periodReturnPct: returnPct };
     }, [assets, totalValueEUR, selectedPeriod]);
 
-    // Stats
-    const openPositions = assets.filter((a) => a.quantity > 0.000001);
+    // Stats - include BES assets even if quantity is 0 (value comes from metadata)
+    const openPositions = assets.filter((a) => a.quantity > 0.000001 || a.type === 'BES');
     const nonCashAssets = openPositions.filter((a) => a.type !== "CASH");
     const sortedByPL = [...nonCashAssets].sort((a, b) => b.plPercentage - a.plPercentage);
     const bestPerformer = sortedByPL[0];
