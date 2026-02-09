@@ -3,16 +3,15 @@
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import { MobileDashboard } from "./MobileDashboard";
 import type { AssetDisplay } from "@/lib/types";
-import type { Goal } from "@prisma/client";
 
 interface MobileClientWrapperProps {
     username: string;
     isOwner: boolean;
     totalValueEUR: number;
     assets: AssetDisplay[];
-    goals: Goal[];
+    goals?: unknown[];
     exchangeRates: Record<string, number>;
-    preferences?: any;
+    preferences?: unknown;
 }
 
 export function MobileClientWrapper({
@@ -20,7 +19,6 @@ export function MobileClientWrapper({
     isOwner,
     totalValueEUR,
     assets,
-    goals,
     exchangeRates,
     preferences
 }: MobileClientWrapperProps) {
@@ -31,7 +29,6 @@ export function MobileClientWrapper({
                 isOwner={isOwner}
                 totalValueEUR={totalValueEUR}
                 assets={assets}
-                goals={goals}
                 exchangeRates={exchangeRates}
                 preferences={preferences}
             />

@@ -3,59 +3,34 @@
 import { useState } from "react";
 import { MobileHeader } from "./MobileHeader";
 import { AnimatePresence, motion } from "framer-motion";
-// import { MobileStories } from "./MobileStories";
-import { MobilePortfolioSummary, MobileHomeAllocations } from "./MobilePortfolioSummary";
+import { MobileHomeTab } from "./MobileHomeTab";
 import { MobileAllocationPie } from "./MobileAllocationPie";
 import { MobileAssetList } from "./MobileAssetList";
 import { MobileBottomNav, type Tab } from "./MobileBottomNav";
 import { MobileAssetModal } from "./MobileAssetModal";
 import { MobileAddAsset } from "./MobileAddAsset";
-import { MobileVision } from "./MobileVision";
 import { MobileImpactSheet } from "./MobileImpactSheet";
-import { MobileDashboardTabs } from "./MobileDashboardTabs";
 import { MobileVisionTab } from "./MobileVisionTab";
 import { SettingsPage } from "../SettingsPage";
 import type { AssetDisplay } from "@/lib/types";
-import type { Goal } from "@prisma/client";
-import { PortfolioPerformanceChart } from "../PortfolioPerformanceChart";
-import { Plus, ArrowLeft, Rocket, TrendingDown } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { getMarketPriceAction } from "@/app/actions/marketData";
-import { MobileClosedPositions } from "./MobileClosedPositions";
 
 interface MobileDashboardProps {
     username: string;
     isOwner: boolean;
     totalValueEUR: number;
     assets: AssetDisplay[];
-    goals: Goal[];
     exchangeRates: Record<string, number>;
     preferences?: any;
 }
 
-type View = 'overview' | 'performance' | 'allocations' | 'positions' | 'add';
-
-function AssetLogo({ asset, fallback, size = 18 }: { asset: AssetDisplay, fallback: React.ReactNode, size?: number }) {
-    const [error, setError] = useState(false);
-    const logoUrl = asset.logoUrl || `https://logo.clearbit.com/${asset.symbol.toLowerCase()}.com`;
-
-    if (error) return <>{fallback}</>;
-
-    return (
-        <img
-            src={logoUrl}
-            alt={asset.symbol}
-            style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', background: 'var(--bg-secondary)' }}
-            onError={() => setError(true)}
-        />
-    );
-}
 
 export function MobileDashboard({
     username,
     isOwner,
     totalValueEUR,
     assets,
-    goals,
     exchangeRates,
     preferences
 }: MobileDashboardProps) {
@@ -70,7 +45,6 @@ export function MobileDashboard({
 
     const [showAssetModal, setShowAssetModal] = useState(false);
     const [selectedAsset, setSelectedAsset] = useState<AssetDisplay | null>(null);
-    const [showSettings, setShowSettings] = useState(false); // Can double as 'profile' view
 
     // Highlight Logic
     const [highlightAssetId, setHighlightAssetId] = useState<string | null>(null);
@@ -146,11 +120,11 @@ export function MobileDashboard({
 
     return (
         <div style={{
-            minHeight: '100vh',
+            height: '100vh',
             background: 'var(--bg-main)',
-            paddingBottom: '80px', // Space for bottom nav
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            overflow: 'hidden'
         }}>
             {/* Header - Always Visible */}
             <MobileHeader
@@ -174,14 +148,11 @@ export function MobileDashboard({
                 }}
             />
 
-            {/* Main Content - Scrollable */}
+            {/* Main Content */}
             <div style={{
                 flex: 1,
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                WebkitOverflowScrolling: 'touch',
-                paddingTop: '12px',
-                paddingBottom: '120px' // Extra padding for bottom bar
+                overflow: 'hidden',
+                paddingTop: '8px'
             }}>
 
                 <AnimatePresence mode="wait">
@@ -240,100 +211,17 @@ export function MobileDashboard({
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
                                     transition={{ duration: 0.2 }}
-                                    style={{ padding: '0 12px 12px 12px', display: 'flex', flexDirection: 'column', gap: '12px' }}
+                                    style={{ padding: '0 16px 16px 16px' }}
                                 >
-                                    {/* Summary Card */}
-                                    <MobilePortfolioSummary
+                                    <MobileHomeTab
                                         totalValueEUR={totalValueEUR}
                                         assets={assets}
                                         isPrivacyMode={isPrivacyMode}
-                                        onTogglePrivacy={() => setIsPrivacyMode(!isPrivacyMode)}
                                         defaultPeriod={selectedPeriod}
                                         onPeriodChange={setSelectedPeriod}
-                                    />
-
-                                    {/* Top Movers Badges (Pulse Cards) */}
-                                    {(() => {
-                                        const validAssets = assets.filter(a => a.type !== 'CASH');
-                                        if (validAssets.length === 0) return null;
-
-                                        const sorted = [...validAssets].sort((a, b) => b.plPercentage - a.plPercentage);
-                                        const best = sorted[0];
-                                        const worst = sorted[sorted.length - 1];
-
-                                        return (
-                                            <div style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '10px',
-                                                overflowX: 'auto',
-                                                scrollbarWidth: 'none',
-                                                padding: '4px 0'
-                                            }}>
-                                                {/* Gainer Badge */}
-                                                <div
-                                                    onClick={() => handleEditAsset(best)}
-                                                    style={{
-                                                        flex: 1,
-                                                        minWidth: '45%',
-                                                        display: 'flex', alignItems: 'center', gap: '8px',
-                                                        background: 'var(--surface)',
-                                                        border: '1px solid var(--border)',
-                                                        borderRadius: '12px',
-                                                        padding: '8px 12px',
-                                                        cursor: 'pointer',
-                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                                                    }}
-                                                >
-                                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                        <AssetLogo asset={best} fallback={<Rocket size={16} color="#10b981" />} size={16} />
-                                                    </div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                                        <span style={{ fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{best.symbol}</span>
-                                                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981' }}>+{best.plPercentage.toFixed(1)}%</span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Loser Badge */}
-                                                <div
-                                                    onClick={() => handleEditAsset(worst)}
-                                                    style={{
-                                                        flex: 1,
-                                                        minWidth: '45%',
-                                                        display: 'flex', alignItems: 'center', gap: '8px',
-                                                        background: 'var(--surface)',
-                                                        border: '1px solid var(--border)',
-                                                        borderRadius: '12px',
-                                                        padding: '8px 12px',
-                                                        cursor: 'pointer',
-                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                                                    }}
-                                                >
-                                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                        <AssetLogo asset={worst} fallback={<TrendingDown size={16} color="#ef4444" />} size={16} />
-                                                    </div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                                        <span style={{ fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{worst.symbol}</span>
-                                                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444' }}>{worst.plPercentage.toFixed(1)}%</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-
-                                    {/* Performance Chart */}
-                                    <PortfolioPerformanceChart
-                                        username={username}
-                                        totalValueEUR={totalValueEUR}
-                                        selectedBenchmarks={preferences?.benchmarks || ['SPY']}
-                                        isPortfolioVisible={true}
-                                        onToggleBenchmark={() => { }}
-                                        onTogglePortfolio={() => { }}
-                                        controlsPosition="bottom"
-                                        defaultRange={selectedPeriod}
-                                        showHistoryList={false}
-                                        showPortfolioValue={false}
-                                        showPeriodSelector={false}
+                                        onNavigateToPositions={() => setActiveTab('positions')}
+                                        onNavigateToAllocation={() => setActiveTab('allocation')}
+                                        onEditAsset={handleEditAsset}
                                     />
                                 </motion.div>
                             )}
@@ -346,7 +234,13 @@ export function MobileDashboard({
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
                                     transition={{ duration: 0.2 }}
-                                    style={{ padding: '0.5rem' }}
+                                    style={{
+                                        padding: '0 8px',
+                                        height: 'calc(100vh - 120px)',
+                                        overflowY: 'auto',
+                                        overflowX: 'hidden',
+                                        WebkitOverflowScrolling: 'touch'
+                                    }}
                                 >
                                     <MobileAssetList
                                         assets={assets}
@@ -354,11 +248,9 @@ export function MobileDashboard({
                                         isCompact={false}
                                         isPrivacyMode={isPrivacyMode}
                                         highlightId={highlightAssetId}
-                                        onAdd={() => setDashboardView('add')} // Crucial: Only changes view, keeps activeTab 'positions'
+                                        onAdd={() => setDashboardView('add')}
                                         totalValueEUR={totalValueEUR}
                                     />
-
-
                                 </motion.div>
                             )}
 

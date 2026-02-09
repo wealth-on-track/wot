@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { ChevronDown, TrendingUp, TrendingDown, Weight, List, Clock, History } from "lucide-react";
+import { useState, useMemo } from "react";
+import { ChevronDown, TrendingUp, TrendingDown, Weight, List, History } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
 import type { AssetDisplay } from "@/lib/types";
 import { MobileAssetCard } from "./MobileAssetCard";
@@ -9,7 +9,6 @@ import { MobileClosedPositions } from "./MobileClosedPositions";
 import {
     DndContext,
     closestCenter,
-    KeyboardSensor,
     PointerSensor,
     useSensor,
     useSensors,
@@ -18,7 +17,6 @@ import {
 import {
     arrayMove,
     SortableContext,
-    sortableKeyboardCoordinates,
     verticalListSortingStrategy,
     useSortable
 } from '@dnd-kit/sortable';
@@ -55,31 +53,48 @@ export function MobileAssetList({
     const { currency } = useCurrency();
     const [filter, setFilter] = useState<FilterType>('ALL');
     const [showFilterMenu, setShowFilterMenu] = useState(false);
+    const [orderedIds, setOrderedIds] = useState<string[]>([]);
 
-    // Time Horizon State
-    // Time Horizon State (Removed)
+    // Filter for open positions (quantity > 0) - same logic as web
+    const openAssets = useMemo(() => assets.filter(a => Math.abs(a.quantity) > 0.000001), [assets]);
 
-    // Time Horizon removed as per request - defaulting to ALL (Total P&L) logic implicitly or via prop
-
-    // -- DnD State --
-    // We only allow DnD when filter is 'ALL' to avoid confusion
-    const [customOrderIds, setCustomOrderIds] = useState<string[]>([]);
-
-    // Initialize custom order if empty or when assets change significantly
-    useEffect(() => {
-        if (assets.length > 0 && (customOrderIds.length === 0 || customOrderIds.length !== assets.length)) {
-            const existingSet = new Set(customOrderIds);
-            const newIds = assets.filter(a => !existingSet.has(a.id)).map(a => a.id);
-            if (newIds.length > 0 || customOrderIds.length === 0) {
-                setCustomOrderIds(assets.map(a => a.id));
-            }
+    // Initialize order when assets change
+    useMemo(() => {
+        if (openAssets.length > 0 && orderedIds.length !== openAssets.length) {
+            setOrderedIds(openAssets.map(a => a.id));
         }
-    }, [assets, customOrderIds.length]);
+    }, [openAssets.length]);
+
+    // DnD with long press (500ms delay)
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                delay: 500,
+                tolerance: 5,
+            },
+        })
+    );
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            setOrderedIds((items) => {
+                const oldIndex = items.indexOf(active.id as string);
+                const newIndex = items.indexOf(over.id as string);
+                if (oldIndex === -1 || newIndex === -1) return items;
+                return arrayMove(items, oldIndex, newIndex);
+            });
+        }
+    };
 
     const processedAssets = useMemo(() => {
-        let result = [...assets];
+        // For CLOSED filter, return empty - MobileClosedPositions handles it separately
+        if (filter === 'CLOSED') return [];
 
-        // 1. Filter/Sort
+        // Use only open positions for all other filters
+        let result = [...openAssets];
+
+        // Sort based on filter
         switch (filter) {
             case 'GAINERS':
                 result.sort((a, b) => b.plPercentage - a.plPercentage);
@@ -92,14 +107,12 @@ export function MobileAssetList({
                 break;
             case 'ALL':
             default:
-                // Apply custom order if exists, otherwise keep passed order (usually value sorted)
-                if (customOrderIds.length > 0) {
-                    const orderMap = new Map(customOrderIds.map((id, index) => [id, index]));
-                    result.sort((a, b) => {
-                        const indexA = orderMap.get(a.id) ?? 9999;
-                        const indexB = orderMap.get(b.id) ?? 9999;
-                        return indexA - indexB;
-                    });
+                // Use custom order if available
+                if (orderedIds.length > 0) {
+                    const orderMap = new Map(orderedIds.map((id, i) => [id, i]));
+                    result.sort((a, b) => (orderMap.get(a.id) ?? 999) - (orderMap.get(b.id) ?? 999));
+                } else {
+                    result.sort((a, b) => b.totalValueEUR - a.totalValueEUR);
                 }
                 break;
         }
@@ -109,49 +122,24 @@ export function MobileAssetList({
         }
 
         return result;
-    }, [assets, filter, maxDisplay, customOrderIds]);
-
-    const sensors = useSensors(
-        useSensor(PointerSensor, {
-            activationConstraint: {
-                distance: 8,
-            },
-        }),
-        useSensor(KeyboardSensor, {
-            coordinateGetter: sortableKeyboardCoordinates,
-        })
-    );
-
-    const handleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
-        if (over && active.id !== over.id) {
-            setCustomOrderIds((currentIds) => {
-                const oldIndex = currentIds.indexOf(active.id as string);
-                const newIndex = currentIds.indexOf(over.id as string);
-
-                // If ID is missing (new asset), assume it was at the end or handle gracefully
-                if (oldIndex === -1 || newIndex === -1) return currentIds;
-
-                return arrayMove(currentIds, oldIndex, newIndex);
-            });
-        }
-    };
+    }, [openAssets, filter, maxDisplay, orderedIds]);
 
     const filterOptions: { key: FilterType; label: string; icon: any }[] = [
-        { key: 'ALL', label: 'All', icon: List },
+        { key: 'ALL', label: 'Open Positions', icon: List },
         { key: 'GAINERS', label: 'Gainers', icon: TrendingUp },
         { key: 'LOSERS', label: 'Losers', icon: TrendingDown },
         { key: 'WEIGHT', label: 'Weight', icon: Weight },
         { key: 'CLOSED', label: 'Closed Positions', icon: History },
     ];
 
-    const currentFilterLabel = filterOptions.find(f => f.key === filter)?.label || 'All';
+    const currentFilterLabel = filterOptions.find(f => f.key === filter)?.label || 'Open Positions';
     const CurrentFilterIcon = filterOptions.find(f => f.key === filter)?.icon || List;
 
     // Auto Compact Logic
-    const shouldCompact = assets.length > 5;
+    const shouldCompact = openAssets.length > 5;
 
-    if (assets.length === 0) {
+    // Show empty state only for Open Positions when no open assets exist
+    if (openAssets.length === 0 && filter !== 'CLOSED') {
         return (
             <div style={{
                 background: 'var(--surface)',
@@ -462,68 +450,63 @@ export function MobileAssetList({
                 </div>
             )}
 
-            {/* List */}
-            {
-                filter === 'CLOSED' ? null : filter === 'ALL' && !maxDisplay ? (
-                    // Draggable List only for ALL view
-                    <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
+            {/* List - Swipe + DnD (long press) enabled */}
+            {filter !== 'CLOSED' && filter === 'ALL' && !maxDisplay ? (
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    <SortableContext
+                        items={processedAssets.map(a => a.id)}
+                        strategy={verticalListSortingStrategy}
                     >
-                        <SortableContext
-                            items={processedAssets.map(item => item.id)}
-                            strategy={verticalListSortingStrategy}
-                        >
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                {processedAssets.map((asset) => (
-                                    <SortableAssetItem
-                                        key={asset.id}
-                                        asset={asset}
-                                        currency={currency}
-                                        onEdit={onEdit}
-                                        isPrivacyMode={isPrivacyMode}
-                                        totalPortfolioValue={totalValueEUR}
-                                        isCompactMode={isCompact || shouldCompact}
-                                        timeHorizon="ALL" // Fixed to ALL
-                                        highlightId={highlightId} // Pass prop
-                                    />
-                                ))}
-                            </div>
-                        </SortableContext>
-                    </DndContext>
-                ) : (
-                    // Static List for filtered views
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {processedAssets.map((asset) => (
-                            <MobileAssetCard
-                                key={asset.id}
-                                asset={asset}
-                                currency={currency}
-                                onEdit={onEdit}
-                                isPrivacyMode={isPrivacyMode}
-                                totalPortfolioValue={totalValueEUR}
-                                isCompactMode={isCompact || (shouldCompact && !maxDisplay)}
-                                isTopList={isCompact}
-                                timeHorizon="ALL" // Fixed to ALL
-                                highlightId={highlightId} // Pass prop
-                            />
-                        ))}
-                    </div>
-                )
-            }
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {processedAssets.map((asset) => (
+                                <SortableAssetItem
+                                    key={asset.id}
+                                    asset={asset}
+                                    currency={currency}
+                                    onEdit={onEdit}
+                                    isPrivacyMode={isPrivacyMode}
+                                    totalPortfolioValue={totalValueEUR}
+                                    isCompactMode={isCompact || shouldCompact}
+                                    isTopList={isCompact}
+                                    timeHorizon="ALL"
+                                    highlightId={highlightId}
+                                />
+                            ))}
+                        </div>
+                    </SortableContext>
+                </DndContext>
+            ) : filter !== 'CLOSED' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {processedAssets.map((asset) => (
+                        <MobileAssetCard
+                            key={asset.id}
+                            asset={asset}
+                            currency={currency}
+                            onEdit={onEdit}
+                            isPrivacyMode={isPrivacyMode}
+                            totalPortfolioValue={totalValueEUR}
+                            isCompactMode={isCompact || shouldCompact}
+                            isTopList={isCompact}
+                            timeHorizon="ALL"
+                            highlightId={highlightId}
+                        />
+                    ))}
+                </div>
+            ) : null}
 
             {/* Closed Positions View */}
-            {
-                filter === 'CLOSED' && (
-                    <MobileClosedPositions assets={assets} />
-                )
-            }
+            {filter === 'CLOSED' && (
+                <MobileClosedPositions assets={assets} />
+            )}
         </div >
     );
 }
 
-// Wrapper for Sortable Item
+// Wrapper for DnD Sortable - only handles vertical reordering via long press
 function SortableAssetItem(props: any) {
     const {
         attributes,
@@ -537,14 +520,12 @@ function SortableAssetItem(props: any) {
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
-        position: 'relative' as 'relative',
-        zIndex: isDragging ? 10 : 1,
-        touchAction: 'pan-y' // Allow vertical scrolling but capture horizontal for swipe? No, dnd-kit handles this.
+        zIndex: isDragging ? 100 : 1,
     };
 
     return (
         <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-            <MobileAssetCard {...props} />
+            <MobileAssetCard {...props} isDndDragging={isDragging} />
         </div>
     );
 }

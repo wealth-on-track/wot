@@ -16,37 +16,41 @@ interface MobileAssetCardProps {
     asset: AssetDisplay;
     currency: string;
     onEdit: (asset: AssetDisplay) => void;
+    onDelete?: (asset: AssetDisplay) => void;
     isPrivacyMode?: boolean;
     totalPortfolioValue?: number;
     isCompactMode?: boolean;
     isTopList?: boolean;
     timeHorizon?: '1D' | '1W' | '1M' | 'YTD' | '1Y' | 'ALL';
     highlightId?: string | null;
+    isDndDragging?: boolean;
 }
 
 export const MobileAssetCard = memo(function MobileAssetCard({
     asset,
     currency,
     onEdit,
+    onDelete,
     isPrivacyMode,
     totalPortfolioValue = 0,
     isCompactMode = false,
     isTopList = false,
     timeHorizon = '1D', // Default to 1D if not passed
-    highlightId
+    highlightId,
+    isDndDragging = false
 }: MobileAssetCardProps) {
     // --- State & Motion ---
     const x = useMotionValue(0);
     const controls = useAnimationControls();
     const [isExpanded, setIsExpanded] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
-    const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+    const [swipeState, setSwipeState] = useState<'closed' | 'left' | 'right'>('closed');
 
     const isHighlighted = highlightId === asset.symbol;
 
     // Swipe limits
     const SWIPE_MAX = 80; // Maximum swipe distance
-    const SWIPE_THRESHOLD = 60; // Threshold to trigger action
+    const SWIPE_THRESHOLD = 40; // Threshold to snap open
 
     // Background button opacity based on drag
     const leftOpacity = useTransform(x, [0, SWIPE_MAX], [0, 1]);
@@ -80,9 +84,21 @@ export const MobileAssetCard = memo(function MobileAssetCard({
     const currentPrice = asset.currentPrice || asset.buyPrice || 0;
     const totalCost = asset.buyPrice * asset.quantity;
 
+    // BES-specific value calculation from metadata (same as web)
+    const besValue = useMemo(() => {
+        if (asset.type !== 'BES' || !asset.metadata) return 0;
+        const meta = asset.metadata as any;
+        const besKP = meta?.contracts?.reduce((s: number, c: any) => s + (c.katkiPayi || 0), 0) || 0;
+        const besDK = meta?.contracts?.reduce((s: number, c: any) => s + (c.devletKatkisi || 0), 0) || 0;
+        return besKP + besDK;
+    }, [asset.type, asset.metadata]);
+
     // When user selects EUR, use totalValueEUR directly (already in EUR)
     // Only convert when a different currency is selected
-    const displayTotalValue = currency === 'EUR' ? asset.totalValueEUR : convert(asset.totalValueEUR, 'EUR');
+    // For BES, use the calculated besValue converted to EUR
+    const displayTotalValue = asset.type === 'BES'
+        ? (besValue / (rates['TRY'] || 38.5)) * (rates[currency] || 1)
+        : (currency === 'EUR' ? asset.totalValueEUR : convert(asset.totalValueEUR, 'EUR'));
 
     // For cost, we need to convert from asset's original currency to display currency
     const displayTotalCost = currency === 'ORG'
@@ -146,32 +162,53 @@ export const MobileAssetCard = memo(function MobileAssetCard({
         }
     };
 
-    const handleDrag = (event: any, info: PanInfo) => {
-        // Track direction for background color
-        if (info.offset.x > 10) {
-            setSwipeDirection('right');
-        } else if (info.offset.x < -10) {
-            setSwipeDirection('left');
+    const handleDragEnd = (event: any, info: PanInfo) => {
+        setIsDragging(false);
+        const offset = info.offset.x;
+
+        // If already open and dragging back toward center
+        if (swipeState === 'right' && offset < -20) {
+            // Close it
+            controls.start({ x: 0, transition: { type: "spring", stiffness: 500, damping: 30 } });
+            setSwipeState('closed');
+            return;
+        }
+        if (swipeState === 'left' && offset > 20) {
+            // Close it
+            controls.start({ x: 0, transition: { type: "spring", stiffness: 500, damping: 30 } });
+            setSwipeState('closed');
+            return;
+        }
+
+        // Snap to open position if threshold passed
+        if (offset > SWIPE_THRESHOLD) {
+            navVibrate();
+            controls.start({ x: SWIPE_MAX, transition: { type: "spring", stiffness: 500, damping: 30 } });
+            setSwipeState('right');
+        } else if (offset < -SWIPE_THRESHOLD) {
+            navVibrate();
+            controls.start({ x: -SWIPE_MAX, transition: { type: "spring", stiffness: 500, damping: 30 } });
+            setSwipeState('left');
         } else {
-            setSwipeDirection(null);
+            // Snap back to closed
+            controls.start({ x: 0, transition: { type: "spring", stiffness: 500, damping: 30 } });
+            setSwipeState('closed');
         }
     };
 
-    const handleDragEnd = (event: any, info: PanInfo) => {
-        setIsDragging(false);
-        setSwipeDirection(null);
-        const offset = info.offset.x;
-
-        // Always animate back to center
+    const handleEditClick = () => {
+        navVibrate();
         controls.start({ x: 0, transition: { type: "spring", stiffness: 500, damping: 30 } });
+        setSwipeState('closed');
+        onEdit(asset);
+    };
 
-        if (offset > SWIPE_THRESHOLD) {
-            navVibrate();
-            onEdit(asset); // Right swipe = Edit
-        } else if (offset < -SWIPE_THRESHOLD) {
-            navVibrate();
-            // Left swipe = Delete (could trigger delete confirmation)
-            // For now just vibrate, you can add delete logic here
+    const handleDeleteClick = () => {
+        navVibrate();
+        controls.start({ x: 0, transition: { type: "spring", stiffness: 500, damping: 30 } });
+        setSwipeState('closed');
+        if (onDelete) {
+            onDelete(asset);
         }
     };
 
@@ -197,30 +234,38 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                 overflow: 'hidden'
             }}>
                 {/* Left side - Edit (green) - shown when swiping RIGHT */}
-                <div style={{
-                    width: SWIPE_MAX + 20,
-                    height: '100%',
-                    background: 'var(--success)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingLeft: '20px'
-                }}>
+                <div
+                    onClick={swipeState === 'right' ? handleEditClick : undefined}
+                    style={{
+                        width: SWIPE_MAX + 20,
+                        height: '100%',
+                        background: 'var(--success)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        paddingLeft: '20px',
+                        cursor: swipeState === 'right' ? 'pointer' : 'default'
+                    }}
+                >
                     <motion.div style={{ opacity: leftOpacity, scale: leftScale, color: '#fff' }}>
                         <Edit2 size={22} strokeWidth={2.5} />
                     </motion.div>
                 </div>
 
                 {/* Right side - Delete (red) - shown when swiping LEFT */}
-                <div style={{
-                    width: SWIPE_MAX + 20,
-                    height: '100%',
-                    background: 'var(--danger)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingRight: '20px'
-                }}>
+                <div
+                    onClick={swipeState === 'left' ? handleDeleteClick : undefined}
+                    style={{
+                        width: SWIPE_MAX + 20,
+                        height: '100%',
+                        background: 'var(--danger)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        paddingRight: '20px',
+                        cursor: swipeState === 'left' ? 'pointer' : 'default'
+                    }}
+                >
                     <motion.div style={{ opacity: rightOpacity, scale: rightScale, color: '#fff' }}>
                         <Trash2 size={22} strokeWidth={2.5} />
                     </motion.div>
@@ -229,27 +274,28 @@ export const MobileAssetCard = memo(function MobileAssetCard({
 
             {/* Foreground Card - Draggable with constraints */}
             <motion.div
-                drag={isExpanded ? false : "x"}
+                drag={isExpanded || isDndDragging ? false : "x"}
                 dragConstraints={{ left: -SWIPE_MAX, right: SWIPE_MAX }}
                 dragElastic={0.1}
                 onDragStart={() => setIsDragging(true)}
-                onDrag={handleDrag}
                 onDragEnd={handleDragEnd}
                 animate={controls}
-                onClick={() => !isDragging && setIsExpanded(!isExpanded)}
+                onClick={() => !isDragging && !isDndDragging && setIsExpanded(!isExpanded)}
                 initial={false}
                 style={{
-                    x,
+                    x: isDndDragging ? 0 : x,
                     padding: isCompactMode ? '8px 10px' : '12px 14px',
                     borderRadius: '16px',
-                    border: '1px solid var(--border)',
-                    background: isExpanded ? 'var(--bg-secondary)' : 'var(--surface)',
+                    border: isDndDragging ? '2px solid var(--accent)' : '1px solid var(--border)',
+                    background: isDndDragging ? 'var(--accent-muted, rgba(99, 102, 241, 0.15))' : (isExpanded ? 'var(--bg-secondary)' : 'var(--surface)'),
                     position: 'relative',
                     zIndex: 10,
-                    cursor: 'pointer',
-                    touchAction: 'pan-y'
+                    cursor: isDndDragging ? 'grabbing' : 'pointer',
+                    touchAction: 'pan-y',
+                    boxShadow: isDndDragging ? '0 8px 32px rgba(99, 102, 241, 0.3)' : 'none',
+                    transform: isDndDragging ? 'scale(1.02)' : undefined
                 }}
-                whileTap={!isDragging ? { scale: 0.995 } : undefined}
+                whileTap={!isDragging && !isDndDragging ? { scale: 0.995 } : undefined}
             >
                 {/* Highlight animation overlay */}
                 {isHighlighted && (
@@ -301,7 +347,9 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                                 }}
                             />
                         ) : (
-                            <span style={{ fontWeight: 800, fontSize: isCompactMode ? '0.8rem' : '1rem' }}>{asset.symbol[0]}</span>
+                            <span style={{ fontWeight: 800, fontSize: asset.type === 'BES' ? '0.65rem' : (isCompactMode ? '0.8rem' : '1rem') }}>
+                                {asset.type === 'BES' ? 'BES' : asset.symbol[0]}
+                            </span>
                         )}
                     </div>
 
@@ -318,17 +366,19 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                             maxWidth: '100%',
                             lineHeight: 1.2
                         }}>
-                            {asset.name || asset.symbol}
+                            {asset.type === 'BES' ? 'BES' : (asset.name || asset.symbol)}
                         </div>
 
                         {/* Row 2: Ticker Symbol */}
-                        <div style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--text-muted)',
-                            fontWeight: 500,
-                        }}>
-                            {asset.symbol}
-                        </div>
+                        {asset.type !== 'BES' && (
+                            <div style={{
+                                fontSize: '0.75rem',
+                                color: 'var(--text-muted)',
+                                fontWeight: 500,
+                            }}>
+                                {asset.symbol}
+                            </div>
+                        )}
                     </div>
 
                     {/* COL 3: Price / Cost (Original Currency) - Stacked */}
@@ -342,7 +392,24 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                             minWidth: '70px',
                             marginRight: '16px' // Bigger gap before Value/P&L
                         }}>
-                            {(() => {
+                            {asset.type === 'BES' ? (
+                                <>
+                                    <span style={{
+                                        color: 'var(--text-muted)',
+                                        fontWeight: 700,
+                                        fontSize: '0.8rem'
+                                    }}>
+                                        -
+                                    </span>
+                                    <span style={{
+                                        color: 'var(--text-muted)',
+                                        fontWeight: 500,
+                                        fontSize: '0.7rem'
+                                    }}>
+                                        -
+                                    </span>
+                                </>
+                            ) : (() => {
                                 const origSym = symbols[asset.currency] || asset.currency;
                                 const p = asset.currentPrice || 0;
                                 const c = asset.buyPrice || 0;
@@ -397,12 +464,14 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                             alignItems: 'center',
                             justifyContent: 'flex-end',
                             gap: '4px',
-                            color: isPositive ? 'var(--success)' : 'var(--danger)',
+                            color: asset.type === 'BES' ? 'var(--text-muted)' : (isPositive ? 'var(--success)' : 'var(--danger)'),
                             fontSize: '0.75rem',
                             fontWeight: 600,
                             whiteSpace: 'nowrap'
                         }}>
-                            {isCompactMode ? (
+                            {asset.type === 'BES' ? (
+                                <span>-</span>
+                            ) : isCompactMode ? (
                                 // Compact: Just %
                                 <span>{isPositive ? '+' : ''}{Math.abs(changePct).toFixed(0)}%</span>
                             ) : (
