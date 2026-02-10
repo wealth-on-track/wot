@@ -110,7 +110,10 @@ async function processAssetFast(
         priceData = await getMarketPrice(asset.symbol, asset.type, asset.exchange, forceRefresh, userId);
     }
 
-    const previousClose = (asset.type === 'CASH' || asset.symbol === 'EUR') ? 1 : (priceData ? priceData.price : asset.buyPrice);
+    // Current price from market data
+    const currentPrice = (asset.type === 'CASH' || asset.symbol === 'EUR') ? 1 : (priceData ? priceData.price : asset.buyPrice);
+    // Previous close for daily change calculation (fallback to current price if not available)
+    const previousClosePrice = (asset.type === 'CASH' || asset.symbol === 'EUR') ? 1 : (priceData?.previousClose || currentPrice);
 
     // Use currency as-is (no auto-repair on read)
     const activeCurrency = asset.currency;
@@ -119,22 +122,27 @@ async function processAssetFast(
     const priceCurrency = priceData?.currency || activeCurrency;
 
     // 2. Convert Price to Asset Currency (if needed)
-    let currentPriceInAssetCurrency = previousClose;
+    let currentPriceInAssetCurrency = currentPrice;
+    let previousCloseInAssetCurrency = previousClosePrice;
 
     if (priceCurrency !== activeCurrency && activeCurrency !== 'EUR' && activeCurrency !== 'USD' && activeCurrency !== 'TRY') {
         // Only convert if necessary and if currencies are different
         try {
-            currentPriceInAssetCurrency = await convertCurrency(previousClose, priceCurrency, activeCurrency, customRates);
+            currentPriceInAssetCurrency = await convertCurrency(currentPrice, priceCurrency, activeCurrency, customRates);
+            previousCloseInAssetCurrency = await convertCurrency(previousClosePrice, priceCurrency, activeCurrency, customRates);
         } catch (e) {
             console.warn(`[Portfolio] Currency conversion failed for ${asset.symbol}:`, e);
-            currentPriceInAssetCurrency = previousClose; // Use as-is if conversion fails
+            currentPriceInAssetCurrency = currentPrice; // Use as-is if conversion fails
+            previousCloseInAssetCurrency = previousClosePrice;
         }
     } else if (priceCurrency !== activeCurrency) {
         // Standard currencies - perform conversion
         try {
-            currentPriceInAssetCurrency = await convertCurrency(previousClose, priceCurrency, activeCurrency, customRates);
+            currentPriceInAssetCurrency = await convertCurrency(currentPrice, priceCurrency, activeCurrency, customRates);
+            previousCloseInAssetCurrency = await convertCurrency(previousClosePrice, priceCurrency, activeCurrency, customRates);
         } catch (e) {
-            currentPriceInAssetCurrency = previousClose;
+            currentPriceInAssetCurrency = currentPrice;
+            previousCloseInAssetCurrency = previousClosePrice;
         }
     }
 
@@ -175,7 +183,7 @@ async function processAssetFast(
         ...asset,
         name: assetName,
         currentPrice: currentPriceInAssetCurrency,
-        previousClose: currentPriceInAssetCurrency,  // Dashboard expects this field name
+        previousClose: previousCloseInAssetCurrency,  // Actual previous close for 1D calculation
         totalValueInAssetCurrency,
         totalCostInAssetCurrency,
         totalValueEUR,
