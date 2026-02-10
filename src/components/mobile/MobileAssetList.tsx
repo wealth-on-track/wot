@@ -517,6 +517,9 @@ export function MobileAssetList({
             {filter === 'CLOSED' && (
                 <MobileClosedPositions assets={assets} />
             )}
+
+            {/* Bottom Spacer - ensures last asset is visible above bottom nav */}
+            <div style={{ height: '100px', flexShrink: 0 }} />
         </div >
     );
 }
