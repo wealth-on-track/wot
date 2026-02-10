@@ -54,7 +54,7 @@ export function MobileHomeTab({
     totalValueEUR,
     assets,
     isPrivacyMode,
-    defaultPeriod = "1Y",
+    defaultPeriod = "1D",
     onPeriodChange,
     onNavigateToPositions,
     onNavigateToAllocation,
@@ -86,10 +86,21 @@ export function MobileHomeTab({
 
         if (totalValueEUR > 0) {
             if (selectedPeriod === "1D" || selectedPeriod === "1W" || selectedPeriod === "1M") {
+                // Calculate 1D return properly in EUR for each asset
                 const total1D = assets.reduce((sum, asset) => {
-                    const prev = asset.previousClose || asset.currentPrice || 0;
+                    // Skip CASH and BES - they don't have daily changes
+                    if (asset.type === 'CASH' || asset.type === 'BES') return sum;
+
+                    const prev = asset.previousClose || 0;
                     const curr = asset.currentPrice || 0;
-                    return sum + (curr - prev) * asset.quantity;
+
+                    // Calculate daily change percentage from prices
+                    const dailyChangePct = prev > 0 ? ((curr - prev) / prev) : 0;
+
+                    // Apply percentage to EUR value of position
+                    const dailyChangeEUR = dailyChangePct * asset.totalValueEUR;
+
+                    return sum + dailyChangeEUR;
                 }, 0);
                 returnEUR = total1D;
                 const yesterdayValue = totalValueEUR - returnEUR;
@@ -238,11 +249,18 @@ export function MobileHomeTab({
                     </div>
                 </div>
 
-                {/* Main value */}
-                <div style={{ position: "relative", zIndex: 1 }}>
+                {/* Main value row: Value on left, P&L on right */}
+                <div style={{
+                    position: "relative",
+                    zIndex: 1,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                }}>
+                    {/* Left: Portfolio Value */}
                     <div
                         style={{
-                            fontSize: "2.2rem",
+                            fontSize: "2rem",
                             fontWeight: 900,
                             color: "var(--text-primary)",
                             letterSpacing: "-0.03em",
@@ -252,28 +270,33 @@ export function MobileHomeTab({
                         {isPrivacyMode ? "••••••" : formatValue(totalValueEUR)}
                     </div>
 
-                    {/* P&L row */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px" }}>
+                    {/* Right: P&L */}
+                    <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-end",
+                        gap: "2px"
+                    }}>
                         <div
                             style={{
                                 display: "flex",
                                 alignItems: "center",
                                 gap: "4px",
                                 background: periodReturnEUR >= 0 ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                                padding: "6px 10px",
-                                borderRadius: "10px"
+                                padding: "4px 8px",
+                                borderRadius: "8px"
                             }}
                         >
                             {periodReturnEUR >= 0 ? (
-                                <ArrowUpRight size={16} color="#10b981" strokeWidth={2.5} />
+                                <ArrowUpRight size={14} color="#10b981" strokeWidth={2.5} />
                             ) : (
-                                <ArrowDownRight size={16} color="#ef4444" strokeWidth={2.5} />
+                                <ArrowDownRight size={14} color="#ef4444" strokeWidth={2.5} />
                             )}
                             <span style={{ fontSize: "0.85rem", fontWeight: 700, color: periodReturnEUR >= 0 ? "#10b981" : "#ef4444" }}>
                                 {periodReturnPct >= 0 ? "+" : ""}{periodReturnPct.toFixed(2)}%
                             </span>
                         </div>
-                        <span style={{ fontSize: "0.8rem", fontWeight: 600, color: periodReturnEUR >= 0 ? "#10b981" : "#ef4444", opacity: 0.85 }}>
+                        <span style={{ fontSize: "0.75rem", fontWeight: 600, color: periodReturnEUR >= 0 ? "#10b981" : "#ef4444", opacity: 0.85 }}>
                             {isPrivacyMode ? "••••" : `${periodReturnEUR >= 0 ? "+" : ""}${formatValue(periodReturnEUR, true)}`}
                         </span>
                     </div>
