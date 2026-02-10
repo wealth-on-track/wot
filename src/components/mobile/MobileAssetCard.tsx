@@ -84,18 +84,21 @@ export const MobileAssetCard = memo(function MobileAssetCard({
     const currentPrice = asset.currentPrice || asset.buyPrice || 0;
     const totalCost = asset.buyPrice * asset.quantity;
 
-    // When user selects EUR, use totalValueEUR directly (already in EUR)
-    // Only convert when a different currency is selected
-    // Server already calculated totalValueEUR correctly for ALL assets (including BES)
-    // using real exchange rates, so we just use that value directly
+    // Use server-calculated EUR values directly (real exchange rates)
+    // Only convert from EUR to other display currencies if needed
     const displayTotalValue = currency === 'EUR'
         ? asset.totalValueEUR
         : convert(asset.totalValueEUR, 'EUR');
 
-    // For cost, we need to convert from asset's original currency to display currency
-    const displayTotalCost = currency === 'ORG'
-        ? totalCost
-        : convert(totalCost * (rates[asset.currency] || 1), asset.currency);
+    // Calculate totalCostEUR from server values using plPercentage
+    // Formula: plPercentage = ((value / cost) - 1) * 100
+    // Therefore: cost = value / (1 + plPercentage / 100)
+    const serverTotalCostEUR = asset.plPercentage !== 0
+        ? asset.totalValueEUR / (1 + asset.plPercentage / 100)
+        : asset.totalValueEUR; // If 0% change, cost equals value
+    const displayTotalCost = currency === 'EUR'
+        ? serverTotalCostEUR
+        : convert(serverTotalCostEUR, 'EUR');
 
     // These are used in the expandable panel and should show in original currency for reference
     const displayBuyPrice = asset.buyPrice;
@@ -110,32 +113,27 @@ export const MobileAssetCard = memo(function MobileAssetCard({
     };
 
     // Calculate P&L based on Time Horizon
-    // Note: In a real app, historical data would be needed. 
-    // Here we simulate different returns or use available data properties.
-    // 1D = Based on previousClose
-    // ALL = Based on Cost Basis (Total P&L)
-    // Others = Simulation for UI demo as per request context "mock if needed"
+    // 1D = Based on previousClose (daily change)
+    // ALL/YTD/1Y = Use server-calculated plPercentage (total P&L from cost basis)
     const pnlData = useMemo(() => {
+        // Daily change calculation
         const d_1d = currentPrice - (asset.previousClose || currentPrice);
         const p_1d = asset.previousClose > 0 ? (d_1d / asset.previousClose) * 100 : 0;
 
-        const totalPL = displayTotalValue - displayTotalCost;
-        const totalPLPct = displayTotalCost > 0 ? (totalPL / displayTotalCost) * 100 : 0;
-
-        // Real Logic applied for 1D and ALL.
-        // Fallback for others to avoid fake data.
+        // Use server-calculated plPercentage for total P&L (uses real exchange rates)
+        const totalPLPct = asset.plPercentage || 0;
 
         let pct = 0;
 
         switch (timeHorizon) {
             case '1D':
-            case '1W': // Fallback to 1D
-            case '1M': // Fallback to 1D
+            case '1W':
+            case '1M':
                 pct = p_1d;
                 break;
             case 'ALL':
-            case 'YTD': // Fallback to ALL
-            case '1Y':  // Fallback to ALL
+            case 'YTD':
+            case '1Y':
                 pct = totalPLPct;
                 break;
             default:
@@ -143,7 +141,7 @@ export const MobileAssetCard = memo(function MobileAssetCard({
         }
 
         return { pct, isPositive: pct >= 0 };
-    }, [timeHorizon, currentPrice, asset.previousClose, displayTotalValue, displayTotalCost, asset.symbol, asset.quantity]);
+    }, [timeHorizon, currentPrice, asset.previousClose, asset.plPercentage]);
 
     const changePct = pnlData.pct;
     const isPositive = pnlData.isPositive;
