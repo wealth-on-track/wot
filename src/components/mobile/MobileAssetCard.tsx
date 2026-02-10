@@ -90,12 +90,9 @@ export const MobileAssetCard = memo(function MobileAssetCard({
         ? asset.totalValueEUR
         : convert(asset.totalValueEUR, 'EUR');
 
-    // Calculate totalCostEUR from server values using plPercentage
-    // Formula: plPercentage = ((value / cost) - 1) * 100
-    // Therefore: cost = value / (1 + plPercentage / 100)
-    const serverTotalCostEUR = asset.plPercentage !== 0
-        ? asset.totalValueEUR / (1 + asset.plPercentage / 100)
-        : asset.totalValueEUR; // If 0% change, cost equals value
+    // Use server-calculated totalCostEUR directly (no derivation needed)
+    // Fallback to totalValueEUR if not available (shouldn't happen)
+    const serverTotalCostEUR = asset.totalCostEUR ?? asset.totalValueEUR;
     const displayTotalCost = currency === 'EUR'
         ? serverTotalCostEUR
         : convert(serverTotalCostEUR, 'EUR');
