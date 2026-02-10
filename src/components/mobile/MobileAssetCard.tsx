@@ -451,12 +451,12 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                             alignItems: 'center',
                             justifyContent: 'flex-end',
                             gap: '4px',
-                            color: asset.type === 'BES' ? 'var(--text-muted)' : (isPositive ? 'var(--success)' : 'var(--danger)'),
+                            color: (asset.type === 'BES' || asset.type === 'CASH') ? 'var(--text-muted)' : (isPositive ? 'var(--success)' : 'var(--danger)'),
                             fontSize: '0.75rem',
                             fontWeight: 600,
                             whiteSpace: 'nowrap'
                         }}>
-                            {asset.type === 'BES' ? (
+                            {(asset.type === 'BES' || asset.type === 'CASH') ? (
                                 <span>-</span>
                             ) : isCompactMode ? (
                                 // Compact: Just %
