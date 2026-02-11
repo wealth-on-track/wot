@@ -134,17 +134,22 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         assetsWithValues = portfolioResult.assetsWithValues;
     } else {
         // Fallback: Show assets with buy prices to prevent page crash
-        // Fallback: Show assets with buy prices to prevent page crash
-        assetsWithValues = (user as any).portfolio!.assets.map((a: any) => ({
-            ...a,
-            name: a.name || a.symbol,
-            currentPrice: a.buyPrice,
-            totalValueEUR: a.quantity * a.buyPrice, // Simplified, ignores currency for safety
-            plPercentage: 0,
-            dailyChange: 0,
-            dailyChangePercentage: 0,
-            marketState: 'CLOSED'
-        }));
+        // CRITICAL: Must convert to EUR using exchange rates!
+        assetsWithValues = (user as any).portfolio!.assets.map((a: any) => {
+            const valueInCurrency = a.quantity * a.buyPrice;
+            const rate = rates[a.currency] || 1;
+            const valueEUR = valueInCurrency / rate;
+            return {
+                ...a,
+                name: a.name || a.symbol,
+                currentPrice: a.buyPrice,
+                totalValueEUR: valueEUR,
+                plPercentage: 0,
+                dailyChange: 0,
+                dailyChangePercentage: 0,
+                marketState: 'CLOSED'
+            };
+        });
         totalPortfolioValueEUR = assetsWithValues.reduce((sum, a) => sum + a.totalValueEUR, 0);
     }
 

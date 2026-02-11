@@ -75,16 +75,22 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
         assetsWithValues = portfolioResult.assetsWithValues;
     } else {
         // Fallback: Show assets with buy prices to prevent page crash
-        assetsWithValues = user.Portfolio!.Asset.map(a => ({
-            ...a,
-            name: a.name || a.symbol,
-            currentPrice: a.buyPrice,
-            totalValueEUR: a.quantity * a.buyPrice,
-            plPercentage: 0,
-            dailyChange: 0,
-            dailyChangePercentage: 0,
-            marketState: 'CLOSED'
-        }));
+        // CRITICAL: Must convert to EUR using exchange rates!
+        assetsWithValues = user.Portfolio!.Asset.map(a => {
+            const valueInCurrency = a.quantity * a.buyPrice;
+            const rate = rates[a.currency] || 1;
+            const valueEUR = valueInCurrency / rate;
+            return {
+                ...a,
+                name: a.name || a.symbol,
+                currentPrice: a.buyPrice,
+                totalValueEUR: valueEUR,
+                plPercentage: 0,
+                dailyChange: 0,
+                dailyChangePercentage: 0,
+                marketState: 'CLOSED'
+            };
+        });
         totalPortfolioValueEUR = assetsWithValues.reduce((sum, a) => sum + a.totalValueEUR, 0);
     }
 
