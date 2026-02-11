@@ -180,7 +180,7 @@ model PortfolioSnapshot {
 model PriceCache {
   symbol              String    @id
   previousClose       Float
-  actualPreviousClose Float?    // Real regularMarketPreviousClose from Yahoo for 1D calculations
+  // actualPreviousClose removed temporarily - column doesn't exist in prod DB
   currency            String
   sector              String?
   country             String?
