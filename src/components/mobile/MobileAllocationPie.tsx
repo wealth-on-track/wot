@@ -12,16 +12,23 @@ interface MobileAllocationPieProps {
     assets: AssetDisplay[];
     totalValueEUR: number;
     isPrivacyMode: boolean;
+    exchangeRates?: Record<string, number>;
 }
 
 const ALL_VIEWS: AllocationView[] = ["Type", "Sector", "Platform", "Currency", "Country"];
 
-export function MobileAllocationPie({ assets, totalValueEUR, isPrivacyMode }: MobileAllocationPieProps) {
+export function MobileAllocationPie({ assets, totalValueEUR, isPrivacyMode, exchangeRates }: MobileAllocationPieProps) {
     const { currency } = useCurrency();
     const [view, setView] = useState<AllocationView>("Type");
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-    const rates: Record<string, number> = { EUR: 1, USD: 1.05, TRY: 38.5, GBP: 0.86 };
+    // Use server-provided exchange rates with fallbacks
+    const rates: Record<string, number> = {
+        EUR: 1,
+        USD: exchangeRates?.['USD'] || 1.09,
+        TRY: exchangeRates?.['TRY'] || 38.5,
+        GBP: exchangeRates?.['GBP'] || 0.85
+    };
     const symbols: Record<string, string> = { EUR: "€", USD: "$", TRY: "₺", GBP: "£" };
 
     const convert = (amount: number) => {

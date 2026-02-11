@@ -24,6 +24,7 @@ interface MobileHomeTabProps {
     onNavigateToPositions?: () => void;
     onNavigateToAllocation?: () => void;
     onEditAsset?: (asset: AssetDisplay) => void;
+    exchangeRates?: Record<string, number>;
 }
 
 type Period = "1D" | "1W" | "1M" | "YTD" | "1Y" | "ALL";
@@ -80,7 +81,8 @@ export function MobileHomeTab({
     onPeriodChange,
     onNavigateToPositions,
     onNavigateToAllocation,
-    onEditAsset
+    onEditAsset,
+    exchangeRates
 }: MobileHomeTabProps) {
     const { currency } = useCurrency();
     const [selectedPeriod, setSelectedPeriod] = useState<Period>(defaultPeriod as Period);
@@ -93,7 +95,13 @@ export function MobileHomeTab({
         }
     }, [defaultPeriod]);
 
-    const rates: Record<string, number> = { EUR: 1, USD: 1.05, TRY: 38.5, GBP: 0.86 };
+    // Use server-provided exchange rates with fallbacks
+    const rates: Record<string, number> = {
+        EUR: 1,
+        USD: exchangeRates?.['USD'] || 1.09,
+        TRY: exchangeRates?.['TRY'] || 38.5,
+        GBP: exchangeRates?.['GBP'] || 0.85
+    };
     const symbols: Record<string, string> = { EUR: "€", USD: "$", TRY: "₺", GBP: "£" };
 
     const convert = (amount: number) => {

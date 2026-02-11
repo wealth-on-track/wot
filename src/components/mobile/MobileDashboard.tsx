@@ -225,6 +225,7 @@ export function MobileDashboard({
                                         onNavigateToPositions={() => setActiveTab('positions')}
                                         onNavigateToAllocation={() => setActiveTab('allocation')}
                                         onEditAsset={handleEditAsset}
+                                        exchangeRates={exchangeRates}
                                     />
                                 </motion.div>
                             )}
@@ -253,6 +254,7 @@ export function MobileDashboard({
                                         highlightId={highlightAssetId}
                                         onAdd={() => setDashboardView('add')}
                                         totalValueEUR={totalValueEUR}
+                                        exchangeRates={exchangeRates}
                                     />
                                 </motion.div>
                             )}
@@ -271,6 +273,7 @@ export function MobileDashboard({
                                         assets={assets}
                                         totalValueEUR={totalValueEUR}
                                         isPrivacyMode={isPrivacyMode}
+                                        exchangeRates={exchangeRates}
                                     />
                                 </motion.div>
                             )}

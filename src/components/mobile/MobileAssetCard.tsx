@@ -24,6 +24,7 @@ interface MobileAssetCardProps {
     timeHorizon?: '1D' | '1W' | '1M' | 'YTD' | '1Y' | 'ALL';
     highlightId?: string | null;
     isDndDragging?: boolean;
+    exchangeRates?: Record<string, number>;
 }
 
 export const MobileAssetCard = memo(function MobileAssetCard({
@@ -37,7 +38,8 @@ export const MobileAssetCard = memo(function MobileAssetCard({
     isTopList = false,
     timeHorizon = '1D', // Default to 1D if not passed
     highlightId,
-    isDndDragging = false
+    isDndDragging = false,
+    exchangeRates
 }: MobileAssetCardProps) {
     // --- State & Motion ---
     const x = useMotionValue(0);
@@ -60,9 +62,14 @@ export const MobileAssetCard = memo(function MobileAssetCard({
     const leftScale = useTransform(x, [0, SWIPE_MAX], [0.5, 1]);
     const rightScale = useTransform(x, [-SWIPE_MAX, 0], [1, 0.5]);
 
-    // --- Currency Conversion ---
-    const rates: Record<string, number> = { EUR: 1, USD: 1.05, TRY: 38.5 };
-    const symbols: Record<string, string> = { EUR: "€", USD: "$", TRY: "₺" };
+    // --- Currency Conversion (use server-provided rates) ---
+    const rates: Record<string, number> = {
+        EUR: 1,
+        USD: exchangeRates?.['USD'] || 1.09,
+        TRY: exchangeRates?.['TRY'] || 38.5,
+        GBP: exchangeRates?.['GBP'] || 0.85
+    };
+    const symbols: Record<string, string> = { EUR: "€", USD: "$", TRY: "₺", GBP: "£" };
 
     const convert = (amount: number, from: string) => {
         if (currency === 'ORG') return amount;

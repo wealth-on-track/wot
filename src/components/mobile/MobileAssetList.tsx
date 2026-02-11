@@ -34,6 +34,7 @@ interface MobileAssetListProps {
     highlightId?: string | null;
     onAdd?: () => void;
     totalValueEUR?: number;
+    exchangeRates?: Record<string, number>;
 }
 
 type FilterType = 'ALL' | 'GAINERS' | 'LOSERS' | 'WEIGHT' | 'CLOSED';
@@ -48,7 +49,8 @@ export function MobileAssetList({
     isPrivacyMode = false,
     highlightId,
     onAdd,
-    totalValueEUR = 0
+    totalValueEUR = 0,
+    exchangeRates
 }: MobileAssetListProps) {
     const { currency } = useCurrency();
     const [filter, setFilter] = useState<FilterType>('ALL');
@@ -492,6 +494,7 @@ export function MobileAssetList({
                                     isTopList={isCompact}
                                     timeHorizon="ALL"
                                     highlightId={highlightId}
+                                    exchangeRates={exchangeRates}
                                 />
                             ))}
                         </div>
@@ -511,6 +514,7 @@ export function MobileAssetList({
                             isTopList={isCompact}
                             timeHorizon="ALL"
                             highlightId={highlightId}
+                            exchangeRates={exchangeRates}
                         />
                     ))}
                 </div>
