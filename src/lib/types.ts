@@ -21,4 +21,9 @@ export interface AssetDisplay {
     logoUrl?: string | null;
     updatedAt?: Date | string;
     metadata?: any;  // For BES and other special asset types
+    // Historical performance (server-calculated in EUR)
+    changePercent1W?: number;
+    changePercent1M?: number;
+    changePercentYTD?: number;
+    changePercent1Y?: number;
 }

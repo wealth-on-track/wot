@@ -6,11 +6,13 @@
  * 2. Batch processing remains
  * 3. Minimal database writes
  * 4. Faster calculation
+ * 5. Historical performance calculation for all periods
  */
 
 import { getMarketPrice, convertCurrency } from "@/services/marketData";
 import { AssetDisplay } from "@/lib/types";
 import { calculateMarketStatus } from "@/lib/market-timing";
+import { ensureAssetHistory, getAssetPerformance, ensureFXHistoryRange } from "@/services/historyService";
 
 export async function getPortfolioMetricsOptimized(
     assets: any[],
@@ -112,8 +114,10 @@ async function processAssetFast(
 
     // Current price from market data
     const currentPrice = (asset.type === 'CASH' || asset.symbol === 'EUR') ? 1 : (priceData ? priceData.price : asset.buyPrice);
-    // Previous close for daily change calculation (fallback to current price if not available)
-    const previousClosePrice = (asset.type === 'CASH' || asset.symbol === 'EUR') ? 1 : (priceData?.previousClose || currentPrice);
+    // Previous close for daily change calculation
+    // Use nullish coalescing (??) not || because previousClose could be 0 which is falsy
+    // Only fallback to currentPrice if previousClose is null/undefined
+    const previousClosePrice = (asset.type === 'CASH' || asset.symbol === 'EUR') ? 1 : (priceData?.previousClose ?? currentPrice);
 
     // Use currency as-is (no auto-repair on read)
     const activeCurrency = asset.currency;
@@ -163,7 +167,7 @@ async function processAssetFast(
         totalCostEUR = totalCostInAssetCurrency;
     }
 
-    // 5. Calculate P&L
+    // 5. Calculate P&L (each currency in its own terms, then converted to EUR)
     const plValueEUR = totalValueEUR - totalCostEUR;
     const plPercentage = totalCostEUR > 0 ? ((totalValueEUR / totalCostEUR - 1) * 100) : 0;
 
@@ -171,13 +175,49 @@ async function processAssetFast(
     const dailyChange = priceData?.change24h || 0;
     const dailyChangePercentage = priceData?.changePercent || 0;
 
-    // 7. Market Status
     // 7. Market Status (Simple String Return)
     const marketStateStr = calculateMarketStatus(
         asset.symbol,
         asset.exchange,
         asset.type
     );
+
+    // 8. Historical Performance (1W, 1M, YTD, 1Y)
+    let changePercent1W = 0;
+    let changePercent1M = 0;
+    let changePercentYTD = 0;
+    let changePercent1Y = 0;
+
+    // Only fetch historical data for non-CASH assets with quantity
+    if (asset.type !== 'CASH' && asset.quantity > 0) {
+        try {
+            // Ensure we have historical data (runs in background, cached)
+            await ensureAssetHistory(asset.symbol, asset.exchange);
+
+            // Also ensure FX history if currency is different from EUR
+            if (activeCurrency !== 'EUR') {
+                const fxPair = `EUR${activeCurrency}=X`;
+                await ensureFXHistoryRange(fxPair, 400);
+            }
+
+            // Get historical performance
+            const performance = await getAssetPerformance(
+                asset.symbol,
+                currentPriceInAssetCurrency,
+                activeCurrency,
+                customRates,
+                'EUR'
+            );
+
+            changePercent1W = performance.changePercent1W;
+            changePercent1M = performance.changePercent1M;
+            changePercentYTD = performance.changePercentYTD;
+            changePercent1Y = performance.changePercent1Y;
+        } catch (e) {
+            console.warn(`[Portfolio] Historical performance failed for ${asset.symbol}:`, e);
+            // Keep defaults (0) on error
+        }
+    }
 
     return {
         ...asset,
@@ -195,5 +235,9 @@ async function processAssetFast(
         marketState: marketStateStr,
         nextOpen: null,
         nextClose: null,
+        changePercent1W,
+        changePercent1M,
+        changePercentYTD,
+        changePercent1Y,
     };
 }

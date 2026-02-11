@@ -147,7 +147,6 @@ export function MobileAssetList({
         { key: 'CLOSED', label: 'Closed Positions', icon: History },
     ];
 
-    const currentFilterLabel = filterOptions.find(f => f.key === filter)?.label || 'Open Positions';
     const CurrentFilterIcon = filterOptions.find(f => f.key === filter)?.icon || List;
 
     // Auto Compact Logic
@@ -249,20 +248,24 @@ export function MobileAssetList({
                             background: 'var(--surface)',
                             border: '1px solid var(--border)',
                             borderRadius: '12px',
-                            padding: '8px 12px',
+                            padding: '10px',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '0.85rem',
-                            fontWeight: 700,
+                            justifyContent: 'center',
+                            gap: '4px',
                             color: 'var(--text-primary)',
                             cursor: isCompact ? 'default' : 'pointer',
                             boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
                         }}
                     >
-                        {!isCompact && <CurrentFilterIcon size={14} />}
-                        {isCompact ? 'Top Positions' : currentFilterLabel}
-                        {!isCompact && <ChevronDown size={14} style={{ opacity: 0.5 }} />}
+                        {isCompact ? (
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>Top Positions</span>
+                        ) : (
+                            <>
+                                <CurrentFilterIcon size={18} />
+                                <ChevronDown size={12} style={{ opacity: 0.5 }} />
+                            </>
+                        )}
                     </button>
 
                     {/* Filter Dropdown */}

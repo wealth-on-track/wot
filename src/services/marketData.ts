@@ -705,6 +705,7 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                 create: {
                     symbol,
                     previousClose: price || 0,
+                    actualPreviousClose: previousClose || null,
                     currency: finalCurrency,
                     sector: profileData?.sector || 'Unknown',
                     country: profileData?.country || 'Unknown',
@@ -715,6 +716,7 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                 },
                 update: {
                     previousClose: price || 0,
+                    actualPreviousClose: previousClose || null,
                     currency: finalCurrency,
                     sector: profileData?.sector, // Takes from profileData (Unknown or Valid)
                     country: profileData?.country,

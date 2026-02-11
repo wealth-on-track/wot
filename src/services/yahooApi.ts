@@ -273,16 +273,18 @@ export async function getYahooQuote(symbol: string, forceRefresh: boolean = fals
                 create: {
                     symbol: quote.symbol,
                     previousClose: quote.regularMarketPrice || 0,
+                    actualPreviousClose: quote.regularMarketPreviousClose || null,
                     currency: quote.currency || 'USD',
                     tradeTime: quote.regularMarketTime,
                     updatedAt: new Date()
                 },
                 update: {
                     previousClose: quote.regularMarketPrice || 0,
+                    actualPreviousClose: quote.regularMarketPreviousClose || null,
                     currency: quote.currency || 'USD',
                     tradeTime: quote.regularMarketTime,
                     updatedAt: new Date()
-                    // Note: We deliberately OMIT sector and country here so we don't 
+                    // Note: We deliberately OMIT sector and country here so we don't
                     // overwrite them with nulls if this is a price-only update.
                 }
             }).catch(err => console.error('[YahooApi] DB Upsert Error:', err));
@@ -332,8 +334,8 @@ export async function getYahooQuote(symbol: string, forceRefresh: boolean = fals
                 // Save to DB
                 await prisma.priceCache.upsert({
                     where: { symbol: quote.symbol },
-                    create: { symbol: quote.symbol, previousClose: quote.regularMarketPrice || 0, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() },
-                    update: { previousClose: quote.regularMarketPrice || 0, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() }
+                    create: { symbol: quote.symbol, previousClose: quote.regularMarketPrice || 0, actualPreviousClose: quote.regularMarketPreviousClose || null, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() },
+                    update: { previousClose: quote.regularMarketPrice || 0, actualPreviousClose: quote.regularMarketPreviousClose || null, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() }
                 }).catch(err => console.error('[YahooApi] DB Upsert (Alpha) Error:', err));
 
                 return quote;
@@ -360,8 +362,8 @@ export async function getYahooQuote(symbol: string, forceRefresh: boolean = fals
 
                 await prisma.priceCache.upsert({
                     where: { symbol: quote.symbol },
-                    create: { symbol: quote.symbol, previousClose: quote.regularMarketPrice || 0, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() },
-                    update: { previousClose: quote.regularMarketPrice || 0, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() }
+                    create: { symbol: quote.symbol, previousClose: quote.regularMarketPrice || 0, actualPreviousClose: quote.regularMarketPreviousClose || null, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() },
+                    update: { previousClose: quote.regularMarketPrice || 0, actualPreviousClose: quote.regularMarketPreviousClose || null, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() }
                 }).catch(err => console.error('[YahooApi] DB Upsert (Finnhub) Error:', err));
 
                 return quote;
@@ -454,7 +456,8 @@ export async function getYahooQuotes(symbols: string[], forceRefresh: boolean = 
                     regularMarketPrice: dbCache.previousClose,
                     currency: (dbCache.source === 'TEFAS' || dbCache.source === 'FON') ? dbCache.currency : (detectCurrency(dbCache.symbol) || dbCache.currency),
                     regularMarketTime: dbCache.tradeTime || dbCache.updatedAt,
-                    regularMarketPreviousClose: dbCache.previousClose,
+                    // Use actualPreviousClose if available, otherwise fallback to previousClose (current price)
+                    regularMarketPreviousClose: (dbCache as any).actualPreviousClose ?? dbCache.previousClose,
                     marketState: undefined
                 };
                 const cacheKey = `yahoo:quote:${symbol}`;
@@ -512,12 +515,14 @@ export async function getYahooQuotes(symbols: string[], forceRefresh: boolean = 
                     create: {
                         symbol: quote.symbol,
                         previousClose: quote.regularMarketPrice || 0,
+                        actualPreviousClose: quote.regularMarketPreviousClose || null,
                         currency: quote.currency || 'USD',
                         tradeTime: quote.regularMarketTime,
                         updatedAt: new Date()
                     },
                     update: {
                         previousClose: quote.regularMarketPrice || 0,
+                        actualPreviousClose: quote.regularMarketPreviousClose || null,
                         currency: quote.currency || 'USD',
                         tradeTime: quote.regularMarketTime,
                         updatedAt: new Date()
@@ -615,12 +620,14 @@ async function getDirectQuoteFallback(symbol: string): Promise<YahooQuote | null
                     create: {
                         symbol: quote.symbol,
                         previousClose: quote.regularMarketPrice || 0,
+                        actualPreviousClose: quote.regularMarketPreviousClose || null,
                         currency: quote.currency || 'USD',
                         tradeTime: quote.regularMarketTime,
                         updatedAt: new Date()
                     },
                     update: {
                         previousClose: quote.regularMarketPrice || 0,
+                        actualPreviousClose: quote.regularMarketPreviousClose || null,
                         currency: quote.currency || 'USD',
                         tradeTime: quote.regularMarketTime,
                         updatedAt: new Date()

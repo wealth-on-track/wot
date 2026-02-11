@@ -204,7 +204,10 @@ export const MobileAssetCard = memo(function MobileAssetCard({
         ? (asset.totalValueEUR / totalPortfolioValue) * 100
         : 0;
 
-    const logoUrl = asset.logoUrl || `https://logo.clearbit.com/${asset.symbol.toLowerCase()}.com`;
+    // For CASH assets, use currency symbol instead of trying to fetch logo
+    const currencySymbols: Record<string, string> = { EUR: '€', USD: '$', TRY: '₺', GBP: '£' };
+    const isCashAsset = asset.type === 'CASH';
+    const logoUrl = asset.logoUrl || (isCashAsset ? null : `https://logo.clearbit.com/${asset.symbol.toLowerCase()}.com`);
 
     return (
         <div style={{ position: 'relative', overflow: 'hidden', marginBottom: '0' }}>
@@ -323,9 +326,14 @@ export const MobileAssetCard = memo(function MobileAssetCard({
                         alignItems: 'center',
                         justifyContent: 'center'
                     }}>
-                        {asset.logoUrl ? (
+                        {isCashAsset ? (
+                            // CASH: Show currency symbol
+                            <span style={{ fontWeight: 800, fontSize: isCompactMode ? '1.1rem' : '1.3rem' }}>
+                                {currencySymbols[asset.symbol] || asset.symbol[0]}
+                            </span>
+                        ) : asset.logoUrl ? (
                             <img
-                                src={logoUrl}
+                                src={logoUrl!}
                                 alt={asset.symbol}
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                 onError={(e) => {

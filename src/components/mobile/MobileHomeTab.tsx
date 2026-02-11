@@ -30,6 +30,28 @@ type Period = "1D" | "1W" | "1M" | "YTD" | "1Y" | "ALL";
 
 function AssetLogo({ asset, fallback, size = 20 }: { asset: AssetDisplay; fallback: React.ReactNode; size?: number }) {
     const [error, setError] = useState(false);
+    const currencySymbols: Record<string, string> = { EUR: '€', USD: '$', TRY: '₺', GBP: '£' };
+    const isCashAsset = asset.type === 'CASH';
+
+    // For CASH assets, show currency symbol instead of logo
+    if (isCashAsset) {
+        return (
+            <div style={{
+                width: size,
+                height: size,
+                borderRadius: "50%",
+                background: "var(--bg-secondary)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 800,
+                fontSize: size * 0.6
+            }}>
+                {currencySymbols[asset.symbol] || asset.symbol[0]}
+            </div>
+        );
+    }
+
     const logoUrl = asset.logoUrl || `https://logo.clearbit.com/${asset.symbol.toLowerCase()}.com`;
 
     if (error) return <>{fallback}</>;
@@ -63,6 +85,7 @@ export function MobileHomeTab({
     const { currency } = useCurrency();
     const [selectedPeriod, setSelectedPeriod] = useState<Period>(defaultPeriod as Period);
     const [isPeriodMenuOpen, setIsPeriodMenuOpen] = useState(false);
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
 
     useEffect(() => {
         if (defaultPeriod) {
@@ -79,42 +102,60 @@ export function MobileHomeTab({
     };
     const sym = currency === "ORG" ? "€" : symbols[currency] || "€";
 
-    // Calculate P&L
+    // Helper to get period-specific change percentage for an asset
+    const getAssetChangePct = (asset: AssetDisplay, period: Period): number => {
+        if (asset.type === 'CASH' || asset.type === 'BES') return 0;
+
+        switch (period) {
+            case "1D": {
+                // 1D uses previousClose vs currentPrice
+                const prev = asset.previousClose || 0;
+                const curr = asset.currentPrice || 0;
+                return prev > 0 ? ((curr - prev) / prev) * 100 : 0;
+            }
+            case "1W":
+                return asset.changePercent1W || 0;
+            case "1M":
+                return asset.changePercent1M || 0;
+            case "YTD":
+                return asset.changePercentYTD || 0;
+            case "1Y":
+                return asset.changePercent1Y || 0;
+            case "ALL":
+                return asset.plPercentage || 0;
+            default:
+                return 0;
+        }
+    };
+
+    // Calculate P&L based on selected period using server-provided historical data
     const { periodReturnEUR, periodReturnPct } = useMemo(() => {
         let returnEUR = 0;
         let returnPct = 0;
 
-        if (totalValueEUR > 0) {
-            if (selectedPeriod === "1D" || selectedPeriod === "1W" || selectedPeriod === "1M") {
-                // Calculate 1D return properly in EUR for each asset
-                const total1D = assets.reduce((sum, asset) => {
-                    // Skip CASH and BES - they don't have daily changes
-                    if (asset.type === 'CASH' || asset.type === 'BES') return sum;
+        if (totalValueEUR <= 0) return { periodReturnEUR: 0, periodReturnPct: 0 };
 
-                    const prev = asset.previousClose || 0;
-                    const curr = asset.currentPrice || 0;
+        // Calculate total return in EUR by applying each asset's period change to its EUR value
+        const totalChangeEUR = assets.reduce((sum, asset) => {
+            if (asset.type === 'CASH' || asset.type === 'BES') return sum;
 
-                    // Calculate daily change percentage from prices
-                    const dailyChangePct = prev > 0 ? ((curr - prev) / prev) : 0;
+            const changePct = getAssetChangePct(asset, selectedPeriod);
+            // Convert percentage to EUR amount based on current value
+            // For period returns: if asset changed X%, the EUR change is (X/100) * currentValueEUR
+            // But we need to account for the fact that currentValue already includes the gain
+            // So: previousValue = currentValue / (1 + changePct/100)
+            // changeEUR = currentValue - previousValue
+            if (changePct === 0) return sum;
 
-                    // Apply percentage to EUR value of position
-                    const dailyChangeEUR = dailyChangePct * asset.totalValueEUR;
+            const previousValue = asset.totalValueEUR / (1 + changePct / 100);
+            const changeEUR = asset.totalValueEUR - previousValue;
 
-                    return sum + dailyChangeEUR;
-                }, 0);
-                returnEUR = total1D;
-                const yesterdayValue = totalValueEUR - returnEUR;
-                returnPct = yesterdayValue > 0 ? (returnEUR / yesterdayValue) * 100 : 0;
-            } else {
-                const totalCostEUR = assets.reduce((sum, asset) => {
-                    if (asset.plPercentage === -100) return sum;
-                    const cost = asset.totalValueEUR / (1 + asset.plPercentage / 100);
-                    return sum + cost;
-                }, 0);
-                returnEUR = totalValueEUR - totalCostEUR;
-                returnPct = totalCostEUR > 0 ? (returnEUR / totalCostEUR) * 100 : 0;
-            }
-        }
+            return sum + changeEUR;
+        }, 0);
+
+        returnEUR = totalChangeEUR;
+        const previousTotalValue = totalValueEUR - returnEUR;
+        returnPct = previousTotalValue > 0 ? (returnEUR / previousTotalValue) * 100 : 0;
 
         return { periodReturnEUR: returnEUR, periodReturnPct: returnPct };
     }, [assets, totalValueEUR, selectedPeriod]);
@@ -122,9 +163,40 @@ export function MobileHomeTab({
     // Stats - include BES assets even if quantity is 0 (value comes from metadata)
     const openPositions = assets.filter((a) => a.quantity > 0.000001 || a.type === 'BES');
     const nonCashAssets = openPositions.filter((a) => a.type !== "CASH");
-    const sortedByPL = [...nonCashAssets].sort((a, b) => b.plPercentage - a.plPercentage);
-    const bestPerformer = sortedByPL[0];
-    const worstPerformer = sortedByPL[sortedByPL.length - 1];
+
+    // Sort by period-specific change percentage - get top 3 best and worst (no duplicate symbols)
+    const { sortedByPL, topPerformers, bottomPerformers } = useMemo(() => {
+        // First, deduplicate by symbol (keep first occurrence which has highest value after sort)
+        const sorted = [...nonCashAssets].sort((a, b) =>
+            getAssetChangePct(b, selectedPeriod) - getAssetChangePct(a, selectedPeriod)
+        );
+
+        // Get unique symbols for top performers
+        const seenSymbols = new Set<string>();
+        const top3: typeof sorted = [];
+        for (const asset of sorted) {
+            if (!seenSymbols.has(asset.symbol) && top3.length < 3) {
+                seenSymbols.add(asset.symbol);
+                top3.push(asset);
+            }
+        }
+
+        // Get unique symbols for bottom performers (from the end, excluding top3 symbols)
+        const bottom3: typeof sorted = [];
+        for (let i = sorted.length - 1; i >= 0 && bottom3.length < 3; i--) {
+            const asset = sorted[i];
+            if (!seenSymbols.has(asset.symbol)) {
+                seenSymbols.add(asset.symbol);
+                bottom3.push(asset);
+            }
+        }
+
+        return {
+            sortedByPL: sorted,
+            topPerformers: top3,
+            bottomPerformers: bottom3
+        };
+    }, [nonCashAssets, selectedPeriod]);
 
     // Asset types count
     const uniqueTypes = new Set(assets.map((a) => a.type)).size;
@@ -184,9 +256,13 @@ export function MobileHomeTab({
                     <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                         Portfolio Value
                     </span>
-                    <div style={{ position: "relative" }}>
+                    <div style={{ position: "relative" }} id="period-dropdown-anchor">
                         <button
-                            onClick={() => setIsPeriodMenuOpen(!isPeriodMenuOpen)}
+                            onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setDropdownPosition({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+                                setIsPeriodMenuOpen(!isPeriodMenuOpen);
+                            }}
                             style={{
                                 display: "flex",
                                 alignItems: "center",
@@ -206,21 +282,20 @@ export function MobileHomeTab({
                         {isPeriodMenuOpen && (
                             <>
                                 <div
-                                    style={{ position: "fixed", inset: 0, zIndex: 99 }}
+                                    style={{ position: "fixed", inset: 0, zIndex: 999 }}
                                     onClick={() => setIsPeriodMenuOpen(false)}
                                 />
                                 <div
                                     style={{
-                                        position: "absolute",
-                                        top: "calc(100% + 6px)",
-                                        right: 0,
+                                        position: "fixed",
+                                        top: dropdownPosition.top,
+                                        right: dropdownPosition.right,
                                         background: "var(--surface)",
                                         border: "1px solid var(--border)",
-                                        borderRadius: "12px",
-                                        padding: "6px",
-                                        minWidth: "80px",
-                                        boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-                                        zIndex: 100
+                                        borderRadius: "8px",
+                                        padding: "3px",
+                                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                                        zIndex: 1000
                                     }}
                                 >
                                     {(["1D", "1W", "1M", "YTD", "1Y", "ALL"] as Period[]).map((period) => (
@@ -228,16 +303,17 @@ export function MobileHomeTab({
                                             key={period}
                                             onClick={() => handlePeriodChange(period)}
                                             style={{
+                                                display: "block",
                                                 width: "100%",
                                                 background: selectedPeriod === period ? "var(--accent)" : "transparent",
                                                 border: "none",
-                                                borderRadius: "8px",
-                                                padding: "8px 10px",
-                                                fontSize: "0.75rem",
+                                                borderRadius: "5px",
+                                                padding: "4px 14px",
+                                                fontSize: "0.65rem",
                                                 fontWeight: 600,
                                                 color: selectedPeriod === period ? "#fff" : "var(--text-primary)",
-                                                textAlign: "center",
-                                                cursor: "pointer"
+                                                cursor: "pointer",
+                                                textAlign: "center"
                                             }}
                                         >
                                             {period}
@@ -270,35 +346,44 @@ export function MobileHomeTab({
                         {isPrivacyMode ? "••••••" : formatValue(totalValueEUR)}
                     </div>
 
-                    {/* Right: P&L */}
-                    <div style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "flex-end",
-                        gap: "2px"
-                    }}>
+                    {/* Right: P&L - separate badges */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "5px", flexShrink: 0 }}>
+                        {/* Percentage badge */}
                         <div
                             style={{
                                 display: "flex",
                                 alignItems: "center",
-                                gap: "4px",
-                                background: periodReturnEUR >= 0 ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                                padding: "4px 8px",
-                                borderRadius: "8px"
+                                gap: "3px",
+                                background: periodReturnEUR >= 0 ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                                padding: "5px 8px",
+                                borderRadius: "8px",
+                                height: "28px"
                             }}
                         >
                             {periodReturnEUR >= 0 ? (
-                                <ArrowUpRight size={14} color="#10b981" strokeWidth={2.5} />
+                                <ArrowUpRight size={12} color="#10b981" strokeWidth={2.5} />
                             ) : (
-                                <ArrowDownRight size={14} color="#ef4444" strokeWidth={2.5} />
+                                <ArrowDownRight size={12} color="#ef4444" strokeWidth={2.5} />
                             )}
-                            <span style={{ fontSize: "0.85rem", fontWeight: 700, color: periodReturnEUR >= 0 ? "#10b981" : "#ef4444" }}>
-                                {periodReturnPct >= 0 ? "+" : ""}{periodReturnPct.toFixed(2)}%
+                            <span style={{ fontSize: "0.7rem", fontWeight: 700, color: periodReturnEUR >= 0 ? "#10b981" : "#ef4444" }}>
+                                {periodReturnPct >= 0 ? "+" : ""}{periodReturnPct.toFixed(0)}%
                             </span>
                         </div>
-                        <span style={{ fontSize: "0.75rem", fontWeight: 600, color: periodReturnEUR >= 0 ? "#10b981" : "#ef4444", opacity: 0.85 }}>
-                            {isPrivacyMode ? "••••" : `${periodReturnEUR >= 0 ? "+" : ""}${formatValue(periodReturnEUR, true)}`}
-                        </span>
+                        {/* Amount badge */}
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                background: periodReturnEUR >= 0 ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                                padding: "5px 8px",
+                                borderRadius: "8px",
+                                height: "28px"
+                            }}
+                        >
+                            <span style={{ fontSize: "0.7rem", fontWeight: 700, color: periodReturnEUR >= 0 ? "#10b981" : "#ef4444" }}>
+                                {isPrivacyMode ? "••••" : `${periodReturnEUR >= 0 ? "+" : ""}${formatValue(periodReturnEUR, true)}`}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </motion.div>
@@ -380,90 +465,114 @@ export function MobileHomeTab({
                 </motion.div>
             </div>
 
-            {/* ===================== TOP MOVERS ===================== */}
-            {nonCashAssets.length > 1 && bestPerformer && worstPerformer && (
+            {/* ===================== TOP MOVERS - Top 3 Best & Worst ===================== */}
+            {nonCashAssets.length > 1 && topPerformers.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
                     style={{ display: "flex", gap: "10px" }}
                 >
-                    {/* Best */}
+                    {/* Top 3 Best */}
                     <div
-                        onClick={() => onEditAsset?.(bestPerformer)}
                         style={{
                             flex: 1,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            padding: "12px 14px",
                             background: "var(--surface)",
                             border: "1px solid var(--border)",
                             borderRadius: "14px",
-                            cursor: "pointer"
+                            padding: "12px"
                         }}
                     >
-                        <div
-                            style={{
-                                width: "36px",
-                                height: "36px",
-                                borderRadius: "10px",
-                                background: "rgba(16, 185, 129, 0.1)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                flexShrink: 0
-                            }}
-                        >
-                            <AssetLogo asset={bestPerformer} fallback={<TrendingUp size={18} color="#10b981" />} size={22} />
+                        <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            marginBottom: "10px"
+                        }}>
+                            <TrendingUp size={14} color="#10b981" />
+                            <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                                Top {selectedPeriod}
+                            </span>
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {bestPerformer.symbol}
-                            </div>
-                            <div style={{ fontSize: "0.9rem", fontWeight: 800, color: "#10b981" }}>
-                                +{bestPerformer.plPercentage.toFixed(1)}%
-                            </div>
-                        </div>
+                        {topPerformers.map((asset, index) => {
+                            const pct = getAssetChangePct(asset, selectedPeriod);
+                            const isPositive = pct >= 0;
+                            return (
+                                <div
+                                    key={`top-${asset.id || asset.symbol}-${index}`}
+                                    onClick={() => onEditAsset?.(asset)}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        padding: "6px 0",
+                                        cursor: "pointer",
+                                        borderTop: index > 0 ? "1px solid var(--border)" : "none"
+                                    }}
+                                >
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <AssetLogo asset={asset} fallback={<div style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--bg-secondary)" }} />} size={20} />
+                                        <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                                            {asset.symbol}
+                                        </span>
+                                    </div>
+                                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: isPositive ? "#10b981" : "#ef4444" }}>
+                                        {isPositive ? "+" : ""}{pct.toFixed(1)}%
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
 
-                    {/* Worst */}
+                    {/* Top 3 Worst */}
                     <div
-                        onClick={() => onEditAsset?.(worstPerformer)}
                         style={{
                             flex: 1,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            padding: "12px 14px",
                             background: "var(--surface)",
                             border: "1px solid var(--border)",
                             borderRadius: "14px",
-                            cursor: "pointer"
+                            padding: "12px"
                         }}
                     >
-                        <div
-                            style={{
-                                width: "36px",
-                                height: "36px",
-                                borderRadius: "10px",
-                                background: "rgba(239, 68, 68, 0.1)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                flexShrink: 0
-                            }}
-                        >
-                            <AssetLogo asset={worstPerformer} fallback={<TrendingDown size={18} color="#ef4444" />} size={22} />
+                        <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            marginBottom: "10px"
+                        }}>
+                            <TrendingDown size={14} color="#ef4444" />
+                            <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                                Bottom {selectedPeriod}
+                            </span>
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {worstPerformer.symbol}
-                            </div>
-                            <div style={{ fontSize: "0.9rem", fontWeight: 800, color: "#ef4444" }}>
-                                {worstPerformer.plPercentage.toFixed(1)}%
-                            </div>
-                        </div>
+                        {bottomPerformers.map((asset, index) => {
+                            const pct = getAssetChangePct(asset, selectedPeriod);
+                            const isPositive = pct >= 0;
+                            return (
+                                <div
+                                    key={`bottom-${asset.id || asset.symbol}-${index}`}
+                                    onClick={() => onEditAsset?.(asset)}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        padding: "6px 0",
+                                        cursor: "pointer",
+                                        borderTop: index > 0 ? "1px solid var(--border)" : "none"
+                                    }}
+                                >
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <AssetLogo asset={asset} fallback={<div style={{ width: 20, height: 20, borderRadius: "50%", background: "var(--bg-secondary)" }} />} size={20} />
+                                        <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-primary)" }}>
+                                            {asset.symbol}
+                                        </span>
+                                    </div>
+                                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: isPositive ? "#10b981" : "#ef4444" }}>
+                                        {isPositive ? "+" : ""}{pct.toFixed(1)}%
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </motion.div>
             )}

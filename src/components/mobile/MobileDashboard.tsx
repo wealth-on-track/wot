@@ -37,7 +37,7 @@ export function MobileDashboard({
     // --- Navigation State ---
     const [activeTab, setActiveTab] = useState<Tab>('dashboard');
     const [showImpactSheet, setShowImpactSheet] = useState(false);
-    const [selectedPeriod, setSelectedPeriod] = useState(preferences?.defaultRange || '1Y');
+    const [selectedPeriod, setSelectedPeriod] = useState(preferences?.defaultRange || '1D');
 
     // Legacy 'View' for within Dashboard (Add Asset etc)
     type DashboardView = 'home' | 'add' | 'settings';

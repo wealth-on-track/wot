@@ -178,15 +178,16 @@ model PortfolioSnapshot {
 }
 
 model PriceCache {
-  symbol          String    @id
-  previousClose   Float
-  currency        String
-  sector          String?
-  country         String?
-  tradeTime       DateTime?
-  source          String?
-  lastRequestedBy String?
-  updatedAt       DateTime  @updatedAt
+  symbol              String    @id
+  previousClose       Float
+  actualPreviousClose Float?    // Real regularMarketPreviousClose from Yahoo for 1D calculations
+  currency            String
+  sector              String?
+  country             String?
+  tradeTime           DateTime?
+  source              String?
+  lastRequestedBy     String?
+  updatedAt           DateTime  @updatedAt
 
   @@index([updatedAt])
   @@index([source])
