@@ -1495,20 +1495,27 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
 
     const [gridColumns, setGridColumns] = useState<1 | 2>(2);
 
-    // Recalculate total value dynamically based on current prices and rates to match FullScreenLayout logic
+    // Calculate total value - prefer server-provided totalValueEUR per asset
+    // Fallback rates used only when server value is missing
     const calculatedTotalValueEUR = useMemo(() => {
+        const FALLBACK_RATES: Record<string, number> = {
+            EUR: 1, USD: 1.09, TRY: 38.5, GBP: 0.85, CHF: 0.94, JPY: 162
+        };
+
         return items.reduce((sum, asset) => {
+            // CRITICAL: Prefer server-calculated totalValueEUR
+            if (asset.totalValueEUR && asset.totalValueEUR > 0) {
+                return sum + asset.totalValueEUR;
+            }
+
+            // Fallback calculation only if server value is missing
             const price = asset.currentPrice || asset.previousClose || 0;
             const quantity = asset.quantity || 0;
             const value = price * quantity;
             const currency = asset.currency || 'EUR';
 
-            let rateToEur = 1;
-            if (currency !== 'EUR') {
-                if (exchangeRates && exchangeRates[currency]) {
-                    rateToEur = exchangeRates[currency];
-                }
-            }
+            // Use exchangeRates with fallback to FALLBACK_RATES
+            const rateToEur = exchangeRates?.[currency] || FALLBACK_RATES[currency] || 1;
             const valueEur = value / rateToEur;
             return sum + valueEur;
         }, 0);

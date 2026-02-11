@@ -1203,29 +1203,36 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
     }, []); 
     */
 
-    // Recalculate total value dynamically based on current prices and rates
+    // Fallback rates for currencies not in exchangeRates
+    const FALLBACK_RATES: Record<string, number> = {
+        EUR: 1, USD: 1.09, TRY: 38.5, GBP: 0.85, CHF: 0.94, JPY: 162
+    };
+
+    // Calculate total value - prefer server-provided totalValueEUR per asset
     const totalPortfolioValue = assets.reduce((sum, asset) => {
+        // CRITICAL: Prefer server-calculated totalValueEUR to avoid rate issues
+        if (asset.totalValueEUR && asset.totalValueEUR > 0) {
+            return sum + asset.totalValueEUR;
+        }
+
         // Special handling for BES - value comes from metadata
         if (asset.type === 'BES' && asset.metadata) {
             const besMeta = asset.metadata as BESMetadata;
             const totalKP = besMeta?.contracts?.reduce((s: number, c: any) => s + (c.katkiPayi || 0), 0) || 0;
             const totalDK = besMeta?.contracts?.reduce((s: number, c: any) => s + (c.devletKatkisi || 0), 0) || 0;
             const besTotal = totalKP + totalDK;
-            const tryToEur = exchangeRates?.['TRY'] || 1;
+            const tryToEur = exchangeRates?.['TRY'] || FALLBACK_RATES['TRY'];
             return sum + (besTotal / tryToEur);
         }
 
+        // Fallback calculation only if server value is missing
         const price = asset.currentPrice || asset.price || asset.previousClose || 0;
         const quantity = asset.quantity || 0;
         const value = price * quantity;
         const currency = asset.currency || 'EUR';
 
-        let rateToEur = 1;
-        if (currency !== 'EUR') {
-            if (exchangeRates && exchangeRates[currency]) {
-                rateToEur = exchangeRates[currency];
-            }
-        }
+        // Use exchangeRates with fallback to FALLBACK_RATES
+        const rateToEur = exchangeRates?.[currency] || FALLBACK_RATES[currency] || 1;
         const valueEur = value / rateToEur;
         return sum + valueEur;
     }, 0);
@@ -1736,22 +1743,15 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                     const currency = asset.currency || 'EUR';
 
                                                     // Calculate values in EUR first (Base)
-                                                    let rateToEur = 1;
-                                                    if (currency !== 'EUR') {
-                                                        if (exchangeRates && exchangeRates[currency]) {
-                                                            rateToEur = exchangeRates[currency];
-                                                        }
-                                                    }
+                                                    // Use exchangeRates with fallback to FALLBACK_RATES
+                                                    const rateToEur = exchangeRates?.[currency] || FALLBACK_RATES[currency] || 1;
                                                     const valueEur = value / rateToEur;
                                                     const costEur = costValue / rateToEur;
 
                                                     // Convert to Global Currency (e.g. USD) if needed
-                                                    let globalRate = 1;
-                                                    if (globalCurrency !== 'EUR') {
-                                                        if (exchangeRates && exchangeRates[globalCurrency]) {
-                                                            globalRate = exchangeRates[globalCurrency];
-                                                        }
-                                                    }
+                                                    const globalRate = globalCurrency !== 'EUR'
+                                                        ? (exchangeRates?.[globalCurrency] || FALLBACK_RATES[globalCurrency] || 1)
+                                                        : 1;
 
                                                     const valueGlobal = valueEur * globalRate;
                                                     const costGlobal = costEur * globalRate;
@@ -1769,9 +1769,11 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                 const besKP = besMeta?.contracts?.reduce((s: number, c: any) => s + (c.katkiPayi || 0), 0) || 0;
                                                 const besDK = besMeta?.contracts?.reduce((s: number, c: any) => s + (c.devletKatkisi || 0), 0) || 0;
                                                 const besTotal = besKP + besDK;
-                                                const tryToEur = exchangeRates?.['TRY'] || 1;
+                                                const tryToEur = exchangeRates?.['TRY'] || FALLBACK_RATES['TRY'];
                                                 const besTotalEur = besTotal / tryToEur;
-                                                const besGlobalRate = (globalCurrency !== 'EUR' && exchangeRates?.[globalCurrency]) ? exchangeRates[globalCurrency] : 1;
+                                                const besGlobalRate = globalCurrency !== 'EUR'
+                                                    ? (exchangeRates?.[globalCurrency] || FALLBACK_RATES[globalCurrency] || 1)
+                                                    : 1;
                                                 const besTotalGlobal = besTotalEur * besGlobalRate;
                                                 const besWeight = totalPortfolioValue > 0 ? (besTotalEur / totalPortfolioValue) * 100 : 0;
 
@@ -2259,20 +2261,28 @@ function AllocationsFullScreen({ assets, exchangeRates }: { assets: any[], excha
         setExpandedCategory(null);
     }, [selectedType]);
 
-    // Process assets to include totalValueEUR for the chart
+    // Process assets - use server-calculated totalValueEUR if available
+    // Fallback calculation only if server value is missing
     const processedAssets = React.useMemo(() => {
+        // Fallback rates if exchangeRates is incomplete
+        const FALLBACK_RATES: Record<string, number> = {
+            EUR: 1, USD: 1.09, TRY: 38.5, GBP: 0.85, CHF: 0.94, JPY: 162
+        };
+
         return assets.map(asset => {
+            // CRITICAL: Prefer server-calculated totalValueEUR to avoid client-side rate issues
+            if (asset.totalValueEUR && asset.totalValueEUR > 0) {
+                return asset;
+            }
+
+            // Fallback calculation only if server value is missing
             const price = asset.currentPrice || asset.price || 0;
             const quantity = asset.quantity || 0;
             const value = price * quantity;
 
             const currency = asset.currency || 'EUR';
-            let rate = 1;
-            if (currency !== 'EUR') {
-                if (exchangeRates && exchangeRates[currency]) {
-                    rate = exchangeRates[currency];
-                }
-            }
+            // Use exchangeRates with fallback to FALLBACK_RATES
+            const rate = exchangeRates?.[currency] || FALLBACK_RATES[currency] || 1;
             const valueEur = value / rate;
 
             return {
