@@ -11,6 +11,7 @@ import { MobileAssetModal } from "./MobileAssetModal";
 import { MobileAddAsset } from "./MobileAddAsset";
 import { MobileImpactSheet } from "./MobileImpactSheet";
 import { MobileVisionTab } from "./MobileVisionTab";
+import { PullToRefresh } from "./PullToRefresh";
 import { SettingsPage } from "../SettingsPage";
 import type { AssetDisplay } from "@/lib/types";
 import { ArrowLeft } from "lucide-react";
@@ -149,11 +150,13 @@ export function MobileDashboard({
             />
 
             {/* Main Content */}
-            <div style={{
-                flex: 1,
-                overflow: 'hidden',
-                paddingTop: '8px'
-            }}>
+            <PullToRefresh>
+                <div style={{
+                    flex: 1,
+                    overflow: 'hidden',
+                    paddingTop: '8px',
+                    height: '100%'
+                }}>
 
                 <AnimatePresence mode="wait">
                     {/* --- GLOBAL: ADD ASSET VIEW --- */}
@@ -291,7 +294,8 @@ export function MobileDashboard({
                     )}
                 </AnimatePresence>
 
-            </div>
+                </div>
+            </PullToRefresh>
 
             {/* Bottom Navigation */}
             <MobileBottomNav
