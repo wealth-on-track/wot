@@ -49,8 +49,12 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
 export function useCurrency() {
     const context = useContext(CurrencyContext);
+    // Return safe defaults during SSR when CurrencyProvider is not yet mounted
     if (context === undefined) {
-        throw new Error('useCurrency must be used within a CurrencyProvider');
+        return {
+            currency: 'EUR' as const,
+            setCurrency: () => {}
+        };
     }
     return context;
 }
