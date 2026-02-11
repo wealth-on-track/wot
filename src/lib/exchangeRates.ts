@@ -15,13 +15,17 @@ export interface RatesMap {
 // Prevent concurrent fetches (race condition protection)
 let fetchInProgress: Promise<RatesMap> | null = null;
 
-// Emergency fallback rates (updated periodically)
+// Emergency fallback rates (updated periodically - Feb 2026)
+// CRITICAL: These ensure conversions never fail even if API/DB is unavailable
 const FALLBACK_RATES: Record<string, number> = {
-    USD: 1.09,
-    TRY: 37.5,
-    GBP: 0.85,
-    CHF: 0.95,
-    JPY: 165.0,
+    EUR: 1,
+    USD: 1.05,
+    TRY: 38.5,
+    GBP: 0.84,
+    CHF: 0.94,
+    JPY: 162,
+    CAD: 1.48,
+    AUD: 1.65,
 };
 
 /**
@@ -63,6 +67,10 @@ export async function getExchangeRates(): Promise<RatesMap> {
 }
 
 async function fetchExchangeRatesInternal(): Promise<RatesMap> {
+    // CRITICAL: Start with fallback rates as base layer
+    // This ensures conversions NEVER fail even if DB/API unavailable
+    const rates: RatesMap = { ...FALLBACK_RATES };
+
     // 0. Detect Required Currencies dynamically from Assets
     const activeAssets = await prisma.asset.findMany({
         where: { quantity: { gt: 0 } },
@@ -73,13 +81,12 @@ async function fetchExchangeRatesInternal(): Promise<RatesMap> {
     const activeCurrencies = activeAssets.map(a => a.currency).filter(c => c !== 'EUR');
     const requiredCurrencies = Array.from(new Set([...activeCurrencies, 'USD', 'TRY']));
 
-    // 1. Check DB
+    // 1. Check DB and overlay on top of fallbacks
     const storedRates = await prisma.exchangeRate.findMany();
 
-    const rates: RatesMap = { EUR: 1 };
     let needsUpdate = false;
 
-    // Populate rates from DB
+    // Populate rates from DB (overwrites fallbacks with real data)
     for (const r of storedRates) {
         rates[r.currency] = r.rate;
     }

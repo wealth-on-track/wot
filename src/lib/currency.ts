@@ -78,12 +78,19 @@ export const getCurrencySymbol = (currency: string): string => {
 
 // Calculate exchange rate from source currency to target currency
 export const getRate = (from: string, to: string, customRates?: Record<string, number>): number => {
-    const rates = customRates || RATES;
-    const fromRate = rates[from];
-    const toRate = rates[to];
+    // CRITICAL FIX: Always merge customRates with RATES as fallback
+    // This prevents 1:1 conversion when a currency is missing from customRates
+    const rates = customRates ? { ...RATES, ...customRates } : RATES;
 
-    // Fallback if currency not found
-    if (!fromRate || !toRate) return 1;
+    // Get rates with fallback to RATES constants for missing currencies
+    const fromRate = rates[from] || RATES[from];
+    const toRate = rates[to] || RATES[to];
+
+    // Final fallback if currency still not found (should never happen for standard currencies)
+    if (!fromRate || !toRate) {
+        console.warn(`[Currency] Missing rate for ${from} -> ${to}, using 1:1 fallback`);
+        return 1;
+    }
 
     return toRate / fromRate;
 };
