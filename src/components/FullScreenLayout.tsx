@@ -3124,18 +3124,60 @@ function TopPerformersFullScreen({ assets }: { assets: any[] }) {
     type SortOrder = 'asc' | 'desc';
     const [sortBy, setSortBy] = React.useState<TimePeriod>('1D');
     const [sortOrder, setSortOrder] = React.useState<SortOrder>('desc');
+    const [performanceData, setPerformanceData] = React.useState<Map<string, any>>(new Map());
+    const [loading, setLoading] = React.useState(true);
 
-    // Mock performance data for different time periods (replace with real data)
+    // Deduplicate assets by symbol
+    const uniqueAssets = React.useMemo(() => {
+        const seen = new Set();
+        return assets.filter(asset => {
+            const key = asset.symbol;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return asset.quantity > 0; // Only show assets with positive quantity
+        });
+    }, [assets]);
+
+    // Fetch real performance data
+    React.useEffect(() => {
+        let isMounted = true;
+
+        async function fetchPerformance() {
+            setLoading(true);
+            try {
+                const { getBulkAssetPerformance } = await import("@/app/actions/performance");
+                const results = await getBulkAssetPerformance(uniqueAssets, 'EUR');
+
+                if (!isMounted) return;
+
+                const perfMap = new Map();
+                results.forEach(r => {
+                    perfMap.set(r.symbol, r.perf);
+                });
+                setPerformanceData(perfMap);
+            } catch (err) {
+                console.error("Failed to load performance data", err);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        }
+
+        if (uniqueAssets.length > 0) {
+            fetchPerformance();
+        } else {
+            setLoading(false);
+        }
+
+        return () => { isMounted = false; };
+    }, [uniqueAssets]);
+
+    // Get performance for a specific asset and period
     const getPerformance = (asset: any, period: TimePeriod): number => {
-        // This should come from real historical data
-        const mockData: Record<TimePeriod, number> = {
-            '1D': (asset.plPercentage || 0) * 0.1,
-            '1W': (asset.plPercentage || 0) * 0.3,
-            '1M': (asset.plPercentage || 0) * 0.6,
-            'YTD': (asset.plPercentage || 0) * 0.8,
-            '1Y': asset.plPercentage || 0
-        };
-        return mockData[period];
+        const perf = performanceData.get(asset.symbol);
+        if (!perf) return 0;
+
+        const key = `changePercent${period}` as keyof typeof perf;
+        return perf[key] || 0;
     };
 
     const handleSort = (period: TimePeriod) => {
@@ -3148,17 +3190,6 @@ function TopPerformersFullScreen({ assets }: { assets: any[] }) {
             setSortOrder('desc');
         }
     };
-
-    // Deduplicate assets by symbol
-    const uniqueAssets = React.useMemo(() => {
-        const seen = new Set();
-        return assets.filter(asset => {
-            const key = asset.symbol;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-        });
-    }, [assets]);
 
     const sortedAssets = [...uniqueAssets]
         .sort((a, b) => {
@@ -3231,7 +3262,16 @@ function TopPerformersFullScreen({ assets }: { assets: any[] }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {sortedAssets.map((asset, i) => (
+                        {loading ? (
+                            <tr>
+                                <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                                        <Clock className="animate-spin" size={24} style={{ opacity: 0.5 }} />
+                                        <span>Loading performance data...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : sortedAssets.map((asset, i) => (
                             <tr key={asset.id} style={{ borderBottom: i < sortedAssets.length - 1 ? '1px solid var(--border)' : 'none' }}>
                                 <td style={{ padding: '6px 12px' }}>
                                     <div style={{
@@ -3277,7 +3317,8 @@ function TopPerformersFullScreen({ assets }: { assets: any[] }) {
                                     );
                                 })}
                             </tr>
-                        ))}
+                        ))
+                        }
                     </tbody>
                 </table>
             </div>
