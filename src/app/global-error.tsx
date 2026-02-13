@@ -2,10 +2,9 @@
 
 /**
  * Global Error Boundary
- * Catches unhandled errors at the root level and reports to Sentry
+ * Catches unhandled errors at the root level
  */
 
-import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 
 export default function GlobalError({
@@ -16,15 +15,8 @@ export default function GlobalError({
     reset: () => void;
 }) {
     useEffect(() => {
-        // Report error to Sentry
-        Sentry.captureException(error, {
-            tags: {
-                errorBoundary: 'global',
-            },
-            extra: {
-                digest: error.digest,
-            },
-        });
+        // Log error to console
+        console.error('[GlobalError]', error, { digest: error.digest });
     }, [error]);
 
     return (

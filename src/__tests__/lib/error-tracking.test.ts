@@ -18,39 +18,34 @@ describe('Error Tracking', () => {
     });
 
     describe('initErrorTracking', () => {
-        it('should warn when Sentry DSN is not configured in production', async () => {
-            process.env.NODE_ENV = 'production';
-            delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+        it('should log init message in development', async () => {
+            process.env.NODE_ENV = 'development';
 
             const { initErrorTracking } = await import('@/lib/error-tracking');
             await initErrorTracking();
 
-            expect(console.warn).toHaveBeenCalledWith(
-                expect.stringContaining('Sentry DSN not configured')
+            expect(console.log).toHaveBeenCalledWith(
+                expect.stringContaining('Using console-based error tracking')
             );
         });
 
-        it('should not warn in development when DSN not configured', async () => {
-            process.env.NODE_ENV = 'development';
-            delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+        it('should not log in production', async () => {
+            process.env.NODE_ENV = 'production';
 
-            const consoleSpy = vi.spyOn(console, 'warn');
+            const consoleSpy = vi.spyOn(console, 'log');
 
             const { initErrorTracking } = await import('@/lib/error-tracking');
             await initErrorTracking();
 
-            // Should not log warning in development
-            const warningCalls = consoleSpy.mock.calls.filter(
-                call => call[0]?.includes?.('Sentry DSN not configured')
+            const logCalls = consoleSpy.mock.calls.filter(
+                call => call[0]?.includes?.('Using console-based')
             );
-            expect(warningCalls.length).toBe(0);
+            expect(logCalls.length).toBe(0);
         });
     });
 
     describe('captureError', () => {
         it('should always log error to console', async () => {
-            delete process.env.NEXT_PUBLIC_SENTRY_DSN;
-
             const { captureError } = await import('@/lib/error-tracking');
 
             const error = new Error('Test error');
@@ -64,8 +59,6 @@ describe('Error Tracking', () => {
         });
 
         it('should handle string errors', async () => {
-            delete process.env.NEXT_PUBLIC_SENTRY_DSN;
-
             const { captureError } = await import('@/lib/error-tracking');
 
             await captureError('String error message');
@@ -78,8 +71,6 @@ describe('Error Tracking', () => {
         });
 
         it('should include context in error logging', async () => {
-            delete process.env.NEXT_PUBLIC_SENTRY_DSN;
-
             const { captureError } = await import('@/lib/error-tracking');
 
             await captureError(new Error('Test'), {
@@ -104,8 +95,6 @@ describe('Error Tracking', () => {
 
     describe('captureWarning', () => {
         it('should log warning to console', async () => {
-            delete process.env.NEXT_PUBLIC_SENTRY_DSN;
-
             const { captureWarning } = await import('@/lib/error-tracking');
 
             await captureWarning('Test warning', { action: 'test' });
@@ -119,9 +108,7 @@ describe('Error Tracking', () => {
     });
 
     describe('startSpan', () => {
-        it('should return mock span when Sentry disabled', async () => {
-            delete process.env.NEXT_PUBLIC_SENTRY_DSN;
-
+        it('should return mock span', async () => {
             const { startSpan } = await import('@/lib/error-tracking');
 
             const span = await startSpan('test-operation', 'db.query');
@@ -132,15 +119,15 @@ describe('Error Tracking', () => {
             expect(typeof span.setStatus).toBe('function');
         });
 
-        it('should log performance debug on span end', async () => {
-            delete process.env.NEXT_PUBLIC_SENTRY_DSN;
+        it('should log performance debug on span end in development', async () => {
+            process.env.NODE_ENV = 'development';
+            vi.resetModules();
 
             const { startSpan } = await import('@/lib/error-tracking');
 
             const span = await startSpan('test-operation', 'db.query');
             span.end();
 
-            // The debug log is a single formatted string containing both [Performance] and the operation name
             expect(console.debug).toHaveBeenCalledWith(
                 expect.stringMatching(/\[Performance\].*test-operation/)
             );
@@ -148,9 +135,7 @@ describe('Error Tracking', () => {
     });
 
     describe('setUser', () => {
-        it('should not throw when Sentry disabled', async () => {
-            delete process.env.NEXT_PUBLIC_SENTRY_DSN;
-
+        it('should not throw', async () => {
             const { setUser } = await import('@/lib/error-tracking');
 
             // Should not throw
@@ -160,9 +145,7 @@ describe('Error Tracking', () => {
     });
 
     describe('addBreadcrumb', () => {
-        it('should not throw when Sentry disabled', async () => {
-            delete process.env.NEXT_PUBLIC_SENTRY_DSN;
-
+        it('should not throw', async () => {
             const { addBreadcrumb } = await import('@/lib/error-tracking');
 
             await expect(

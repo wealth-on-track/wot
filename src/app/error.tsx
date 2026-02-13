@@ -2,10 +2,9 @@
 
 /**
  * Page-Level Error Boundary
- * Catches errors in page components and reports to Sentry
+ * Catches errors in page components
  */
 
-import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 import Link from "next/link";
 
@@ -17,15 +16,8 @@ export default function Error({
     reset: () => void;
 }) {
     useEffect(() => {
-        // Report error to Sentry
-        Sentry.captureException(error, {
-            tags: {
-                errorBoundary: 'page',
-            },
-            extra: {
-                digest: error.digest,
-            },
-        });
+        // Log error to console
+        console.error('[PageError]', error, { digest: error.digest });
     }, [error]);
 
     return (
