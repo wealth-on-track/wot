@@ -22,6 +22,10 @@ export default defineConfig({
         'prisma/',
       ],
     },
+    deps: {
+      // Mark optional dependencies as external to prevent bundling errors
+      external: ['@vercel/blob', '@aws-sdk/client-s3'],
+    },
   },
   resolve: {
     alias: {

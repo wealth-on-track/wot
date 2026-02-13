@@ -1,8 +1,23 @@
 import { apiCache } from '@/lib/cache';
 import { trackApiRequest } from '@/services/telemetry';
+import { fetchWithTimeout, API_TIMEOUT } from '@/lib/fetch-with-timeout';
 
-const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || 'demo';
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
+
+/**
+ * Get Finnhub API key from environment
+ * Returns null if not configured (disables Finnhub features)
+ */
+function getFinnhubApiKey(): string | null {
+    const key = process.env.FINNHUB_API_KEY;
+    if (!key) {
+        if (process.env.NODE_ENV === 'development') {
+            console.warn('[Finnhub] API key not configured - Finnhub features disabled');
+        }
+        return null;
+    }
+    return key;
+}
 
 export interface FinnhubSymbol {
     description: string;
@@ -37,14 +52,18 @@ export interface FinnhubProfile {
 export async function searchSymbols(query: string): Promise<FinnhubSymbol[]> {
     if (!query || query.length < 2) return [];
 
+    const apiKey = getFinnhubApiKey();
+    if (!apiKey) return [];
+
     const cacheKey = `search:${query.toLowerCase()}`;
     const cached = apiCache.get<FinnhubSymbol[]>(cacheKey);
 
     if (cached) return cached;
 
     try {
-        const response = await fetch(
-            `${FINNHUB_BASE_URL}/search?q=${encodeURIComponent(query)}&token=${FINNHUB_API_KEY}`
+        const response = await fetchWithTimeout(
+            `${FINNHUB_BASE_URL}/search?q=${encodeURIComponent(query)}&token=${apiKey}`,
+            { timeout: API_TIMEOUT }
         );
 
         if (!response.ok) {
@@ -69,14 +88,18 @@ export async function searchSymbols(query: string): Promise<FinnhubSymbol[]> {
  * Get real-time quote for a symbol
  */
 export async function getQuote(symbol: string): Promise<FinnhubQuote | null> {
+    const apiKey = getFinnhubApiKey();
+    if (!apiKey) return null;
+
     const cacheKey = `quote:${symbol.toUpperCase()}`;
     const cached = apiCache.get<FinnhubQuote>(cacheKey);
 
     if (cached) return cached;
 
     try {
-        const response = await fetch(
-            `${FINNHUB_BASE_URL}/quote?symbol=${encodeURIComponent(symbol)}&token=${FINNHUB_API_KEY}`
+        const response = await fetchWithTimeout(
+            `${FINNHUB_BASE_URL}/quote?symbol=${encodeURIComponent(symbol)}&token=${apiKey}`,
+            { timeout: API_TIMEOUT }
         );
 
         if (!response.ok) {
@@ -102,16 +125,19 @@ export async function getQuote(symbol: string): Promise<FinnhubQuote | null> {
  * Get company profile
  */
 export async function getCompanyProfile(symbol: string): Promise<FinnhubProfile | null> {
+    const apiKey = getFinnhubApiKey();
+    if (!apiKey) return null;
+
     const cacheKey = `profile:${symbol.toUpperCase()}`;
     const cached = apiCache.get<FinnhubProfile>(cacheKey);
 
     if (cached) return cached;
 
-
     const startTime = Date.now();
     try {
-        const response = await fetch(
-            `${FINNHUB_BASE_URL}/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${FINNHUB_API_KEY}`
+        const response = await fetchWithTimeout(
+            `${FINNHUB_BASE_URL}/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${apiKey}`,
+            { timeout: API_TIMEOUT }
         );
 
         if (!response.ok) {

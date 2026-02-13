@@ -189,7 +189,12 @@ export const getLogoUrl = (symbol: string, type: string, exchange?: string, coun
         }
 
         // Logo.dev provides high-quality logos for stocks using ticker symbols
-        const apiKey = process.env.NEXT_PUBLIC_LOGODEV_API_KEY || 'pk_OYRe85gjScGyAdhJcb1Jag';
+        // SECURITY: API key required - no fallback to prevent key exposure
+        const apiKey = process.env.NEXT_PUBLIC_LOGODEV_API_KEY;
+        if (!apiKey) {
+            // Return null to use letter-based placeholder when API key not configured
+            return null;
+        }
 
         // GLOBAL SAFETY CLEANUP:
         // If the symbol looks like 'ETH-EUR' or 'BTC-USD', strip the suffix

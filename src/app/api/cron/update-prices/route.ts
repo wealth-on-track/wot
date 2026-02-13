@@ -1,13 +1,27 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { updateAllPrices } from '@/services/priceUpdateService';
+import { verifyCronAuth, sanitizeError } from '@/lib/api-security';
 
 // Force dynamic to prevent static generation
 export const dynamic = 'force-dynamic';
 // Allow longer execution for batching
 export const maxDuration = 300;
 
-export async function GET(request: Request) {
+/**
+ * Price Update Cron Job
+ *
+ * Security:
+ * - Requires CRON_SECRET authentication (mandatory in production)
+ * - Time-gated to skip night hours (00:00-08:00 CET)
+ */
+export async function GET(request: NextRequest) {
     try {
+        // Verify CRON authentication
+        const authError = verifyCronAuth(request);
+        if (authError) {
+            return authError;
+        }
+
         console.log("[Cron] Starting Manual/Scheduled Price Update...");
 
         // Skip updates between 00:00-08:00 CET
@@ -29,8 +43,12 @@ export async function GET(request: Request) {
         const result = await updateAllPrices();
         console.log("[Cron] Update Result:", result);
         return NextResponse.json(result);
-    } catch (error: any) {
+    } catch (error) {
+        const sanitized = sanitizeError(error, 'Price update failed');
         console.error("[Cron] Failed:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { success: false, error: sanitized.error, code: sanitized.code },
+            { status: sanitized.status }
+        );
     }
 }

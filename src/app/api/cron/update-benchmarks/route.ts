@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { normalizeToMidnight } from '@/lib/yahoo-finance';
+import { verifyCronAuth, sanitizeError } from '@/lib/api-security';
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes max
@@ -14,14 +16,15 @@ const BENCHMARKS = [
 ];
 
 async function fetchHistoricalData(symbol: string) {
-    // Fetch last 2 years (approx 730 days) to be safe for 1Y/YTD charts
+    // Fetch last 2 years (approx 730 days)
     const end = Math.floor(Date.now() / 1000);
     const start = end - (730 * 24 * 60 * 60);
 
     const url = `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&period1=${start}&period2=${end}`;
 
     try {
-        const response = await fetch(url, {
+        const response = await fetchWithTimeout(url, {
+            timeout: 30000, // 30 second timeout
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 'Accept': '*/*',
@@ -47,7 +50,7 @@ async function fetchHistoricalData(symbol: string) {
         return timestamps.map((ts: number, i: number) => ({
             date: new Date(ts * 1000),
             price: closes[i]
-        })).filter((item: any) => item.price != null);
+        })).filter((item: { date: Date; price: number | null }) => item.price != null);
 
     } catch (e) {
         console.error(`Error fetching ${symbol}:`, e);
@@ -55,7 +58,19 @@ async function fetchHistoricalData(symbol: string) {
     }
 }
 
-export async function GET() {
+/**
+ * Benchmark Update Cron Job
+ *
+ * Security:
+ * - Requires CRON_SECRET authentication (mandatory in production)
+ */
+export async function GET(request: NextRequest) {
+    // Verify CRON authentication
+    const authError = verifyCronAuth(request);
+    if (authError) {
+        return authError;
+    }
+
     console.log('[Cron] Starting Daily Benchmark Update...');
     const results = [];
 
@@ -72,38 +87,19 @@ export async function GET() {
 
             console.log(`[Cron] Got ${data.length} data points for ${bench.symbol}. Saving to DB...`);
 
-            // Batch create/update
-            // Since we can't do massive "upsertMany" easily in Prisma without raw SQL or loops
-            // We'll use a transaction with individual upserts or delete/create for range
-            // For simplicity and robustness, let's just upsert the last 30 days individually
-            // AND doing a full seed if it's the first time?
-            // Actually, "createMany" with "skipDuplicates" is best for history, but updates won't happen.
-            // But history doesn't change much. Only today/yesterday changes.
-
-            // Strategy: 
-            // 1. Delete records for this symbol in the date range to avoid conflicts? No, risky.
-            // 2. Loop and upsert. A bit slow but safe for 730 records x 5 assets = 3500 ops.
-            //    Prisma transaction can handle it.
-
-            // Optimization: Filter out dates that already exist? 
-            // Let's just createMany with skipDuplicates for bulk history
-            // And then upsert the last 5 days to ensure latest data is correct.
-
-            const normalizedData = data.map((d: any) => ({
+            const normalizedData = data.map((d: { date: Date; price: number }) => ({
                 symbol: bench.symbol,
                 date: normalizeToMidnight(d.date),
                 price: d.price
             }));
 
-            // 1. Try to bulk insert everything (ignoring duplicates)
-            // This fills in any missing history efficiently
+            // 1. Bulk insert (ignoring duplicates)
             await prisma.benchmarkPrice.createMany({
                 data: normalizedData,
                 skipDuplicates: true,
             });
 
-            // 2. Explicitly update the last 14 days to catch any data corrections/adjustments
-            // (Yahoo sometimes updates recent closes)
+            // 2. Update last 14 days for data corrections
             const recentData = normalizedData.slice(-14);
             for (const item of recentData) {
                 await prisma.benchmarkPrice.upsert({
@@ -123,8 +119,12 @@ export async function GET() {
 
         return NextResponse.json({ success: true, results });
 
-    } catch (error: any) {
+    } catch (error) {
+        const sanitized = sanitizeError(error, 'Benchmark update failed');
         console.error('[Cron] Benchmark update failed:', error);
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { success: false, error: sanitized.error, code: sanitized.code },
+            { status: sanitized.status }
+        );
     }
 }

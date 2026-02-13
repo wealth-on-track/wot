@@ -1,0 +1,481 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Wealth on Track API",
+    "description": "Portfolio tracking and management API for personal finance",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support",
+      "url": "https://wealthontrack.app/support"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://wealthontrack.app/api",
+      "description": "Production"
+    },
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Development"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Portfolio",
+      "description": "Portfolio management endpoints"
+    },
+    {
+      "name": "Assets",
+      "description": "Asset and position management"
+    },
+    {
+      "name": "GDPR",
+      "description": "Privacy and data management"
+    },
+    {
+      "name": "Admin",
+      "description": "Administrative endpoints (requires admin role)"
+    },
+    {
+      "name": "CRON",
+      "description": "Scheduled job endpoints (internal use)"
+    }
+  ],
+  "paths": {
+    "/portfolio/{username}": {
+      "get": {
+        "tags": ["Portfolio"],
+        "summary": "Get user portfolio",
+        "description": "Retrieve portfolio data for a specific user. Requires authentication for private portfolios.",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 30,
+              "pattern": "^[a-zA-Z0-9_-]+$"
+            },
+            "description": "Username of the portfolio owner"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portfolio data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/portfolio/{username}/history": {
+      "get": {
+        "tags": ["Portfolio"],
+        "summary": "Get portfolio history",
+        "description": "Retrieve historical portfolio value snapshots",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["1D", "1W", "1M", "3M", "6M", "YTD", "1Y", "ALL"]
+            },
+            "description": "Time period for history"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portfolio history data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gdpr/export": {
+      "get": {
+        "tags": ["GDPR"],
+        "summary": "Export user data",
+        "description": "Download all personal data in JSON format (GDPR/KVKK compliance)",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "User data export",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataExport"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/gdpr/delete": {
+      "delete": {
+        "tags": ["GDPR"],
+        "summary": "Delete user account",
+        "description": "Permanently delete account and all associated data",
+        "security": [{ "cookieAuth": [] }],
+        "parameters": [
+          {
+            "name": "confirmation",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["DELETE_MY_ACCOUNT"]
+            },
+            "description": "Confirmation string to prevent accidental deletion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "deletedAt": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Confirmation required"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/gdpr/consent": {
+      "get": {
+        "tags": ["GDPR"],
+        "summary": "Get consent status",
+        "description": "Retrieve current privacy consent preferences",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Consent preferences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["GDPR"],
+        "summary": "Update consent preferences",
+        "description": "Update privacy consent settings",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Consent updated successfully"
+          }
+        }
+      }
+    },
+    "/admin/backups": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get backup statistics",
+        "description": "View backup status and storage information",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Backup statistics"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Trigger manual backup",
+        "description": "Create an immediate database backup",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Backup created successfully"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/cron/backup": {
+      "get": {
+        "tags": ["CRON"],
+        "summary": "Daily backup job",
+        "description": "Creates database backup (scheduled daily at 03:00 UTC)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Backup completed"
+          },
+          "401": {
+            "description": "Invalid CRON secret"
+          }
+        }
+      }
+    },
+    "/cron/cleanup-logs": {
+      "get": {
+        "tags": ["CRON"],
+        "summary": "Log cleanup job",
+        "description": "Removes old audit logs based on retention policy (weekly)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Cleanup completed"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "authjs.session-token",
+        "description": "NextAuth.js session cookie"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "CRON_SECRET token for scheduled jobs"
+      }
+    },
+    "schemas": {
+      "Asset": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "symbol": { "type": "string" },
+          "name": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["STOCK", "CRYPTO", "GOLD", "BOND", "FUND", "CASH", "COMMODITY", "CURRENCY", "ETF"]
+          },
+          "category": {
+            "type": "string",
+            "enum": ["BIST", "TEFAS", "US_MARKETS", "EU_MARKETS", "CRYPTO", "COMMODITIES", "FX", "CASH", "BENCHMARK", "BES"]
+          },
+          "quantity": { "type": "number" },
+          "buyPrice": { "type": "number" },
+          "currency": { "type": "string" },
+          "exchange": { "type": "string" },
+          "sector": { "type": "string" },
+          "country": { "type": "string" }
+        }
+      },
+      "PortfolioResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "totalValue": { "type": "number" },
+              "totalValueEUR": { "type": "number" },
+              "assets": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/Asset" }
+              }
+            }
+          },
+          "meta": { "$ref": "#/components/schemas/ResponseMeta" }
+        }
+      },
+      "HistoryResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": { "type": "string", "format": "date-time" },
+                "value": { "type": "number" }
+              }
+            }
+          }
+        }
+      },
+      "DataExport": {
+        "type": "object",
+        "properties": {
+          "exportedAt": { "type": "string", "format": "date-time" },
+          "version": { "type": "string" },
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "username": { "type": "string" },
+              "email": { "type": "string" },
+              "role": { "type": "string" },
+              "createdAt": { "type": "string", "format": "date-time" }
+            }
+          },
+          "assets": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Asset" }
+          }
+        }
+      },
+      "ConsentResponse": {
+        "type": "object",
+        "properties": {
+          "consent": {
+            "type": "object",
+            "properties": {
+              "analytics": { "type": "boolean" },
+              "marketing": { "type": "boolean" },
+              "thirdPartySharing": { "type": "boolean" },
+              "portfolioPublic": { "type": "boolean" },
+              "updatedAt": { "type": "string", "format": "date-time" }
+            }
+          },
+          "dataRetentionPolicy": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      },
+      "ConsentUpdate": {
+        "type": "object",
+        "properties": {
+          "analytics": { "type": "boolean" },
+          "marketing": { "type": "boolean" },
+          "thirdPartySharing": { "type": "boolean" },
+          "portfolioPublic": { "type": "boolean" }
+        }
+      },
+      "ResponseMeta": {
+        "type": "object",
+        "properties": {
+          "requestId": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "duration": { "type": "integer" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "enum": [false] },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "details": { "type": "object" }
+            }
+          },
+          "meta": { "$ref": "#/components/schemas/ResponseMeta" }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Authentication required",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Insufficient permissions",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Too many requests",
+        "headers": {
+          "Retry-After": {
+            "schema": { "type": "integer" },
+            "description": "Seconds until rate limit resets"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      }
+    }
+  }
+}

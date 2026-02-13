@@ -1,8 +1,23 @@
 import { apiCache } from '@/lib/cache';
 import { trackApiRequest } from '@/services/telemetry';
+import { fetchWithTimeout, API_TIMEOUT } from '@/lib/fetch-with-timeout';
 
-const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const ALPHA_VANTAGE_BASE_URL = 'https://www.alphavantage.co/query';
+
+/**
+ * Get Alpha Vantage API key from environment
+ * Returns null if not configured (disables Alpha Vantage features)
+ */
+function getAlphaVantageApiKey(): string | null {
+    const key = process.env.ALPHA_VANTAGE_API_KEY;
+    if (!key) {
+        if (process.env.NODE_ENV === 'development') {
+            console.warn('[AlphaVantage] API key not configured - AlphaVantage features disabled');
+        }
+        return null;
+    }
+    return key;
+}
 
 export interface AlphaVantageProfile {
     Symbol: string;
@@ -22,6 +37,9 @@ export interface AlphaVantageProfile {
  * Includes: country, sector, industry
  */
 export async function getCompanyOverview(symbol: string): Promise<{ country?: string, sector?: string, industry?: string } | null> {
+    const apiKey = getAlphaVantageApiKey();
+    if (!apiKey) return null;
+
     const cacheKey = `alphavantage_profile_${symbol}`;
 
     // Check cache first (24 hours)
@@ -30,11 +48,10 @@ export async function getCompanyOverview(symbol: string): Promise<{ country?: st
         return cached;
     }
 
-
     const startTime = Date.now();
     try {
-        const url = `${ALPHA_VANTAGE_BASE_URL}?function=OVERVIEW&symbol=${encodeURIComponent(symbol)}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-        const response = await fetch(url);
+        const url = `${ALPHA_VANTAGE_BASE_URL}?function=OVERVIEW&symbol=${encodeURIComponent(symbol)}&apikey=${apiKey}`;
+        const response = await fetchWithTimeout(url, { timeout: API_TIMEOUT });
 
         if (!response.ok) {
             console.error('[AlphaVantage] API error:', response.status);

@@ -182,7 +182,8 @@ async function processAssetFast(
         asset.type
     );
 
-    // 8. Historical Performance (1W, 1M, YTD, 1Y)
+    // 8. Historical Performance (1D, 1W, 1M, YTD, 1Y)
+    let changePercent1D = 0;
     let changePercent1W = 0;
     let changePercent1M = 0;
     let changePercentYTD = 0;
@@ -209,6 +210,7 @@ async function processAssetFast(
                 'EUR'
             );
 
+            changePercent1D = performance.changePercent1D;
             changePercent1W = performance.changePercent1W;
             changePercent1M = performance.changePercent1M;
             changePercentYTD = performance.changePercentYTD;
@@ -219,22 +221,54 @@ async function processAssetFast(
         }
     }
 
+    // For 1D: PRIORITIZE historical calculation because it uses validated previousClose
+    // Yahoo's priceData.changePercent often uses chartPreviousClose (wrong reference price)
+    // For 1W, 1M, YTD, 1Y: Use historical data (only option)
+    let yahooChangePercent1D = priceData?.changePercent || 0;
+
+    // VALIDATE Yahoo's 1D change - reject if suspiciously large (>25% in a day is rare)
+    // This catches cases where Yahoo uses chartPreviousClose (multi-day range start) instead of yesterday's close
+    const MAX_REASONABLE_1D_CHANGE = 25;
+    if (Math.abs(yahooChangePercent1D) > MAX_REASONABLE_1D_CHANGE) {
+        console.warn(`[Portfolio] ${asset.symbol}: Yahoo 1D change ${yahooChangePercent1D.toFixed(2)}% exceeds ${MAX_REASONABLE_1D_CHANGE}% threshold - rejecting as invalid`);
+        yahooChangePercent1D = 0; // Reject suspicious value
+    }
+
+    // Debug log for specific symbols
+    if (asset.symbol === 'SOI.PA' || asset.symbol === 'AAPL') {
+        console.log(`[Portfolio] ${asset.symbol}: historical1D=${changePercent1D.toFixed(2)}%, yahoo1D=${yahooChangePercent1D.toFixed(2)}%`);
+    }
+
+    // PRIORITY: Use historical 1D (validated) first, fallback to Yahoo only if historical is 0
+    // This prevents Yahoo's incorrect chartPreviousClose-based percentages from being used
+    const finalChangePercent1D = changePercent1D !== 0 ? changePercent1D : yahooChangePercent1D;
+
+    // Override changePercent1D with the corrected value
+    changePercent1D = finalChangePercent1D;
+
+    const finalDailyChangePercent = finalChangePercent1D;
+    // Calculate dailyChange value from percentage if we have valid data
+    const finalDailyChange = finalDailyChangePercent !== 0
+        ? (previousCloseInAssetCurrency * finalDailyChangePercent / 100)
+        : (priceData?.change24h || 0);
+
     return {
         ...asset,
         name: assetName,
         currentPrice: currentPriceInAssetCurrency,
-        previousClose: previousCloseInAssetCurrency,  // Actual previous close for 1D calculation
+        previousClose: previousCloseInAssetCurrency,
         totalValueInAssetCurrency,
         totalCostInAssetCurrency,
         totalValueEUR,
         totalCostEUR,
         plValueEUR,
         plPercentage,
-        dailyChange,
-        dailyChangePercentage,
+        dailyChange: finalDailyChange,
+        dailyChangePercentage: finalDailyChangePercent,
         marketState: marketStateStr,
         nextOpen: null,
         nextClose: null,
+        changePercent1D,
         changePercent1W,
         changePercent1M,
         changePercentYTD,

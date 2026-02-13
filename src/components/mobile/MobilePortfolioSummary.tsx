@@ -59,16 +59,25 @@ export function MobilePortfolioSummary({
 
     if (totalValueEUR > 0) {
         if (selectedPeriod === '1D') {
-            // Calculate 1D P&L: Sum((Current - Previous) * Quantity)
-            // If previousClose is missing, assume 0 change (use currentPrice)
+            // Calculate 1D P&L using pre-calculated changePercent1D from history
+            // This is more accurate than (currentPrice - previousClose) since cache may have same values
             const total1D = assets.reduce((sum, asset) => {
+                // Prefer changePercent1D (calculated from historical data) if available
+                const pct1D = (asset as any).changePercent1D || 0;
+                if (pct1D !== 0) {
+                    // Calculate value change from percentage: value * pct / 100
+                    return sum + (asset.totalValueEUR * pct1D / 100);
+                }
+                // Fallback to old method if no history data
                 const prev = asset.previousClose || (asset.currentPrice || 0);
                 const curr = asset.currentPrice || 0;
-                return sum + ((curr - prev) * asset.quantity);
+                const valueChange = (curr - prev) * asset.quantity;
+                // Convert to EUR if needed
+                const rate = rates[asset.currency] || 1;
+                return sum + (valueChange / rate);
             }, 0);
             periodReturnEUR = total1D;
             // % change = P&L / (TotalValue - P&L) -> effectively P&L / YesterdayValue
-            // approximating as P&L / TotalValue for UI unless we want strict yesterday value
             const yesterdayValue = totalValueEUR - periodReturnEUR;
             periodReturnPct = yesterdayValue > 0 ? (periodReturnEUR / yesterdayValue) * 100 : 0;
 
@@ -117,17 +126,20 @@ export function MobilePortfolioSummary({
             // OR (Riskier) leave as 0. 
             // I'll default to 1D for < 1Y and ALL for > 1Y to show *some* real data.
 
-            // actually, let's just use 1D for all short term and ALL for all long term
+            // Use proper historical data for 1W, 1M periods
             if (['1W', '1M'].includes(selectedPeriod)) {
-                // Repeat 1D logic
-                const total1D = assets.reduce((sum, asset) => {
-                    const prev = asset.previousClose || (asset.currentPrice || 0);
-                    const curr = asset.currentPrice || 0;
-                    return sum + ((curr - prev) * asset.quantity);
+                // Use changePercent1W or changePercent1M if available
+                const periodKey = selectedPeriod === '1W' ? 'changePercent1W' : 'changePercent1M';
+                const totalPeriod = assets.reduce((sum, asset) => {
+                    const pct = (asset as any)[periodKey] || 0;
+                    if (pct !== 0) {
+                        return sum + (asset.totalValueEUR * pct / 100);
+                    }
+                    return sum;
                 }, 0);
-                periodReturnEUR = total1D;
-                const yesterdayValue = totalValueEUR - periodReturnEUR;
-                periodReturnPct = yesterdayValue > 0 ? (periodReturnEUR / yesterdayValue) * 100 : 0;
+                periodReturnEUR = totalPeriod;
+                const pastValue = totalValueEUR - periodReturnEUR;
+                periodReturnPct = pastValue > 0 ? (periodReturnEUR / pastValue) * 100 : 0;
             } else {
                 // Repeat ALL logic
                 const totalCostEUR = assets.reduce((sum, asset) => {

@@ -1,16 +1,24 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSearchSymbol } from "@/services/marketData";
 import { getYahooAssetProfile } from "@/services/yahooApi";
 import { getManualMapping } from "@/lib/symbolMapping";
+import { requireAdminAccess } from "@/lib/rbac";
+import { apiMiddleware, STRICT_RATE_LIMIT } from '@/lib/api-security';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST() {
-    const session = await auth();
-    if (!session?.user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function POST(request: NextRequest) {
+    // Apply rate limiting
+    const middlewareResult = await apiMiddleware(request, { rateLimit: STRICT_RATE_LIMIT });
+    if (middlewareResult) return middlewareResult;
+
+    // SECURITY: Require admin role - not just authentication
+    const adminUser = await requireAdminAccess();
+    if (!adminUser) {
+        return NextResponse.json(
+            { error: "Admin access required", code: "FORBIDDEN" },
+            { status: 403 }
+        );
     }
 
     try {

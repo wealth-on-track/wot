@@ -1,9 +1,36 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { apiMiddleware, AUTH_RATE_LIMIT } from "@/lib/api-security";
 
-export async function POST(request: Request) {
+// Password validation regex patterns
+const PASSWORD_MIN_LENGTH = 12;
+const HAS_UPPERCASE = /[A-Z]/;
+const HAS_LOWERCASE = /[a-z]/;
+const HAS_NUMBER = /[0-9]/;
+
+function validatePassword(password: string): { valid: boolean; error?: string } {
+    if (password.length < PASSWORD_MIN_LENGTH) {
+        return { valid: false, error: `Password must be at least ${PASSWORD_MIN_LENGTH} characters` };
+    }
+    if (!HAS_UPPERCASE.test(password)) {
+        return { valid: false, error: 'Password must contain at least one uppercase letter' };
+    }
+    if (!HAS_LOWERCASE.test(password)) {
+        return { valid: false, error: 'Password must contain at least one lowercase letter' };
+    }
+    if (!HAS_NUMBER.test(password)) {
+        return { valid: false, error: 'Password must contain at least one number' };
+    }
+    return { valid: true };
+}
+
+export async function POST(request: NextRequest) {
+    // Apply rate limiting for auth operations
+    const middlewareResult = await apiMiddleware(request, { rateLimit: AUTH_RATE_LIMIT });
+    if (middlewareResult) return middlewareResult;
+
     try {
         // Check authentication
         const session = await auth();
@@ -25,9 +52,11 @@ export async function POST(request: Request) {
             );
         }
 
-        if (newPassword.length < 6) {
+        // Validate password strength
+        const validation = validatePassword(newPassword);
+        if (!validation.valid) {
             return NextResponse.json(
-                { error: 'New password must be at least 6 characters' },
+                { error: validation.error },
                 { status: 400 }
             );
         }

@@ -101,15 +101,15 @@ export default function TopPerformers(props: TopPerformersProps) {
         return () => { isMounted = false; };
     }, [eligibleAssets, period, baseCurrency]); // Recalculate when base currency changes
 
-    // Derived Top 3 based on selected period
-    const top3 = useMemo(() => {
+    // Derived Top 5 based on selected period
+    const top5 = useMemo(() => {
         if (!performanceData.length) return [];
 
         const key = `changePercent${period}` as keyof typeof performanceData[0]['performance'];
 
         return [...performanceData]
             .sort((a, b) => (b.performance[key] || 0) - (a.performance[key] || 0))
-            .slice(0, 3);
+            .slice(0, 5);
     }, [performanceData, period]);
 
 
@@ -137,12 +137,12 @@ export default function TopPerformers(props: TopPerformersProps) {
                 }}>
                     Top Performers
                 </h3>
-                {top3.length > 0 && <IntelligenceTrigger label="Brag" data={{
+                {top5.length > 0 && <IntelligenceTrigger label="Brag" data={{
                     username: props.username || 'Investor',
-                    favouriteAsset: top3[0] ? {
-                        name: top3[0].name,
-                        symbol: top3[0].symbol,
-                        changePercent: top3[0].performance[`changePercent${period}`],
+                    favouriteAsset: top5[0] ? {
+                        name: top5[0].name,
+                        symbol: top5[0].symbol,
+                        changePercent: top5[0].performance[`changePercent${period}`],
                         currentValue: 0
                     } : undefined
                 }} />}
@@ -179,19 +179,20 @@ export default function TopPerformers(props: TopPerformersProps) {
                         <Clock className="animate-spin" size={20} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
                         Calculations...
                     </div>
-                ) : top3.length > 0 ? (
+                ) : top5.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
 
-                        {top3.map((asset, index) => {
+                        {top5.map((asset, index) => {
                             const key = `changePercent${period}` as keyof typeof asset.performance;
                             const val = asset.performance[key];
                             const isPositive = val >= 0;
 
-                            // Medal Colors
-                            const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+                            // Medal Colors / Rank Icons
+                            const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
                             const bgGradient = index === 0 ? 'linear-gradient(90deg, rgba(255, 215, 0, 0.1), transparent)' :
                                 index === 1 ? 'linear-gradient(90deg, rgba(192, 192, 192, 0.1), transparent)' :
-                                    'linear-gradient(90deg, rgba(205, 127, 50, 0.1), transparent)';
+                                index === 2 ? 'linear-gradient(90deg, rgba(205, 127, 50, 0.1), transparent)' :
+                                    'linear-gradient(90deg, rgba(99, 102, 241, 0.05), transparent)';
 
                             return (
                                 <div

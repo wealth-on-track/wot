@@ -1,22 +1,23 @@
-import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { AdminSidebar } from "@/components/AdminSidebar";
+import { requireAdminAccess } from "@/lib/rbac";
 
 export default async function AdminLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const session = await auth();
+    // SECURITY: Verify admin role via RBAC
+    const adminUser = await requireAdminAccess();
 
-    // Basic protection
-    if (!session?.user) {
-        redirect("/?login=true");
+    if (!adminUser) {
+        // User is either not logged in or not an admin
+        redirect("/?error=unauthorized");
     }
 
     return (
         <div style={{ display: 'flex', minHeight: '100vh', width: '100%', background: 'var(--bg-primary)' }}>
-            <AdminSidebar username={session.user.name || ''} />
+            <AdminSidebar username={adminUser.username} />
             <main style={{
                 flex: 1,
                 width: '100%',

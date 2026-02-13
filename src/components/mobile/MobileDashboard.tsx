@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MobileHeader } from "./MobileHeader";
 import { AnimatePresence, motion } from "framer-motion";
 import { MobileHomeTab } from "./MobileHomeTab";
@@ -49,7 +49,14 @@ export function MobileDashboard({
 
     // Highlight Logic
     const [highlightAssetId, setHighlightAssetId] = useState<string | null>(null);
-    if (highlightAssetId) setTimeout(() => setHighlightAssetId(null), 3000);
+
+    // Auto-clear highlight after 3 seconds (properly handled in useEffect)
+    useEffect(() => {
+        if (!highlightAssetId) return;
+
+        const timer = setTimeout(() => setHighlightAssetId(null), 3000);
+        return () => clearTimeout(timer);
+    }, [highlightAssetId]);
 
     const handleAddFromSearch = async (searchResult: any) => {
         let fetchedPrice = 0;
@@ -255,6 +262,7 @@ export function MobileDashboard({
                                         onAdd={() => setDashboardView('add')}
                                         totalValueEUR={totalValueEUR}
                                         exchangeRates={exchangeRates}
+                                        timeHorizon={selectedPeriod as '1D' | '1W' | '1M' | 'YTD' | '1Y' | 'ALL'}
                                     />
                                 </motion.div>
                             )}

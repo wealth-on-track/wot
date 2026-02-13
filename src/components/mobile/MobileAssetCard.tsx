@@ -117,27 +117,35 @@ export const MobileAssetCard = memo(function MobileAssetCard({
     };
 
     // Calculate P&L based on Time Horizon
-    // 1D = Based on previousClose (daily change)
-    // ALL/YTD/1Y = Use server-calculated plPercentage (total P&L from cost basis)
+    // Use server-calculated historical percentages from AssetHistory
     const pnlData = useMemo(() => {
-        // Daily change calculation
-        const d_1d = currentPrice - (asset.previousClose || currentPrice);
-        const p_1d = asset.previousClose > 0 ? (d_1d / asset.previousClose) * 100 : 0;
-
-        // Use server-calculated plPercentage for total P&L (uses real exchange rates)
+        // Get pre-calculated percentages from server (based on historical data)
+        const p_1d = (asset as any).changePercent1D || 0;
+        const p_1w = (asset as any).changePercent1W || 0;
+        const p_1m = (asset as any).changePercent1M || 0;
+        const p_ytd = (asset as any).changePercentYTD || 0;
+        const p_1y = (asset as any).changePercent1Y || 0;
         const totalPLPct = asset.plPercentage || 0;
 
         let pct = 0;
 
         switch (timeHorizon) {
             case '1D':
-            case '1W':
-            case '1M':
                 pct = p_1d;
                 break;
-            case 'ALL':
+            case '1W':
+                pct = p_1w;
+                break;
+            case '1M':
+                pct = p_1m;
+                break;
             case 'YTD':
+                pct = p_ytd || totalPLPct; // Fallback to total if no YTD data
+                break;
             case '1Y':
+                pct = p_1y || totalPLPct; // Fallback to total if no 1Y data
+                break;
+            case 'ALL':
                 pct = totalPLPct;
                 break;
             default:
@@ -145,7 +153,7 @@ export const MobileAssetCard = memo(function MobileAssetCard({
         }
 
         return { pct, isPositive: pct >= 0 };
-    }, [timeHorizon, currentPrice, asset.previousClose, asset.plPercentage]);
+    }, [timeHorizon, asset]);
 
     const changePct = pnlData.pct;
     const isPositive = pnlData.isPositive;

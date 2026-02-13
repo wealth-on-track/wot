@@ -1,29 +1,56 @@
-
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { calculateInsights } from '@/lib/insightsEngine';
+import {
+    apiMiddleware,
+    sanitizeError,
+    usernameSchema,
+    STRICT_RATE_LIMIT
+} from '@/lib/api-security';
 
+/**
+ * GET /api/insights/[username]
+ * Returns portfolio insights for the authenticated user
+ *
+ * Security:
+ * - Requires authentication
+ * - User can only access their own insights
+ * - Rate limited
+ */
 export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ username: string }> } // Next.js 15/16 style params are async promises
+    request: NextRequest,
+    { params }: { params: Promise<{ username: string }> }
 ) {
     try {
         const { username } = await params;
 
-        if (!username) {
+        // Validate username
+        const usernameResult = usernameSchema.safeParse(username);
+        if (!usernameResult.success) {
             return NextResponse.json(
-                { error: 'Username is required' },
+                { error: 'Invalid username', code: 'VALIDATION_ERROR' },
                 { status: 400 }
             );
         }
 
-        const insights = await calculateInsights(username);
+        // Security middleware: require auth + user match + rate limit
+        const middlewareError = await apiMiddleware(request, {
+            requireAuth: true,
+            matchUsername: usernameResult.data,
+            rateLimit: STRICT_RATE_LIMIT,
+        });
+
+        if (middlewareError) {
+            return middlewareError;
+        }
+
+        const insights = await calculateInsights(usernameResult.data);
 
         return NextResponse.json(insights);
-    } catch (error: any) {
-        console.error('[API] Insights Error:', error);
+    } catch (error) {
+        const sanitized = sanitizeError(error, 'Failed to calculate insights');
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
-            { status: 500 }
+            { error: sanitized.error, code: sanitized.code },
+            { status: sanitized.status }
         );
     }
 }

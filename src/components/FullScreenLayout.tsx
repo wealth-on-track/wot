@@ -5,7 +5,7 @@ import {
     Briefcase, PieChart, TrendingUp, Lightbulb, Eye,
     Target, Trophy, XCircle, Share2, Settings, Hash, Monitor, Pencil, Wallet, Save, X,
     ChevronUp, ChevronDown, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2, GripVertical, Upload, ListChecks, SlidersHorizontal, Search,
-    LayoutGrid, List, PanelLeftClose, PanelLeft, ChevronsLeft, ChevronsRight, Menu
+    LayoutGrid, List, PanelLeftClose, PanelLeft, ChevronsLeft, ChevronsRight, Menu, ArrowUpDown
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -1097,6 +1097,42 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
 
     const [selectedAssetId, setSelectedAssetId] = React.useState<string | null>(null);
 
+    // Column sorting state
+    type SortColumn = 'NAME' | 'WEIGHT' | 'PL' | null;
+    type SortDirection = 'asc' | 'desc' | null;
+    const [sortColumn, setSortColumn] = React.useState<SortColumn>(null);
+    const [sortDirection, setSortDirection] = React.useState<SortDirection>(null);
+
+    // Handle header click for sorting
+    // NAME: A-Z (asc) → Z-A (desc) → default
+    // WEIGHT/PL: High to Low (desc) → Low to High (asc) → default
+    const handleHeaderSort = (column: SortColumn) => {
+        if (sortColumn !== column) {
+            // New column: start with appropriate direction
+            setSortColumn(column);
+            setSortDirection(column === 'NAME' ? 'asc' : 'desc');
+        } else {
+            // Same column: cycle through directions
+            if (column === 'NAME') {
+                // NAME: asc → desc → null
+                if (sortDirection === 'asc') {
+                    setSortDirection('desc');
+                } else {
+                    setSortColumn(null);
+                    setSortDirection(null);
+                }
+            } else {
+                // WEIGHT/PL: desc → asc → null
+                if (sortDirection === 'desc') {
+                    setSortDirection('asc');
+                } else {
+                    setSortColumn(null);
+                    setSortDirection(null);
+                }
+            }
+        }
+    };
+
     // Sync state with props when data is refreshed (e.g. after import)
     React.useEffect(() => {
         const filteredAssets = initialAssets.filter(a => Math.abs(a.quantity) > 0.000001 || a.type === 'BES');
@@ -1125,8 +1161,44 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
 
     // Extract BES asset from assets (if exists)
     const besAsset = React.useMemo(() => assets.find(a => a.type === 'BES' && a.symbol === 'BES'), [assets]);
-    // Display all assets including BES
-    const displayAssets = React.useMemo(() => assets, [assets]);
+
+    // Calculate total portfolio value for weight calculation
+    const totalPortfolioValueForSort = React.useMemo(() => {
+        return assets.reduce((sum, a) => sum + (a.totalValueEUR || 0), 0);
+    }, [assets]);
+
+    // Display all assets including BES - with sorting support
+    const displayAssets = React.useMemo(() => {
+        if (!sortColumn || !sortDirection) {
+            return assets; // Default order
+        }
+
+        const sorted = [...assets].sort((a, b) => {
+            const multiplier = sortDirection === 'asc' ? 1 : -1;
+
+            switch (sortColumn) {
+                case 'NAME': {
+                    const nameA = (a.name || a.symbol || '').toLowerCase();
+                    const nameB = (b.name || b.symbol || '').toLowerCase();
+                    return multiplier * nameA.localeCompare(nameB);
+                }
+                case 'WEIGHT': {
+                    const weightA = totalPortfolioValueForSort > 0 ? ((a.totalValueEUR || 0) / totalPortfolioValueForSort) * 100 : 0;
+                    const weightB = totalPortfolioValueForSort > 0 ? ((b.totalValueEUR || 0) / totalPortfolioValueForSort) * 100 : 0;
+                    return multiplier * (weightA - weightB);
+                }
+                case 'PL': {
+                    const plA = a.changePercent1D ?? a.plPercentage ?? 0;
+                    const plB = b.changePercent1D ?? b.plPercentage ?? 0;
+                    return multiplier * (plA - plB);
+                }
+                default:
+                    return 0;
+            }
+        });
+
+        return sorted;
+    }, [assets, sortColumn, sortDirection, totalPortfolioValueForSort]);
 
     // Load BES metadata from asset
     React.useEffect(() => {
@@ -1653,9 +1725,30 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                             <th style={{ padding: '0 12px', textAlign: 'center', color: 'var(--text-muted)', width: '110px', borderBottom: '1px solid var(--border)' }}>
                                                 <Monitor size={sizing.iconSize} strokeWidth={2.5} />
                                             </th>
-                                            {/* Asset */}
-                                            <th style={{ padding: '0 16px', textAlign: 'left', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
-                                                Asset Name
+                                            {/* Asset - SORTABLE */}
+                                            <th
+                                                onClick={() => handleHeaderSort('NAME')}
+                                                style={{
+                                                    padding: '0 16px',
+                                                    textAlign: 'left',
+                                                    fontSize: '11px',
+                                                    fontWeight: 700,
+                                                    color: sortColumn === 'NAME' ? 'var(--accent)' : 'var(--text-muted)',
+                                                    textTransform: 'uppercase',
+                                                    borderBottom: '1px solid var(--border)',
+                                                    cursor: 'pointer',
+                                                    userSelect: 'none',
+                                                    transition: 'color 0.2s'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    Asset Name
+                                                    {sortColumn === 'NAME' ? (
+                                                        sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                                                    ) : (
+                                                        <ArrowUpDown size={10} style={{ opacity: 0.4 }} />
+                                                    )}
+                                                </div>
                                             </th>
                                             {/* Qty Icon Header */}
                                             <th style={{ padding: '0 12px', textAlign: 'right', color: 'var(--text-muted)', width: '80px', borderBottom: '1px solid var(--border)' }}>
@@ -1678,14 +1771,60 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                 <div>Value ({getCurrencySymbol(globalCurrency)})</div>
                                                 <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost ({getCurrencySymbol(globalCurrency)})</div>
                                             </th>
-                                            {/* Weight */}
-                                            <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
-                                                Weight
+                                            {/* Weight - SORTABLE */}
+                                            <th
+                                                onClick={() => handleHeaderSort('WEIGHT')}
+                                                style={{
+                                                    padding: '0 16px',
+                                                    textAlign: 'right',
+                                                    fontSize: '11px',
+                                                    fontWeight: 700,
+                                                    color: sortColumn === 'WEIGHT' ? 'var(--accent)' : 'var(--text-muted)',
+                                                    textTransform: 'uppercase',
+                                                    borderBottom: '1px solid var(--border)',
+                                                    cursor: 'pointer',
+                                                    userSelect: 'none',
+                                                    transition: 'color 0.2s'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                                                    Weight
+                                                    {sortColumn === 'WEIGHT' ? (
+                                                        sortDirection === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />
+                                                    ) : (
+                                                        <ArrowUpDown size={10} style={{ opacity: 0.4 }} />
+                                                    )}
+                                                </div>
                                             </th>
-                                            {/* P&L */}
-                                            <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', minWidth: '100px', whiteSpace: 'nowrap' }}>
-                                                <div>P&L</div>
-                                                <div style={{ opacity: 0.5, fontWeight: 500 }}>Amt</div>
+                                            {/* P&L - SORTABLE */}
+                                            <th
+                                                onClick={() => handleHeaderSort('PL')}
+                                                style={{
+                                                    padding: '0 16px',
+                                                    textAlign: 'right',
+                                                    fontSize: '11px',
+                                                    fontWeight: 700,
+                                                    color: sortColumn === 'PL' ? 'var(--accent)' : 'var(--text-muted)',
+                                                    textTransform: 'uppercase',
+                                                    borderBottom: '1px solid var(--border)',
+                                                    minWidth: '100px',
+                                                    whiteSpace: 'nowrap',
+                                                    cursor: 'pointer',
+                                                    userSelect: 'none',
+                                                    transition: 'color 0.2s'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div>P&L</div>
+                                                        <div style={{ opacity: 0.5, fontWeight: 500 }}>Amt</div>
+                                                    </div>
+                                                    {sortColumn === 'PL' ? (
+                                                        sortDirection === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />
+                                                    ) : (
+                                                        <ArrowUpDown size={10} style={{ opacity: 0.4 }} />
+                                                    )}
+                                                </div>
                                             </th>
                                             {/* Delete Action (Batch Mode Only) */}
                                             <th style={{

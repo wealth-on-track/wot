@@ -183,7 +183,7 @@ export async function ensureAssetHistory(symbol: string, exchange?: string): Pro
         select: { date: true }
     });
 
-    const isFresh = latest && (Date.now() - latest.date.getTime()) < (3 * 24 * 60 * 60 * 1000); // 3 days buffer
+    const isFresh = latest && (Date.now() - latest.date.getTime()) < (24 * 60 * 60 * 1000); // 1 day buffer for fresher 1D data
 
     if (isFresh) {
         return true; // Data is up to date
@@ -265,6 +265,7 @@ export async function ensureAssetHistory(symbol: string, exchange?: string): Pro
 }
 
 interface HistoricalPerformance {
+    changePercent1D: number;
     changePercent1W: number;
     changePercent1M: number;
     changePercentYTD: number;
@@ -322,6 +323,7 @@ export async function getAssetPerformance(
     // Get comparison dates
     const now = new Date();
 
+    const oneDayAgo = new Date(now); oneDayAgo.setDate(now.getDate() - 1);
     const oneWeekAgo = new Date(now); oneWeekAgo.setDate(now.getDate() - 7);
     const oneMonthAgo = new Date(now); oneMonthAgo.setMonth(now.getMonth() - 1);
     const oneYearAgo = new Date(now); oneYearAgo.setFullYear(now.getFullYear() - 1);
@@ -373,7 +375,8 @@ export async function getAssetPerformance(
         adjustedCurrentPrice = currentPrice / currentRate;
     }
 
-    const [p1W, p1M, pYTD, p1Y] = await Promise.all([
+    const [p1D, p1W, p1M, pYTD, p1Y] = await Promise.all([
+        findPriceAt(oneDayAgo),
         findPriceAt(oneWeekAgo),
         findPriceAt(oneMonthAgo),
         findPriceAt(startOfYear),
@@ -385,7 +388,23 @@ export async function getAssetPerformance(
         return ((adjustedCurrentPrice - oldPrice) / oldPrice) * 100;
     };
 
+    // Debug log for 1D calculation
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`[Performance] ${symbol}: currentPrice=${adjustedCurrentPrice.toFixed(2)}, p1D=${p1D?.toFixed(2) || 'null'}, 1D%=${calc(p1D).toFixed(2)}`);
+    }
+
+    // Use the calculated 1D percent directly - no stale check needed
+    // The calculation already uses the most recent available data point before "oneDayAgo"
+    // which is correct for 1D change (yesterday's close vs current price)
+    //
+    // NOTE: Previously this had a "stale" check that incorrectly marked valid 1-day-old data
+    // as stale, causing fallback to Yahoo's incorrect changePercent values.
+    // The historical calculation above (comparing current price to yesterday's close) is
+    // the authoritative source for 1D change.
+    const final1DPercent = calc(p1D);
+
     return {
+        changePercent1D: final1DPercent,
         changePercent1W: calc(p1W),
         changePercent1M: calc(p1M),
         changePercentYTD: calc(pYTD),

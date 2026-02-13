@@ -111,16 +111,15 @@ export function MobileHomeTab({
     const sym = currency === "ORG" ? "€" : symbols[currency] || "€";
 
     // Helper to get period-specific change percentage for an asset
+    // Uses server-calculated historical percentages from AssetPriceHistory
     const getAssetChangePct = (asset: AssetDisplay, period: Period): number => {
         if (asset.type === 'CASH' || asset.type === 'BES') return 0;
 
         switch (period) {
-            case "1D": {
-                // 1D uses previousClose vs currentPrice
-                const prev = asset.previousClose || 0;
-                const curr = asset.currentPrice || 0;
-                return prev > 0 ? ((curr - prev) / prev) * 100 : 0;
-            }
+            case "1D":
+                // Use server-calculated changePercent1D from historical data
+                // NOT previousClose vs currentPrice (those are often identical in cache)
+                return asset.changePercent1D || 0;
             case "1W":
                 return asset.changePercent1W || 0;
             case "1M":
@@ -172,7 +171,7 @@ export function MobileHomeTab({
     const openPositions = assets.filter((a) => a.quantity > 0.000001 || a.type === 'BES');
     const nonCashAssets = openPositions.filter((a) => a.type !== "CASH");
 
-    // Sort by period-specific change percentage - get top 3 best and worst (no duplicate symbols)
+    // Sort by period-specific change percentage - get top 5 best and worst (no duplicate symbols)
     const { sortedByPL, topPerformers, bottomPerformers } = useMemo(() => {
         // First, deduplicate by symbol (keep first occurrence which has highest value after sort)
         const sorted = [...nonCashAssets].sort((a, b) =>
@@ -181,28 +180,28 @@ export function MobileHomeTab({
 
         // Get unique symbols for top performers
         const seenSymbols = new Set<string>();
-        const top3: typeof sorted = [];
+        const top5: typeof sorted = [];
         for (const asset of sorted) {
-            if (!seenSymbols.has(asset.symbol) && top3.length < 3) {
+            if (!seenSymbols.has(asset.symbol) && top5.length < 5) {
                 seenSymbols.add(asset.symbol);
-                top3.push(asset);
+                top5.push(asset);
             }
         }
 
-        // Get unique symbols for bottom performers (from the end, excluding top3 symbols)
-        const bottom3: typeof sorted = [];
-        for (let i = sorted.length - 1; i >= 0 && bottom3.length < 3; i--) {
+        // Get unique symbols for bottom performers (from the end, excluding top5 symbols)
+        const bottom5: typeof sorted = [];
+        for (let i = sorted.length - 1; i >= 0 && bottom5.length < 5; i--) {
             const asset = sorted[i];
             if (!seenSymbols.has(asset.symbol)) {
                 seenSymbols.add(asset.symbol);
-                bottom3.push(asset);
+                bottom5.push(asset);
             }
         }
 
         return {
             sortedByPL: sorted,
-            topPerformers: top3,
-            bottomPerformers: bottom3
+            topPerformers: top5,
+            bottomPerformers: bottom5
         };
     }, [nonCashAssets, selectedPeriod]);
 
@@ -473,7 +472,7 @@ export function MobileHomeTab({
                 </motion.div>
             </div>
 
-            {/* ===================== TOP MOVERS - Top 3 Best & Worst ===================== */}
+            {/* ===================== TOP MOVERS - Top 5 Best & Worst ===================== */}
             {nonCashAssets.length > 1 && topPerformers.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -481,7 +480,7 @@ export function MobileHomeTab({
                     transition={{ delay: 0.2 }}
                     style={{ display: "flex", gap: "10px" }}
                 >
-                    {/* Top 3 Best */}
+                    {/* Top 5 Best */}
                     <div
                         style={{
                             flex: 1,
@@ -532,7 +531,7 @@ export function MobileHomeTab({
                         })}
                     </div>
 
-                    {/* Top 3 Worst */}
+                    {/* Top 5 Worst */}
                     <div
                         style={{
                             flex: 1,

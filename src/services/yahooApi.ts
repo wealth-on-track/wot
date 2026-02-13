@@ -5,6 +5,18 @@ import YahooFinance from 'yahoo-finance2';
 import { prisma } from '@/lib/prisma';
 import { trackApiRequest } from './telemetry';
 import { isPriceStale } from './marketData';
+import { fetchWithTimeout, API_TIMEOUT } from '@/lib/fetch-with-timeout';
+import { extractActualPreviousClose, validatePriceChange, type ChartData } from '@/lib/price-validation';
+
+// ============================================
+// SECURE FETCH HELPER
+// ============================================
+
+const YAHOO_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+    'Accept': 'application/json',
+    'Referer': 'https://finance.yahoo.com/'
+};
 
 const yahooFinance = new YahooFinance({
     suppressNotices: ['yahooSurvey'],
@@ -41,12 +53,9 @@ async function searchDirect(query: string, useQuery2 = false): Promise<YahooSymb
         // query1 is usually faster/newer, query2 is the classic fallback
         const url = `https://${subdomain}.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&lang=en-US&region=US&quotesCount=10&newsCount=0&enableFuzzyQuery=false&quotesQueryId=tss_match_phrase_query&multiQuoteQueryId=multi_quote_single_token_query`;
 
-        const response = await fetch(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                'Accept': 'application/json',
-                'Referer': 'https://finance.yahoo.com/'
-            }
+        const response = await fetchWithTimeout(url, {
+            timeout: API_TIMEOUT,
+            headers: YAHOO_HEADERS
         });
 
         if (!response.ok) {
@@ -70,7 +79,6 @@ async function searchDirect(query: string, useQuery2 = false): Promise<YahooSymb
 
     } catch (e: any) {
         console.warn(`[YahooApi] Direct search error:`, e.message || e);
-        // await trackApiRequest('YAHOO_DIRECT', false); // Optional: don't span telemetry with catches
         return [];
     }
 }
@@ -245,17 +253,42 @@ export async function getYahooQuote(symbol: string, forceRefresh: boolean = fals
         }
 
         // 4. Library Fallback (Only if direct fails)
+        // NOTE: Library's regularMarketPreviousClose is often wrong, so we validate it
         try {
             const result = await yahooFinance.quote(symbol);
             if (!result || !result.symbol) throw new Error("No Result");
 
             await trackApiRequest('YAHOO', true, { endpoint: 'quote_lib', params: symbol });
-            // ... Logic continues ...
 
-            // --- CLOSING PRICE LOGIC ---
-            // We always want the LATEST available price (regularMarketPrice).
             const effectivePrice = result.regularMarketPrice;
-            const effectiveCurrency = forcedCurrency || result.currency; // Override with detected currency if available
+            const effectiveCurrency = forcedCurrency || result.currency;
+
+            // Validate the library's previousClose - if suspicious, fetch correct one from chart
+            let validatedPreviousClose = result.regularMarketPreviousClose;
+            if (effectivePrice && validatedPreviousClose) {
+                const validation = validatePriceChange(effectivePrice, validatedPreviousClose, symbol);
+                if (validation.validationWarnings.length > 0) {
+                    console.warn(`[YahooApi] Library previousClose suspicious for ${symbol}, fetching from chart...`);
+                    // Fetch correct previousClose from chart API
+                    try {
+                        const chartUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=5d`;
+                        const chartResp = await fetchWithTimeout(chartUrl, { timeout: API_TIMEOUT, headers: YAHOO_HEADERS, cache: 'no-store' });
+                        if (chartResp.ok) {
+                            const chartData = await chartResp.json();
+                            const chartResult = chartData.chart?.result?.[0] as ChartData | undefined;
+                            if (chartResult) {
+                                const correctedPrevClose = extractActualPreviousClose(chartResult);
+                                if (correctedPrevClose) {
+                                    console.log(`[YahooApi] Corrected previousClose for ${symbol}: ${validatedPreviousClose} -> ${correctedPrevClose}`);
+                                    validatedPreviousClose = correctedPrevClose;
+                                }
+                            }
+                        }
+                    } catch (chartErr) {
+                        console.warn(`[YahooApi] Chart correction failed for ${symbol}:`, chartErr);
+                    }
+                }
+            }
 
             const quote: YahooQuote = {
                 symbol: result.symbol,
@@ -263,42 +296,39 @@ export async function getYahooQuote(symbol: string, forceRefresh: boolean = fals
                 currency: effectiveCurrency,
                 regularMarketTime: result.regularMarketTime,
                 marketState: result.marketState,
-                regularMarketPreviousClose: (result as any).main_regularMarketPreviousClose || result.regularMarketPreviousClose,
+                regularMarketPreviousClose: validatedPreviousClose,
                 earningsTimestamp: (result as any).earningsTimestamp || (result as any).earningsTimestampStart
             };
 
-            // Save to DB
+            // Save to DB with validated previousClose
             await prisma.priceCache.upsert({
                 where: { symbol: quote.symbol },
                 create: {
                     symbol: quote.symbol,
                     previousClose: quote.regularMarketPrice || 0,
+                    actualPreviousClose: validatedPreviousClose || null,
                     currency: quote.currency || 'USD',
                     tradeTime: quote.regularMarketTime,
                     updatedAt: new Date()
                 },
                 update: {
                     previousClose: quote.regularMarketPrice || 0,
+                    actualPreviousClose: validatedPreviousClose || null,
                     currency: quote.currency || 'USD',
                     tradeTime: quote.regularMarketTime,
                     updatedAt: new Date()
-                    // Note: We deliberately OMIT sector and country here so we don't
-                    // overwrite them with nulls if this is a price-only update.
                 }
             }).catch(err => console.error('[YahooApi] DB Upsert Error:', err));
 
-            // Crypto 7/24 Logic
             if (isCrypto(quote.symbol)) {
                 quote.marketState = 'REGULAR';
             }
 
-            // Save to Memory
             apiCache.set(cacheKey, quote, 0.5);
-
             return quote;
 
         } catch (innerError) {
-            throw innerError; // Rethrow to trigger outer catch block
+            throw innerError;
         }
 
     } catch (error: any) {
@@ -313,33 +343,39 @@ export async function getYahooQuote(symbol: string, forceRefresh: boolean = fals
         if (directQuote) return directQuote;
 
         // FALLBACK 2: Alpha Vantage Quote
-        try {
-            console.log(`[YahooApi] Trying Alpha Vantage Quote fallback for ${symbol}...`);
-            const response = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${process.env.ALPHA_VANTAGE_API_KEY}`, { cache: 'no-store' });
-            const data = await response.json();
-            const globalQuote = data['Global Quote'];
+        const alphaVantageKey = process.env.ALPHA_VANTAGE_API_KEY;
+        if (alphaVantageKey) {
+            try {
+                console.log(`[YahooApi] Trying Alpha Vantage Quote fallback for ${symbol}...`);
+                const response = await fetchWithTimeout(
+                    `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${alphaVantageKey}`,
+                    { timeout: API_TIMEOUT, cache: 'no-store' }
+                );
+                const data = await response.json();
+                const globalQuote = data['Global Quote'];
 
-            if (globalQuote && globalQuote['05. price']) {
-                const quote: YahooQuote = {
-                    symbol: symbol,
-                    regularMarketPrice: parseFloat(globalQuote['05. price']),
-                    currency: forcedCurrencyFallback || 'USD',
-                    regularMarketTime: new Date(),
-                    regularMarketPreviousClose: parseFloat(globalQuote['08. previous close']),
-                    marketState: getEstimatedUSMarketState()
-                };
+                if (globalQuote && globalQuote['05. price']) {
+                    const quote: YahooQuote = {
+                        symbol: symbol,
+                        regularMarketPrice: parseFloat(globalQuote['05. price']),
+                        currency: forcedCurrencyFallback || 'USD',
+                        regularMarketTime: new Date(),
+                        regularMarketPreviousClose: parseFloat(globalQuote['08. previous close']),
+                        marketState: getEstimatedUSMarketState()
+                    };
 
-                // Save to DB
-                await prisma.priceCache.upsert({
-                    where: { symbol: quote.symbol },
-                    create: { symbol: quote.symbol, previousClose: quote.regularMarketPrice || 0, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() },
-                    update: { previousClose: quote.regularMarketPrice || 0, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() }
-                }).catch(err => console.error('[YahooApi] DB Upsert (Alpha) Error:', err));
+                    // Save to DB
+                    await prisma.priceCache.upsert({
+                        where: { symbol: quote.symbol },
+                        create: { symbol: quote.symbol, previousClose: quote.regularMarketPrice || 0, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() },
+                        update: { previousClose: quote.regularMarketPrice || 0, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() }
+                    }).catch(err => console.error('[YahooApi] DB Upsert (Alpha) Error:', err));
 
-                return quote;
+                    return quote;
+                }
+            } catch (e) {
+                console.warn(`[YahooApi] Alpha Vantage fallback failed:`, e);
             }
-        } catch (e) {
-            console.warn(`[YahooApi] Alpha Vantage fallback failed:`, e);
         }
 
         // FALLBACK 3: Finnhub Quote
@@ -379,6 +415,7 @@ export async function getYahooQuote(symbol: string, forceRefresh: boolean = fals
             return {
                 symbol: dbCachedFallback.symbol,
                 regularMarketPrice: dbCachedFallback.previousClose,
+                regularMarketPreviousClose: dbCachedFallback.actualPreviousClose || dbCachedFallback.previousClose,
                 currency: forcedCurrencyFallback || dbCachedFallback.currency,
                 regularMarketTime: dbCachedFallback.tradeTime || dbCachedFallback.updatedAt
             };
@@ -451,10 +488,10 @@ export async function getYahooQuotes(symbols: string[], forceRefresh: boolean = 
             if (dbCache && !isPriceStale(dbCache.updatedAt)) {
                 const quote: YahooQuote = {
                     symbol: dbCache.symbol,
-                    regularMarketPrice: dbCache.previousClose,
+                    regularMarketPrice: dbCache.previousClose, // Legacy: this stores current price
                     currency: (dbCache.source === 'TEFAS' || dbCache.source === 'FON') ? dbCache.currency : (detectCurrency(dbCache.symbol) || dbCache.currency),
                     regularMarketTime: dbCache.tradeTime || dbCache.updatedAt,
-                    regularMarketPreviousClose: dbCache.previousClose,
+                    regularMarketPreviousClose: dbCache.actualPreviousClose || dbCache.previousClose, // Use TRUE previous close
                     marketState: undefined
                 };
                 const cacheKey = `yahoo:quote:${symbol}`;
@@ -473,87 +510,29 @@ export async function getYahooQuotes(symbols: string[], forceRefresh: boolean = 
 
     if (missingSymbols.length === 0) return results;
 
-    // 3. Fetch Missing from API (Batch)
-    try {
-        console.log(`[YahooApi] Batch Fetching for ${missingSymbols.length} symbols:`, missingSymbols);
+    // 3. Fetch Missing from API using Chart API (more reliable for previousClose)
+    // IMPORTANT: Yahoo library's regularMarketPreviousClose is often wrong (returns chartPreviousClose)
+    // So we use chart API directly for accurate 1D change calculation
+    console.log(`[YahooApi] Batch Fetching for ${missingSymbols.length} symbols via Chart API:`, missingSymbols);
 
-        // Yahoo library supports array of symbols for 'quote'
-        const quotes = await yahooFinance.quote(missingSymbols);
-
-        // Collect DB writes for parallel execution
-        const dbWrites: Promise<any>[] = [];
-
-        // Map back to our structure
-        for (const q of quotes) {
-            const forcedCurrency = detectCurrency(q.symbol);
-            const quote: YahooQuote = {
-                symbol: q.symbol,
-                regularMarketPrice: q.regularMarketPrice,
-                currency: forcedCurrency || q.currency,
-                regularMarketTime: q.regularMarketTime,
-                marketState: q.marketState,
-                regularMarketPreviousClose: (q as any).regularMarketPreviousClose,
-                earningsTimestamp: (q as any).earningsTimestamp
-            };
-
-            // Save to Results
-            results[q.symbol] = quote;
-            const inputSymbol = missingSymbols.find(s => s.toUpperCase() === q.symbol.toUpperCase());
-            if (inputSymbol) results[inputSymbol] = quote;
-
-            // Save to Memory Cache immediately
-            const cacheKey = `yahoo:quote:${q.symbol}`;
-            apiCache.set(cacheKey, quote, 0.5);
-
-            // Queue DB write (non-blocking)
-            dbWrites.push(
-                prisma.priceCache.upsert({
-                    where: { symbol: quote.symbol },
-                    create: {
-                        symbol: quote.symbol,
-                        previousClose: quote.regularMarketPrice || 0,
-                            currency: quote.currency || 'USD',
-                        tradeTime: quote.regularMarketTime,
-                        updatedAt: new Date()
-                    },
-                    update: {
-                        previousClose: quote.regularMarketPrice || 0,
-                            currency: quote.currency || 'USD',
-                        tradeTime: quote.regularMarketTime,
-                        updatedAt: new Date()
-                    }
-                }).catch(e => console.warn(`[YahooApi] Batch Write Error for ${q.symbol}`, e))
-            );
-        }
-
-        // Execute all DB writes in parallel (fire-and-forget style, don't block response)
-        Promise.all(dbWrites).catch(() => { });
-
-        // 4. Handle missed symbols - use cache values or null (skip slow fallbacks for speed)
-        for (const s of missingSymbols) {
-            if (!results[s]) {
-                // Don't do expensive individual fallbacks - just return null
-                // The next refresh will try again
-                console.warn(`[YahooApi] Batch missed ${s}, skipping fallback for speed`);
-                results[s] = null;
-            }
-        }
-
-    } catch (e: any) {
-        console.warn('[YahooApi] Batch Fetch Error (likely 429/Crumb):', e.message || e);
-        // Quick fallback: Try Direct Chart API in parallel (limited concurrency)
-        const PARALLEL_LIMIT = 5;
-        for (let i = 0; i < missingSymbols.length; i += PARALLEL_LIMIT) {
-            const batch = missingSymbols.slice(i, i + PARALLEL_LIMIT);
-            await Promise.all(batch.map(async (s) => {
-                try {
-                    const fallback = await getDirectQuoteFallback(s);
-                    results[s] = fallback;
-                } catch {
+    const PARALLEL_LIMIT = 5;
+    for (let i = 0; i < missingSymbols.length; i += PARALLEL_LIMIT) {
+        const batch = missingSymbols.slice(i, i + PARALLEL_LIMIT);
+        await Promise.all(batch.map(async (s) => {
+            try {
+                const quote = await getDirectQuoteFallback(s);
+                if (quote) {
+                    results[s] = quote;
+                    // Also map by uppercase for consistency
+                    const inputSymbol = missingSymbols.find(sym => sym.toUpperCase() === s.toUpperCase());
+                    if (inputSymbol && inputSymbol !== s) results[inputSymbol] = quote;
+                } else {
                     results[s] = null;
                 }
-            }));
-        }
+            } catch {
+                results[s] = null;
+            }
+        }));
     }
 
     return results;
@@ -588,25 +567,39 @@ async function getDirectQuoteFallback(symbol: string): Promise<YahooQuote | null
     const forcedCurrency = detectCurrency(symbol);
     try {
         console.log(`[YahooApi] Direct Chart Fallback for ${symbol}`);
-        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
-        const response = await fetch(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': '*/*'
-            },
+        // Use range=5d to get multiple days of data for accurate previous close
+        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=5d`;
+        const response = await fetchWithTimeout(url, {
+            timeout: API_TIMEOUT,
+            headers: YAHOO_HEADERS,
             cache: 'no-store'
         });
 
         if (response.ok) {
             const data = await response.json();
-            const result = data.chart?.result?.[0];
+            const result = data.chart?.result?.[0] as ChartData | undefined;
             if (result?.meta) {
+                // Use centralized, validated previous close extraction
+                const actualPreviousClose = extractActualPreviousClose(result);
+
+                // Validate the price change for sanity checking
+                if (result.meta.regularMarketPrice && actualPreviousClose) {
+                    const validation = validatePriceChange(
+                        result.meta.regularMarketPrice,
+                        actualPreviousClose,
+                        symbol
+                    );
+                    if (validation.validationWarnings.length > 0) {
+                        console.warn(`[YahooApi] ${symbol} price warnings:`, validation.validationWarnings);
+                    }
+                }
+
                 const quote: YahooQuote = {
-                    symbol: result.meta.symbol,
+                    symbol: result.meta.symbol || symbol,
                     regularMarketPrice: result.meta.regularMarketPrice,
                     currency: forcedCurrency || result.meta.currency || 'USD',
-                    regularMarketTime: new Date(result.meta.regularMarketTime * 1000),
-                    regularMarketPreviousClose: result.meta.chartPreviousClose,
+                    regularMarketTime: new Date((result.meta.regularMarketTime || Date.now() / 1000) * 1000),
+                    regularMarketPreviousClose: actualPreviousClose || undefined,
                     marketState: deriveMarketState(result.meta)
                 };
 

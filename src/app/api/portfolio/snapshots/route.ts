@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { normalizeToMidnight } from '@/lib/yahoo-finance';
+import { apiMiddleware, STRICT_RATE_LIMIT } from '@/lib/api-security';
 
 /**
  * GET /api/portfolio/snapshots
@@ -10,7 +11,11 @@ import { normalizeToMidnight } from '@/lib/yahoo-finance';
  * Query params:
  * - range: 1D, 1W, 1M, 3M, 6M, 1Y, 5Y, ALL
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  // Apply rate limiting
+  const middlewareResult = await apiMiddleware(request, { rateLimit: STRICT_RATE_LIMIT });
+  if (middlewareResult) return middlewareResult;
+
   try {
     const session = await auth();
     if (!session?.user?.email) {

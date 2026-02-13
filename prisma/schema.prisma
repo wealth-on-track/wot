@@ -180,7 +180,6 @@ model PortfolioSnapshot {
 model PriceCache {
   symbol              String    @id
   previousClose       Float
-  // actualPreviousClose removed temporarily - column doesn't exist in prod DB
   currency            String
   sector              String?
   country             String?
@@ -188,6 +187,7 @@ model PriceCache {
   source              String?
   lastRequestedBy     String?
   updatedAt           DateTime  @updatedAt
+  actualPreviousClose Float?
 
   @@index([updatedAt])
   @@index([source])
@@ -223,7 +223,14 @@ model User {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   preferences Json?
+  role        UserRole   @default(USER)
   Portfolio   Portfolio?
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
 }
 
 enum AssetCategory {

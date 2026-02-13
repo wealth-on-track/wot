@@ -228,11 +228,24 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                 } else {
                     // Check freshness using "Half-Past Hour" strategy
                     if (!isPriceStale(cached.updatedAt)) {
+                        // Calculate 1D change using actualPreviousClose if available
+                        const currentPrice = cached.previousClose; // Legacy: previousClose stores current price
+                        const truePreviousClose = cached.actualPreviousClose || cached.previousClose;
+                        const change24h = currentPrice - truePreviousClose;
+                        const changePercent = truePreviousClose > 0 ? (change24h / truePreviousClose) * 100 : 0;
+
+                        // Debug log for 1D calculation from cache
+                        if (symbol === 'SOI.PA') {
+                            console.log(`[MarketData] SOI.PA cache read: currentPrice=${currentPrice}, actualPrevClose=${cached.actualPreviousClose}, truePrevClose=${truePreviousClose}, changePercent=${changePercent.toFixed(2)}%`);
+                        }
+
                         return {
-                            price: cached.previousClose,
+                            price: currentPrice,
                             currency: finalCurrency,
                             timestamp: (cached.tradeTime || cached.updatedAt).toLocaleString('tr-TR'),
-                            previousClose: cached.previousClose,
+                            previousClose: truePreviousClose, // Return TRUE previous close
+                            change24h: change24h,
+                            changePercent: changePercent,
                             sector: cached.sector || 'N/A',
                             country: countryValue || 'N/A'
                         };
@@ -700,11 +713,15 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
             const cacheSource = derivedQuote?.source || (derivedQuote ? 'YAHOO_SYNTHETIC' : 'YAHOO');
 
             // SAVE TO CACHE
+            // IMPORTANT: Store BOTH current price AND actual previousClose (for 1D change)
+            // - previousClose: stores CURRENT price (legacy naming, used for portfolio value)
+            // - actualPreviousClose: stores TRUE previous day close (for 1D change %)
             await prisma.priceCache.upsert({
                 where: { symbol },
                 create: {
                     symbol,
-                    previousClose: price || 0,
+                    previousClose: price || 0, // Current price (legacy naming)
+                    actualPreviousClose: previousClose || null, // True previous day close
                     currency: finalCurrency,
                     sector: profileData?.sector || 'Unknown',
                     country: profileData?.country || 'Unknown',
@@ -714,9 +731,10 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
                     lastRequestedBy: userId
                 },
                 update: {
-                    previousClose: price || 0,
+                    previousClose: price || 0, // Current price (legacy naming)
+                    actualPreviousClose: previousClose || null, // True previous day close
                     currency: finalCurrency,
-                    sector: profileData?.sector, // Takes from profileData (Unknown or Valid)
+                    sector: profileData?.sector,
                     country: profileData?.country,
                     tradeTime: quote.regularMarketTime ? new Date(quote.regularMarketTime) : new Date(),
                     updatedAt: new Date(),

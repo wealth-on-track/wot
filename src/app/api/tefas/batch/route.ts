@@ -1,26 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTefasFundInfo } from '@/services/tefasApi';
+import {
+    apiMiddleware,
+    sanitizeError,
+    STRICT_RATE_LIMIT
+} from '@/lib/api-security';
+import { z } from 'zod';
+
+// Validation schema for request body
+const batchRequestSchema = z.object({
+    codes: z.array(z.string().min(1).max(20))
+        .min(1, 'At least one code required')
+        .max(20, 'Maximum 20 codes allowed')
+});
 
 /**
- * Batch fetch TEFAS fund prices
  * POST /api/tefas/batch
+ * Batch fetch TEFAS fund prices
+ *
+ * Security:
+ * - Requires authentication
+ * - Rate limited
+ * - Input validation
+ *
  * Body: { codes: ['AH2', 'AH5', 'AEA', ...] }
  * Returns: { prices: { 'AH2': 1.234, 'AH5': 5.678, ... } }
  */
 export async function POST(request: NextRequest) {
     try {
-        const { codes } = await request.json();
+        // Security middleware: require auth + rate limit
+        const middlewareError = await apiMiddleware(request, {
+            requireAuth: true,
+            rateLimit: STRICT_RATE_LIMIT,
+        });
 
-        if (!codes || !Array.isArray(codes) || codes.length === 0) {
-            return NextResponse.json({ error: 'Invalid codes array' }, { status: 400 });
+        if (middlewareError) {
+            return middlewareError;
         }
 
-        // Limit to prevent abuse
-        const limitedCodes = codes.slice(0, 20);
+        // Validate request body
+        let body;
+        try {
+            body = await request.json();
+        } catch {
+            return NextResponse.json(
+                { error: 'Invalid JSON body', code: 'INVALID_JSON' },
+                { status: 400 }
+            );
+        }
+
+        const validation = batchRequestSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json(
+                {
+                    error: 'Validation failed',
+                    code: 'VALIDATION_ERROR',
+                    details: validation.error.flatten()
+                },
+                { status: 400 }
+            );
+        }
+
+        const { codes } = validation.data;
 
         // Fetch all prices in parallel
         const results = await Promise.allSettled(
-            limitedCodes.map(async (code: string) => {
+            codes.map(async (code: string) => {
                 const info = await getTefasFundInfo(code);
                 return { code, price: info?.price || null };
             })
@@ -35,7 +80,10 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ prices });
     } catch (error) {
-        console.error('[TEFAS Batch] Error:', error);
-        return NextResponse.json({ error: 'Failed to fetch prices' }, { status: 500 });
+        const sanitized = sanitizeError(error, 'Failed to fetch TEFAS prices');
+        return NextResponse.json(
+            { error: sanitized.error, code: sanitized.code },
+            { status: sanitized.status }
+        );
     }
 }

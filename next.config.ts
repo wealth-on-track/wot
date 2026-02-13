@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 /**
  * Next.js Configuration - Production-Optimized
@@ -6,6 +7,7 @@ import type { NextConfig } from "next";
  * - Image optimization with aggressive caching
  * - Security-focused headers
  * - Memory-efficient settings for Vercel
+ * - Sentry error tracking integration
  */
 
 const nextConfig: NextConfig = {
@@ -170,4 +172,32 @@ const nextConfig: NextConfig = {
     },
 };
 
-export default nextConfig;
+// Sentry configuration options
+const sentryWebpackPluginOptions = {
+    // Organization and project settings (set via env vars)
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+    authToken: process.env.SENTRY_AUTH_TOKEN,
+
+    // Only upload source maps in production builds
+    silent: !process.env.CI,
+
+    // Upload source maps for better error tracking
+    widenClientFileUpload: true,
+
+    // Automatically tree-shake Sentry logger statements
+    disableLogger: true,
+
+    // Hide source content from being uploaded
+    hideSourceMaps: true,
+
+    // Prevent build failures if source map upload fails
+    automaticVercelMonitors: true,
+};
+
+// Export with Sentry wrapper (only if DSN is configured)
+const finalConfig = process.env.NEXT_PUBLIC_SENTRY_DSN
+    ? withSentryConfig(nextConfig, sentryWebpackPluginOptions)
+    : nextConfig;
+
+export default finalConfig;

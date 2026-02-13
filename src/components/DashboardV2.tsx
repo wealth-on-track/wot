@@ -45,7 +45,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { ASSET_COLORS } from "@/lib/constants";
 import { getLogoUrl } from "@/lib/logos";
 const TIME_PERIODS = ["ALL"];
-import { Bitcoin, Wallet, TrendingUp, PieChart, Gem, Coins, Layers, LayoutGrid, List, Save, X, Trash2, Settings, LayoutTemplate, Grid, Check, ChevronDown, ChevronRight, ChevronLeft, GripVertical, SlidersHorizontal, Briefcase, Banknote, MoreVertical, MoreHorizontal, Plus, Upload, Download, Search, Rows } from "lucide-react";
+import { Bitcoin, Wallet, TrendingUp, PieChart, Gem, Coins, Layers, LayoutGrid, List, Save, X, Trash2, Settings, LayoutTemplate, Grid, Check, ChevronDown, ChevronRight, ChevronLeft, ChevronUp, GripVertical, SlidersHorizontal, Briefcase, Banknote, MoreVertical, MoreHorizontal, Plus, Upload, Download, Search, Rows, ArrowUpDown } from "lucide-react";
 import { getPortfolioStyle } from "@/lib/portfolioStyles";
 import { DetailedAssetCard } from "./DetailedAssetCard";
 import { ClosedPositionsNew } from "./ClosedPositionsNew";
@@ -1674,6 +1674,31 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
     const [platformFilter, setPlatformFilter] = useState<string | null>(null);
     const [customGroupFilter, setCustomGroupFilter] = useState<string | null>(null);
 
+    // Column Sorting State: null = default (by value), 'asc', 'desc'
+    type SortDirection = 'asc' | 'desc' | null;
+    type SortableColumn = 'NAME' | 'VALUE_EUR' | 'PL';
+    const [sortColumn, setSortColumn] = useState<SortableColumn | null>(null);
+    const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+    // Handle header click for sorting - cycles: asc -> desc -> default
+    const handleHeaderSort = (column: SortableColumn) => {
+        if (sortColumn !== column) {
+            // New column: start with appropriate direction
+            setSortColumn(column);
+            setSortDirection(column === 'NAME' ? 'asc' : 'desc'); // NAME: A-Z first, others: high to low first
+        } else {
+            // Same column: cycle through directions
+            if (sortDirection === 'asc') {
+                setSortDirection('desc');
+            } else if (sortDirection === 'desc') {
+                setSortColumn(null);
+                setSortDirection(null);
+            } else {
+                setSortDirection(column === 'NAME' ? 'asc' : 'desc');
+            }
+        }
+    };
+
     // Filter UI States
     const [isCustomizeModalOpen, setIsCustomizeModalOpen] = useState(false);
     const [filterOrder, setFilterOrder] = useState(['customGroup', 'type', 'exchange', 'currency', 'country', 'sector', 'platform']);
@@ -1723,20 +1748,40 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
         });
     }, [items, typeFilter, exchangeFilter, currencyFilter, countryFilter, sectorFilter, platformFilter, customGroupFilter]);
 
-    // Memoize sorted assets
+    // Memoize sorted assets with column sorting support
     const sortedAssets = useMemo(() => {
-        // Assuming a sortConfig state exists or is defined elsewhere for sorting
-        // For now, let's use a default sort or assume `items` are already sorted if no explicit sortConfig is provided.
-        // If `sortConfig` is not defined, this will need to be adjusted.
-        // For the purpose of this edit, I'll assume a `sortConfig` exists or use a placeholder.
-        // Let's use the initial sort from `useEffect` for now if no `sortConfig` is available.
-        // If `sortConfig` is meant to be a state, it should be declared.
-        // For now, I'll use a placeholder sort that keeps the order from `filteredAssets`.
         return [...filteredAssets].sort((a, b) => {
-            // Sort by Value (Descending) - rank field removed
-            return b.totalValueEUR - a.totalValueEUR;
+            // If no sort column selected, use default (by value descending)
+            if (!sortColumn || !sortDirection) {
+                return b.totalValueEUR - a.totalValueEUR;
+            }
+
+            const multiplier = sortDirection === 'asc' ? 1 : -1;
+
+            switch (sortColumn) {
+                case 'NAME': {
+                    const nameA = (a.name || a.symbol || '').toLowerCase();
+                    const nameB = (b.name || b.symbol || '').toLowerCase();
+                    return multiplier * nameA.localeCompare(nameB);
+                }
+                case 'VALUE_EUR': {
+                    // Weight = percentage of total portfolio
+                    const totalPortfolio = filteredAssets.reduce((sum, asset) => sum + asset.totalValueEUR, 0);
+                    const weightA = totalPortfolio > 0 ? (a.totalValueEUR / totalPortfolio) * 100 : 0;
+                    const weightB = totalPortfolio > 0 ? (b.totalValueEUR / totalPortfolio) * 100 : 0;
+                    return multiplier * (weightA - weightB);
+                }
+                case 'PL': {
+                    // Sort by P&L percentage (1D change)
+                    const plA = a.changePercent1D ?? a.plPercentage ?? 0;
+                    const plB = b.changePercent1D ?? b.plPercentage ?? 0;
+                    return multiplier * (plA - plB);
+                }
+                default:
+                    return b.totalValueEUR - a.totalValueEUR;
+            }
         });
-    }, [filteredAssets]); // Add sortConfig to dependencies if it becomes a state
+    }, [filteredAssets, sortColumn, sortDirection]);
 
     // Grouping State: 'none' | 'customGroup' | 'type' | 'country' | 'sector' | 'platform'
     const [groupingKey, setGroupingKey] = useState<string>('none');
@@ -2258,9 +2303,36 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                                 const globalCurrency = positionsViewCurrency === 'ORG' ? 'EUR' : positionsViewCurrency;
                                                                                 const globalSym = getCurrencySymbol(globalCurrency);
 
+                                                                                // Check if this column is sortable
+                                                                                const isSortable = ['NAME', 'VALUE_EUR', 'PL'].includes(colId);
+                                                                                const isCurrentSort = sortColumn === colId;
+
                                                                                 let headerContent: React.ReactNode = label;
 
-                                                                                if (colId === 'CURRENCY') {
+                                                                                // Sortable column: NAME
+                                                                                if (colId === 'NAME') {
+                                                                                    headerContent = (
+                                                                                        <div
+                                                                                            onClick={(e) => { e.stopPropagation(); handleHeaderSort('NAME'); }}
+                                                                                            style={{
+                                                                                                display: 'flex',
+                                                                                                alignItems: 'center',
+                                                                                                gap: '4px',
+                                                                                                cursor: 'pointer',
+                                                                                                userSelect: 'none',
+                                                                                                color: isCurrentSort ? 'var(--accent)' : 'inherit',
+                                                                                                transition: 'color 0.2s'
+                                                                                            }}
+                                                                                        >
+                                                                                            <span>NAME</span>
+                                                                                            {isCurrentSort ? (
+                                                                                                sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                                                                                            ) : (
+                                                                                                <ArrowUpDown size={10} style={{ opacity: 0.4 }} />
+                                                                                            )}
+                                                                                        </div>
+                                                                                    );
+                                                                                } else if (colId === 'CURRENCY') {
                                                                                     headerContent = (
                                                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                                                             <Banknote size={12} strokeWidth={2.5} style={{ opacity: 0.8 }} />
@@ -2289,10 +2361,67 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                                         </div>
                                                                                     );
                                                                                 } else if (colId === 'VALUE_EUR') {
+                                                                                    // Sortable column: VALUE_EUR (Weight)
+                                                                                    const isValueSort = sortColumn === 'VALUE_EUR';
                                                                                     headerContent = (
-                                                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.1 }}>
-                                                                                            <span>Total Value ({globalSym})</span>
-                                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>Total Cost ({globalSym})</span>
+                                                                                        <div
+                                                                                            onClick={(e) => { e.stopPropagation(); handleHeaderSort('VALUE_EUR'); }}
+                                                                                            style={{
+                                                                                                display: 'flex',
+                                                                                                flexDirection: 'column',
+                                                                                                alignItems: 'flex-end',
+                                                                                                lineHeight: 1.1,
+                                                                                                cursor: 'pointer',
+                                                                                                userSelect: 'none'
+                                                                                            }}
+                                                                                        >
+                                                                                            <span style={{
+                                                                                                display: 'flex',
+                                                                                                alignItems: 'center',
+                                                                                                gap: '4px',
+                                                                                                color: isValueSort ? 'var(--accent)' : 'inherit',
+                                                                                                transition: 'color 0.2s'
+                                                                                            }}>
+                                                                                                WEIGHT
+                                                                                                {isValueSort ? (
+                                                                                                    sortDirection === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />
+                                                                                                ) : (
+                                                                                                    <ArrowUpDown size={10} style={{ opacity: 0.4 }} />
+                                                                                                )}
+                                                                                            </span>
+                                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>VALUE ({globalSym})</span>
+                                                                                        </div>
+                                                                                    );
+                                                                                } else if (colId === 'PL') {
+                                                                                    // Sortable column: PL
+                                                                                    const isPLSort = sortColumn === 'PL';
+                                                                                    headerContent = (
+                                                                                        <div
+                                                                                            onClick={(e) => { e.stopPropagation(); handleHeaderSort('PL'); }}
+                                                                                            style={{
+                                                                                                display: 'flex',
+                                                                                                flexDirection: 'column',
+                                                                                                alignItems: 'flex-end',
+                                                                                                lineHeight: 1.1,
+                                                                                                cursor: 'pointer',
+                                                                                                userSelect: 'none'
+                                                                                            }}
+                                                                                        >
+                                                                                            <span style={{
+                                                                                                display: 'flex',
+                                                                                                alignItems: 'center',
+                                                                                                gap: '4px',
+                                                                                                color: isPLSort ? 'var(--accent)' : 'inherit',
+                                                                                                transition: 'color 0.2s'
+                                                                                            }}>
+                                                                                                P&L (%)
+                                                                                                {isPLSort ? (
+                                                                                                    sortDirection === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />
+                                                                                                ) : (
+                                                                                                    <ArrowUpDown size={10} style={{ opacity: 0.4 }} />
+                                                                                                )}
+                                                                                            </span>
+                                                                                            <span style={{ fontSize: '0.6rem', opacity: 0.75, fontWeight: 500 }}>AMOUNT</span>
                                                                                         </div>
                                                                                     );
                                                                                 }
@@ -2346,9 +2475,29 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                                 {/* 1. Icon Space */}
                                                                                 <div />
 
-                                                                                {/* 2. Name / Ticker */}
-                                                                                <div style={{ padding: '0 0.5rem', fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'flex', alignItems: 'center' }}>
+                                                                                {/* 2. Name / Ticker - SORTABLE */}
+                                                                                <div
+                                                                                    onClick={() => handleHeaderSort('NAME')}
+                                                                                    style={{
+                                                                                        padding: '0 0.5rem',
+                                                                                        fontSize: '0.7rem',
+                                                                                        fontWeight: 800,
+                                                                                        color: sortColumn === 'NAME' ? 'var(--accent)' : 'var(--text-secondary)',
+                                                                                        textTransform: 'uppercase',
+                                                                                        display: 'flex',
+                                                                                        alignItems: 'center',
+                                                                                        gap: '4px',
+                                                                                        cursor: 'pointer',
+                                                                                        userSelect: 'none',
+                                                                                        transition: 'color 0.2s'
+                                                                                    }}
+                                                                                >
                                                                                     NAME
+                                                                                    {sortColumn === 'NAME' ? (
+                                                                                        sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                                                                                    ) : (
+                                                                                        <ArrowUpDown size={10} style={{ opacity: 0.4 }} />
+                                                                                    )}
                                                                                 </div>
 
                                                                                 {/* 3. Price / Cost */}
@@ -2357,15 +2506,75 @@ export default function Dashboard({ username, isOwner, totalValueEUR, assets, go
                                                                                     <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', lineHeight: 1.2 }}>COST</span>
                                                                                 </div>
 
-                                                                                {/* 4. Total Value / Total Cost */}
-                                                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', padding: '0 2.5rem 0 0.5rem', justifyContent: 'center', width: '100%', textAlign: 'right' }}>
-                                                                                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', lineHeight: 1.2 }}>TOTAL VALUE</span>
-                                                                                    <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', lineHeight: 1.2 }}>TOTAL COST</span>
+                                                                                {/* 4. Total Value / Total Cost - SORTABLE (Weight) */}
+                                                                                <div
+                                                                                    onClick={() => handleHeaderSort('VALUE_EUR')}
+                                                                                    style={{
+                                                                                        display: 'flex',
+                                                                                        flexDirection: 'column',
+                                                                                        alignItems: 'flex-end',
+                                                                                        padding: '0 2.5rem 0 0.5rem',
+                                                                                        justifyContent: 'center',
+                                                                                        width: '100%',
+                                                                                        textAlign: 'right',
+                                                                                        cursor: 'pointer',
+                                                                                        userSelect: 'none'
+                                                                                    }}
+                                                                                >
+                                                                                    <span style={{
+                                                                                        fontSize: '0.75rem',
+                                                                                        fontWeight: 800,
+                                                                                        color: sortColumn === 'VALUE_EUR' ? 'var(--accent)' : 'var(--text-secondary)',
+                                                                                        textTransform: 'uppercase',
+                                                                                        lineHeight: 1.2,
+                                                                                        display: 'flex',
+                                                                                        alignItems: 'center',
+                                                                                        gap: '4px',
+                                                                                        transition: 'color 0.2s'
+                                                                                    }}>
+                                                                                        WEIGHT
+                                                                                        {sortColumn === 'VALUE_EUR' ? (
+                                                                                            sortDirection === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />
+                                                                                        ) : (
+                                                                                            <ArrowUpDown size={10} style={{ opacity: 0.4 }} />
+                                                                                        )}
+                                                                                    </span>
+                                                                                    <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', lineHeight: 1.2 }}>VALUE</span>
                                                                                 </div>
 
-                                                                                {/* 5. P&L */}
-                                                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', padding: '0 0.5rem', justifyContent: 'center', width: '100%', textAlign: 'right' }}>
-                                                                                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', lineHeight: 1.2 }}>P&L (%)</span>
+                                                                                {/* 5. P&L - SORTABLE */}
+                                                                                <div
+                                                                                    onClick={() => handleHeaderSort('PL')}
+                                                                                    style={{
+                                                                                        display: 'flex',
+                                                                                        flexDirection: 'column',
+                                                                                        alignItems: 'flex-end',
+                                                                                        padding: '0 0.5rem',
+                                                                                        justifyContent: 'center',
+                                                                                        width: '100%',
+                                                                                        textAlign: 'right',
+                                                                                        cursor: 'pointer',
+                                                                                        userSelect: 'none'
+                                                                                    }}
+                                                                                >
+                                                                                    <span style={{
+                                                                                        fontSize: '0.75rem',
+                                                                                        fontWeight: 800,
+                                                                                        color: sortColumn === 'PL' ? 'var(--accent)' : 'var(--text-secondary)',
+                                                                                        textTransform: 'uppercase',
+                                                                                        lineHeight: 1.2,
+                                                                                        display: 'flex',
+                                                                                        alignItems: 'center',
+                                                                                        gap: '4px',
+                                                                                        transition: 'color 0.2s'
+                                                                                    }}>
+                                                                                        P&L (%)
+                                                                                        {sortColumn === 'PL' ? (
+                                                                                            sortDirection === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />
+                                                                                        ) : (
+                                                                                            <ArrowUpDown size={10} style={{ opacity: 0.4 }} />
+                                                                                        )}
+                                                                                    </span>
                                                                                     <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', lineHeight: 1.2 }}>AMOUNT</span>
                                                                                 </div>
                                                                             </>

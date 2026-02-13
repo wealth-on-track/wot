@@ -21,8 +21,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     providers: [
         Credentials({
             async authorize(credentials) {
+                // SECURITY: Minimum 8 characters for stronger password security
                 const parsedCredentials = z
-                    .object({ email: z.string().email(), password: z.string().min(6) })
+                    .object({ email: z.string().email(), password: z.string().min(8) })
                     .safeParse(credentials);
 
                 if (parsedCredentials.success) {
@@ -74,5 +75,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return session;
         }
     },
-    secret: process.env.AUTH_SECRET || "fallback_secret_for_dev_only",
+    // AUTH_SECRET is required - no fallback for security
+    secret: process.env.AUTH_SECRET,
 });

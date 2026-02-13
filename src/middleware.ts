@@ -17,8 +17,8 @@ const getCSPHeader = (): string => {
         'script-src': [
             "'self'",
             "'unsafe-inline'", // Required for Next.js inline scripts
-            "'unsafe-eval'", // Required for development hot reload (removed in production ideally)
-            isProduction ? '' : "'unsafe-eval'",
+            // unsafe-eval ONLY in development for hot reload
+            ...(isProduction ? [] : ["'unsafe-eval'"]),
         ].filter(Boolean),
         'style-src': ["'self'", "'unsafe-inline'"], // Required for Tailwind/styled components
         'img-src': [

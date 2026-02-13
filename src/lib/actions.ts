@@ -13,10 +13,17 @@ import { getAssetCategory } from "@/lib/assetCategories";
 
 
 
+// SECURITY: Strong password requirements
+const passwordSchema = z.string()
+    .min(12, "Password must be at least 12 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number");
+
 const RegisterSchema = z.object({
     username: z.string().min(3).regex(/^[a-zA-Z0-9_-]+$/).optional(),
     email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
+    password: passwordSchema,
 });
 
 async function generateUniqueUsername(email: string): Promise<string> {

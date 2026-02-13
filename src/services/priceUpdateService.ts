@@ -101,6 +101,20 @@ export async function updateAllPrices() {
 
 async function updateCurrencyRates() {
     try {
+        // Check if rates were updated within the last 60 minutes (same as price threshold)
+        const recentRate = await prisma.exchangeRate.findFirst({
+            where: { currency: { in: ['USD', 'TRY', 'GBP'] } },
+            orderBy: { updatedAt: 'desc' }
+        });
+
+        if (recentRate) {
+            const timeSinceUpdate = Date.now() - recentRate.updatedAt.getTime();
+            if (timeSinceUpdate < SKIP_THRESHOLD_MS) {
+                console.log(`[PriceServer] Exchange Rates are fresh (${Math.round(timeSinceUpdate / 60000)}min old). Skipping.`);
+                return;
+            }
+        }
+
         console.log("[PriceServer] Updating Exchange Rates (EUR base)...");
         const currencies = ['EURUSD=X', 'EURTRY=X', 'EURGBP=X'];
 

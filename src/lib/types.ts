@@ -21,9 +21,19 @@ export interface AssetDisplay {
     logoUrl?: string | null;
     updatedAt?: Date | string;
     metadata?: any;  // For BES and other special asset types
+    // Daily change
+    dailyChange?: number;
+    dailyChangePercentage?: number;
+    marketState?: string;
+    nextOpen?: Date | null;
+    nextClose?: Date | null;
     // Historical performance (server-calculated in EUR)
+    changePercent1D?: number;
     changePercent1W?: number;
     changePercent1M?: number;
     changePercentYTD?: number;
     changePercent1Y?: number;
+    // Value in asset's original currency
+    totalValueInAssetCurrency?: number;
+    totalCostInAssetCurrency?: number;
 }
