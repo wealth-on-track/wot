@@ -5,7 +5,7 @@ import {
     Briefcase, PieChart, TrendingUp, Lightbulb, Eye,
     Target, Trophy, XCircle, Share2, Settings, Hash, Monitor, Pencil, Wallet, Save, X,
     ChevronUp, ChevronDown, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2, GripVertical, Upload, ListChecks, SlidersHorizontal, Search,
-    LayoutGrid, List, PanelLeftClose, PanelLeft, ChevronsLeft, ChevronsRight, Menu, ArrowUpDown
+    LayoutGrid, List, PanelLeftClose, PanelLeft, ChevronsLeft, ChevronsRight, Menu, ArrowUpDown, Clock
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
