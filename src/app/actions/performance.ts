@@ -136,7 +136,9 @@ export async function getBulkAssetPerformance(assets: AssetInput[], targetCurren
                     }
 
                     // 4. Calc Performance
-                    const perf = await getAssetPerformance(asset.symbol, currentPrice, assetCurrency, rates, targetCurrency);
+                    // Pass Yahoo's previousClose for accurate 1D calculation
+                    const previousClose = quote?.regularMarketPreviousClose;
+                    const perf = await getAssetPerformance(asset.symbol, currentPrice, assetCurrency, rates, targetCurrency, previousClose);
 
                     return {
                         symbol: asset.symbol,

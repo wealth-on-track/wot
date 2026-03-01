@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, ReactNode, useRef } from "react";
-import { CurrencyProvider, useCurrency } from "@/context/CurrencyContext";
+import { useEffect, ReactNode, useState, useCallback } from "react";
+import { CurrencyProvider } from "@/context/CurrencyContext";
 import { PrivacyProvider } from "@/context/PrivacyContext";
 import { DeploymentFooter } from "./DeploymentFooter";
 import { PreferencesSync } from "./PreferencesSync";
 import { FullScreenLayout } from "./FullScreenLayout";
+import { useLiveUpdates } from "@/hooks/useLiveUpdates";
 
 interface ClientWrapperProps {
     username: string;
@@ -17,12 +18,48 @@ interface ClientWrapperProps {
     exchangeRates?: Record<string, number>;
     preferences?: any;
     userEmail?: string;
+    portfolioId?: string;
+    enableLiveUpdates?: boolean;
 }
 
-export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals = [], navbar, exchangeRates, preferences, userEmail }: ClientWrapperProps) {
+export function ClientWrapper({
+    username,
+    isOwner,
+    totalValueEUR,
+    assets: initialAssets,
+    goals = [],
+    navbar,
+    exchangeRates = {},
+    preferences,
+    userEmail,
+    portfolioId,
+    enableLiveUpdates = false
+}: ClientWrapperProps) {
+    // Mutable state for live price updates (only currentPrice, dailyChange)
+    // totalValueEUR stays constant - recalculated on next page load
+    const [assets, setAssets] = useState(initialAssets);
+
+    // Handle individual asset updates from SSE - only price fields
+    const handleAssetUpdate = useCallback((symbol: string, newData: Partial<any>) => {
+        setAssets(prev => prev.map(a =>
+            a.symbol === symbol ? { ...a, ...newData } : a
+        ));
+    }, []);
+
+    // Live updates hook - silent background updates
+    const {
+        getFlashStyle,
+        triggerFlash
+    } = useLiveUpdates({
+        portfolioId,
+        assets,
+        exchangeRates,
+        enabled: enableLiveUpdates && isOwner,
+        onAssetUpdate: handleAssetUpdate
+    });
+
     // Force cleanup of any potential scroll locks
     useEffect(() => {
-        // Ensure body allows scrolling for sticky headers to work relative to viewport
         document.body.style.overflowY = 'visible';
         document.body.style.overflowX = 'hidden';
         document.body.classList.remove('antigravity-scroll-lock');
@@ -33,17 +70,12 @@ export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals 
     }, []);
 
     // Mobile Redirect Fallback (Client-Side)
-    // If server-side detection fails (e.g. edge cache), this catches it.
     useEffect(() => {
         const checkMobileRedirect = async () => {
-            // Dynamic import to avoid SSR issues or circular dependencies if any
             const { isMobileDevice, isMobileScreen } = await import('@/lib/deviceDetection');
-
-            // Check if forced desktop
             const forceDesktop = document.cookie.includes('forceDesktop=true');
 
             if (!forceDesktop && (isMobileDevice() || isMobileScreen())) {
-                // Prevent loop if we are already on mobile (though this component shouldn't be rendered there)
                 if (!window.location.pathname.includes('/mobile')) {
                     window.location.href = `/${username}/mobile`;
                 }
@@ -52,30 +84,6 @@ export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals 
 
         checkMobileRedirect();
     }, [username]);
-
-    // Automatic Price Update for Owner (Local/Dev support)
-    useEffect(() => {
-        if (!isOwner) return;
-
-        const updatePrices = async () => {
-            try {
-                // Call the cron endpoint
-                // We don't await the result to block UI, just fire it.
-                // The server-side logic has a 15-min skip threshold, so it won't spam.
-                fetch('/api/cron/update-prices', { cache: 'no-store' })
-                    .catch(err => console.error("Auto-update failed:", err));
-            } catch (e) {
-                console.error("Auto-update error:", e);
-            }
-        };
-
-        // Run on mount
-        updatePrices();
-
-        // Run every 60 minutes
-        const interval = setInterval(updatePrices, 60 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, [isOwner]);
 
     return (
         <CurrencyProvider>
@@ -92,6 +100,8 @@ export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals 
                     exchangeRates={exchangeRates}
                     preferences={preferences}
                     userEmail={userEmail}
+                    getFlashStyle={getFlashStyle}
+                    triggerFlash={triggerFlash}
                 />
 
                 <DeploymentFooter />
@@ -99,4 +109,3 @@ export function ClientWrapper({ username, isOwner, totalValueEUR, assets, goals 
         </CurrencyProvider>
     );
 }
-

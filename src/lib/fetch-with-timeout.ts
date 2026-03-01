@@ -10,8 +10,8 @@
 // CONSTANTS
 // ============================================
 
-export const DEFAULT_TIMEOUT = 30000; // 30 seconds
-export const API_TIMEOUT = 10000;     // 10 seconds for API calls
+export const DEFAULT_TIMEOUT = 15000; // 15 seconds
+export const API_TIMEOUT = 3000;      // 3 seconds for API calls (faster failures)
 export const CRON_TIMEOUT = 60000;    // 60 seconds for CRON jobs
 
 // ============================================

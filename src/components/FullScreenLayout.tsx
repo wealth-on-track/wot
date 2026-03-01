@@ -45,10 +45,11 @@ import { deleteAccount, saveBESData, getBESData } from "@/lib/actions";
 import { lookupTefasFund } from "@/app/actions/search";
 import { signOut } from "next-auth/react";
 // BESPortfolioItem no longer needed - BES shown inline in table
-import { BESMetadata } from "@/lib/besTypes";
+import { BESMetadata, calculateBESAllocationBreakdown, calculateBESTotals } from "@/lib/besTypes";
+import { AnimatedValue } from "./AnimatedValue";
 
 // Sortable Row Component for Open Positions Table
-function SortableRow({ children, id, isBatchEditMode }: { children: React.ReactNode, id: string, isBatchEditMode: boolean }) {
+function SortableRow({ children, id, isBatchEditMode, flashStyle }: { children: React.ReactNode, id: string, isBatchEditMode: boolean, flashStyle?: React.CSSProperties }) {
     const {
         attributes,
         listeners,
@@ -68,10 +69,20 @@ function SortableRow({ children, id, isBatchEditMode }: { children: React.ReactN
 
     const [isHovered, setIsHovered] = React.useState(false);
 
+    // Determine background color priority: flash > hover > default
+    const getBackgroundColor = (defaultBg?: string) => {
+        if (flashStyle?.backgroundColor) return flashStyle.backgroundColor;
+        if (isHovered) return 'var(--bg-secondary)';
+        return defaultBg || 'transparent';
+    };
+
     return (
         <tr
             ref={setNodeRef}
-            style={style}
+            style={{
+                ...style,
+                ...(flashStyle?.boxShadow ? { boxShadow: flashStyle.boxShadow } : {})
+            }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
@@ -83,8 +94,8 @@ function SortableRow({ children, id, isBatchEditMode }: { children: React.ReactN
                 verticalAlign: 'middle',
                 borderBottom: '1px solid var(--border)',
                 cursor: isBatchEditMode ? 'default' : 'grab',
-                background: isHovered ? 'var(--bg-secondary)' : 'transparent',
-                transition: 'background 0.15s ease'
+                background: getBackgroundColor(),
+                transition: 'background 0.3s ease-out, box-shadow 0.3s ease-out'
             }}
                 {...(!isBatchEditMode ? { ...attributes, ...listeners } : {})}
             >
@@ -104,8 +115,8 @@ function SortableRow({ children, id, isBatchEditMode }: { children: React.ReactN
                     return React.cloneElement(tdChild, {
                         style: {
                             ...tdChild.props.style,
-                            background: isHovered ? 'var(--bg-secondary)' : (tdChild.props.style?.background || 'transparent'),
-                            transition: 'background 0.15s ease'
+                            background: getBackgroundColor(tdChild.props.style?.background as string),
+                            transition: 'background 0.3s ease-out, box-shadow 0.3s ease-out'
                         }
                     });
                 }
@@ -154,6 +165,8 @@ interface FullScreenLayoutProps {
     preferences?: any;
     userEmail?: string;
     defaultSection?: SectionId;
+    getFlashStyle?: (assetId: string) => React.CSSProperties;
+    triggerFlash?: (assetId: string, direction: 'up' | 'down' | null) => void;
 }
 
 export function FullScreenLayout({
@@ -165,7 +178,9 @@ export function FullScreenLayout({
     exchangeRates,
     preferences,
     userEmail,
-    defaultSection = 'open-positions'
+    defaultSection = 'open-positions',
+    getFlashStyle,
+    triggerFlash
 }: FullScreenLayoutProps) {
     const [activeSection, setActiveSection] = useState<SectionId>(defaultSection);
     const [hoveredItem, setHoveredItem] = useState<SectionId | null>(null);
@@ -236,7 +251,7 @@ export function FullScreenLayout({
     const renderContent = () => {
         switch (activeSection) {
             case 'open-positions':
-                return <OpenPositionsFullScreen key="open-positions" assets={assets} exchangeRates={exchangeRates} globalCurrency={preferences?.currency || 'EUR'} onCountChange={refreshCounts} closedPositionsCount={closedPositionsCount} isOwner={isOwner} />;
+                return <OpenPositionsFullScreen key="open-positions" assets={assets} exchangeRates={exchangeRates} globalCurrency={preferences?.currency || 'EUR'} onCountChange={refreshCounts} closedPositionsCount={closedPositionsCount} isOwner={isOwner} getFlashStyle={getFlashStyle} triggerFlash={triggerFlash} />;
             case 'allocations':
                 return <AllocationsFullScreen assets={assets} exchangeRates={exchangeRates} />;
             case 'performance':
@@ -1075,11 +1090,12 @@ function BESInlineEditor({ initialData, onSave, onCancel, availablePortfolios = 
 }
 
 // 1. Open Positions - Table Only, No Tabs
-function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalCurrency = 'EUR', onCountChange, closedPositionsCount, isOwner = true }: { assets: any[], exchangeRates?: Record<string, number>, globalCurrency?: string, onCountChange: () => void, closedPositionsCount: number, isOwner?: boolean }) {
+function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalCurrency = 'EUR', onCountChange, closedPositionsCount, isOwner = true, getFlashStyle, triggerFlash }: { assets: any[], exchangeRates?: Record<string, number>, globalCurrency?: string, onCountChange: () => void, closedPositionsCount: number, isOwner?: boolean, getFlashStyle?: (assetId: string) => React.CSSProperties, triggerFlash?: (assetId: string, direction: 'up' | 'down' | null) => void }) {
     // Use stable ID to prevent hydration mismatch with Turbopack
     const dndId = 'open-positions-dnd';
     const [activePositionTab, setActivePositionTab] = React.useState<'open' | 'closed' | 'import' | 'transactions'>('open');
     const [transViewMode, setTransViewMode] = React.useState<'group' | 'date'>('group');
+    const [openPositionsViewMode, setOpenPositionsViewMode] = React.useState<'grouped' | 'transactions'>('grouped');
     const [isBatchEditMode, setIsBatchEditMode] = React.useState(false);
     const [isClosedBatchEditMode, setIsClosedBatchEditMode] = React.useState(false);
     const [editedAssets, setEditedAssets] = React.useState<Record<string, any>>({});
@@ -1280,12 +1296,12 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         EUR: 1, USD: 1.09, TRY: 38.5, GBP: 0.85, CHF: 0.94, JPY: 162
     };
 
-    // Calculate total value - prefer server-provided totalValueEUR per asset
+    // Calculate total value - ALWAYS use currentPrice for live updates
+    // This ensures Total Wealth updates in real-time with odometer animation
     const totalPortfolioValue = assets.reduce((sum, asset) => {
-        // CRITICAL: Prefer server-calculated totalValueEUR to avoid rate issues
-        if (asset.totalValueEUR && asset.totalValueEUR > 0) {
-            return sum + asset.totalValueEUR;
-        }
+        // Check if this asset has been edited (quantity change)
+        const editedQuantity = editedAssets[asset.id]?.quantity;
+        const hasQuantityEdit = editedQuantity !== undefined;
 
         // Special handling for BES - value comes from metadata
         if (asset.type === 'BES' && asset.metadata) {
@@ -1297,17 +1313,32 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
             return sum + (besTotal / tryToEur);
         }
 
-        // Fallback calculation only if server value is missing
+        // Get current price (live updated) and quantity (possibly edited)
         const price = asset.currentPrice || asset.price || asset.previousClose || 0;
-        const quantity = asset.quantity || 0;
+        const quantity = hasQuantityEdit ? (Number(editedQuantity) || 0) : (asset.quantity || 0);
         const value = price * quantity;
         const currency = asset.currency || 'EUR';
-
-        // Use exchangeRates with fallback to FALLBACK_RATES
         const rateToEur = exchangeRates?.[currency] || FALLBACK_RATES[currency] || 1;
         const valueEur = value / rateToEur;
         return sum + valueEur;
     }, 0);
+
+    // Track previous total for flash highlight
+    const prevTotalRef = React.useRef<number>(totalPortfolioValue);
+
+    // Trigger flash on Total Wealth when it changes
+    React.useEffect(() => {
+        const prevTotal = prevTotalRef.current;
+        const diff = totalPortfolioValue - prevTotal;
+
+        // Only flash if there's a meaningful change (more than €1)
+        if (Math.abs(diff) > 1 && triggerFlash) {
+            const direction = diff > 0 ? 'up' : 'down';
+            triggerFlash('total-wealth', direction);
+        }
+
+        prevTotalRef.current = totalPortfolioValue;
+    }, [totalPortfolioValue, triggerFlash]);
 
     // Helper function to get current value (edited or original)
     const getCurrentValue = (assetId: string, field: string, originalValue: any) => {
@@ -1364,6 +1395,83 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         // Input padding
         inputPadding: isExtraCompact ? '2px 6px' : isCompact ? '3px 7px' : '4px 8px',
     };
+
+    // Memoized transaction list for transaction view (prevents re-computation on every render)
+    const allTransactionsList = React.useMemo(() => {
+        const transactions: Array<{
+            id: string;
+            date: Date;
+            dateStr: string;
+            portfolio: string;
+            platform: string;
+            assetName: string;
+            assetSymbol: string;
+            assetType: string;
+            assetExchange: string;
+            assetCountry: string;
+            type: string;
+            quantity: number;
+            price: number;
+            currency: string;
+            runningBalance: number;
+            avgCost: number;
+            value: number;
+        }> = [];
+
+        assets.forEach(asset => {
+            if (!asset.transactions || asset.transactions.length === 0) return;
+
+            const sortedTx = [...asset.transactions].sort((a: any, b: any) =>
+                new Date(a.date).getTime() - new Date(b.date).getTime()
+            );
+
+            let runningBalance = 0;
+            let totalCost = 0;
+
+            sortedTx.forEach((tx: any) => {
+                const qty = Number(tx.quantity) || 0;
+                const price = Number(tx.price) || 0;
+                const txType = tx.type?.toUpperCase() || (qty > 0 ? 'BUY' : 'SELL');
+
+                if (txType === 'BUY') {
+                    totalCost += qty * price;
+                    runningBalance += qty;
+                } else if (txType === 'SELL') {
+                    if (runningBalance > 0) {
+                        totalCost = totalCost * ((runningBalance - Math.abs(qty)) / runningBalance);
+                    }
+                    runningBalance -= Math.abs(qty);
+                }
+
+                const avgCost = runningBalance > 0 ? totalCost / runningBalance : 0;
+                const value = Math.abs(qty) * price;
+
+                transactions.push({
+                    id: tx.id || `${asset.id}-${tx.date}-${transactions.length}`,
+                    date: new Date(tx.date),
+                    dateStr: new Date(tx.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                    portfolio: asset.customGroup || 'Main',
+                    platform: asset.platform || asset.broker || 'Unknown',
+                    assetName: asset.name || asset.symbol,
+                    assetSymbol: asset.symbol,
+                    assetType: asset.type || 'STOCK',
+                    assetExchange: asset.exchange || '',
+                    assetCountry: asset.country || '',
+                    type: txType,
+                    quantity: Math.abs(qty),
+                    price: price,
+                    currency: asset.currency || 'EUR',
+                    runningBalance: runningBalance,
+                    avgCost: avgCost,
+                    value: value,
+                });
+            });
+        });
+
+        // Sort by date descending (most recent first)
+        transactions.sort((a, b) => b.date.getTime() - a.date.getTime());
+        return transactions;
+    }, [assets]);
 
     const handleDelete = async (assetId: string) => {
         // Optimistically update UI
@@ -1478,22 +1586,58 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
             }}>
                 {/* Positions Tabs */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button
-                        onClick={() => setActivePositionTab('open')}
-                        style={{
-                            padding: '8px 16px',
-                            borderRadius: '8px',
-                            background: activePositionTab === 'open' ? 'var(--bg-secondary)' : 'transparent',
-                            color: activePositionTab === 'open' ? 'var(--text-primary)' : 'var(--text-muted)',
-                            fontWeight: 700,
-                            fontSize: '13px',
-                            border: 'none',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        Open Positions
-                    </button>
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        padding: '4px',
+                        paddingRight: activePositionTab === 'open' ? '8px' : '4px',
+                        background: activePositionTab === 'open' ? 'var(--bg-secondary)' : 'transparent',
+                        borderRadius: '8px',
+                        transition: 'all 0.2s',
+                    }}>
+                        <button
+                            onClick={() => setActivePositionTab('open')}
+                            style={{
+                                padding: '6px 12px',
+                                background: 'transparent',
+                                color: activePositionTab === 'open' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                fontWeight: 700,
+                                fontSize: '13px',
+                                border: 'none',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            Open Positions
+                        </button>
+
+                        {activePositionTab === 'open' && (
+                            <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-primary)', padding: '2px', borderRadius: '6px' }}>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setOpenPositionsViewMode('grouped'); }}
+                                    style={{
+                                        padding: '4px', borderRadius: '4px',
+                                        background: openPositionsViewMode === 'grouped' ? 'var(--bg-secondary)' : 'transparent',
+                                        color: openPositionsViewMode === 'grouped' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center'
+                                    }}
+                                    title="Grouped View"
+                                >
+                                    <LayoutGrid size={14} />
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setOpenPositionsViewMode('transactions'); }}
+                                    style={{
+                                        padding: '4px', borderRadius: '4px',
+                                        background: openPositionsViewMode === 'transactions' ? 'var(--bg-secondary)' : 'transparent',
+                                        color: openPositionsViewMode === 'transactions' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center'
+                                    }}
+                                    title="Transaction View"
+                                >
+                                    <List size={14} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
                     <button
                         onClick={() => setActivePositionTab('closed')}
                         style={{
@@ -1599,13 +1743,26 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                 {/* Spacer */}
                 <div style={{ flex: 1 }}></div>
 
-                {/* Total Wealth */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {/* Total Wealth - Animated with Flash Highlight */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    transition: 'all 0.15s ease-out',
+                    ...getFlashStyle?.('total-wealth')
+                }}>
                     <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                         Total Wealth:
                     </span>
-                    <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                        <span style={{ color: 'var(--accent)' }}>€</span>{formatNumber(totalPortfolioValue, 0)}
+                    <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                        <span style={{ color: 'var(--accent)' }}>€</span>
+                        <AnimatedValue
+                            value={totalPortfolioValue}
+                            format={(v) => formatNumber(v, 0)}
+                            duration={4}
+                        />
                     </span>
                 </div>
 
@@ -1696,8 +1853,8 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                         </div>
                     )}
 
-                    {/* Assets Table (includes BES) */}
-                    {(assets.length > 0 || besMetadata) && !showBESEditor && (
+                    {/* Assets Table (includes BES) - Grouped View */}
+                    {(assets.length > 0 || besMetadata) && !showBESEditor && openPositionsViewMode === 'grouped' && (
                         <div style={{
                             background: 'var(--surface)',
                             borderRadius: '16px',
@@ -1850,12 +2007,14 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                 // Calculations per row for consistent display
                                                 const calculateValues = () => {
                                                     const price = asset.currentPrice || asset.price || asset.previousClose || 0;
-                                                    let cost = asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0;
+                                                    // Use edited cost if available
+                                                    const editedCost = editedAssets[asset.id]?.averageBuyPrice;
+                                                    let cost = editedCost !== undefined ? Number(editedCost) : (asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0);
 
                                                     // OVERRIDE: Use transaction history average cost if available
-                                                    // This ensures the main row matches the transaction grid logic
-                                                    if (asset.transactions && asset.transactions.length > 0) {
-                                                        const sorted = [...asset.transactions].sort((a: any, b: any) => new Date(a.date).getTime() - b.date.getTime());
+                                                    // BUT skip if user is actively editing the cost
+                                                    if (editedCost === undefined && asset.transactions && asset.transactions.length > 0) {
+                                                        const sorted = [...asset.transactions].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
                                                         let rQty = 0;
                                                         let tCost = 0;
                                                         for (const tx of sorted) {
@@ -1875,7 +2034,9 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                             cost = tCost / rQty;
                                                         }
                                                     }
-                                                    const quantity = asset.quantity || 0;
+                                                    // Use edited quantity if available, otherwise use original
+                                                    const editedQty = editedAssets[asset.id]?.quantity;
+                                                    const quantity = editedQty !== undefined ? Number(editedQty) : (asset.quantity || 0);
                                                     const value = price * quantity;
                                                     const costValue = cost * quantity;
 
@@ -1895,12 +2056,13 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                     const valueGlobal = valueEur * globalRate;
                                                     const costGlobal = costEur * globalRate;
                                                     const plAmount = valueGlobal - costGlobal;
+                                                    const plPercentage = costGlobal > 0 ? ((valueGlobal / costGlobal) - 1) * 100 : 0;
                                                     const weight = totalPortfolioValue > 0 ? (valueEur / totalPortfolioValue) * 100 : 0;
 
-                                                    return { value, costValue, valueGlobal, costGlobal, plAmount, weight, currency, price, cost };
+                                                    return { value, costValue, valueGlobal, costGlobal, plAmount, plPercentage, weight, currency, price, cost };
                                                 };
 
-                                                const { value, costValue, valueGlobal, costGlobal, plAmount, weight, currency, price, cost } = calculateValues();
+                                                const { value, costValue, valueGlobal, costGlobal, plAmount, plPercentage, weight, currency, price, cost } = calculateValues();
 
                                                 // BES-specific values
                                                 const isBES = asset.type === 'BES';
@@ -1922,6 +2084,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                             key={asset.id}
                                                             id={asset.id}
                                                             isBatchEditMode={isBatchEditMode}
+                                                            flashStyle={getFlashStyle?.(asset.id)}
                                                         >
                                                             {/* Portfolio Pill */}
                                                             <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
@@ -2026,23 +2189,29 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                             BES
                                                                         </div>
                                                                     ) : (
-                                                                        <div style={{
-                                                                            width: `${sizing.logoSize}px`, height: `${sizing.logoSize}px`,
-                                                                            borderRadius: '50%', overflow: 'hidden',
-                                                                            background: '#fff',
-                                                                            border: '1px solid var(--border)',
-                                                                            flexShrink: 0,
-                                                                            padding: '2px',
-                                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
-                                                                            cursor: 'default'
-                                                                        }}>
-                                                                            <img
-                                                                                src={getLogoUrl(asset.symbol, asset.type || 'STOCK', asset.exchange, asset.country) || undefined}
-                                                                                alt={asset.symbol}
-                                                                                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
-                                                                                onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random` }}
-                                                                            />
-                                                                        </div>
+                                                                        (() => {
+                                                                            const logoUrl = getLogoUrl(asset.symbol, asset.type || 'STOCK', asset.exchange, asset.country);
+                                                                            const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent((asset.symbol || 'X').charAt(0))}&background=6366f1&color=fff&size=64&bold=true`;
+                                                                            return (
+                                                                                <div style={{
+                                                                                    width: `${sizing.logoSize}px`, height: `${sizing.logoSize}px`,
+                                                                                    borderRadius: '50%', overflow: 'hidden',
+                                                                                    background: '#fff',
+                                                                                    border: '1px solid var(--border)',
+                                                                                    flexShrink: 0,
+                                                                                    padding: '2px',
+                                                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+                                                                                    cursor: 'default'
+                                                                                }}>
+                                                                                    <img
+                                                                                        src={logoUrl || fallbackUrl}
+                                                                                        alt={asset.symbol}
+                                                                                        style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
+                                                                                        onError={(e) => { e.currentTarget.src = fallbackUrl; }}
+                                                                                    />
+                                                                                </div>
+                                                                            );
+                                                                        })()
                                                                     )}
                                                                     <div style={{ flex: 1 }}>
                                                                         {isBatchEditMode ? (
@@ -2120,10 +2289,16 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                         </div>
                                                                         <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px' }}>-</div>
                                                                     </>
+                                                                ) : asset.type === 'CASH' ? (
+                                                                    <>
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>-</div>
+                                                                        <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px' }}>-</div>
+                                                                    </>
                                                                 ) : (
                                                                     <>
-                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                                            {getCurrencySymbol(currency)}{formatNumber(price)}
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)' }}>
+                                                                            {getCurrencySymbol(currency)}
+                                                                            <AnimatedValue value={price} format={(v) => formatNumber(v)} duration={4} />
                                                                         </div>
                                                                         {isBatchEditMode ? (
                                                                             <input
@@ -2175,19 +2350,25 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                     </>
                                                                 )}
                                                             </td>
-                                                            {/* Value / Cost (Global) */}
+                                                            {/* Value / Cost (Global) - Animated */}
                                                             <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
                                                                 {isBES ? (
                                                                     <>
-                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                                            {getCurrencySymbol(globalCurrency)}{formatNumber(besTotalGlobal, 0)}
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)' }}>
+                                                                            {getCurrencySymbol(globalCurrency)}
+                                                                            <AnimatedValue value={besTotalGlobal} format={(v) => formatNumber(v, 0)} duration={4} />
                                                                         </div>
                                                                         <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500 }}>-</div>
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
-                                                                            {valueGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(valueGlobal, 0)}` : '-'}
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)' }}>
+                                                                            {valueGlobal > 0 ? (
+                                                                                <>
+                                                                                    {getCurrencySymbol(globalCurrency)}
+                                                                                    <AnimatedValue value={valueGlobal} format={(v) => formatNumber(v, 0)} duration={4} />
+                                                                                </>
+                                                                            ) : '-'}
                                                                         </div>
                                                                         <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
                                                                             {costGlobal > 0 ? `${getCurrencySymbol(globalCurrency)}${formatNumber(costGlobal, 0)}` : '-'}
@@ -2210,8 +2391,8 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: (asset.plPercentage || 0) >= 0 ? '#34d399' : '#f87171', fontVariantNumeric: 'tabular-nums' }}>
-                                                                            {(asset.plPercentage || 0) >= 0 ? '+' : ''}{Math.round(asset.plPercentage || 0)}%
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: plPercentage >= 0 ? '#34d399' : '#f87171', fontVariantNumeric: 'tabular-nums' }}>
+                                                                            {plPercentage >= 0 ? '+' : ''}{Math.round(plPercentage)}%
                                                                         </div>
                                                                         <div style={{ fontSize: sizing.smallNumberSize, color: plAmount >= 0 ? '#34d399' : '#f87171', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                                                                             {plAmount >= 0 ? '+' : ''}{getCurrencySymbol(globalCurrency)}{formatNumber(plAmount, 0)}
@@ -2346,6 +2527,181 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                             </DndContext>
                         </div >
                     )}
+
+                    {/* Transaction List View */}
+                    {(assets.length > 0) && !showBESEditor && openPositionsViewMode === 'transactions' && (
+                        <div style={{
+                            background: 'var(--surface)',
+                            borderRadius: '16px',
+                            border: '1px solid var(--border)',
+                            overflow: 'hidden',
+                            boxShadow: 'var(--shadow-md)'
+                        }}>
+                            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                                <thead>
+                                    <tr style={{ background: 'var(--bg-secondary)', height: sizing.headerHeight }}>
+                                        <th style={{ padding: `0 ${sizing.rowPaddingLR}`, textAlign: 'left', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', width: '90px' }}>
+                                            Date
+                                        </th>
+                                        <th style={{ padding: '0 8px', textAlign: 'center', color: 'var(--text-muted)', width: '70px', borderBottom: '1px solid var(--border)' }}>
+                                            <Wallet size={sizing.iconSize} strokeWidth={2.5} />
+                                        </th>
+                                        <th style={{ padding: '0 8px', textAlign: 'center', color: 'var(--text-muted)', width: '90px', borderBottom: '1px solid var(--border)' }}>
+                                            <Monitor size={sizing.iconSize} strokeWidth={2.5} />
+                                        </th>
+                                        <th style={{ padding: `0 ${sizing.rowPaddingLR}`, textAlign: 'left', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                                            Asset Name
+                                        </th>
+                                        <th style={{ padding: '0 8px', textAlign: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', width: '55px' }}>
+                                            Type
+                                        </th>
+                                        <th style={{ padding: `0 ${sizing.rowPaddingLR}`, textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', width: '140px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span>Qty</span>
+                                                <span>Price</span>
+                                            </div>
+                                        </th>
+                                        <th style={{ padding: `0 ${sizing.rowPaddingLR}`, textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', width: '70px' }}>
+                                            Balance
+                                        </th>
+                                        <th style={{ padding: `0 ${sizing.rowPaddingLR}`, textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', width: '90px' }}>
+                                            Avg Cost
+                                        </th>
+                                        <th style={{ padding: `0 ${sizing.rowPaddingLR}`, textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', width: '100px' }}>
+                                            Value
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {allTransactionsList.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={9} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)', fontSize: sizing.numberSize }}>
+                                                No transactions found
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        allTransactionsList.map((tx, idx) => (
+                                            <tr
+                                                key={tx.id}
+                                                style={{
+                                                    background: idx % 2 === 0 ? 'transparent' : 'var(--bg-primary)',
+                                                    transition: 'background 0.2s'
+                                                }}
+                                            >
+                                                {/* Date */}
+                                                <td style={{ padding: `${sizing.rowPadding} ${sizing.rowPaddingLR}`, borderBottom: '1px solid var(--border)', fontSize: sizing.numberSize, color: 'var(--text-muted)' }}>
+                                                    {tx.dateStr}
+                                                </td>
+                                                {/* Portfolio */}
+                                                <td style={{ padding: `${sizing.rowPadding} 8px`, borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
+                                                    <span style={{
+                                                        display: 'inline-block',
+                                                        padding: sizing.pillPadding,
+                                                        borderRadius: '6px',
+                                                        fontSize: sizing.pillFontSize,
+                                                        fontWeight: 600,
+                                                        background: 'var(--bg-secondary)',
+                                                        color: 'var(--text-muted)'
+                                                    }}>
+                                                        {tx.portfolio}
+                                                    </span>
+                                                </td>
+                                                {/* Platform */}
+                                                <td style={{ padding: `${sizing.rowPadding} 8px`, borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
+                                                    <span style={{
+                                                        display: 'inline-block',
+                                                        padding: sizing.pillPadding,
+                                                        borderRadius: '6px',
+                                                        fontSize: sizing.pillFontSize,
+                                                        fontWeight: 600,
+                                                        background: 'var(--bg-secondary)',
+                                                        color: 'var(--text-muted)'
+                                                    }}>
+                                                        {tx.platform}
+                                                    </span>
+                                                </td>
+                                                {/* Asset Name */}
+                                                <td style={{ padding: `${sizing.rowPadding} ${sizing.rowPaddingLR}`, borderBottom: '1px solid var(--border)' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        {(() => {
+                                                            const logoUrl = getLogoUrl(tx.assetSymbol, tx.assetType, tx.assetExchange, tx.assetCountry);
+                                                            const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent((tx.assetSymbol || 'X').charAt(0))}&background=6366f1&color=fff&size=64&bold=true`;
+                                                            return (
+                                                                <div style={{
+                                                                    width: `${sizing.logoSize}px`,
+                                                                    height: `${sizing.logoSize}px`,
+                                                                    borderRadius: '50%',
+                                                                    overflow: 'hidden',
+                                                                    background: '#fff',
+                                                                    border: '1px solid var(--border)',
+                                                                    flexShrink: 0,
+                                                                    padding: '2px',
+                                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
+                                                                }}>
+                                                                    <img
+                                                                        src={logoUrl || fallbackUrl}
+                                                                        alt={tx.assetSymbol}
+                                                                        style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
+                                                                        onError={(e) => { e.currentTarget.src = fallbackUrl; }}
+                                                                    />
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                        <div>
+                                                            <div style={{ fontSize: sizing.assetNameSize, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                                                                {tx.assetName}
+                                                            </div>
+                                                            <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)' }}>
+                                                                {tx.assetSymbol}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                {/* Type */}
+                                                <td style={{ padding: `${sizing.rowPadding} 8px`, borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
+                                                    <span style={{
+                                                        display: 'inline-block',
+                                                        padding: sizing.pillPadding,
+                                                        borderRadius: '4px',
+                                                        fontSize: sizing.pillFontSize,
+                                                        fontWeight: 700,
+                                                        textTransform: 'uppercase',
+                                                        background: tx.type === 'BUY' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                                        color: tx.type === 'BUY' ? '#22c55e' : '#ef4444'
+                                                    }}>
+                                                        {tx.type}
+                                                    </span>
+                                                </td>
+                                                {/* Qty | Price (two sub-columns) */}
+                                                <td style={{ padding: `${sizing.rowPadding} ${sizing.rowPaddingLR}`, borderBottom: '1px solid var(--border)', fontSize: sizing.numberSize }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                                                        <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                                                            {formatNumber(tx.quantity, tx.quantity < 1 ? 4 : 2)}
+                                                        </span>
+                                                        <span style={{ color: 'var(--text-muted)' }}>
+                                                            {getCurrencySymbol(tx.currency)}{formatNumber(tx.price, 2)}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                {/* Qty Balance */}
+                                                <td style={{ padding: `${sizing.rowPadding} ${sizing.rowPaddingLR}`, borderBottom: '1px solid var(--border)', textAlign: 'right', fontSize: sizing.numberSize, color: 'var(--text-primary)', fontWeight: 600 }}>
+                                                    {formatNumber(tx.runningBalance, tx.runningBalance < 1 ? 4 : 2)}
+                                                </td>
+                                                {/* Avg Cost */}
+                                                <td style={{ padding: `${sizing.rowPadding} ${sizing.rowPaddingLR}`, borderBottom: '1px solid var(--border)', textAlign: 'right', fontSize: sizing.numberSize, color: 'var(--text-muted)' }}>
+                                                    {tx.avgCost > 0 ? `${getCurrencySymbol(tx.currency)}${formatNumber(tx.avgCost, 2)}` : '-'}
+                                                </td>
+                                                {/* Value */}
+                                                <td style={{ padding: `${sizing.rowPadding} ${sizing.rowPaddingLR}`, borderBottom: '1px solid var(--border)', textAlign: 'right', fontSize: sizing.numberSize, fontWeight: 600, color: 'var(--text-primary)' }}>
+                                                    {getCurrencySymbol(tx.currency)}{formatNumber(tx.value, 2)}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </>
             )
             }
@@ -2402,33 +2758,100 @@ function AllocationsFullScreen({ assets, exchangeRates }: { assets: any[], excha
 
     // Process assets - use server-calculated totalValueEUR if available
     // Fallback calculation only if server value is missing
+    // IMPORTANT: BES assets are broken down into their underlying asset classes (STOCK, BOND, GOLD, CASH)
     const processedAssets = React.useMemo(() => {
         // Fallback rates if exchangeRates is incomplete
         const FALLBACK_RATES: Record<string, number> = {
             EUR: 1, USD: 1.09, TRY: 38.5, GBP: 0.85, CHF: 0.94, JPY: 162
         };
 
-        return assets.map(asset => {
-            // CRITICAL: Prefer server-calculated totalValueEUR to avoid client-side rate issues
-            if (asset.totalValueEUR && asset.totalValueEUR > 0) {
-                return asset;
+        const result: any[] = [];
+
+        for (const asset of assets) {
+            // Special handling for BES - break down into underlying asset classes
+            if (asset.type === 'BES' && asset.metadata) {
+                const besMeta = asset.metadata as BESMetadata;
+                const besAllocation = calculateBESAllocationBreakdown(besMeta);
+                const totals = calculateBESTotals(besMeta);
+                const tryToEur = exchangeRates?.['TRY'] ? 1 / exchangeRates['TRY'] : 1 / FALLBACK_RATES.TRY;
+
+                // Create synthetic assets for each BES asset class
+                if (besAllocation.STOCK > 0) {
+                    result.push({
+                        ...asset,
+                        id: `${asset.id}-BES-STOCK`,
+                        symbol: 'BES (Hisse)',
+                        name: 'BES Hisse Fonları',
+                        type: 'STOCK',
+                        sector: 'BES - Hisse',
+                        totalValueEUR: besAllocation.STOCK * tryToEur,
+                        _isBESBreakdown: true,
+                        _besOriginalId: asset.id
+                    });
+                }
+                if (besAllocation.BOND > 0) {
+                    result.push({
+                        ...asset,
+                        id: `${asset.id}-BES-BOND`,
+                        symbol: 'BES (Tahvil)',
+                        name: 'BES Tahvil/Bono Fonları',
+                        type: 'BOND',
+                        sector: 'BES - Tahvil',
+                        totalValueEUR: besAllocation.BOND * tryToEur,
+                        _isBESBreakdown: true,
+                        _besOriginalId: asset.id
+                    });
+                }
+                if (besAllocation.GOLD > 0) {
+                    result.push({
+                        ...asset,
+                        id: `${asset.id}-BES-GOLD`,
+                        symbol: 'BES (Altın)',
+                        name: 'BES Altın Fonları',
+                        type: 'COMMODITY',
+                        sector: 'BES - Altın',
+                        totalValueEUR: besAllocation.GOLD * tryToEur,
+                        _isBESBreakdown: true,
+                        _besOriginalId: asset.id
+                    });
+                }
+                if (besAllocation.CASH > 0) {
+                    result.push({
+                        ...asset,
+                        id: `${asset.id}-BES-CASH`,
+                        symbol: 'BES (Nakit)',
+                        name: 'BES Para Piyasası',
+                        type: 'CASH',
+                        sector: 'BES - Para Piyasası',
+                        totalValueEUR: besAllocation.CASH * tryToEur,
+                        _isBESBreakdown: true,
+                        _besOriginalId: asset.id
+                    });
+                }
+                continue; // Skip adding original BES asset
             }
 
-            // Fallback calculation only if server value is missing
-            const price = asset.currentPrice || asset.price || 0;
-            const quantity = asset.quantity || 0;
-            const value = price * quantity;
+            // Normal asset processing
+            if (asset.totalValueEUR && asset.totalValueEUR > 0) {
+                result.push(asset);
+            } else {
+                // Fallback calculation only if server value is missing
+                const price = asset.currentPrice || asset.price || 0;
+                const quantity = asset.quantity || 0;
+                const value = price * quantity;
 
-            const currency = asset.currency || 'EUR';
-            // Use exchangeRates with fallback to FALLBACK_RATES
-            const rate = exchangeRates?.[currency] || FALLBACK_RATES[currency] || 1;
-            const valueEur = value / rate;
+                const currency = asset.currency || 'EUR';
+                const rate = exchangeRates?.[currency] || FALLBACK_RATES[currency] || 1;
+                const valueEur = value / rate;
 
-            return {
-                ...asset,
-                totalValueEUR: valueEur
-            };
-        });
+                result.push({
+                    ...asset,
+                    totalValueEUR: valueEur
+                });
+            }
+        }
+
+        return result;
     }, [assets, exchangeRates]);
 
     const totalValueEUR = processedAssets.reduce((sum, a) => sum + (a.totalValueEUR || 0), 0);
@@ -3697,14 +4120,18 @@ function ClosedPositionsFullScreen({ onCountChange, hideHeader = false, isBatchE
 
                                             {/* Asset */}
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-                                                <img
-                                                    src={pos.logoUrl || getLogoUrl(pos.symbol, getAssetType(pos), pos.exchange) || ''}
-                                                    alt={pos.symbol}
-                                                    style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                                                    onError={(e) => {
-                                                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${pos.symbol}&background=random`;
-                                                    }}
-                                                />
+                                                {(() => {
+                                                    const logoUrl = pos.logoUrl || getLogoUrl(pos.symbol, getAssetType(pos), pos.exchange);
+                                                    const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent((pos.symbol || 'X').charAt(0))}&background=6366f1&color=fff&size=64&bold=true`;
+                                                    return (
+                                                        <img
+                                                            src={logoUrl || fallbackUrl}
+                                                            alt={pos.symbol}
+                                                            style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                                                            onError={(e) => { e.currentTarget.src = fallbackUrl; }}
+                                                        />
+                                                    );
+                                                })()}
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', overflow: 'hidden' }}>
                                                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                                                         <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px', textOverflow: 'ellipsis', overflow: 'hidden' }} title={pos.name || pos.symbol}>

@@ -119,12 +119,18 @@ export function CompactAssetRow({
 
             {/* 2. Asset Info (Name + Ticker | Tag) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                <img
-                    src={asset.logoUrl || getLogoUrl(asset.symbol, asset.type, asset.exchange, asset.country)}
-                    alt={asset.symbol}
-                    style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-                    onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${asset.symbol}&background=random` }}
-                />
+                {(() => {
+                    const logoUrl = asset.logoUrl || getLogoUrl(asset.symbol, asset.type, asset.exchange, asset.country);
+                    const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent((asset.symbol || 'X').charAt(0))}&background=6366f1&color=fff&size=64&bold=true`;
+                    return (
+                        <img
+                            src={logoUrl || fallbackUrl}
+                            alt={asset.symbol}
+                            style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                            onError={(e) => { e.currentTarget.src = fallbackUrl; }}
+                        />
+                    );
+                })()}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
                     {/* Top Row: Name */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

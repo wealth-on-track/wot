@@ -2941,14 +2941,20 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
                                 marginBottom: '32px'
                             }}>
                                 {importResult.added} assets added, {importResult.updated} updated.
-                                {(importResult as any).txAdded !== undefined && (importResult as any).txAdded > 0 && (
+                                {((importResult as any).txAdded > 0 || (importResult as any).txSkipped > 0) && (
                                     <span style={{
                                         display: 'block',
                                         marginTop: '8px',
                                         color: 'var(--accent)',
                                         fontWeight: 600
                                     }}>
-                                        ✓ {(importResult as any).txAdded} transactions saved to history.
+                                        {(importResult as any).txAdded > 0 && `✓ ${(importResult as any).txAdded} transactions saved to history.`}
+                                        {(importResult as any).txSkipped > 0 && (
+                                            <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>
+                                                {(importResult as any).txAdded > 0 ? ' ' : ''}
+                                                ({(importResult as any).txSkipped} duplicates skipped)
+                                            </span>
+                                        )}
                                     </span>
                                 )}
                             </p>

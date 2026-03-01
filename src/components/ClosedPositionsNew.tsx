@@ -246,14 +246,18 @@ export function ClosedPositionsNew({ isOwner = true }: { isOwner?: boolean }) {
 
                                 {/* Asset */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-                                    <img
-                                        src={getLogoUrl(pos.symbol, getAssetType(pos), pos.exchange) || ''}
-                                        alt={pos.symbol}
-                                        style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${pos.symbol}&background=random`
-                                        }}
-                                    />
+                                    {(() => {
+                                        const logoUrl = getLogoUrl(pos.symbol, getAssetType(pos), pos.exchange);
+                                        const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent((pos.symbol || 'X').charAt(0))}&background=6366f1&color=fff&size=64&bold=true`;
+                                        return (
+                                            <img
+                                                src={logoUrl || fallbackUrl}
+                                                alt={pos.symbol}
+                                                style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                                                onError={(e) => { e.currentTarget.src = fallbackUrl; }}
+                                            />
+                                        );
+                                    })()}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', overflow: 'hidden' }}>
                                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                                             <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem', textOverflow: 'ellipsis', overflow: 'hidden' }} title={pos.name || pos.symbol}>

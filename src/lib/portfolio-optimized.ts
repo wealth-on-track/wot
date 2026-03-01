@@ -190,7 +190,10 @@ async function processAssetFast(
     let changePercent1Y = 0;
 
     // Only fetch historical data for non-CASH assets with quantity
-    if (asset.type !== 'CASH' && asset.quantity > 0) {
+    // Fast initial load: Skip history fetch, background refresh will update later
+    const skipHistoryFetch = process.env.FAST_INITIAL_LOAD === 'true';
+
+    if (asset.type !== 'CASH' && asset.quantity > 0 && !skipHistoryFetch) {
         try {
             // Ensure we have historical data (runs in background, cached)
             await ensureAssetHistory(asset.symbol, asset.exchange);

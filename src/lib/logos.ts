@@ -1,9 +1,28 @@
 // Simple synchronous function - just returns URL string
 // Tracking is done at the point of actual usage
 export const getLogoUrl = (symbol: string, type: string, exchange?: string, country?: string): string | null => {
-    let s = symbol.toUpperCase();
-    const t = type.toUpperCase();
-    const ex = exchange?.toUpperCase();
+    // Safety check for empty/null symbol
+    if (!symbol || typeof symbol !== 'string') {
+        return null;
+    }
+
+    // Clean and normalize inputs
+    let s = symbol.trim().toUpperCase();
+    const t = (type || 'STOCK').trim().toUpperCase();
+    const ex = exchange?.trim().toUpperCase();
+
+    // Safety check after trim
+    if (!s || s.length === 0) {
+        return null;
+    }
+
+    // GLOBAL: For long/complex symbols (certificates, structured products), use placeholder
+    // Standard tickers are typically 1-6 characters
+    // Symbols like RABOCERTIFFRNPL (15 chars) won't have logos from any provider
+    // This check is at the TOP to catch ALL asset types
+    if (s.length > 8) {
+        return null;
+    }
 
     // 0. TEFAS FUNDS: Use first letter placeholder (avoid wrong company logos)
     // TEFAS funds are mutual funds in Turkey, they should NOT get corporate logos

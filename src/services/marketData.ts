@@ -124,6 +124,10 @@ export async function getAssetName(symbol: string, type: string, exchange?: stri
 // Rule: Refresh if we have crossed a XX:30 boundary since the last update.
 // RULE 2: Quiet Hours (00:00 - 08:00 CET). Do not update during night.
 export function isPriceStale(lastUpdate: Date): boolean {
+    // Fast initial load: In development, never consider prices stale on server-side
+    // Client will refresh in background after page loads
+    if (process.env.FAST_INITIAL_LOAD === 'true') return false;
+
     const now = new Date();
     const currentHour = now.getHours();
 
@@ -147,6 +151,27 @@ export function isPriceStale(lastUpdate: Date): boolean {
 }
 
 export async function getMarketPrice(symbol: string, type: string, exchange?: string, forceRefresh: boolean = false, userId: string = 'System', category?: string): Promise<PriceResult | undefined> {
+    // Development mode: Skip external API calls for faster page loads
+    const skipPriceFetch = process.env.SKIP_PRICE_FETCH === 'true';
+    if (skipPriceFetch && !forceRefresh) {
+        // Return cached data only, don't fetch from external APIs
+        const cached = await prisma.priceCache.findUnique({ where: { symbol } });
+        if (cached && cached.previousClose > 0) {
+            return {
+                price: cached.previousClose,
+                currency: cached.currency,
+                timestamp: (cached.tradeTime || cached.updatedAt).toLocaleString('tr-TR'),
+                previousClose: cached.actualPreviousClose || cached.previousClose,
+                change24h: 0,
+                changePercent: 0,
+                sector: cached.sector || 'N/A',
+                country: cached.country || 'N/A'
+            };
+        }
+        // If no cache, return undefined (will use buyPrice as fallback)
+        return undefined;
+    }
+
     // Ticker Normalization (Force correct symbols for known issues)
     if (symbol.toUpperCase() === 'SOIT.PA') symbol = 'SOI.PA';
 
@@ -768,6 +793,27 @@ export async function getMarketPrice(symbol: string, type: string, exchange?: st
  * BATCH: Get prices for multiple symbols at once
  */
 export async function getBatchMarketPrices(assets: { symbol: string, type: string, exchange?: string, category?: string }[], forceRefresh: boolean = false): Promise<Record<string, PriceResult | null>> {
+    // Development mode: Skip external API calls for faster page loads
+    const skipPriceFetch = process.env.SKIP_PRICE_FETCH === 'true';
+    if (skipPriceFetch && !forceRefresh) {
+        const results: Record<string, PriceResult | null> = {};
+        const symbols = assets.map(a => a.symbol);
+        const cached = await prisma.priceCache.findMany({ where: { symbol: { in: symbols } } });
+        for (const c of cached) {
+            if (c.previousClose > 0) {
+                results[c.symbol] = {
+                    price: c.previousClose,
+                    currency: c.currency,
+                    timestamp: (c.tradeTime || c.updatedAt).toLocaleString('tr-TR'),
+                    previousClose: c.actualPreviousClose || c.previousClose,
+                    change24h: 0,
+                    changePercent: 0
+                };
+            }
+        }
+        return results;
+    }
+
     try {
         // Separate Yahoo-able assets from others
         const yahooSymbols: string[] = [];

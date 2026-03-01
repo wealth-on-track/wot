@@ -840,6 +840,7 @@ export interface ImportResult {
     skipped: number;
     errors: string[];
     txAdded?: number;
+    txSkipped?: number; // Number of duplicate transactions skipped
 }
 
 /**
@@ -907,6 +908,7 @@ export async function executeImport(
     let updated = 0;
     let skipped = 0;
     let txAdded = 0;
+    let txSkipped = 0; // Track duplicate transactions
     const errors: string[] = [];
 
     // Create a map of raw symbol -> resolved asset for quick lookup
@@ -1287,20 +1289,43 @@ export async function executeImport(
                         }
                     });
                 } else {
-                    // Start of fuzzy matching for duplicates if no external ID
-                    // Check if identical transaction exists (same date, same quantity/price/symbol)
-                    const existingTx = await prisma.assetTransaction.findFirst({
+                    // SMART MERGE: Robust duplicate detection for re-imports
+                    // This ensures that previously imported transactions are skipped
+                    // even if there are minor floating point or timezone differences
+
+                    const txDate = new Date(tx.date);
+                    // Create date range for same-day matching (ignore time component)
+                    const dayStart = new Date(txDate.getFullYear(), txDate.getMonth(), txDate.getDate(), 0, 0, 0, 0);
+                    const dayEnd = new Date(txDate.getFullYear(), txDate.getMonth(), txDate.getDate(), 23, 59, 59, 999);
+
+                    // Tolerance for floating point comparison (0.01% tolerance)
+                    const qtyTolerance = Math.abs(tx.quantity) * 0.0001 + 0.000001;
+                    const priceTolerance = Math.abs(tx.price) * 0.0001 + 0.000001;
+
+                    // Find potential duplicates within the same day
+                    const potentialDuplicates = await prisma.assetTransaction.findMany({
                         where: {
                             portfolioId: targetPortfolioId,
                             symbol: resolvedSymbol,
-                            date: new Date(tx.date),
-                            quantity: tx.quantity,
-                            price: tx.price,
-                            type: tx.type
+                            type: tx.type,
+                            date: {
+                                gte: dayStart,
+                                lte: dayEnd
+                            }
                         }
                     });
 
-                    if (!existingTx) {
+                    // Check if any existing transaction matches within tolerance
+                    const isDuplicate = potentialDuplicates.some(existing => {
+                        const qtyMatch = Math.abs(existing.quantity - tx.quantity) <= qtyTolerance;
+                        const priceMatch = Math.abs(existing.price - tx.price) <= priceTolerance;
+                        return qtyMatch && priceMatch;
+                    });
+
+                    if (isDuplicate) {
+                        txSkipped++;
+                        console.log(`[Import] Skipped duplicate tx: ${resolvedSymbol} ${tx.type} ${tx.quantity}@${tx.price} on ${txDate.toISOString().split('T')[0]}`);
+                    } else {
                         await prisma.assetTransaction.create({
                             data: {
                                 portfolioId: targetPortfolioId,
@@ -1325,7 +1350,7 @@ export async function executeImport(
                 errors.push(`Tx Error ${tx.symbol}: ${error}`);
             }
         }
-        console.log(`[Import] Processed ${transactions.length} transactions, successfully added ${txAdded}`);
+        console.log(`[Import] Processed ${transactions.length} transactions: ${txAdded} added, ${txSkipped} skipped (duplicates)`);
     }
 
     // Track the import activity
@@ -1352,6 +1377,7 @@ export async function executeImport(
         updated,
         skipped,
         errors,
-        txAdded
+        txAdded,
+        txSkipped
     };
 }

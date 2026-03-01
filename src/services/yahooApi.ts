@@ -232,7 +232,8 @@ export async function getYahooQuote(symbol: string, forceRefresh: boolean = fals
                         // Respect TEFAS currency, otherwise fallback to detection
                         currency: (dbCache.source === 'TEFAS' || dbCache.source === 'FON') ? dbCache.currency : (forcedCurrency || dbCache.currency),
                         regularMarketTime: dbCache.tradeTime || dbCache.updatedAt,
-                        regularMarketPreviousClose: dbCache.previousClose,
+                        // FIX: Use actualPreviousClose (real previous close) not previousClose (which is current price)
+                        regularMarketPreviousClose: dbCache.actualPreviousClose || undefined,
                         marketState: undefined
                     };
 
@@ -364,11 +365,24 @@ export async function getYahooQuote(symbol: string, forceRefresh: boolean = fals
                         marketState: getEstimatedUSMarketState()
                     };
 
-                    // Save to DB
+                    // Save to DB - include actualPreviousClose for accurate 1D calculations
                     await prisma.priceCache.upsert({
                         where: { symbol: quote.symbol },
-                        create: { symbol: quote.symbol, previousClose: quote.regularMarketPrice || 0, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() },
-                        update: { previousClose: quote.regularMarketPrice || 0, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() }
+                        create: {
+                            symbol: quote.symbol,
+                            previousClose: quote.regularMarketPrice || 0,
+                            actualPreviousClose: quote.regularMarketPreviousClose || null,
+                            currency: quote.currency || 'USD',
+                            tradeTime: quote.regularMarketTime,
+                            updatedAt: new Date()
+                        },
+                        update: {
+                            previousClose: quote.regularMarketPrice || 0,
+                            actualPreviousClose: quote.regularMarketPreviousClose || null,
+                            currency: quote.currency || 'USD',
+                            tradeTime: quote.regularMarketTime,
+                            updatedAt: new Date()
+                        }
                     }).catch(err => console.error('[YahooApi] DB Upsert (Alpha) Error:', err));
 
                     return quote;
@@ -394,10 +408,24 @@ export async function getYahooQuote(symbol: string, forceRefresh: boolean = fals
                     marketState: getEstimatedUSMarketState()
                 };
 
+                // Save to DB - include actualPreviousClose for accurate 1D calculations
                 await prisma.priceCache.upsert({
                     where: { symbol: quote.symbol },
-                    create: { symbol: quote.symbol, previousClose: quote.regularMarketPrice || 0, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() },
-                    update: { previousClose: quote.regularMarketPrice || 0, currency: quote.currency || 'USD', tradeTime: quote.regularMarketTime, updatedAt: new Date() }
+                    create: {
+                        symbol: quote.symbol,
+                        previousClose: quote.regularMarketPrice || 0,
+                        actualPreviousClose: quote.regularMarketPreviousClose || null,
+                        currency: quote.currency || 'USD',
+                        tradeTime: quote.regularMarketTime,
+                        updatedAt: new Date()
+                    },
+                    update: {
+                        previousClose: quote.regularMarketPrice || 0,
+                        actualPreviousClose: quote.regularMarketPreviousClose || null,
+                        currency: quote.currency || 'USD',
+                        tradeTime: quote.regularMarketTime,
+                        updatedAt: new Date()
+                    }
                 }).catch(err => console.error('[YahooApi] DB Upsert (Finnhub) Error:', err));
 
                 return quote;
@@ -608,13 +636,15 @@ async function getDirectQuoteFallback(symbol: string): Promise<YahooQuote | null
                     create: {
                         symbol: quote.symbol,
                         previousClose: quote.regularMarketPrice || 0,
-                            currency: quote.currency || 'USD',
+                        actualPreviousClose: actualPreviousClose || null,
+                        currency: quote.currency || 'USD',
                         tradeTime: quote.regularMarketTime,
                         updatedAt: new Date()
                     },
                     update: {
                         previousClose: quote.regularMarketPrice || 0,
-                            currency: quote.currency || 'USD',
+                        actualPreviousClose: actualPreviousClose || null,
+                        currency: quote.currency || 'USD',
                         tradeTime: quote.regularMarketTime,
                         updatedAt: new Date()
                     }

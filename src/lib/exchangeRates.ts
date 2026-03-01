@@ -42,6 +42,9 @@ function isQuietHours(): boolean {
  * Check if a rate is stale (updated before current hour)
  */
 function isStale(lastUpdateUTC: Date): boolean {
+    // Fast initial load: Never consider stale, use cache
+    if (process.env.FAST_INITIAL_LOAD === 'true') return false;
+
     if (isQuietHours()) return false;
 
     const now = new Date();

@@ -282,7 +282,8 @@ export async function getAssetPerformance(
     currentPrice: number,
     assetCurrency: string,
     exchangeRates?: ExchangeRates, // e.g. { EUR: 1, USD: 1.05, TRY: 38.5 }
-    targetCurrency: string = 'EUR'
+    targetCurrency: string = 'EUR',
+    previousClose?: number // Optional: Yahoo's previousClose for accurate 1D calculation
 ): Promise<HistoricalPerformance> {
 
     // Helper: Convert Amount to Target
@@ -323,11 +324,27 @@ export async function getAssetPerformance(
     // Get comparison dates
     const now = new Date();
 
-    const oneDayAgo = new Date(now); oneDayAgo.setDate(now.getDate() - 1);
-    const oneWeekAgo = new Date(now); oneWeekAgo.setDate(now.getDate() - 7);
+    // CRITICAL FIX: Set time to end of day (23:59:59.999) for proper date comparison
+    // This ensures we find prices from that CALENDAR day, not exact timestamp
+    // Example: If now is Feb 14 21:33, we want prices from Feb 13 (any time)
+    // So we set oneDayAgo to Feb 13 23:59:59.999 to include all Feb 13 prices
+    // Without this fix, a price from Feb 13 22:56 would be missed if current time is 21:33
+    const endOfDay = (date: Date): Date => {
+        const d = new Date(date);
+        d.setHours(23, 59, 59, 999);
+        return d;
+    };
+
+    const oneDayAgo = endOfDay(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+    const oneWeekAgo = endOfDay(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
     const oneMonthAgo = new Date(now); oneMonthAgo.setMonth(now.getMonth() - 1);
     const oneYearAgo = new Date(now); oneYearAgo.setFullYear(now.getFullYear() - 1);
     const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+    // Apply end of day to month/year/YTD dates too
+    const oneMonthAgoEOD = endOfDay(oneMonthAgo);
+    const oneYearAgoEOD = endOfDay(oneYearAgo);
+    const startOfYearEOD = endOfDay(startOfYear);
 
     // Helper to find price closest to date
     const findPriceAt = async (targetDate: Date): Promise<number | null> => {
@@ -376,11 +393,11 @@ export async function getAssetPerformance(
     }
 
     const [p1D, p1W, p1M, pYTD, p1Y] = await Promise.all([
-        findPriceAt(oneDayAgo),
-        findPriceAt(oneWeekAgo),
-        findPriceAt(oneMonthAgo),
-        findPriceAt(startOfYear),
-        findPriceAt(oneYearAgo)
+        findPriceAt(oneDayAgo),      // Already has endOfDay applied
+        findPriceAt(oneWeekAgo),     // Already has endOfDay applied
+        findPriceAt(oneMonthAgoEOD),
+        findPriceAt(startOfYearEOD),
+        findPriceAt(oneYearAgoEOD)
     ]);
 
     const calc = (oldPrice: number | null) => {
@@ -388,20 +405,33 @@ export async function getAssetPerformance(
         return ((adjustedCurrentPrice - oldPrice) / oldPrice) * 100;
     };
 
-    // Debug log for 1D calculation
-    if (process.env.NODE_ENV === 'development') {
-        console.log(`[Performance] ${symbol}: currentPrice=${adjustedCurrentPrice.toFixed(2)}, p1D=${p1D?.toFixed(2) || 'null'}, 1D%=${calc(p1D).toFixed(2)}`);
-    }
+    // Calculate 1D change
+    // PRIORITY: Use Yahoo's previousClose when provided (most accurate for 1D)
+    // Fallback to historical data only when previousClose is not available
+    let final1DPercent: number;
 
-    // Use the calculated 1D percent directly - no stale check needed
-    // The calculation already uses the most recent available data point before "oneDayAgo"
-    // which is correct for 1D change (yesterday's close vs current price)
-    //
-    // NOTE: Previously this had a "stale" check that incorrectly marked valid 1-day-old data
-    // as stale, causing fallback to Yahoo's incorrect changePercent values.
-    // The historical calculation above (comparing current price to yesterday's close) is
-    // the authoritative source for 1D change.
-    const final1DPercent = calc(p1D);
+    if (previousClose && previousClose > 0) {
+        // Use Yahoo's previousClose - convert to target currency if needed
+        let adjustedPreviousClose = previousClose;
+        if (isDifferent) {
+            const currentRate = exchangeRates?.[assetCurrency] || 1;
+            adjustedPreviousClose = previousClose / currentRate;
+        }
+        final1DPercent = ((adjustedCurrentPrice - adjustedPreviousClose) / adjustedPreviousClose) * 100;
+
+        // Debug log
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`[Performance] ${symbol}: current=${adjustedCurrentPrice.toFixed(2)}, prevClose=${adjustedPreviousClose.toFixed(2)}, 1D%=${final1DPercent.toFixed(2)} (Yahoo)`);
+        }
+    } else {
+        // Fallback to historical data
+        final1DPercent = calc(p1D);
+
+        // Debug log
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`[Performance] ${symbol}: current=${adjustedCurrentPrice.toFixed(2)}, p1D=${p1D?.toFixed(2) || 'null'}, 1D%=${final1DPercent.toFixed(2)} (History)`);
+        }
+    }
 
     return {
         changePercent1D: final1DPercent,

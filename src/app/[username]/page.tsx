@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { Navbar } from "@/components/Navbar";
 import { ClientWrapper } from "@/components/ClientWrapper";
-import { getPortfolioMetricsOptimized } from "@/lib/portfolio-optimized";
+import { getCachedPortfolioMetrics } from "@/lib/portfolio-cached";
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { isMobileDevice } from "@/lib/deviceDetection";
@@ -112,15 +112,15 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     // This ensures server-side values match client-side recalculations
     const rates = await getExchangeRates();
 
-    let portfolioResult: { success: true; totalValueEUR: number; assetsWithValues: any[] } | { success: false; error: unknown };
+    // INSTANT LOAD: Use cached prices from database (no API calls)
+    // Live updates happen client-side via SSE streaming
+    let portfolioResult: { success: true; totalValueEUR: number; assetsWithValues: any[]; cacheTimestamps: Record<string, Date> } | { success: false; error: unknown };
     try {
-        const result = await getPortfolioMetricsOptimized(
+        const result = await getCachedPortfolioMetrics(
             (user as any).portfolio!.assets,
-            rates,  // Use REAL rates, not emergency fallback
-            false,
-            session?.user?.name || session?.user?.email || 'System'
+            rates
         );
-        portfolioResult = { success: true as const, totalValueEUR: result.totalValueEUR, assetsWithValues: result.assetsWithValues };
+        portfolioResult = { success: true as const, ...result };
     } catch (e) {
         console.error("Critical: Failed to calculate portfolio metrics", e);
         portfolioResult = { success: false as const, error: e };
@@ -205,6 +205,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             exchangeRates={rates}
             preferences={(user.preferences as any) || undefined}
             userEmail={user.email}
+            portfolioId={(user as any).portfolio!.id}
+            enableLiveUpdates={isOwner}
             navbar={
                 <Navbar
                     totalBalance={totalPortfolioValueEUR}
