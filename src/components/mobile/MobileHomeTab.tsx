@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import { useCurrency } from "@/context/CurrencyContext";
 import type { AssetDisplay } from "@/lib/types";
@@ -89,11 +89,43 @@ export function MobileHomeTab({
     const [isPeriodMenuOpen, setIsPeriodMenuOpen] = useState(false);
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
 
+    // Odometer-like smooth value updates for total portfolio amount
+    const [animatedTotal, setAnimatedTotal] = useState(totalValueEUR);
+    const rafRef = useRef<number | null>(null);
+
     useEffect(() => {
         if (defaultPeriod) {
             setSelectedPeriod(defaultPeriod as Period);
         }
     }, [defaultPeriod]);
+
+    useEffect(() => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+
+        const start = animatedTotal;
+        const end = totalValueEUR;
+        const diff = end - start;
+        if (Math.abs(diff) < 0.01) {
+            setAnimatedTotal(end);
+            return;
+        }
+
+        const duration = 650;
+        const t0 = performance.now();
+        const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+
+        const tick = (now: number) => {
+            const t = Math.min(1, (now - t0) / duration);
+            setAnimatedTotal(start + diff * easeOut(t));
+            if (t < 1) rafRef.current = requestAnimationFrame(tick);
+        };
+
+        rafRef.current = requestAnimationFrame(tick);
+        return () => {
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [totalValueEUR]);
 
     // Use server-provided exchange rates with fallbacks
     const rates: Record<string, number> = {
@@ -350,7 +382,7 @@ export function MobileHomeTab({
                             lineHeight: 1
                         }}
                     >
-                        {isPrivacyMode ? "••••••" : formatValue(totalValueEUR)}
+                        {isPrivacyMode ? "••••••" : formatValue(animatedTotal)}
                     </div>
 
                     {/* Right: P&L - separate badges */}

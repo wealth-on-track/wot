@@ -161,23 +161,23 @@ export function MobileDashboard({
             />
 
             {/* Main Content */}
-            {isOwner && (
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '4px 12px 0 12px',
-                    fontSize: 11,
-                    color: 'var(--text-muted)'
-                }}>
-                    <span style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        background: isLiveUpdating ? '#10b981' : '#6b7280',
-                        display: 'inline-block'
-                    }} />
-                    <span>{isLiveUpdating ? `Canlı güncelleniyor • %${Math.round(liveProgress)}` : 'Önce cache, sonra canlı güncelleme'}</span>
+            {isOwner && isLiveUpdating && (
+                <div style={{ padding: '4px 12px 0 12px' }}>
+                    <div style={{
+                        width: '100%',
+                        height: 4,
+                        borderRadius: 999,
+                        background: 'rgba(255,255,255,0.08)',
+                        overflow: 'hidden'
+                    }}>
+                        <div style={{
+                            width: `${Math.max(0, Math.min(100, liveProgress))}%`,
+                            height: '100%',
+                            borderRadius: 999,
+                            background: 'linear-gradient(90deg, #ef4444 0%, #f59e0b 45%, #10b981 100%)',
+                            transition: 'width 220ms ease'
+                        }} />
+                    </div>
                 </div>
             )}
             <PullToRefresh>
