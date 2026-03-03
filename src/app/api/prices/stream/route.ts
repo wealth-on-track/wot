@@ -3,7 +3,10 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getMarketPrice, convertCurrency } from "@/services/marketData";
 
-const BATCH_SIZE = 5;
+// Keep concurrency conservative to avoid Yahoo/Finnhub rate limits (stale fallbacks)
+const BATCH_SIZE = 2;
+const BATCH_DELAY_MS = 350;
+const RETRY_DELAY_MS = 400;
 
 export async function GET(request: NextRequest) {
     // Auth check
@@ -92,8 +95,24 @@ export async function GET(request: NextRequest) {
                     batch.map(async (symbol) => {
                         const assetInfo = assetMap.get(symbol) || { type: 'STOCK', exchange: '', currency: 'USD', quantity: 0 };
 
+                        const toPayload = (priceData: any) => {
+                            const currency = priceData.currency || assetInfo.currency;
+                            const rate = rateMap[currency] || 1;
+                            const valueEUR = (priceData.price * assetInfo.quantity) / rate;
+                            return {
+                                symbol,
+                                price: priceData.price,
+                                previousClose: priceData.previousClose || priceData.price,
+                                change: priceData.change24h || 0,
+                                changePercent: priceData.changePercent || 0,
+                                currency: priceData.currency || assetInfo.currency,
+                                valueEUR,
+                                success: true
+                            };
+                        };
+
                         try {
-                            const priceData = await getMarketPrice(
+                            const firstTry = await getMarketPrice(
                                 symbol,
                                 assetInfo.type,
                                 assetInfo.exchange,
@@ -101,23 +120,20 @@ export async function GET(request: NextRequest) {
                                 session.user?.email || 'stream'
                             );
 
-                            if (priceData) {
-                                // Calculate EUR value
-                                const currency = priceData.currency || assetInfo.currency;
-                                const rate = rateMap[currency] || 1;
-                                const valueEUR = (priceData.price * assetInfo.quantity) / rate;
+                            if (firstTry) return toPayload(firstTry);
 
-                                return {
-                                    symbol,
-                                    price: priceData.price,
-                                    previousClose: priceData.previousClose || priceData.price,
-                                    change: priceData.change24h || 0,
-                                    changePercent: priceData.changePercent || 0,
-                                    currency: priceData.currency || assetInfo.currency,
-                                    valueEUR,
-                                    success: true
-                                };
-                            }
+                            // Retry once (gentle backoff) to reduce transient stale results from provider rate limits
+                            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+                            const retry = await getMarketPrice(
+                                symbol,
+                                assetInfo.type,
+                                assetInfo.exchange,
+                                true,
+                                session.user?.email || 'stream-retry'
+                            );
+
+                            if (retry) return toPayload(retry);
+
                             return { symbol, success: false };
                         } catch (e) {
                             console.error(`[Stream] Error fetching ${symbol}:`, e);
@@ -131,7 +147,7 @@ export async function GET(request: NextRequest) {
                     completed++;
                     const progress = Math.round((completed / totalSymbols) * 100);
 
-                    if (result.status === 'fulfilled' && result.value.success) {
+                    if (result.status === 'fulfilled' && result.value.success && 'price' in result.value) {
                         const data = result.value;
                         controller.enqueue(
                             encoder.encode(`data: ${JSON.stringify({
@@ -161,7 +177,7 @@ export async function GET(request: NextRequest) {
 
                 // Small delay between batches to avoid rate limiting
                 if (i + BATCH_SIZE < symbols.length) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                    await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
                 }
             }
 
