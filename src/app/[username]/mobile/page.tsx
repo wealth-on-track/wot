@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { MobileClientWrapper } from "@/components/mobile/MobileClientWrapper";
-import { getPortfolioMetricsOptimized } from "@/lib/portfolio-optimized";
+import { getCachedPortfolioMetrics } from "@/lib/portfolio-cached";
 import { prisma } from "@/lib/prisma";
 import { getExchangeRates } from "@/lib/exchangeRates";
 
@@ -55,11 +55,11 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
 
     let portfolioResult: { success: true; totalValueEUR: number; assetsWithValues: any[] } | { success: false; error: unknown };
     try {
-        const result = await getPortfolioMetricsOptimized(
+        // FAST INITIAL LOAD: use DB cached prices first (same strategy as web)
+        // Then mobile client streams incremental updates in background.
+        const result = await getCachedPortfolioMetrics(
             user.Portfolio!.Asset,
-            rates,  // Use REAL rates, not emergency fallback
-            false,
-            session?.user?.name || session?.user?.email || 'System'
+            rates
         );
         portfolioResult = { success: true as const, totalValueEUR: result.totalValueEUR, assetsWithValues: result.assetsWithValues };
     } catch (e) {
@@ -109,6 +109,8 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
             goals={displayedGoals}
             exchangeRates={rates}
             preferences={user.preferences}
+            portfolioId={user.Portfolio.id}
+            enableLiveUpdates={isOwner}
         />
     );
 }

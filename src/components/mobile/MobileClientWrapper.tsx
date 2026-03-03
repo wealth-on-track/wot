@@ -1,7 +1,9 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import { CurrencyProvider } from "@/context/CurrencyContext";
 import { MobileDashboard } from "./MobileDashboard";
+import { useLiveUpdates } from "@/hooks/useLiveUpdates";
 import type { AssetDisplay } from "@/lib/types";
 
 interface MobileClientWrapperProps {
@@ -12,16 +14,40 @@ interface MobileClientWrapperProps {
     goals?: unknown[];
     exchangeRates: Record<string, number>;
     preferences?: unknown;
+    portfolioId?: string;
+    enableLiveUpdates?: boolean;
 }
 
 export function MobileClientWrapper({
     username,
     isOwner,
     totalValueEUR,
-    assets,
+    assets: initialAssets,
     exchangeRates,
-    preferences
+    preferences,
+    portfolioId,
+    enableLiveUpdates = false
 }: MobileClientWrapperProps) {
+    const [assets, setAssets] = useState(initialAssets);
+
+    useEffect(() => {
+        setAssets(initialAssets);
+    }, [initialAssets]);
+
+    const handleAssetUpdate = useCallback((symbol: string, newData: Partial<any>) => {
+        setAssets(prev => prev.map(a =>
+            a.symbol === symbol ? { ...a, ...newData } : a
+        ));
+    }, []);
+
+    const { isUpdating, progress } = useLiveUpdates({
+        portfolioId,
+        assets,
+        exchangeRates,
+        enabled: enableLiveUpdates && isOwner,
+        onAssetUpdate: handleAssetUpdate
+    });
+
     return (
         <CurrencyProvider>
             <MobileDashboard
@@ -31,6 +57,8 @@ export function MobileClientWrapper({
                 assets={assets}
                 exchangeRates={exchangeRates}
                 preferences={preferences}
+                isLiveUpdating={isUpdating}
+                liveProgress={progress}
             />
         </CurrencyProvider>
     );

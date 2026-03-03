@@ -24,6 +24,8 @@ interface MobileDashboardProps {
     assets: AssetDisplay[];
     exchangeRates: Record<string, number>;
     preferences?: any;
+    isLiveUpdating?: boolean;
+    liveProgress?: number;
 }
 
 
@@ -33,7 +35,9 @@ export function MobileDashboard({
     totalValueEUR,
     assets,
     exchangeRates,
-    preferences
+    preferences,
+    isLiveUpdating = false,
+    liveProgress = 0
 }: MobileDashboardProps) {
     // --- Navigation State ---
     const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -157,6 +161,25 @@ export function MobileDashboard({
             />
 
             {/* Main Content */}
+            {isOwner && (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '4px 12px 0 12px',
+                    fontSize: 11,
+                    color: 'var(--text-muted)'
+                }}>
+                    <span style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: isLiveUpdating ? '#10b981' : '#6b7280',
+                        display: 'inline-block'
+                    }} />
+                    <span>{isLiveUpdating ? `Canlı güncelleniyor • %${Math.round(liveProgress)}` : 'Önce cache, sonra canlı güncelleme'}</span>
+                </div>
+            )}
             <PullToRefresh>
                 <div style={{
                     flex: 1,
