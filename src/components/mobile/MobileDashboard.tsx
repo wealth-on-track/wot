@@ -331,6 +331,17 @@ export function MobileDashboard({
                 </div>
             </PullToRefresh>
 
+            {/* Build badge */}
+            <div style={{
+                textAlign: 'center',
+                fontSize: 10,
+                color: 'var(--text-muted)',
+                paddingBottom: 4,
+                opacity: 0.8
+            }}>
+                build b573b3e
+            </div>
+
             {/* Bottom Navigation */}
             <MobileBottomNav
                 activeTab={activeTab}
