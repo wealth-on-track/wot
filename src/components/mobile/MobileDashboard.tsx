@@ -331,15 +331,21 @@ export function MobileDashboard({
                 </div>
             </PullToRefresh>
 
-            {/* Build badge */}
+            {/* Build badge (fixed, always visible above bottom nav) */}
             <div style={{
+                position: 'fixed',
+                left: 0,
+                right: 0,
+                bottom: 62,
                 textAlign: 'center',
-                fontSize: 10,
+                fontSize: 11,
+                fontWeight: 700,
                 color: 'var(--text-muted)',
-                paddingBottom: 4,
-                opacity: 0.8
+                opacity: 0.9,
+                pointerEvents: 'none',
+                zIndex: 40
             }}>
-                build b573b3e
+                build b3ef53c
             </div>
 
             {/* Bottom Navigation */}
