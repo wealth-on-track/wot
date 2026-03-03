@@ -336,7 +336,7 @@ export function MobileDashboard({
                 position: 'fixed',
                 left: 0,
                 right: 0,
-                bottom: 62,
+                bottom: 82,
                 textAlign: 'center',
                 fontSize: 11,
                 fontWeight: 700,
