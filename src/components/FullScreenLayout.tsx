@@ -1366,27 +1366,35 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         if (sortColumn || sortDirection) return; // disable when table sort is active
         if (active.id === over.id) return;
 
-        // Reorder on the visible list (includes BES synthetic rows)
-        const oldDisplayIndex = displayAssets.findIndex((item: any) => item.id === active.id);
-        const newDisplayIndex = displayAssets.findIndex((item: any) => item.id === over.id);
-        if (oldDisplayIndex < 0 || newDisplayIndex < 0) return;
+        const activeRow = displayAssets.find((item: any) => item.id === active.id);
+        const overRow = displayAssets.find((item: any) => item.id === over.id);
+        if (!activeRow || !overRow) return;
 
-        const reorderedDisplay = arrayMove(displayAssets as any[], oldDisplayIndex, newDisplayIndex);
+        // Group key: BES sub-funds move as one block via parent BES asset id
+        const activeGroupKey = (activeRow as any)._besAssetId || activeRow.id;
+        const overGroupKey = (overRow as any)._besAssetId || overRow.id;
+        if (activeGroupKey === overGroupKey) return;
 
-        // Map visible rows back to real asset ids (BES_FUND -> BES asset id), keep first occurrence
-        const realOrder = Array.from(new Set(
-            reorderedDisplay.map((a: any) => a._besAssetId || a.id)
+        // Build current group order from visible rows
+        const groupOrder = Array.from(new Set(
+            (displayAssets as any[]).map((a: any) => a._besAssetId || a.id)
         ));
+
+        const oldIndex = groupOrder.indexOf(activeGroupKey);
+        const newIndex = groupOrder.indexOf(overGroupKey);
+        if (oldIndex < 0 || newIndex < 0) return;
+
+        const nextGroupOrder = arrayMove(groupOrder, oldIndex, newIndex);
 
         setAssets((items) => {
             const byId = new Map(items.map(i => [i.id, i]));
-            const next = realOrder.map((id: any) => byId.get(id)).filter(Boolean) as typeof items;
+            const next = nextGroupOrder.map((id: any) => byId.get(id)).filter(Boolean) as typeof items;
             return next.length ? next : items;
         });
 
-        // Persist order
+        // Persist order by real asset ids
         const { reorderAssets } = await import('@/lib/actions');
-        await reorderAssets(realOrder as string[]);
+        await reorderAssets(nextGroupOrder as string[]);
     };
 
     /* 
