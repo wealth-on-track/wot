@@ -57,8 +57,17 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
     try {
         // FAST INITIAL LOAD: use DB cached prices first (same strategy as web)
         // Then mobile client streams incremental updates in background.
+        const effectiveAssets = user.Portfolio!.Asset.map((a: any) => ({
+            ...a,
+            type: a.customType || a.type,
+            exchange: a.customExchange || a.exchange,
+            currency: a.customCurrency || a.currency,
+            country: a.customCountry || a.country,
+            sector: a.customSector || a.sector,
+        }));
+
         const result = await getCachedPortfolioMetrics(
-            user.Portfolio!.Asset,
+            effectiveAssets,
             rates
         );
         portfolioResult = { success: true as const, totalValueEUR: result.totalValueEUR, assetsWithValues: result.assetsWithValues };

@@ -116,8 +116,17 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     // Live updates happen client-side via SSE streaming
     let portfolioResult: { success: true; totalValueEUR: number; assetsWithValues: any[]; cacheTimestamps: Record<string, Date> } | { success: false; error: unknown };
     try {
+        const effectiveAssets = (user as any).portfolio!.assets.map((a: any) => ({
+            ...a,
+            type: a.customType || a.type,
+            exchange: a.customExchange || a.exchange,
+            currency: a.customCurrency || a.currency,
+            country: a.customCountry || a.country,
+            sector: a.customSector || a.sector,
+        }));
+
         const result = await getCachedPortfolioMetrics(
-            (user as any).portfolio!.assets,
+            effectiveAssets,
             rates
         );
         portfolioResult = { success: true as const, ...result };

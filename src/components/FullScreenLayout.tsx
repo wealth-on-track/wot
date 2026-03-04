@@ -1652,7 +1652,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
 
     /* Loading block removed */
 
-    const handleBatchSaveOrToggle = () => {
+    const handleBatchSaveOrToggle = async () => {
         if (activePositionTab === 'closed') {
             setIsClosedBatchEditMode(!isClosedBatchEditMode);
             return;
@@ -1687,7 +1687,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
 
             setAssets(updatedAssets);
 
-            const saveChanges = async () => {
+            const saveChanges = async (): Promise<boolean> => {
                 const { updateAsset, updateBESFundMetadata } = await import('@/lib/actions');
 
                 const normalizeAssetType = (v?: string) => {
@@ -1749,10 +1749,27 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                 const hasError = results.some((r: any) => r && r.error);
                 if (hasError) {
                     console.error('Batch metadata save had validation errors', results);
+                    return false;
                 }
                 onCountChange();
+                return true;
             };
-            saveChanges().catch(err => console.error("Batch save failed:", err));
+
+            try {
+                const ok = await saveChanges();
+                if (!ok) {
+                    setSuccessMessage('Save failed');
+                    setShowSuccessNotification(true);
+                    setTimeout(() => setShowSuccessNotification(false), 2200);
+                    return;
+                }
+            } catch (err) {
+                console.error("Batch save failed:", err);
+                setSuccessMessage('Save failed');
+                setShowSuccessNotification(true);
+                setTimeout(() => setShowSuccessNotification(false), 2200);
+                return;
+            }
 
             setSuccessMessage('Changes Saved');
             setShowSuccessNotification(true);
