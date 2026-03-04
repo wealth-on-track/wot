@@ -1100,6 +1100,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
     const [isClosedBatchEditMode, setIsClosedBatchEditMode] = React.useState(false);
     const [editedAssets, setEditedAssets] = React.useState<Record<string, any>>({});
     const [assets, setAssets] = React.useState(() => initialAssets.filter(a => Math.abs(a.quantity) > 0.000001 || a.type === 'BES'));
+    const [flattenedOrderIds, setFlattenedOrderIds] = React.useState<string[]>([]);
     const [expandedAssets, setExpandedAssets] = React.useState<Set<string>>(new Set());
 
     const toggleExpand = (assetId: string) => {
@@ -1272,10 +1273,26 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         return result;
     }, [assets, exchangeRates]);
 
+    // Keep a stable, independently reorderable row order for flattened rows (incl. BES_FUND)
+    React.useEffect(() => {
+        setFlattenedOrderIds(prev => {
+            const currentIds = flattenedAssets.map((a: any) => a.id);
+            if (!prev.length) return currentIds;
+
+            const validPrev = prev.filter(id => currentIds.includes(id));
+            const missing = currentIds.filter(id => !validPrev.includes(id));
+            return [...validPrev, ...missing];
+        });
+    }, [flattenedAssets]);
+
     // Display all assets with sorting support
     const displayAssets = React.useMemo(() => {
         if (!sortColumn || !sortDirection) {
-            return flattenedAssets; // Default order
+            if (!flattenedOrderIds.length) return flattenedAssets;
+            const byId = new Map(flattenedAssets.map((a: any) => [a.id, a]));
+            const ordered = flattenedOrderIds.map(id => byId.get(id)).filter(Boolean) as any[];
+            const missing = flattenedAssets.filter((a: any) => !flattenedOrderIds.includes(a.id));
+            return [...ordered, ...missing];
         }
 
         const sorted = [...flattenedAssets].sort((a, b) => {
@@ -1312,7 +1329,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         });
 
         return sorted;
-    }, [flattenedAssets, sortColumn, sortDirection, totalPortfolioValueForSort]);
+    }, [flattenedAssets, flattenedOrderIds, sortColumn, sortDirection, totalPortfolioValueForSort]);
 
     // Load BES metadata from asset
     React.useEffect(() => {
@@ -1366,35 +1383,28 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         if (sortColumn || sortDirection) return; // disable when table sort is active
         if (active.id === over.id) return;
 
-        const activeRow = displayAssets.find((item: any) => item.id === active.id);
-        const overRow = displayAssets.find((item: any) => item.id === over.id);
-        if (!activeRow || !overRow) return;
+        const oldRowIndex = displayAssets.findIndex((a: any) => a.id === active.id);
+        const newRowIndex = displayAssets.findIndex((a: any) => a.id === over.id);
+        if (oldRowIndex < 0 || newRowIndex < 0) return;
 
-        // Group key: BES sub-funds move as one block via parent BES asset id
-        const activeGroupKey = (activeRow as any)._besAssetId || activeRow.id;
-        const overGroupKey = (overRow as any)._besAssetId || overRow.id;
-        if (activeGroupKey === overGroupKey) return;
+        // 1) Always reorder visible rows independently (BES rows included)
+        const nextDisplay = arrayMove(displayAssets as any[], oldRowIndex, newRowIndex);
+        const nextRowOrderIds = nextDisplay.map((a: any) => a.id);
+        setFlattenedOrderIds(nextRowOrderIds);
 
-        // Build current group order from visible rows
-        const groupOrder = Array.from(new Set(
-            (displayAssets as any[]).map((a: any) => a._besAssetId || a.id)
+        // 2) Persist only real asset order to DB (first occurrence wins)
+        const nextRealOrder = Array.from(new Set(
+            nextDisplay.map((a: any) => a._besAssetId || a.id)
         ));
-
-        const oldIndex = groupOrder.indexOf(activeGroupKey);
-        const newIndex = groupOrder.indexOf(overGroupKey);
-        if (oldIndex < 0 || newIndex < 0) return;
-
-        const nextGroupOrder = arrayMove(groupOrder, oldIndex, newIndex);
 
         setAssets((items) => {
             const byId = new Map(items.map(i => [i.id, i]));
-            const next = nextGroupOrder.map((id: any) => byId.get(id)).filter(Boolean) as typeof items;
+            const next = nextRealOrder.map((id: any) => byId.get(id)).filter(Boolean) as typeof items;
             return next.length ? next : items;
         });
 
-        // Persist order by real asset ids
         const { reorderAssets } = await import('@/lib/actions');
-        await reorderAssets(nextGroupOrder as string[]);
+        await reorderAssets(nextRealOrder as string[]);
     };
 
     /* 
