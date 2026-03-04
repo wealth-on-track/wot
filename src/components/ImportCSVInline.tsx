@@ -415,7 +415,7 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
         }
     }, [step]);
 
-    // Import progress animation
+    // Import progress animation (single controlled bar)
     useEffect(() => {
         if (step !== 'importing') {
             setImportProgress(0);
@@ -423,31 +423,16 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
             return;
         }
 
-        // Smooth progress animation
         const progressInterval = setInterval(() => {
             setImportProgress(prev => {
-                const targetProgress = IMPORT_PHASES[importPhase]?.progress || 95;
-                if (prev < targetProgress) {
-                    const newProgress = Math.min(prev + 1, targetProgress);
-                    return newProgress;
-                }
+                const targetProgress = IMPORT_PHASES[importPhase]?.progress ?? prev;
+                if (prev < targetProgress) return Math.min(prev + 1, targetProgress);
                 return prev;
             });
-        }, 50);
-
-        // Phase progression
-        const phaseInterval = setInterval(() => {
-            setImportPhase(prev => {
-                if (prev < IMPORT_PHASES.length - 1) {
-                    return prev + 1;
-                }
-                return prev;
-            });
-        }, 600);
+        }, 40);
 
         return () => {
             clearInterval(progressInterval);
-            clearInterval(phaseInterval);
         };
     }, [step, importPhase]);
 
@@ -599,6 +584,8 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
 
         setStep('importing');
         setError(null);
+        // Show only one progress system during import
+        setHideResolveBar(true);
 
         try {
             // Fallback: If resolvedAssets is empty (e.g. running from Preview/Map step), construct it from parseResult
@@ -735,10 +722,10 @@ export function ImportCSVInline({ onSuccess, onCancel }: ImportCSVInlineProps) {
             console.log('[ImportCSVInline] executeImport result:', result);
             setImportResult(result);
 
-            // Calculate counts for later
-            const openCount = resolvedAssets.filter(r => categorizeRow(r) === 'open').length;
-            const closedCount = resolvedAssets.filter(r => categorizeRow(r) === 'closed').length;
-            const statementCount = resolvedAssets.filter(r => categorizeRow(r) === 'statement').length;
+            // Calculate counts from actual import payload (resolvedAssets may be empty in direct-run path)
+            const openCount = assetsToImport.filter(r => categorizeRow(r) === 'open').length;
+            const closedCount = assetsToImport.filter(r => categorizeRow(r) === 'closed').length;
+            const statementCount = assetsToImport.filter(r => categorizeRow(r) === 'statement').length;
 
             // Phase 5: Syncing data (80%)
             setImportPhase(5);
