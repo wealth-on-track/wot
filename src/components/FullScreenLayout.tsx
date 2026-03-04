@@ -28,7 +28,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 import { ImportCSVInline } from "./ImportCSVInline";
 import { TransactionsFullScreen } from "./TransactionsFullScreen";
-import { getLogoUrl } from "@/lib/logos";
+import { getLogoUrl, getPlaceholderUrl, getLogoUrlWithFallback } from "@/lib/logos";
 import { ShareHub } from "./share/ShareHub";
 import { TransactionHistory } from '@/components/TransactionHistory';
 import { InsightsTab } from "./InsightsTab";
@@ -1113,8 +1113,8 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
 
     const [selectedAssetId, setSelectedAssetId] = React.useState<string | null>(null);
 
-    // Column sorting state
-    type SortColumn = 'NAME' | 'WEIGHT' | 'PL' | null;
+    // Column sorting state - PL now has two sub-types: Amount and Percentage
+    type SortColumn = 'NAME' | 'WEIGHT' | 'PL_AMT' | 'PL_PCT' | null;
     type SortDirection = 'asc' | 'desc' | null;
     const [sortColumn, setSortColumn] = React.useState<SortColumn>(null);
     const [sortDirection, setSortDirection] = React.useState<SortDirection>(null);
@@ -1183,13 +1183,102 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         return assets.reduce((sum, a) => sum + (a.totalValueEUR || 0), 0);
     }, [assets]);
 
-    // Display all assets including BES - with sorting support
-    const displayAssets = React.useMemo(() => {
-        if (!sortColumn || !sortDirection) {
-            return assets; // Default order
+    // Flatten BES into individual fund assets
+    const flattenedAssets = React.useMemo(() => {
+        const result: any[] = [];
+        const tryToEur = exchangeRates?.['TRY'] || 38.5; // Fallback rate
+
+        for (const asset of assets) {
+            if (asset.type === 'BES' && asset.metadata) {
+                // Flatten BES funds into individual assets
+                const meta = asset.metadata as BESMetadata;
+                const totalKP = meta.contracts?.reduce((s: number, c: any) => s + (c.katkiPayi || 0), 0) || 0;
+                const totalDK = meta.contracts?.reduce((s: number, c: any) => s + (c.devletKatkisi || 0), 0) || 0;
+
+                // Katkı Payı Funds
+                if (meta.katkiPayiFunds && meta.katkiPayiFunds.length > 0) {
+                    for (const fund of meta.katkiPayiFunds) {
+                        const valueTRY = (fund.percentage / 100) * totalKP;
+                        const valueEUR = valueTRY / tryToEur;
+                        // Cost calculation: use avgPrice if available, otherwise assume no P&L
+                        const costTRY = fund.avgPrice ? (valueTRY / (fund.price || fund.avgPrice)) * fund.avgPrice : valueTRY;
+                        const costEUR = costTRY / tryToEur;
+                        const plValueEUR = valueEUR - costEUR;
+                        const plPercentage = costEUR > 0 ? ((valueEUR / costEUR) - 1) * 100 : 0;
+
+                        result.push({
+                            id: `bes-kp-${fund.code}`,
+                            symbol: fund.code,
+                            name: fund.name,  // Just the fund name, no "BES:" prefix
+                            type: 'BES_FUND',
+                            subType: 'KATKI_PAYI',
+                            currency: 'TRY',
+                            exchange: 'TEFAS',
+                            quantity: fund.percentage,
+                            currentPrice: fund.price || 0,
+                            buyPrice: fund.avgPrice || 0,
+                            // TRY values (local currency)
+                            totalValueTRY: valueTRY,
+                            totalCostTRY: costTRY,
+                            // EUR values (base currency)
+                            totalValueEUR: valueEUR,
+                            totalCostEUR: costEUR,
+                            plValueEUR,
+                            plPercentage,
+                            customGroup: asset.customGroup,
+                            platform: asset.platform,
+                            _isBESFund: true,
+                            _besAssetId: asset.id,
+                            _fundType: 'KP'
+                        });
+                    }
+                }
+
+                // Devlet Katkısı Fund (always AET)
+                if (totalDK > 0) {
+                    const valueEUR = totalDK / tryToEur;
+                    result.push({
+                        id: `bes-dk-AET`,
+                        symbol: 'AET',
+                        name: 'Anadolu Hayat Emeklilik A.Ş. Katkı Emeklilik Yatırım Fonu',
+                        type: 'BES_FUND',
+                        subType: 'DEVLET_KATKISI',
+                        currency: 'TRY',
+                        exchange: 'TEFAS',
+                        quantity: 100,
+                        currentPrice: 0,
+                        buyPrice: 0,
+                        // TRY values
+                        totalValueTRY: totalDK,
+                        totalCostTRY: totalDK,
+                        // EUR values
+                        totalValueEUR: valueEUR,
+                        totalCostEUR: valueEUR, // DK has no P&L concept
+                        plValueEUR: 0,
+                        plPercentage: 0,
+                        customGroup: asset.customGroup,
+                        platform: asset.platform,
+                        _isBESFund: true,
+                        _besAssetId: asset.id,
+                        _fundType: 'DK'
+                    });
+                }
+            } else {
+                // Non-BES asset, keep as-is
+                result.push(asset);
+            }
         }
 
-        const sorted = [...assets].sort((a, b) => {
+        return result;
+    }, [assets, exchangeRates]);
+
+    // Display all assets with sorting support
+    const displayAssets = React.useMemo(() => {
+        if (!sortColumn || !sortDirection) {
+            return flattenedAssets; // Default order
+        }
+
+        const sorted = [...flattenedAssets].sort((a, b) => {
             const multiplier = sortDirection === 'asc' ? 1 : -1;
 
             switch (sortColumn) {
@@ -1203,10 +1292,19 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                     const weightB = totalPortfolioValueForSort > 0 ? ((b.totalValueEUR || 0) / totalPortfolioValueForSort) * 100 : 0;
                     return multiplier * (weightA - weightB);
                 }
-                case 'PL': {
-                    const plA = a.changePercent1D ?? a.plPercentage ?? 0;
-                    const plB = b.changePercent1D ?? b.plPercentage ?? 0;
+                case 'PL_AMT': {
+                    // P&L Amount sorting - use EUR values for consistent comparison
+                    // plValueEUR = totalValueEUR - totalCostEUR (server-calculated)
+                    // Fall back to manual calculation if plValueEUR not available
+                    const plA = a.plValueEUR ?? ((a.totalValueEUR || 0) - (a.totalCostEUR || 0));
+                    const plB = b.plValueEUR ?? ((b.totalValueEUR || 0) - (b.totalCostEUR || 0));
                     return multiplier * (plA - plB);
+                }
+                case 'PL_PCT': {
+                    // P&L Percentage sorting
+                    const pctA = a.plPercentage ?? 0;
+                    const pctB = b.plPercentage ?? 0;
+                    return multiplier * (pctA - pctB);
                 }
                 default:
                     return 0;
@@ -1214,7 +1312,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         });
 
         return sorted;
-    }, [assets, sortColumn, sortDirection, totalPortfolioValueForSort]);
+    }, [flattenedAssets, sortColumn, sortDirection, totalPortfolioValueForSort]);
 
     // Load BES metadata from asset
     React.useEffect(() => {
@@ -1953,34 +2051,68 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                     )}
                                                 </div>
                                             </th>
-                                            {/* P&L - SORTABLE */}
+                                            {/* P&L - Single Column with Two Sort Options */}
                                             <th
-                                                onClick={() => handleHeaderSort('PL')}
                                                 style={{
                                                     padding: '0 16px',
                                                     textAlign: 'right',
                                                     fontSize: '11px',
                                                     fontWeight: 700,
-                                                    color: sortColumn === 'PL' ? 'var(--accent)' : 'var(--text-muted)',
+                                                    color: 'var(--text-muted)',
                                                     textTransform: 'uppercase',
                                                     borderBottom: '1px solid var(--border)',
                                                     minWidth: '100px',
                                                     whiteSpace: 'nowrap',
-                                                    cursor: 'pointer',
-                                                    userSelect: 'none',
-                                                    transition: 'color 0.2s'
+                                                    userSelect: 'none'
                                                 }}
                                             >
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                                                    <div style={{ textAlign: 'right' }}>
-                                                        <div>P&L</div>
-                                                        <div style={{ opacity: 0.5, fontWeight: 500 }}>Amt</div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                                                    {/* P&L % Row - Clickable */}
+                                                    <div
+                                                        onClick={() => handleHeaderSort('PL_PCT')}
+                                                        style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            cursor: 'pointer',
+                                                            padding: '2px 6px',
+                                                            borderRadius: '4px',
+                                                            background: sortColumn === 'PL_PCT' ? 'var(--accent)' : 'transparent',
+                                                            color: sortColumn === 'PL_PCT' ? '#fff' : 'var(--text-muted)',
+                                                            transition: 'all 0.15s ease'
+                                                        }}
+                                                        title="Sort by P&L Percentage"
+                                                    >
+                                                        <span style={{ fontWeight: 700, fontSize: '10px' }}>P&L %</span>
+                                                        {sortColumn === 'PL_PCT' ? (
+                                                            sortDirection === 'desc' ? <ChevronDown size={11} /> : <ChevronUp size={11} />
+                                                        ) : (
+                                                            <ArrowUpDown size={9} style={{ opacity: 0.5 }} />
+                                                        )}
                                                     </div>
-                                                    {sortColumn === 'PL' ? (
-                                                        sortDirection === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />
-                                                    ) : (
-                                                        <ArrowUpDown size={10} style={{ opacity: 0.4 }} />
-                                                    )}
+                                                    {/* AMT Row - Clickable */}
+                                                    <div
+                                                        onClick={() => handleHeaderSort('PL_AMT')}
+                                                        style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            cursor: 'pointer',
+                                                            padding: '2px 6px',
+                                                            borderRadius: '4px',
+                                                            background: sortColumn === 'PL_AMT' ? 'var(--accent)' : 'transparent',
+                                                            color: sortColumn === 'PL_AMT' ? '#fff' : 'var(--text-muted)',
+                                                            transition: 'all 0.15s ease'
+                                                        }}
+                                                        title="Sort by P&L Amount"
+                                                    >
+                                                        <span style={{ fontWeight: 700, fontSize: '10px' }}>AMT</span>
+                                                        {sortColumn === 'PL_AMT' ? (
+                                                            sortDirection === 'desc' ? <ChevronDown size={11} /> : <ChevronUp size={11} />
+                                                        ) : (
+                                                            <ArrowUpDown size={9} style={{ opacity: 0.5 }} />
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </th>
                                             {/* Delete Action (Batch Mode Only) */}
@@ -2003,9 +2135,35 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                         >
                                             {displayAssets.map((asset, i) => {
                                                 const isLast = i === displayAssets.length - 1;
+                                                const isBESFund = asset.type === 'BES_FUND';
+                                                const isCash = asset.type === 'CASH';
 
                                                 // Calculations per row for consistent display
                                                 const calculateValues = () => {
+                                                    // BES_FUND: Use pre-calculated values from flattenedAssets
+                                                    if (isBESFund) {
+                                                        const globalRate = globalCurrency !== 'EUR'
+                                                            ? (exchangeRates?.[globalCurrency] || FALLBACK_RATES[globalCurrency] || 1)
+                                                            : 1;
+                                                        const valueGlobal = (asset.totalValueEUR || 0) * globalRate;
+                                                        const costGlobal = (asset.totalCostEUR || 0) * globalRate;
+                                                        const weight = totalPortfolioValue > 0 ? ((asset.totalValueEUR || 0) / totalPortfolioValue) * 100 : 0;
+                                                        return {
+                                                            // Local currency values (TRY)
+                                                            value: asset.totalValueTRY || 0,
+                                                            costValue: asset.totalCostTRY || 0,
+                                                            // Global currency values
+                                                            valueGlobal,
+                                                            costGlobal,
+                                                            plAmount: asset.plValueEUR ? asset.plValueEUR * globalRate : (valueGlobal - costGlobal),
+                                                            plPercentage: asset.plPercentage || 0,
+                                                            weight,
+                                                            currency: 'TRY',
+                                                            price: asset.currentPrice || 0,
+                                                            cost: asset.buyPrice || 0
+                                                        };
+                                                    }
+
                                                     const price = asset.currentPrice || asset.price || asset.previousClose || 0;
                                                     // Use edited cost if available
                                                     const editedCost = editedAssets[asset.id]?.averageBuyPrice;
@@ -2064,7 +2222,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
 
                                                 const { value, costValue, valueGlobal, costGlobal, plAmount, plPercentage, weight, currency, price, cost } = calculateValues();
 
-                                                // BES-specific values
+                                                // BES-specific values (for old grouped BES - now mostly unused)
                                                 const isBES = asset.type === 'BES';
                                                 const besMeta = isBES ? asset.metadata as BESMetadata : null;
                                                 const besKP = besMeta?.contracts?.reduce((s: number, c: any) => s + (c.katkiPayi || 0), 0) || 0;
@@ -2188,33 +2346,46 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                         >
                                                                             BES
                                                                         </div>
+                                                                    ) : isBESFund ? (
+                                                                        /* BES Fund - Normal logo style like other assets */
+                                                                        <div style={{
+                                                                            width: `${sizing.logoSize}px`, height: `${sizing.logoSize}px`,
+                                                                            borderRadius: '50%', overflow: 'hidden',
+                                                                            background: '#fff',
+                                                                            border: '1px solid var(--border)',
+                                                                            flexShrink: 0,
+                                                                            padding: '2px',
+                                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+                                                                            cursor: 'default'
+                                                                        }}>
+                                                                            <img
+                                                                                src={getLogoUrlWithFallback(asset.symbol, 'FUND', 'TEFAS')}
+                                                                                alt={asset.symbol}
+                                                                                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
+                                                                                onError={(e) => { e.currentTarget.src = getPlaceholderUrl(asset.symbol); }}
+                                                                            />
+                                                                        </div>
                                                                     ) : (
-                                                                        (() => {
-                                                                            const logoUrl = getLogoUrl(asset.symbol, asset.type || 'STOCK', asset.exchange, asset.country);
-                                                                            const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent((asset.symbol || 'X').charAt(0))}&background=6366f1&color=fff&size=64&bold=true`;
-                                                                            return (
-                                                                                <div style={{
-                                                                                    width: `${sizing.logoSize}px`, height: `${sizing.logoSize}px`,
-                                                                                    borderRadius: '50%', overflow: 'hidden',
-                                                                                    background: '#fff',
-                                                                                    border: '1px solid var(--border)',
-                                                                                    flexShrink: 0,
-                                                                                    padding: '2px',
-                                                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
-                                                                                    cursor: 'default'
-                                                                                }}>
-                                                                                    <img
-                                                                                        src={logoUrl || fallbackUrl}
-                                                                                        alt={asset.symbol}
-                                                                                        style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
-                                                                                        onError={(e) => { e.currentTarget.src = fallbackUrl; }}
-                                                                                    />
-                                                                                </div>
-                                                                            );
-                                                                        })()
+                                                                        <div style={{
+                                                                            width: `${sizing.logoSize}px`, height: `${sizing.logoSize}px`,
+                                                                            borderRadius: '50%', overflow: 'hidden',
+                                                                            background: '#fff',
+                                                                            border: '1px solid var(--border)',
+                                                                            flexShrink: 0,
+                                                                            padding: '2px',
+                                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+                                                                            cursor: 'default'
+                                                                        }}>
+                                                                            <img
+                                                                                src={getLogoUrlWithFallback(asset.symbol, asset.type || 'STOCK', asset.exchange, asset.country)}
+                                                                                alt={asset.symbol}
+                                                                                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
+                                                                                onError={(e) => { e.currentTarget.src = getPlaceholderUrl(asset.symbol); }}
+                                                                            />
+                                                                        </div>
                                                                     )}
                                                                     <div style={{ flex: 1 }}>
-                                                                        {isBatchEditMode ? (
+                                                                        {isBatchEditMode && !isBESFund ? (
                                                                             <>
                                                                                 <input
                                                                                     type="text"
@@ -2241,8 +2412,14 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                             </>
                                                                         ) : (
                                                                             <div>
-                                                                                <div style={{ fontSize: sizing.assetNameSize, fontWeight: 700, color: isBES ? 'var(--accent)' : 'var(--text-primary)' }}>{isBES ? 'BES' : (asset.name || asset.symbol)}</div>
-                                                                                {!isBES && <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500 }}>{asset.symbol}</div>}
+                                                                                <div style={{ fontSize: sizing.assetNameSize, fontWeight: 700, color: isBES ? 'var(--accent)' : 'var(--text-primary)' }}>
+                                                                                    {isBES ? 'BES' : (asset.name || asset.symbol)}
+                                                                                </div>
+                                                                                {!isBES && (
+                                                                                    <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500 }}>
+                                                                                        {asset.symbol}
+                                                                                    </div>
+                                                                                )}
                                                                             </div>
                                                                         )}
                                                                     </div>
@@ -2252,6 +2429,11 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                             <td style={{ padding: `${sizing.rowPaddingLR} 12px`, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
                                                                 {isBES ? (
                                                                     <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-muted)' }}>-</div>
+                                                                ) : isBESFund ? (
+                                                                    /* BES Fund shows allocation percentage */
+                                                                    <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                        {asset._fundType === 'DK' ? '100%' : `${asset.quantity}%`}
+                                                                    </div>
                                                                 ) : isBatchEditMode ? (
                                                                     <input
                                                                         type="number"
@@ -2288,6 +2470,16 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                             ₺{formatNumber(besTotal, 0)}
                                                                         </div>
                                                                         <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px' }}>-</div>
+                                                                    </>
+                                                                ) : isBESFund ? (
+                                                                    /* BES Fund - show fund price if available */
+                                                                    <>
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                                                                            {price > 0 ? `₺${formatNumber(price, 4)}` : '-'}
+                                                                        </div>
+                                                                        <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500 }}>
+                                                                            {cost > 0 ? `₺${formatNumber(cost, 4)}` : '-'}
+                                                                        </div>
                                                                     </>
                                                                 ) : asset.type === 'CASH' ? (
                                                                     <>
@@ -2382,9 +2574,9 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                     {isBES ? `${Math.round(besWeight)}%` : `${Math.round(weight)}%`}
                                                                 </div>
                                                             </td>
-                                                            {/* P&L */}
+                                                            {/* P&L - Single Cell with % on top, AMT below */}
                                                             <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-                                                                {isBES ? (
+                                                                {(isBES || isCash) ? (
                                                                     <>
                                                                         <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-muted)' }}>-</div>
                                                                         <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px' }}>-</div>
@@ -2476,8 +2668,10 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                     </button>
                                                                 </div>
                                                             </td>
+                                                            {/* Expand chevron - hide for BES_FUND (no transaction details) */}
                                                             <td
                                                                 onClick={(e) => {
+                                                                    if (isBESFund) return; // No expand for BES funds
                                                                     e.stopPropagation();
                                                                     toggleExpand(asset.id);
                                                                 }}
@@ -2487,16 +2681,18 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                     textAlign: 'center',
                                                                     verticalAlign: 'middle',
                                                                     borderBottom: isLast && !expandedAssets.has(asset.id) ? 'none' : '1px solid var(--border)',
-                                                                    cursor: 'pointer',
+                                                                    cursor: isBESFund ? 'default' : 'pointer',
                                                                     color: 'var(--text-secondary)'
                                                                 }}
                                                             >
-                                                                {expandedAssets.has(asset.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                                {/* Hide chevron for BES_FUND */}
+                                                                {!isBESFund && (expandedAssets.has(asset.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
                                                             </td>
                                                         </SortableRow>
 
+                                                        {/* Expanded row - skip for BES_FUND */}
                                                         {
-                                                            expandedAssets.has(asset.id) && (
+                                                            !isBESFund && expandedAssets.has(asset.id) && (
                                                                 <tr style={{ background: 'var(--bg-secondary)' }}>
                                                                     <td colSpan={100} style={{ padding: '0 0.8rem 0.8rem 0.8rem', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
                                                                         <div style={{ marginTop: '0.8rem' }}>
@@ -2623,30 +2819,24 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                 {/* Asset Name */}
                                                 <td style={{ padding: `${sizing.rowPadding} ${sizing.rowPaddingLR}`, borderBottom: '1px solid var(--border)' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        {(() => {
-                                                            const logoUrl = getLogoUrl(tx.assetSymbol, tx.assetType, tx.assetExchange, tx.assetCountry);
-                                                            const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent((tx.assetSymbol || 'X').charAt(0))}&background=6366f1&color=fff&size=64&bold=true`;
-                                                            return (
-                                                                <div style={{
-                                                                    width: `${sizing.logoSize}px`,
-                                                                    height: `${sizing.logoSize}px`,
-                                                                    borderRadius: '50%',
-                                                                    overflow: 'hidden',
-                                                                    background: '#fff',
-                                                                    border: '1px solid var(--border)',
-                                                                    flexShrink: 0,
-                                                                    padding: '2px',
-                                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
-                                                                }}>
-                                                                    <img
-                                                                        src={logoUrl || fallbackUrl}
-                                                                        alt={tx.assetSymbol}
-                                                                        style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
-                                                                        onError={(e) => { e.currentTarget.src = fallbackUrl; }}
-                                                                    />
-                                                                </div>
-                                                            );
-                                                        })()}
+                                                        <div style={{
+                                                            width: `${sizing.logoSize}px`,
+                                                            height: `${sizing.logoSize}px`,
+                                                            borderRadius: '50%',
+                                                            overflow: 'hidden',
+                                                            background: '#fff',
+                                                            border: '1px solid var(--border)',
+                                                            flexShrink: 0,
+                                                            padding: '2px',
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
+                                                        }}>
+                                                            <img
+                                                                src={getLogoUrlWithFallback(tx.assetSymbol, tx.assetType, tx.assetExchange, tx.assetCountry)}
+                                                                alt={tx.assetSymbol}
+                                                                style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
+                                                                onError={(e) => { e.currentTarget.src = getPlaceholderUrl(tx.assetSymbol); }}
+                                                            />
+                                                        </div>
                                                         <div>
                                                             <div style={{ fontSize: sizing.assetNameSize, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2 }}>
                                                                 {tx.assetName}
@@ -4120,18 +4310,12 @@ function ClosedPositionsFullScreen({ onCountChange, hideHeader = false, isBatchE
 
                                             {/* Asset */}
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-                                                {(() => {
-                                                    const logoUrl = pos.logoUrl || getLogoUrl(pos.symbol, getAssetType(pos), pos.exchange);
-                                                    const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent((pos.symbol || 'X').charAt(0))}&background=6366f1&color=fff&size=64&bold=true`;
-                                                    return (
-                                                        <img
-                                                            src={logoUrl || fallbackUrl}
-                                                            alt={pos.symbol}
-                                                            style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                                                            onError={(e) => { e.currentTarget.src = fallbackUrl; }}
-                                                        />
-                                                    );
-                                                })()}
+                                                <img
+                                                    src={pos.logoUrl || getLogoUrlWithFallback(pos.symbol, getAssetType(pos), pos.exchange)}
+                                                    alt={pos.symbol}
+                                                    style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                                                    onError={(e) => { e.currentTarget.src = getPlaceholderUrl(pos.symbol); }}
+                                                />
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', overflow: 'hidden' }}>
                                                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                                                         <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px', textOverflow: 'ellipsis', overflow: 'hidden' }} title={pos.name || pos.symbol}>
@@ -4597,7 +4781,13 @@ function SettingsFullScreen({ preferences, username, userEmail }: { preferences?
                                     if (confirm('Are you sure you want to delete your account? This will permanently remove all your data including assets, transactions, and portfolio history. This action cannot be undone.')) {
                                         const result = await deleteAccount();
                                         if (result.success) {
-                                            await signOut({ callbackUrl: '/' });
+                                            // Ensure session cookie is cleared, then force-login screen on same origin
+                                            try {
+                                                await signOut({ redirect: false });
+                                            } catch {
+                                                // ignore and still redirect
+                                            }
+                                            window.location.assign('/login?deleted=1');
                                         } else {
                                             alert(result.error || 'Failed to delete account');
                                         }
