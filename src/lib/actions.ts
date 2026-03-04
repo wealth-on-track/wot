@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { signIn, auth } from "@/auth";
 import { AuthError } from "next-auth";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getAssetName } from "@/services/marketData";
 import { getLogoUrl } from "@/lib/logos";
@@ -61,7 +62,8 @@ export async function register(prevState: any, formData: FormData) {
         return { error: "Invalid fields. Please check your input.", timestamp: Date.now() };
     }
 
-    const { email, password } = validatedFields.data;
+    const email = validatedFields.data.email.trim().toLowerCase();
+    const { password } = validatedFields.data;
 
     try {
         const existingUser = await prisma.user.findUnique({
@@ -104,12 +106,29 @@ export async function register(prevState: any, formData: FormData) {
         });
 
         // AUTO-LOGIN AFTER SUCCESSFUL REGISTRATION
-        await signIn("credentials", {
-            email,
-            password,
-            redirectTo: `/${username}`,
-        });
+        // Build same-origin redirect URL (prevents accidental localhost redirects in production)
+        const h = await headers();
+        const host = h.get("x-forwarded-host") || h.get("host");
+        const proto = h.get("x-forwarded-proto") || "https";
+        const redirectTo = host ? `${proto}://${host}/${username}` : `/${username}`;
 
+        // Retry sign-in briefly to handle read-after-write lag on distributed DB infra
+        let lastErr: unknown = null;
+        for (let i = 0; i < 3; i++) {
+            try {
+                await signIn("credentials", {
+                    email,
+                    password,
+                    redirectTo,
+                });
+                return { success: true, timestamp: Date.now() };
+            } catch (e) {
+                lastErr = e;
+                await new Promise((r) => setTimeout(r, 250 * (i + 1)));
+            }
+        }
+
+        if (lastErr) throw lastErr;
         return { success: true, timestamp: Date.now() };
 
     } catch (error) {
@@ -126,8 +145,8 @@ export async function authenticate(
     formData: FormData,
 ) {
     try {
-        const email = formData.get("email") as string;
-        const password = formData.get("password") as string;
+        const email = String(formData.get("email") || "").trim().toLowerCase();
+        const password = String(formData.get("password") || "");
 
         const user = await prisma.user.findUnique({
             where: { email },
@@ -142,7 +161,10 @@ export async function authenticate(
             return { error: "Invalid credentials.", timestamp: Date.now() };
         }
 
-        const redirectTo = `/${user.username}`;
+        const h = await headers();
+        const host = h.get("x-forwarded-host") || h.get("host");
+        const proto = h.get("x-forwarded-proto") || "https";
+        const redirectTo = host ? `${proto}://${host}/${user.username}` : `/${user.username}`;
 
         await signIn("credentials", {
             ...Object.fromEntries(formData),
