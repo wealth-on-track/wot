@@ -233,8 +233,10 @@ export function getAssetCategory(
     return 'BES';
   }
 
-  // TEFAS - Explicit check first (includes FUND type for mutual funds)
-  if (type === 'TEFAS' || type === 'FON' || type === 'FUND' || upperExchange === 'TEFAS') {
+  // TEFAS - Explicit only.
+  // IMPORTANT: Do NOT classify all FUND/ETF as TEFAS.
+  // TEFAS should be inferred from explicit markers (type/exchange) or Turkish ISIN checks below.
+  if (type === 'TEFAS' || type === 'FON' || upperExchange === 'TEFAS') {
     return 'TEFAS';
   }
 
@@ -470,8 +472,8 @@ export function getCategoryDefaults(category: AssetCategory, symbol?: string): {
       return { sector: 'Unknown', country: 'United States', currency: 'USD', exchange: undefined };
 
     case 'EU_MARKETS':
-      // Country depends on exchange, default to Europe
-      return { sector: 'Unknown', country: 'Europe', currency: 'EUR', exchange: undefined };
+      // Country depends on listing/company. If unknown, keep as Unknown (avoid wrong attribution).
+      return { sector: 'Unknown', country: 'Unknown', currency: 'EUR', exchange: undefined };
 
     case 'CRYPTO':
       // Crypto pairs: BTC-USD, ETH-EUR, etc.
