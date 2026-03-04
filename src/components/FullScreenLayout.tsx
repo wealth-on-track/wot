@@ -1119,6 +1119,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
     type SortDirection = 'asc' | 'desc' | null;
     const [sortColumn, setSortColumn] = React.useState<SortColumn>(null);
     const [sortDirection, setSortDirection] = React.useState<SortDirection>(null);
+    const prevAssetCountRef = React.useRef(initialAssets.length);
 
     // Handle header click for sorting
     // NAME: A-Z (asc) → Z-A (desc) → default
@@ -1150,10 +1151,18 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
         }
     };
 
-    // Sync state with props when data is refreshed (e.g. after import)
+    // Sync state with props when data is refreshed (e.g. after import/add)
     React.useEffect(() => {
         const filteredAssets = initialAssets.filter(a => Math.abs(a.quantity) > 0.000001 || a.type === 'BES');
         setAssets(filteredAssets);
+
+        // If a new asset was added, reset table sorting so new asset appears at top by sortOrder.
+        // (User expectation from quick-add search flow)
+        if (initialAssets.length > prevAssetCountRef.current) {
+            setSortColumn(null);
+            setSortDirection(null);
+        }
+        prevAssetCountRef.current = initialAssets.length;
     }, [initialAssets]);
 
     const [showSuccessNotification, setShowSuccessNotification] = React.useState(false);
