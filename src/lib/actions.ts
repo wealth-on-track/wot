@@ -496,6 +496,57 @@ export async function updateAsset(assetId: string, data: { quantity: number; buy
     }
 }
 
+// Persist user overrides for flattened BES fund rows while keeping original metadata
+export async function updateBESFundMetadata(
+    parentAssetId: string,
+    fundCode: string,
+    data: { type?: string; exchange?: string; currency?: string; country?: string; sector?: string; name?: string }
+) {
+    const session = await auth();
+    if (!session?.user?.email) return { error: "Not authenticated" };
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            include: { Portfolio: true }
+        });
+        if (!user?.Portfolio) return { error: "Portfolio not found" };
+
+        const asset = await prisma.asset.findUnique({ where: { id: parentAssetId } });
+        if (!asset || asset.portfolioId !== user.Portfolio.id || asset.type !== 'BES') {
+            return { error: "Unauthorized" };
+        }
+
+        const meta: any = (asset.metadata as any) || {};
+        const userFundOverrides = meta.userFundOverrides || {};
+        const prev = userFundOverrides[fundCode] || {};
+
+        userFundOverrides[fundCode] = {
+            ...prev,
+            ...(data.type !== undefined ? { type: data.type } : {}),
+            ...(data.exchange !== undefined ? { exchange: data.exchange } : {}),
+            ...(data.currency !== undefined ? { currency: data.currency } : {}),
+            ...(data.country !== undefined ? { country: data.country } : {}),
+            ...(data.sector !== undefined ? { sector: data.sector } : {}),
+            ...(data.name !== undefined ? { name: data.name } : {}),
+        };
+
+        await prisma.asset.update({
+            where: { id: parentAssetId },
+            data: {
+                metadata: {
+                    ...meta,
+                    userFundOverrides
+                }
+            }
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('updateBESFundMetadata error:', error);
+        return { error: 'Failed to update BES metadata' };
+    }
+}
 
 // Reorder assets by updating sortOrder
 export async function reorderAssets(assetIds: string[]) {

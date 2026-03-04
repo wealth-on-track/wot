@@ -1203,6 +1203,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
             if (asset.type === 'BES' && asset.metadata) {
                 // Flatten BES funds into individual assets
                 const meta = asset.metadata as BESMetadata;
+                const userFundOverrides = (meta as any)?.userFundOverrides || {};
                 const totalKP = meta.contracts?.reduce((s: number, c: any) => s + (c.katkiPayi || 0), 0) || 0;
                 const totalDK = meta.contracts?.reduce((s: number, c: any) => s + (c.devletKatkisi || 0), 0) || 0;
 
@@ -1217,14 +1218,17 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                         const plValueEUR = valueEUR - costEUR;
                         const plPercentage = costEUR > 0 ? ((valueEUR / costEUR) - 1) * 100 : 0;
 
+                        const ov = userFundOverrides[fund.code] || {};
                         result.push({
                             id: `bes-kp-${fund.code}`,
                             symbol: fund.code,
-                            name: fund.name,  // Just the fund name, no "BES:" prefix
-                            type: 'BES_FUND',
+                            name: ov.name || fund.name,  // user override first
+                            type: ov.type || 'BES_FUND',
                             subType: 'KATKI_PAYI',
-                            currency: 'TRY',
-                            exchange: 'TEFAS',
+                            currency: ov.currency || 'TRY',
+                            exchange: ov.exchange || 'TEFAS',
+                            country: ov.country || '',
+                            sector: ov.sector || '',
                             quantity: fund.percentage,
                             currentPrice: fund.price || 0,
                             buyPrice: fund.avgPrice || 0,
@@ -1248,14 +1252,17 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                 // Devlet Katkısı Fund (always AET)
                 if (totalDK > 0) {
                     const valueEUR = totalDK / tryToEur;
+                    const ov = userFundOverrides['AET'] || {};
                     result.push({
                         id: `bes-dk-AET`,
                         symbol: 'AET',
-                        name: 'Anadolu Hayat Emeklilik A.Ş. Katkı Emeklilik Yatırım Fonu',
-                        type: 'BES_FUND',
+                        name: ov.name || 'Anadolu Hayat Emeklilik A.Ş. Katkı Emeklilik Yatırım Fonu',
+                        type: ov.type || 'BES_FUND',
                         subType: 'DEVLET_KATKISI',
-                        currency: 'TRY',
-                        exchange: 'TEFAS',
+                        currency: ov.currency || 'TRY',
+                        exchange: ov.exchange || 'TEFAS',
+                        country: ov.country || '',
+                        sector: ov.sector || '',
                         quantity: 100,
                         currentPrice: 0,
                         buyPrice: 0,
@@ -1674,8 +1681,24 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
             setAssets(updatedAssets);
 
             const saveChanges = async () => {
-                const { updateAsset } = await import('@/lib/actions');
+                const { updateAsset, updateBESFundMetadata } = await import('@/lib/actions');
                 const promises = Object.entries(editedAssets).map(([id, data]) => {
+                    // BES flattened rows are synthetic IDs (bes-kp-XXX / bes-dk-AET)
+                    if (id.startsWith('bes-kp-') || id.startsWith('bes-dk-')) {
+                        const fundCode = id.startsWith('bes-kp-') ? id.replace('bes-kp-', '') : 'AET';
+                        const parent = flattenedAssets.find((a: any) => a.id === id)?._besAssetId;
+                        if (!parent) return Promise.resolve(null);
+
+                        return updateBESFundMetadata(parent, fundCode, {
+                            type: data.type,
+                            exchange: data.exchange,
+                            currency: data.currency,
+                            country: data.country,
+                            sector: data.sector,
+                            name: data.name,
+                        });
+                    }
+
                     return updateAsset(id, {
                         quantity: data.quantity,
                         buyPrice: data.averageBuyPrice,
