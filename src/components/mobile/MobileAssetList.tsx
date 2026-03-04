@@ -1,26 +1,11 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { ChevronDown, TrendingUp, TrendingDown, Weight, List, History } from "lucide-react";
+import { useState, useMemo, useEffect, type CSSProperties } from "react";
+import { ChevronDown, TrendingUp, TrendingDown, Weight, List, History, ArrowUp, ArrowDown } from "lucide-react";
 import { useCurrency } from "@/context/CurrencyContext";
 import type { AssetDisplay } from "@/lib/types";
 import { MobileAssetCard } from "./MobileAssetCard";
 import { MobileClosedPositions } from "./MobileClosedPositions";
-import {
-    DndContext,
-    closestCenter,
-    PointerSensor,
-    useSensor,
-    useSensors,
-    DragEndEvent
-} from '@dnd-kit/core';
-import {
-    arrayMove,
-    SortableContext,
-    verticalListSortingStrategy,
-    useSortable
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
 interface MobileAssetListProps {
     assets: AssetDisplay[];
@@ -36,6 +21,7 @@ interface MobileAssetListProps {
     totalValueEUR?: number;
     exchangeRates?: Record<string, number>;
     timeHorizon?: '1D' | '1W' | '1M' | 'YTD' | '1Y' | 'ALL';
+    onToggleHorizon?: () => void;
 }
 
 type FilterType = 'ALL' | 'GAINERS' | 'LOSERS' | 'WEIGHT' | 'CLOSED';
@@ -52,15 +38,92 @@ export function MobileAssetList({
     onAdd,
     totalValueEUR = 0,
     exchangeRates,
-    timeHorizon = '1D'
+    timeHorizon = '1D',
+    onToggleHorizon
 }: MobileAssetListProps) {
     const { currency } = useCurrency();
     const [filter, setFilter] = useState<FilterType>('ALL');
     const [showFilterMenu, setShowFilterMenu] = useState(false);
     const [orderedIds, setOrderedIds] = useState<string[]>([]);
+    const [isOrderEditMode, setIsOrderEditMode] = useState(false);
 
-    // Filter for open positions (quantity > 0) OR BES assets - same logic as web
-    const openAssets = useMemo(() => assets.filter(a => Math.abs(a.quantity) > 0.000001 || a.type === 'BES'), [assets]);
+    // Open positions + BES flattened funds (mobile should match web behavior)
+    const openAssets = useMemo(() => {
+        const out: AssetDisplay[] = [];
+        const tryToEur = exchangeRates?.TRY || 38.5;
+
+        for (const asset of assets) {
+            if (asset.type === 'BES' && (asset as any).metadata) {
+                const meta: any = (asset as any).metadata || {};
+                const userFundOverrides = meta.userFundOverrides || {};
+
+                const totalKP = meta.contracts?.reduce((s: number, c: any) => s + (c.katkiPayi || 0), 0) || 0;
+                const totalDK = meta.contracts?.reduce((s: number, c: any) => s + (c.devletKatkisi || 0), 0) || 0;
+
+                if (meta.katkiPayiFunds && meta.katkiPayiFunds.length > 0) {
+                    for (const fund of meta.katkiPayiFunds) {
+                        const valueTRY = (fund.percentage / 100) * totalKP;
+                        const valueEUR = valueTRY / tryToEur;
+                        const ov = userFundOverrides[fund.code] || {};
+
+                        out.push({
+                            ...(asset as any),
+                            id: `mbes-kp-${fund.code}`,
+                            symbol: fund.code,
+                            name: ov.name || fund.name,
+                            type: (ov.type || 'FUND') as any,
+                            currency: ov.currency || 'TRY',
+                            exchange: ov.exchange || 'TEFAS',
+                            country: ov.country || '',
+                            sector: ov.sector || '',
+                            quantity: fund.percentage || 0,
+                            currentPrice: fund.price || 0,
+                            buyPrice: fund.avgPrice || 0,
+                            totalValueEUR: valueEUR,
+                            totalCostEUR: valueEUR,
+                            plValueEUR: 0,
+                            plPercentage: 0,
+                            _isBESFund: true,
+                            _besAssetId: asset.id,
+                        } as any);
+                    }
+                }
+
+                if (totalDK > 0) {
+                    const valueEUR = totalDK / tryToEur;
+                    const ov = userFundOverrides['AET'] || {};
+                    out.push({
+                        ...(asset as any),
+                        id: `mbes-dk-AET`,
+                        symbol: 'AET',
+                        name: ov.name || 'Anadolu Hayat Emeklilik Katkı Fonu',
+                        type: (ov.type || 'FUND') as any,
+                        currency: ov.currency || 'TRY',
+                        exchange: ov.exchange || 'TEFAS',
+                        country: ov.country || '',
+                        sector: ov.sector || '',
+                        quantity: 100,
+                        currentPrice: 0,
+                        buyPrice: 0,
+                        totalValueEUR: valueEUR,
+                        totalCostEUR: valueEUR,
+                        plValueEUR: 0,
+                        plPercentage: 0,
+                        _isBESFund: true,
+                        _besAssetId: asset.id,
+                    } as any);
+                }
+
+                continue;
+            }
+
+            if (Math.abs(asset.quantity) > 0.000001) {
+                out.push(asset);
+            }
+        }
+
+        return out;
+    }, [assets, exchangeRates]);
 
     // Sync orderedIds with server-provided order when assets change
     // This ensures drag-drop changes from web view are reflected in mobile
@@ -75,35 +138,22 @@ export function MobileAssetList({
         }
     }, [openAssets]);
 
-    // DnD with long press (500ms delay)
-    const sensors = useSensors(
-        useSensor(PointerSensor, {
-            activationConstraint: {
-                delay: 500,
-                tolerance: 5,
-            },
-        })
-    );
+    const persistOrder = async (newOrder: string[]) => {
+        const { reorderAssets } = await import('@/lib/actions');
+        await reorderAssets(newOrder);
+    };
 
-    const handleDragEnd = async (event: DragEndEvent) => {
-        const { active, over } = event;
-        if (over && active.id !== over.id) {
-            setOrderedIds((items) => {
-                const oldIndex = items.indexOf(active.id as string);
-                const newIndex = items.indexOf(over.id as string);
-                if (oldIndex === -1 || newIndex === -1) return items;
-                const newOrder = arrayMove(items, oldIndex, newIndex);
+    const moveItem = async (assetId: string, direction: 'up' | 'down') => {
+        const idx = orderedIds.indexOf(assetId);
+        if (idx === -1) return;
 
-                // Persist new order to database (same as web view)
-                const saveOrder = async () => {
-                    const { reorderAssets } = await import('@/lib/actions');
-                    await reorderAssets(newOrder);
-                };
-                saveOrder();
+        const swapWith = direction === 'up' ? idx - 1 : idx + 1;
+        if (swapWith < 0 || swapWith >= orderedIds.length) return;
 
-                return newOrder;
-            });
-        }
+        const next = [...orderedIds];
+        [next[idx], next[swapWith]] = [next[swapWith], next[idx]];
+        setOrderedIds(next);
+        await persistOrder(next);
     };
 
     const processedAssets = useMemo(() => {
@@ -153,8 +203,8 @@ export function MobileAssetList({
 
     const CurrentFilterIcon = filterOptions.find(f => f.key === filter)?.icon || List;
 
-    // Auto Compact Logic
-    const shouldCompact = openAssets.length > 5;
+    // Auto Compact Logic (keep cards readable on narrow screens / edit mode)
+    const shouldCompact = openAssets.length > 4 || isOrderEditMode;
 
     // Show empty state only for Open Positions when no open assets exist
     if (openAssets.length === 0 && filter !== 'CLOSED') {
@@ -245,7 +295,7 @@ export function MobileAssetList({
                 borderBottom: '1px solid transparent'
             }}>
                 {/* LEFT: Filter Button */}
-                <div style={{ position: 'relative' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button
                         onClick={() => !isCompact && setShowFilterMenu(!showFilterMenu)}
                         style={{
@@ -324,28 +374,67 @@ export function MobileAssetList({
                             </div>
                         </>
                     )}
+                    {onToggleHorizon && (
+                        <button
+                            onClick={onToggleHorizon}
+                            style={{
+                                border: '1px solid var(--border)',
+                                background: 'var(--surface)',
+                                borderRadius: 999,
+                                padding: '8px 12px',
+                                fontSize: '0.72rem',
+                                fontWeight: 800,
+                                color: 'var(--text-primary)',
+                                cursor: 'pointer',
+                                minWidth: '52px'
+                            }}
+                        >
+                            {timeHorizon === 'ALL' ? 'ALL' : '1D'}
+                        </button>
+                    )}
+
+                    {filter === 'ALL' && !isCompact && (
+                        <button
+                            onClick={() => setIsOrderEditMode(v => !v)}
+                            style={{
+                                border: '1px solid var(--border)',
+                                background: isOrderEditMode ? 'var(--accent)' : 'var(--surface)',
+                                borderRadius: 999,
+                                padding: '8px 10px',
+                                fontSize: '0.7rem',
+                                fontWeight: 800,
+                                color: isOrderEditMode ? '#fff' : 'var(--text-primary)',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            {isOrderEditMode ? 'Bitti' : 'Sırala'}
+                        </button>
+                    )}
                 </div>
 
                 {/* RIGHT: Total Wealth & Add Button */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {/* Total Wealth Display */}
+                    {/* Total Wealth Display + 1D/ALL toggle */}
                     {!isCompact && (
-                        <div style={{
-                            background: 'var(--surface)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '12px',
-                            padding: '8px 12px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'flex-end',
-                            justifyContent: 'center',
-                            minWidth: '90px',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
-                        }}>
-                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, lineHeight: 1, marginBottom: '2px' }}>Total Wealth</span>
-                            <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 800, lineHeight: 1 }}>
-                                {isPrivacyMode ? '****' : `€${totalValueEUR.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`}
-                            </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{
+                                background: 'var(--surface)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '12px',
+                                padding: '8px 12px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-end',
+                                justifyContent: 'center',
+                                minWidth: '90px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.04)'
+                            }}>
+                                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, lineHeight: 1, marginBottom: '2px' }}>Total Wealth</span>
+                                <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 800, lineHeight: 1 }}>
+                                    {isPrivacyMode ? '****' : `€${totalValueEUR.toLocaleString('de-DE', { maximumFractionDigits: 0 })}`}
+                                </span>
+                            </div>
+
                         </div>
                     )}
 
@@ -472,21 +561,13 @@ export function MobileAssetList({
                 </div>
             )}
 
-            {/* List - Swipe + DnD (long press) enabled */}
-            {filter !== 'CLOSED' && filter === 'ALL' && !maxDisplay ? (
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                >
-                    <SortableContext
-                        items={processedAssets.map(a => a.id)}
-                        strategy={verticalListSortingStrategy}
-                    >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            {processedAssets.map((asset) => (
-                                <SortableAssetItem
-                                    key={asset.id}
+            {/* List */}
+            {filter !== 'CLOSED' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {processedAssets.map((asset, index) => (
+                        <div key={asset.id} style={{ display: 'flex', alignItems: 'stretch', gap: '6px' }}>
+                            <div style={{ flex: 1 }}>
+                                <MobileAssetCard
                                     asset={asset}
                                     currency={currency}
                                     onEdit={onEdit}
@@ -497,27 +578,47 @@ export function MobileAssetList({
                                     timeHorizon={timeHorizon}
                                     highlightId={highlightId}
                                     exchangeRates={exchangeRates}
+                                    hidePriceCost={isOrderEditMode}
                                 />
-                            ))}
+                            </div>
+
+                            {isOrderEditMode && filter === 'ALL' && !isCompact && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center' }}>
+                                    <button
+                                        onClick={() => moveItem(asset.id, 'up')}
+                                        disabled={index === 0}
+                                        style={{
+                                            width: 30,
+                                            height: 30,
+                                            borderRadius: 8,
+                                            border: '1px solid var(--border)',
+                                            background: index === 0 ? 'var(--bg-secondary)' : 'var(--surface)',
+                                            color: 'var(--text-primary)',
+                                            opacity: index === 0 ? 0.45 : 1,
+                                            cursor: index === 0 ? 'not-allowed' : 'pointer'
+                                        }}
+                                    >
+                                        <ArrowUp size={14} />
+                                    </button>
+                                    <button
+                                        onClick={() => moveItem(asset.id, 'down')}
+                                        disabled={index === processedAssets.length - 1}
+                                        style={{
+                                            width: 30,
+                                            height: 30,
+                                            borderRadius: 8,
+                                            border: '1px solid var(--border)',
+                                            background: index === processedAssets.length - 1 ? 'var(--bg-secondary)' : 'var(--surface)',
+                                            color: 'var(--text-primary)',
+                                            opacity: index === processedAssets.length - 1 ? 0.45 : 1,
+                                            cursor: index === processedAssets.length - 1 ? 'not-allowed' : 'pointer'
+                                        }}
+                                    >
+                                        <ArrowDown size={14} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
-                    </SortableContext>
-                </DndContext>
-            ) : filter !== 'CLOSED' ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {processedAssets.map((asset) => (
-                        <MobileAssetCard
-                            key={asset.id}
-                            asset={asset}
-                            currency={currency}
-                            onEdit={onEdit}
-                            isPrivacyMode={isPrivacyMode}
-                            totalPortfolioValue={totalValueEUR}
-                            isCompactMode={isCompact || shouldCompact}
-                            isTopList={isCompact}
-                            timeHorizon={timeHorizon}
-                            highlightId={highlightId}
-                            exchangeRates={exchangeRates}
-                        />
                     ))}
                 </div>
             ) : null}
@@ -533,26 +634,3 @@ export function MobileAssetList({
     );
 }
 
-// Wrapper for DnD Sortable - only handles vertical reordering via long press
-function SortableAssetItem(props: any) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging
-    } = useSortable({ id: props.asset.id });
-
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        zIndex: isDragging ? 100 : 1,
-    };
-
-    return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-            <MobileAssetCard {...props} isDndDragging={isDragging} />
-        </div>
-    );
-}
