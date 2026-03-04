@@ -38,5 +38,16 @@ export function getPlatformStyle(name: string) {
     if (!name || name === '-') {
         return { bg: 'var(--bg-secondary)', text: 'var(--text-muted)', border: 'transparent' };
     }
+
+    // Brand-like overrides for key platforms
+    const n = name.trim().toLowerCase();
+    if (n.includes('degiro')) {
+        return {
+            bg: 'hsla(214, 88%, 56%, 0.14)',
+            text: 'hsl(214, 88%, 34%)',
+            border: 'hsla(214, 88%, 46%, 0.34)',
+        };
+    }
+
     return computeTagStyle(name, 'PLATFORM');
 }
