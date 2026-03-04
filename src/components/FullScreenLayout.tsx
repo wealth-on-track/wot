@@ -1707,9 +1707,44 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                         ETF: 'ETF',
                         BES_FUND: 'FUND',
                     };
-                    return map[t] || t;
+                    const normalized = map[t] || t;
+                    const allowed = new Set(['STOCK','CRYPTO','GOLD','BOND','FUND','CASH','COMMODITY','CURRENCY','ETF']);
+                    return allowed.has(normalized) ? normalized : undefined;
                 };
-                const normalizeCurrency = (v?: string) => (v ? v.trim().toUpperCase() : undefined);
+
+                const normalizeCurrency = (v?: string) => {
+                    if (!v) return undefined;
+                    const t = v.trim().toUpperCase();
+                    const map: Record<string, string> = {
+                        TL: 'TRY',
+                        TRY: 'TRY',
+                        '₺': 'TRY',
+                        '$': 'USD',
+                        USD: 'USD',
+                        EUR: 'EUR',
+                        '€': 'EUR',
+                        GBP: 'GBP',
+                        CHF: 'CHF',
+                        JPY: 'JPY',
+                        CAD: 'CAD',
+                        AUD: 'AUD',
+                        CNY: 'CNY',
+                        HKD: 'HKD',
+                        SGD: 'SGD',
+                        NOK: 'NOK',
+                        SEK: 'SEK',
+                        DKK: 'DKK',
+                        PLN: 'PLN',
+                        CZK: 'CZK',
+                        HUF: 'HUF',
+                        BRL: 'BRL',
+                        MXN: 'MXN',
+                        KRW: 'KRW',
+                        INR: 'INR',
+                        ZAR: 'ZAR'
+                    };
+                    return map[t] || undefined;
+                };
 
                 const promises = Object.entries(editedAssets).map(async ([id, data]) => {
                     const normalizedType = normalizeAssetType(data.type);
