@@ -1288,6 +1288,12 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
             const currentIds = flattenedAssets.map((a: any) => a.id);
             if (!prev.length) return currentIds;
 
+            // If new rows arrived (e.g., new asset add/import), trust fresh server order
+            // so newly added assets respect DB sortOrder (top insert) instead of being appended.
+            if (currentIds.length > prev.length) {
+                return currentIds;
+            }
+
             const validPrev = prev.filter(id => currentIds.includes(id));
             const missing = currentIds.filter(id => !validPrev.includes(id));
             return [...validPrev, ...missing];
