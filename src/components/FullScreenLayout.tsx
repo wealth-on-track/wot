@@ -3679,7 +3679,7 @@ function AllocationsFullScreen({ assets, exchangeRates }: { assets: any[], excha
                                                                         color: 'var(--text-muted)',
                                                                         fontVariantNumeric: 'tabular-nums'
                                                                     }}>
-                                                                        {assetPct.toFixed(1)}%
+                                                                        {Math.round(assetPct)}%
                                                                     </span>
                                                                 </div>
                                                             </div>
