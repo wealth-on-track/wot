@@ -1282,8 +1282,15 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                     });
                 }
             } else {
-                // Non-BES asset, keep as-is
-                result.push(asset);
+                // Non-BES asset: expose user overrides as effective display metadata
+                result.push({
+                    ...asset,
+                    type: asset.customType || asset.type,
+                    exchange: asset.customExchange || asset.exchange,
+                    currency: asset.customCurrency || asset.currency,
+                    country: asset.customCountry || asset.country,
+                    sector: asset.customSector || asset.sector,
+                });
             }
         }
 
@@ -1668,11 +1675,11 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                         quantity: edits.quantity !== undefined ? Number(edits.quantity) : asset.quantity,
                         name: edits.name !== undefined ? edits.name : asset.name,
                         platform: edits.platform !== undefined ? edits.platform : asset.platform,
-                        type: edits.type !== undefined ? edits.type : asset.type,
-                        exchange: edits.exchange !== undefined ? edits.exchange : asset.exchange,
-                        currency: edits.currency !== undefined ? edits.currency : asset.currency,
-                        country: edits.country !== undefined ? edits.country : asset.country,
-                        sector: edits.sector !== undefined ? edits.sector : asset.sector
+                        type: edits.type !== undefined ? edits.type : (asset.customType || asset.type),
+                        exchange: edits.exchange !== undefined ? edits.exchange : (asset.customExchange || asset.exchange),
+                        currency: edits.currency !== undefined ? edits.currency : (asset.customCurrency || asset.currency),
+                        country: edits.country !== undefined ? edits.country : (asset.customCountry || asset.country),
+                        sector: edits.sector !== undefined ? edits.sector : (asset.customSector || asset.sector)
                     };
                 }
                 return asset;
@@ -1736,11 +1743,11 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                     name: asset.name || asset.symbol,
                     quantity: asset.quantity,
                     averageBuyPrice: asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0,
-                    type: asset.type || '',
-                    exchange: asset.exchange || '',
-                    currency: asset.currency || '',
-                    country: asset.country || '',
-                    sector: asset.sector || ''
+                    type: asset.customType || asset.type || '',
+                    exchange: asset.customExchange || asset.exchange || '',
+                    currency: asset.customCurrency || asset.currency || '',
+                    country: asset.customCountry || asset.country || '',
+                    sector: asset.customSector || asset.sector || ''
                 };
             });
             setEditedAssets(initialEdits);
