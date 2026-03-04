@@ -1746,7 +1746,42 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                     return map[t] || undefined;
                 };
 
-                const promises = Object.entries(editedAssets).map(async ([id, data]) => {
+                const changedEntries = Object.entries(editedAssets).filter(([id, data]) => {
+                    const row: any = flattenedAssets.find((a: any) => a.id === id) || assets.find((a: any) => a.id === id);
+                    if (!row) return false;
+
+                    const q = Number(data.quantity);
+                    const bp = Number(data.averageBuyPrice);
+                    const name = (data.name || '').trim();
+                    const platform = data.platform || '';
+                    const portfolio = data.portfolio || '';
+                    const type = normalizeAssetType(data.type);
+                    const exchange = (data.exchange || '').trim();
+                    const currency = normalizeCurrency(data.currency);
+                    const country = (data.country || '').trim();
+                    const sector = (data.sector || '').trim();
+
+                    const baseType = normalizeAssetType(row.customType || row.type);
+                    const baseExchange = (row.customExchange || row.exchange || '').trim();
+                    const baseCurrency = normalizeCurrency(row.customCurrency || row.currency);
+                    const baseCountry = (row.customCountry || row.country || '').trim();
+                    const baseSector = (row.customSector || row.sector || '').trim();
+
+                    return (
+                        q !== Number(row.quantity) ||
+                        bp !== Number(row.buyPrice || row.averageBuyPrice || row.avgPrice || 0) ||
+                        name !== (row.name || '').trim() ||
+                        platform !== (row.platform || '') ||
+                        portfolio !== (row.customGroup || row.portfolio || '') ||
+                        (type || '') !== (baseType || '') ||
+                        exchange !== baseExchange ||
+                        (currency || '') !== (baseCurrency || '') ||
+                        country !== baseCountry ||
+                        sector !== baseSector
+                    );
+                });
+
+                const promises = changedEntries.map(async ([id, data]) => {
                     const normalizedType = normalizeAssetType(data.type);
                     const normalizedCurrency = normalizeCurrency(data.currency);
 
@@ -1784,6 +1819,10 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                         })
                     });
                 });
+
+                if (promises.length === 0) {
+                    return true;
+                }
 
                 const results = await Promise.all(promises);
                 const hasError = results.some((r: any) => r && r.error);
