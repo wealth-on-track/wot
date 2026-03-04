@@ -131,7 +131,10 @@ export function InlineAssetSearch() {
             const fetchResults = async () => {
                 const results = await searchSymbolsAction(searchQuery);
 
-                // Sort by category priority: BIST → TEFAS → US → EU → CRYPTO → COMMODITIES → FX → CASH
+                // Relevance-first sorting (query intent), then category fallback
+                const q = searchQuery.trim().toUpperCase();
+                const normalizedQ = q.replace(/\s+/g, '');
+
                 const categoryPriority: Record<AssetCategory, number> = {
                     'BIST': 1,
                     'TEFAS': 2,
@@ -145,18 +148,50 @@ export function InlineAssetSearch() {
                     'BENCHMARK': 10
                 };
 
+                const relevance = (x: typeof results[number]) => {
+                    const symbol = (x.symbol || '').toUpperCase();
+                    const name = (x.fullName || x.rawName || '').toUpperCase();
+                    const exchange = (x.exchange || '').toUpperCase();
+                    const currency = (x.currency || '').toUpperCase();
+                    const category = (x.category || '') as AssetCategory;
+
+                    let score = 0;
+
+                    // Exact ticker/currency intent (EUR, USD, TRY cash, etc.)
+                    if (symbol === q) score += 250;
+                    if (currency === q && category === 'CASH') score += 230;
+
+                    // Exact/full text matches
+                    if (name === q) score += 200;
+                    if (name.replace(/\s+/g, '').includes(normalizedQ)) score += 120;
+                    if (symbol.includes(normalizedQ)) score += 100;
+
+                    // Cash intent boost (EUR CASH / CASH EUR etc.)
+                    const cashIntent = q.includes('CASH') || q.includes('NAKIT');
+                    if (cashIntent && category === 'CASH') score += 180;
+                    if (cashIntent && currency && q.includes(currency)) score += 60;
+
+                    // Exchange/currency clues in query
+                    if (exchange && q.includes(exchange)) score += 40;
+                    if (currency && q.includes(currency)) score += 30;
+
+                    // Prefer manual cash entries for cash-intent exact currency
+                    if (cashIntent && category === 'CASH' && x.source === 'MANUAL') score += 35;
+
+                    return score;
+                };
+
                 results.sort((a, b) => {
+                    const ra = relevance(a);
+                    const rb = relevance(b);
+                    if (ra !== rb) return rb - ra;
+
                     const catA = a.category || 'US_MARKETS';
                     const catB = b.category || 'US_MARKETS';
-
                     const priorityA = categoryPriority[catA];
                     const priorityB = categoryPriority[catB];
+                    if (priorityA !== priorityB) return priorityA - priorityB;
 
-                    if (priorityA !== priorityB) {
-                        return priorityA - priorityB;
-                    }
-
-                    // Within same category: alphabetical by symbol
                     return a.symbol.localeCompare(b.symbol);
                 });
 
