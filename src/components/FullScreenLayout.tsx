@@ -1097,6 +1097,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
     const [transViewMode, setTransViewMode] = React.useState<'group' | 'date'>('group');
     const [openPositionsViewMode, setOpenPositionsViewMode] = React.useState<'grouped' | 'transactions'>('grouped');
     const [isBatchEditMode, setIsBatchEditMode] = React.useState(false);
+    const [showMetadataEdit, setShowMetadataEdit] = React.useState(false);
     const [isClosedBatchEditMode, setIsClosedBatchEditMode] = React.useState(false);
     const [editedAssets, setEditedAssets] = React.useState<Record<string, any>>({});
     const [assets, setAssets] = React.useState(() => initialAssets.filter(a => Math.abs(a.quantity) > 0.000001 || a.type === 'BES'));
@@ -1659,7 +1660,12 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                         portfolio: edits.portfolio !== undefined ? edits.portfolio : asset.portfolio,
                         quantity: edits.quantity !== undefined ? Number(edits.quantity) : asset.quantity,
                         name: edits.name !== undefined ? edits.name : asset.name,
-                        platform: edits.platform !== undefined ? edits.platform : asset.platform
+                        platform: edits.platform !== undefined ? edits.platform : asset.platform,
+                        type: edits.type !== undefined ? edits.type : asset.type,
+                        exchange: edits.exchange !== undefined ? edits.exchange : asset.exchange,
+                        currency: edits.currency !== undefined ? edits.currency : asset.currency,
+                        country: edits.country !== undefined ? edits.country : asset.country,
+                        sector: edits.sector !== undefined ? edits.sector : asset.sector
                     };
                 }
                 return asset;
@@ -1675,7 +1681,12 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                         buyPrice: data.averageBuyPrice,
                         name: data.name,
                         platform: data.platform,
-                        customGroup: data.portfolio
+                        customGroup: data.portfolio,
+                        type: data.type,
+                        exchange: data.exchange,
+                        currency: data.currency,
+                        country: data.country,
+                        sector: data.sector
                     });
                 });
                 await Promise.all(promises);
@@ -1691,6 +1702,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
 
             setEditedAssets({});
             setIsBatchEditMode(false);
+            setShowMetadataEdit(false);
         } else {
             // Enter edit mode
             const initialEdits: Record<string, any> = {};
@@ -1700,7 +1712,12 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                     platform: asset.platform || 'Interactive Brokers',
                     name: asset.name || asset.symbol,
                     quantity: asset.quantity,
-                    averageBuyPrice: asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0
+                    averageBuyPrice: asset.buyPrice || asset.averageBuyPrice || asset.avgPrice || 0,
+                    type: asset.type || '',
+                    exchange: asset.exchange || '',
+                    currency: asset.currency || '',
+                    country: asset.country || '',
+                    sector: asset.sector || ''
                 };
             });
             setEditedAssets(initialEdits);
@@ -2047,29 +2064,29 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                 </div>
                                             </th>
                                             {/* Qty Icon Header */}
-                                            <th style={{ padding: '0 12px', textAlign: 'right', color: 'var(--text-muted)', width: '80px', borderBottom: '1px solid var(--border)' }}>
+                                            <th style={{ padding: '0 12px', textAlign: 'right', color: 'var(--text-muted)', width: '80px', borderBottom: '1px solid var(--border)', display: (isBatchEditMode && showMetadataEdit) ? 'none' : 'table-cell' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
                                                     <Hash size={sizing.iconSize} strokeWidth={2.5} />
                                                 </div>
                                             </th>
                                             {/* Price */}
-                                            <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>
+                                            <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', display: (isBatchEditMode && showMetadataEdit) ? 'none' : 'table-cell' }}>
                                                 <div>Price</div>
                                                 <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost</div>
                                             </th>
                                             {/* Total Value Org */}
-                                            <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', minWidth: '100px' }}>
+                                            <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', minWidth: '100px', display: (isBatchEditMode && showMetadataEdit) ? 'none' : 'table-cell' }}>
                                                 <div>Value</div>
                                                 <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost</div>
                                             </th>
                                             {/* Total Value Global */}
-                                            <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', minWidth: '110px', whiteSpace: 'nowrap' }}>
+                                            <th style={{ padding: '0 16px', textAlign: 'right', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', minWidth: '110px', whiteSpace: 'nowrap', display: (isBatchEditMode && showMetadataEdit) ? 'none' : 'table-cell' }}>
                                                 <div>Value ({getCurrencySymbol(globalCurrency)})</div>
                                                 <div style={{ opacity: 0.5, fontWeight: 500 }}>Cost ({getCurrencySymbol(globalCurrency)})</div>
                                             </th>
                                             {/* Weight - SORTABLE */}
                                             <th
-                                                onClick={() => handleHeaderSort('WEIGHT')}
+                                                onClick={() => !(isBatchEditMode && showMetadataEdit) && handleHeaderSort('WEIGHT')}
                                                 style={{
                                                     padding: '0 16px',
                                                     textAlign: 'right',
@@ -2080,7 +2097,8 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                     borderBottom: '1px solid var(--border)',
                                                     cursor: 'pointer',
                                                     userSelect: 'none',
-                                                    transition: 'color 0.2s'
+                                                    transition: 'color 0.2s',
+                                                    display: (isBatchEditMode && showMetadataEdit) ? 'none' : 'table-cell'
                                                 }}
                                             >
                                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
@@ -2104,7 +2122,8 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                     borderBottom: '1px solid var(--border)',
                                                     minWidth: '100px',
                                                     whiteSpace: 'nowrap',
-                                                    userSelect: 'none'
+                                                    userSelect: 'none',
+                                                    display: (isBatchEditMode && showMetadataEdit) ? 'none' : 'table-cell'
                                                 }}
                                             >
                                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
@@ -2156,15 +2175,46 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                     </div>
                                                 </div>
                                             </th>
-                                            {/* Delete Action (Batch Mode Only) */}
+                                            {/* Metadata edit columns (batch mode + toggle) */}
+                                            {isBatchEditMode && showMetadataEdit && (
+                                                <>
+                                                    <th style={{ padding: '0 10px', textAlign: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>Type</th>
+                                                    <th style={{ padding: '0 10px', textAlign: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>Exchange</th>
+                                                    <th style={{ padding: '0 10px', textAlign: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>Currency</th>
+                                                    <th style={{ padding: '0 10px', textAlign: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>Country</th>
+                                                    <th style={{ padding: '0 10px', textAlign: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>Sector</th>
+                                                </>
+                                            )}
+
+                                            {/* Delete Action (Batch Mode Only) + Column Toggle */}
                                             <th style={{
-                                                padding: isBatchEditMode ? '0 12px' : '0',
-                                                width: isBatchEditMode ? '60px' : '0px',
+                                                padding: isBatchEditMode ? '0 8px' : '0',
+                                                width: isBatchEditMode ? '72px' : '0px',
                                                 opacity: isBatchEditMode ? 1 : 0,
                                                 transition: 'all 0.3s ease',
                                                 overflow: 'hidden',
                                                 borderBottom: '1px solid var(--border)'
-                                            }} />
+                                            }}>
+                                                {isBatchEditMode && (
+                                                    <button
+                                                        onClick={() => setShowMetadataEdit(v => !v)}
+                                                        title={showMetadataEdit ? 'Show value columns' : 'Show metadata columns'}
+                                                        style={{
+                                                            border: '1px solid var(--border)',
+                                                            background: 'var(--surface)',
+                                                            color: 'var(--text-muted)',
+                                                            width: 26,
+                                                            height: 22,
+                                                            borderRadius: 6,
+                                                            cursor: 'pointer',
+                                                            fontWeight: 800,
+                                                            fontSize: 12
+                                                        }}
+                                                    >
+                                                        {showMetadataEdit ? '<' : '>'}
+                                                    </button>
+                                                )}
+                                            </th>
                                             {/* Expand Toggle */}
                                             <th style={{ width: '30px', borderBottom: '1px solid var(--border)' }} />
                                         </tr>
@@ -2472,7 +2522,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                 </div>
                                                             </td>
                                                             {/* Quantity */}
-                                                            <td style={{ padding: `${sizing.rowPaddingLR} 12px`, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            <td style={{ padding: `${sizing.rowPaddingLR} 12px`, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border)', display: (isBatchEditMode && showMetadataEdit) ? 'none' : 'table-cell' }}>
                                                                 {isBES ? (
                                                                     <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-muted)' }}>-</div>
                                                                 ) : isBESFund ? (
@@ -2509,7 +2559,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                 )}
                                                             </td>
                                                             {/* Price / Cost */}
-                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)', display: (isBatchEditMode && showMetadataEdit) ? 'none' : 'table-cell' }}>
                                                                 {isBES ? (
                                                                     <>
                                                                         <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
@@ -2571,7 +2621,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                 )}
                                                             </td>
                                                             {/* Value / Cost (Local) */}
-                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)', display: (isBatchEditMode && showMetadataEdit) ? 'none' : 'table-cell' }}>
                                                                 {isBES ? (
                                                                     <>
                                                                         <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-muted)' }}>-</div>
@@ -2589,7 +2639,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                 )}
                                                             </td>
                                                             {/* Value / Cost (Global) - Animated */}
-                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)', display: (isBatchEditMode && showMetadataEdit) ? 'none' : 'table-cell' }}>
                                                                 {isBES ? (
                                                                     <>
                                                                         <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -2615,13 +2665,13 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                 )}
                                                             </td>
                                                             {/* Weight */}
-                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'top', borderBottom: isLast ? 'none' : '1px solid var(--border)', display: (isBatchEditMode && showMetadataEdit) ? 'none' : 'table-cell' }}>
                                                                 <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
                                                                     {isBES ? `${Math.round(besWeight)}%` : `${Math.round(weight)}%`}
                                                                 </div>
                                                             </td>
                                                             {/* P&L - Single Cell with % on top, AMT below */}
-                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                            <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)', display: (isBatchEditMode && showMetadataEdit) ? 'none' : 'table-cell' }}>
                                                                 {(isBES || isCash) ? (
                                                                     <>
                                                                         <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-muted)' }}>-</div>
@@ -2638,6 +2688,47 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                     </>
                                                                 )}
                                                             </td>
+                                                            {/* Metadata edit cells */}
+                                                            {isBatchEditMode && showMetadataEdit && (
+                                                                <>
+                                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'center', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                        <input
+                                                                            value={getCurrentValue(asset.id, 'type', asset.type || '')}
+                                                                            onChange={(e) => setEditedAssets(prev => ({ ...prev, [asset.id]: { ...prev[asset.id], type: e.target.value } }))}
+                                                                            style={{ width: '84px', padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--accent)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '12px' }}
+                                                                        />
+                                                                    </td>
+                                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'center', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                        <input
+                                                                            value={getCurrentValue(asset.id, 'exchange', asset.exchange || '')}
+                                                                            onChange={(e) => setEditedAssets(prev => ({ ...prev, [asset.id]: { ...prev[asset.id], exchange: e.target.value } }))}
+                                                                            style={{ width: '84px', padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--accent)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '12px' }}
+                                                                        />
+                                                                    </td>
+                                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'center', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                        <input
+                                                                            value={getCurrentValue(asset.id, 'currency', asset.currency || '')}
+                                                                            onChange={(e) => setEditedAssets(prev => ({ ...prev, [asset.id]: { ...prev[asset.id], currency: e.target.value } }))}
+                                                                            style={{ width: '74px', padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--accent)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '12px' }}
+                                                                        />
+                                                                    </td>
+                                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'center', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                        <input
+                                                                            value={getCurrentValue(asset.id, 'country', asset.country || '')}
+                                                                            onChange={(e) => setEditedAssets(prev => ({ ...prev, [asset.id]: { ...prev[asset.id], country: e.target.value } }))}
+                                                                            style={{ width: '92px', padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--accent)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '12px' }}
+                                                                        />
+                                                                    </td>
+                                                                    <td style={{ padding: sizing.rowPaddingLR, textAlign: 'center', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
+                                                                        <input
+                                                                            value={getCurrentValue(asset.id, 'sector', asset.sector || '')}
+                                                                            onChange={(e) => setEditedAssets(prev => ({ ...prev, [asset.id]: { ...prev[asset.id], sector: e.target.value } }))}
+                                                                            style={{ width: '92px', padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--accent)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '12px' }}
+                                                                        />
+                                                                    </td>
+                                                                </>
+                                                            )}
+
                                                             {/* Action Buttons (Edit for BES + Delete) */}
                                                             <td style={{
                                                                 padding: isBatchEditMode ? sizing.rowPadding : 0,
