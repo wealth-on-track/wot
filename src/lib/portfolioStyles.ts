@@ -3,22 +3,34 @@ export function getPortfolioStyle(name: string) {
         return { bg: 'var(--bg-secondary)', text: 'var(--text-muted)', border: 'transparent' };
     }
 
-    // Deterministic color per portfolio name (very high uniqueness)
-    // Avoids small fixed palette collisions like TAK/BES sharing same badge color.
-    let hash = 0;
+    // Collision-resistant deterministic color mapping
+    // Uses FNV-1a + bit mixing so short tickers like AAK/BES/EAK/TAK don't collapse to same hue.
     const cleanName = name.trim().toUpperCase();
+
+    let hash = 0x811c9dc5; // FNV-1a 32-bit offset basis
     for (let i = 0; i < cleanName.length; i++) {
-        hash = (hash * 31 + cleanName.charCodeAt(i)) | 0;
+        hash ^= cleanName.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193); // FNV prime
     }
 
-    const n = Math.abs(hash);
+    // Final avalanche mix
+    hash ^= hash >>> 16;
+    hash = Math.imul(hash, 0x85ebca6b);
+    hash ^= hash >>> 13;
+    hash = Math.imul(hash, 0xc2b2ae35);
+    hash ^= hash >>> 16;
+
+    const n = hash >>> 0;
+
+    // Pull different parts of hash for independent channels
     const hue = n % 360;
-    const sat = 62 + (n % 16);      // 62-77
-    const textLight = 28 + (n % 8); // 28-35 (dark, readable)
+    const sat = 60 + ((n >>> 9) % 24);       // 60-83
+    const bgLight = 54 + ((n >>> 17) % 8);   // 54-61
+    const textLight = 24 + ((n >>> 25) % 10);// 24-33
 
     return {
-        bg: `hsla(${hue}, ${sat}%, 58%, 0.12)`,
+        bg: `hsla(${hue}, ${sat}%, ${bgLight}%, 0.13)`,
         text: `hsl(${hue}, ${sat}%, ${textLight}%)`,
-        border: `hsla(${hue}, ${sat}%, 50%, 0.28)`,
+        border: `hsla(${hue}, ${sat}%, 45%, 0.32)`,
     };
 }
