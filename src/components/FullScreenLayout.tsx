@@ -2984,12 +2984,12 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
 // 2. Allocations - Single Card with Side Options
 function AllocationsFullScreen({ assets, exchangeRates }: { assets: any[], exchangeRates?: Record<string, number> }) {
     const [selectedType, setSelectedType] = React.useState('Type');
-    const [expandedCategory, setExpandedCategory] = React.useState<string | null>(null);
+    const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(new Set());
     const { showAmounts } = usePrivacy();
 
-    // Reset expanded category when view changes
+    // Reset expanded categories when view changes
     React.useEffect(() => {
-        setExpandedCategory(null);
+        setExpandedCategories(new Set());
     }, [selectedType]);
 
     // Process assets - use server-calculated totalValueEUR if available
@@ -3080,10 +3080,13 @@ function AllocationsFullScreen({ assets, exchangeRates }: { assets: any[], excha
                 const rate = exchangeRates?.[currency] || FALLBACK_RATES[currency] || 1;
                 const valueEur = value / rate;
 
-                result.push({
-                    ...asset,
-                    totalValueEUR: valueEur
-                });
+                // Allocations should never include closed/zero-value rows
+                if (valueEur > 0) {
+                    result.push({
+                        ...asset,
+                        totalValueEUR: valueEur
+                    });
+                }
             }
         }
 
@@ -3376,27 +3379,61 @@ function AllocationsFullScreen({ assets, exchangeRates }: { assets: any[], excha
                         flexDirection: 'column'
                     }}>
                         <div style={{
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            color: 'var(--text-muted)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
                             marginBottom: '12px'
                         }}>
-                            Distribution
+                            <div style={{
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                color: 'var(--text-muted)',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em'
+                            }}>
+                                Distribution
+                            </div>
+                            <button
+                                onClick={() => {
+                                    if (expandedCategories.size >= chartData.length) {
+                                        setExpandedCategories(new Set());
+                                    } else {
+                                        setExpandedCategories(new Set(chartData.map(c => c.name)));
+                                    }
+                                }}
+                                style={{
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--surface)',
+                                    color: 'var(--text-muted)',
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    borderRadius: '6px',
+                                    padding: '3px 8px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {expandedCategories.size >= chartData.length ? 'Collapse all' : 'Expand all'}
+                            </button>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             {chartData.map((item) => {
                                 const pct = totalVal > 0 ? (item.value / totalVal) * 100 : 0;
                                 const isHovered = hoveredSlice === item.name;
-                                const isExpanded = expandedCategory === item.name;
+                                const isExpanded = expandedCategories.has(item.name);
                                 const categoryAssets = isExpanded ? getAssetsForCategory(item.name) : [];
 
                                 return (
                                     <div key={item.name} style={{ display: 'flex', flexDirection: 'column' }}>
                                         {/* Category Header */}
                                         <div
-                                            onClick={() => setExpandedCategory(isExpanded ? null : item.name)}
+                                            onClick={() => {
+                                                setExpandedCategories(prev => {
+                                                    const next = new Set(prev);
+                                                    if (next.has(item.name)) next.delete(item.name);
+                                                    else next.add(item.name);
+                                                    return next;
+                                                });
+                                            }}
                                             onMouseEnter={() => setHoveredSlice(item.name)}
                                             onMouseLeave={() => setHoveredSlice(null)}
                                             style={{
