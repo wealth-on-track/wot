@@ -784,7 +784,9 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                 color: 'var(--text-muted)',
                 opacity: 0.7,
                 zIndex: 20,
-                pointerEvents: 'none'
+                pointerEvents: 'auto',
+                userSelect: 'text',
+                cursor: 'text'
             }}>
                 build {buildTag || 'dev'}
             </div>
