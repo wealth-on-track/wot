@@ -1362,32 +1362,31 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
     const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;
 
-        // No drop target
         if (!over) return;
+        if (sortColumn || sortDirection) return; // disable when table sort is active
+        if (active.id === over.id) return;
 
-        // Reordering disabled while sorted by a column
-        if (sortColumn || sortDirection) return;
+        // Reorder on the visible list (includes BES synthetic rows)
+        const oldDisplayIndex = displayAssets.findIndex((item: any) => item.id === active.id);
+        const newDisplayIndex = displayAssets.findIndex((item: any) => item.id === over.id);
+        if (oldDisplayIndex < 0 || newDisplayIndex < 0) return;
 
-        if (active.id !== over.id) {
-            setAssets((items) => {
-                const oldIndex = items.findIndex((item) => item.id === active.id);
-                const newIndex = items.findIndex((item) => item.id === over.id);
+        const reorderedDisplay = arrayMove(displayAssets as any[], oldDisplayIndex, newDisplayIndex);
 
-                // Ignore synthetic rows (e.g., BES_FUND) and invalid indices
-                if (oldIndex < 0 || newIndex < 0) return items;
+        // Map visible rows back to real asset ids (BES_FUND -> BES asset id), keep first occurrence
+        const realOrder = Array.from(new Set(
+            reorderedDisplay.map((a: any) => a._besAssetId || a.id)
+        ));
 
-                const newOrder = arrayMove(items, oldIndex, newIndex);
+        setAssets((items) => {
+            const byId = new Map(items.map(i => [i.id, i]));
+            const next = realOrder.map((id: any) => byId.get(id)).filter(Boolean) as typeof items;
+            return next.length ? next : items;
+        });
 
-                // Persist new order (only real asset IDs)
-                const saveOrder = async () => {
-                    const { reorderAssets } = await import('@/lib/actions');
-                    await reorderAssets(newOrder.map(a => a.id));
-                };
-                saveOrder();
-
-                return newOrder;
-            });
-        }
+        // Persist order
+        const { reorderAssets } = await import('@/lib/actions');
+        await reorderAssets(realOrder as string[]);
     };
 
     /* 
@@ -2139,7 +2138,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                     </thead>
                                     <tbody>
                                         <SortableContext
-                                            items={displayAssets.filter(a => a.type !== 'BES_FUND').map(a => a.id)}
+                                            items={displayAssets.map(a => a.id)}
                                             strategy={verticalListSortingStrategy}
                                         >
                                             {displayAssets.map((asset, i) => {
@@ -2252,7 +2251,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                             id={asset.id}
                                                             isBatchEditMode={isBatchEditMode}
                                                             flashStyle={getFlashStyle?.(asset.id)}
-                                                            disabled={Boolean(isBESFund || sortColumn || sortDirection)}
+                                                            disabled={Boolean(sortColumn || sortDirection)}
                                                         >
                                                             {/* Portfolio Pill */}
                                                             <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
