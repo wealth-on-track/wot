@@ -10,9 +10,10 @@ interface LandingPageProps {
     isLoggedIn: boolean;
     username?: string;
     userEmail?: string;
+    buildTag?: string;
 }
 
-export function LandingPage({ isLoggedIn, username, userEmail }: LandingPageProps) {
+export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: LandingPageProps) {
     const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
@@ -774,6 +775,19 @@ export function LandingPage({ isLoggedIn, username, userEmail }: LandingPageProp
                     }
                 </div >
             </section >
+
+            <div style={{
+                position: 'fixed',
+                left: 10,
+                bottom: 8,
+                fontSize: 10,
+                color: 'var(--text-muted)',
+                opacity: 0.7,
+                zIndex: 20,
+                pointerEvents: 'none'
+            }}>
+                build {buildTag || 'dev'}
+            </div>
         </div >
     );
 }

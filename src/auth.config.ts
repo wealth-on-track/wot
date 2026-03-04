@@ -73,6 +73,24 @@ export const authConfig = {
             }
             return session;
         },
+
+        // Harden redirects: block localhost callback leaks in production flows
+        redirect({ url, baseUrl }) {
+            try {
+                const target = new URL(url, baseUrl);
+                const isLocalhost = target.hostname === 'localhost' || target.hostname === '127.0.0.1';
+                if (isLocalhost) return baseUrl;
+
+                const sameOrigin = target.origin === new URL(baseUrl).origin;
+                if (sameOrigin) return target.toString();
+
+                // allow relative fallback only
+                if (url.startsWith('/')) return `${baseUrl}${url}`;
+                return baseUrl;
+            } catch {
+                return baseUrl;
+            }
+        },
     },
 
     providers: [], // Configured in auth.ts
