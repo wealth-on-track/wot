@@ -49,7 +49,7 @@ import { BESMetadata, calculateBESAllocationBreakdown, calculateBESTotals } from
 import { AnimatedValue } from "./AnimatedValue";
 
 // Sortable Row Component for Open Positions Table
-function SortableRow({ children, id, isBatchEditMode, flashStyle }: { children: React.ReactNode, id: string, isBatchEditMode: boolean, flashStyle?: React.CSSProperties }) {
+function SortableRow({ children, id, isBatchEditMode, flashStyle, disabled = false }: { children: React.ReactNode, id: string, isBatchEditMode: boolean, flashStyle?: React.CSSProperties, disabled?: boolean }) {
     const {
         attributes,
         listeners,
@@ -57,7 +57,7 @@ function SortableRow({ children, id, isBatchEditMode, flashStyle }: { children: 
         transform,
         transition,
         isDragging
-    } = useSortable({ id });
+    } = useSortable({ id, disabled });
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -93,18 +93,18 @@ function SortableRow({ children, id, isBatchEditMode, flashStyle }: { children: 
                 textAlign: 'center',
                 verticalAlign: 'middle',
                 borderBottom: '1px solid var(--border)',
-                cursor: isBatchEditMode ? 'default' : 'grab',
+                cursor: (isBatchEditMode || disabled) ? 'default' : 'grab',
                 background: getBackgroundColor(),
                 transition: 'background 0.3s ease-out, box-shadow 0.3s ease-out'
             }}
-                {...(!isBatchEditMode ? { ...attributes, ...listeners } : {})}
+                {...(!(isBatchEditMode || disabled) ? { ...attributes, ...listeners } : {})}
             >
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'var(--text-muted)',
-                    opacity: isBatchEditMode ? 0.3 : 0.7,
+                    opacity: (isBatchEditMode || disabled) ? 0.25 : 0.7,
                 }}>
                     <GripVertical size={14} />
                 </div>
@@ -1362,14 +1362,23 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
     const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;
 
-        if (active.id !== over?.id) {
+        // No drop target
+        if (!over) return;
+
+        // Reordering disabled while sorted by a column
+        if (sortColumn || sortDirection) return;
+
+        if (active.id !== over.id) {
             setAssets((items) => {
                 const oldIndex = items.findIndex((item) => item.id === active.id);
-                const newIndex = items.findIndex((item) => item.id === over?.id);
+                const newIndex = items.findIndex((item) => item.id === over.id);
+
+                // Ignore synthetic rows (e.g., BES_FUND) and invalid indices
+                if (oldIndex < 0 || newIndex < 0) return items;
 
                 const newOrder = arrayMove(items, oldIndex, newIndex);
 
-                // Persist new order
+                // Persist new order (only real asset IDs)
                 const saveOrder = async () => {
                     const { reorderAssets } = await import('@/lib/actions');
                     await reorderAssets(newOrder.map(a => a.id));
@@ -2130,7 +2139,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                     </thead>
                                     <tbody>
                                         <SortableContext
-                                            items={displayAssets.map(a => a.id)}
+                                            items={displayAssets.filter(a => a.type !== 'BES_FUND').map(a => a.id)}
                                             strategy={verticalListSortingStrategy}
                                         >
                                             {displayAssets.map((asset, i) => {
@@ -2243,6 +2252,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                             id={asset.id}
                                                             isBatchEditMode={isBatchEditMode}
                                                             flashStyle={getFlashStyle?.(asset.id)}
+                                                            disabled={Boolean(isBESFund || sortColumn || sortDirection)}
                                                         >
                                                             {/* Portfolio Pill */}
                                                             <td style={{ padding: sizing.rowPadding, textAlign: 'center', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
