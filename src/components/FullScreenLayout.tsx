@@ -40,7 +40,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { BENCHMARK_ASSETS } from "@/lib/benchmarkApi";
-import { getPortfolioStyle } from "@/lib/portfolioStyles";
+import { getPortfolioStyle, getPlatformStyle } from "@/lib/portfolioStyles";
 import { deleteAccount, saveBESData, getBESData } from "@/lib/actions";
 import { lookupTefasFund } from "@/app/actions/search";
 import { signOut } from "next-auth/react";
@@ -2357,19 +2357,23 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                             textAlign: 'center'
                                                                         }}
                                                                     />
-                                                                ) : (
-                                                                    <div style={{
-                                                                        display: 'inline-flex', padding: sizing.pillPadding,
-                                                                        borderRadius: '6px',
-                                                                        background: 'var(--bg-primary)',
-                                                                        border: '1px solid var(--border)',
-                                                                        fontSize: sizing.pillFontSize, fontWeight: 700,
-                                                                        color: 'var(--text-secondary)',
-                                                                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                                                                    }}>
-                                                                        {asset.platform || 'Interactive Brokers'}
-                                                                    </div>
-                                                                )}
+                                                                ) : (() => {
+                                                                    const pName = asset.platform || 'Interactive Brokers';
+                                                                    const pStyle = getPlatformStyle(pName);
+                                                                    return (
+                                                                        <div style={{
+                                                                            display: 'inline-flex', padding: sizing.pillPadding,
+                                                                            borderRadius: '6px',
+                                                                            background: pStyle.bg,
+                                                                            border: `1px solid ${pStyle.border}`,
+                                                                            fontSize: sizing.pillFontSize, fontWeight: 700,
+                                                                            color: pStyle.text,
+                                                                            boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                                                                        }}>
+                                                                            {pName}
+                                                                        </div>
+                                                                    );
+                                                                })()}
                                                             </td>
                                                             {/* Asset (Logo + Name) */}
                                                             <td style={{ padding: `${sizing.rowPadding} ${sizing.rowPaddingLR}`, verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
@@ -4327,16 +4331,18 @@ function ClosedPositionsFullScreen({ onCountChange, hideHeader = false, isBatchE
 
                                             {/* Platform */}
                                             <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                                {pos.platform ? (
+                                                {pos.platform ? (() => {
+                                                    const pStyle = getPlatformStyle(pos.platform);
+                                                    return (
                                                     <div title={pos.platform} style={{
                                                         display: 'inline-flex',
                                                         padding: sizing.pillPadding,
                                                         borderRadius: '6px',
-                                                        background: 'var(--bg-primary)',
-                                                        border: '1px solid var(--border)',
+                                                        background: pStyle.bg,
+                                                        border: `1px solid ${pStyle.border}`,
                                                         fontSize: sizing.pillFontSize,
                                                         fontWeight: 700,
-                                                        color: 'var(--text-secondary)',
+                                                        color: pStyle.text,
                                                         boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
                                                         maxWidth: '70px',
                                                         overflow: 'hidden',
@@ -4345,7 +4351,8 @@ function ClosedPositionsFullScreen({ onCountChange, hideHeader = false, isBatchE
                                                     }}>
                                                         {pos.platform}
                                                     </div>
-                                                ) : (
+                                                    );
+                                                })() : (
                                                     <Monitor size={sizing.iconSize} color="var(--text-muted)" style={{ opacity: 0.5 }} />
                                                 )}
                                             </div>

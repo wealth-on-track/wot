@@ -1,11 +1,5 @@
-export function getPortfolioStyle(name: string) {
-    if (!name || name === '-') {
-        return { bg: 'var(--bg-secondary)', text: 'var(--text-muted)', border: 'transparent' };
-    }
-
-    // Collision-resistant deterministic color mapping
-    // Uses FNV-1a + bit mixing so short tickers like AAK/BES/EAK/TAK don't collapse to same hue.
-    const cleanName = name.trim().toUpperCase();
+function computeTagStyle(rawName: string, salt: string) {
+    const cleanName = `${salt}:${rawName.trim().toUpperCase()}`;
 
     let hash = 0x811c9dc5; // FNV-1a 32-bit offset basis
     for (let i = 0; i < cleanName.length; i++) {
@@ -21,8 +15,6 @@ export function getPortfolioStyle(name: string) {
     hash ^= hash >>> 16;
 
     const n = hash >>> 0;
-
-    // Pull different parts of hash for independent channels
     const hue = n % 360;
     const sat = 60 + ((n >>> 9) % 24);       // 60-83
     const bgLight = 54 + ((n >>> 17) % 8);   // 54-61
@@ -33,4 +25,18 @@ export function getPortfolioStyle(name: string) {
         text: `hsl(${hue}, ${sat}%, ${textLight}%)`,
         border: `hsla(${hue}, ${sat}%, 45%, 0.32)`,
     };
+}
+
+export function getPortfolioStyle(name: string) {
+    if (!name || name === '-') {
+        return { bg: 'var(--bg-secondary)', text: 'var(--text-muted)', border: 'transparent' };
+    }
+    return computeTagStyle(name, 'PORTFOLIO');
+}
+
+export function getPlatformStyle(name: string) {
+    if (!name || name === '-') {
+        return { bg: 'var(--bg-secondary)', text: 'var(--text-muted)', border: 'transparent' };
+    }
+    return computeTagStyle(name, 'PLATFORM');
 }
