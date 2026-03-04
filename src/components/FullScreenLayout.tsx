@@ -1731,17 +1731,22 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                         });
                     }
 
+                    const baseAsset = assets.find((a: any) => a.id === id);
+                    const isBesParent = baseAsset?.type === 'BES';
+
                     return updateAsset(id, {
                         quantity: Number(data.quantity),
                         buyPrice: Number(data.averageBuyPrice),
                         name: data.name,
                         platform: data.platform,
                         customGroup: data.portfolio,
-                        type: normalizedType as any,
-                        exchange: data.exchange,
-                        currency: normalizedCurrency as any,
-                        country: data.country,
-                        sector: data.sector
+                        ...(isBesParent ? {} : {
+                            type: normalizedType as any,
+                            exchange: data.exchange,
+                            currency: normalizedCurrency as any,
+                            country: data.country,
+                            sector: data.sector,
+                        })
                     });
                 });
 
