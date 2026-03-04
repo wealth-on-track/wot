@@ -1689,17 +1689,42 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
 
             const saveChanges = async () => {
                 const { updateAsset, updateBESFundMetadata } = await import('@/lib/actions');
-                const promises = Object.entries(editedAssets).map(([id, data]) => {
+
+                const normalizeAssetType = (v?: string) => {
+                    if (!v) return undefined;
+                    const t = v.trim().toUpperCase();
+                    const map: Record<string, string> = {
+                        STOCK: 'STOCK',
+                        CRYPTO: 'CRYPTO',
+                        GOLD: 'GOLD',
+                        BOND: 'BOND',
+                        FUND: 'FUND',
+                        CASH: 'CASH',
+                        COMMODITY: 'COMMODITY',
+                        COMMODITIES: 'COMMODITY',
+                        CURRENCY: 'CURRENCY',
+                        FX: 'CURRENCY',
+                        ETF: 'ETF',
+                        BES_FUND: 'FUND',
+                    };
+                    return map[t] || t;
+                };
+                const normalizeCurrency = (v?: string) => (v ? v.trim().toUpperCase() : undefined);
+
+                const promises = Object.entries(editedAssets).map(async ([id, data]) => {
+                    const normalizedType = normalizeAssetType(data.type);
+                    const normalizedCurrency = normalizeCurrency(data.currency);
+
                     // BES flattened rows are synthetic IDs (bes-kp-XXX / bes-dk-AET)
                     if (id.startsWith('bes-kp-') || id.startsWith('bes-dk-')) {
                         const fundCode = id.startsWith('bes-kp-') ? id.replace('bes-kp-', '') : 'AET';
                         const parent = flattenedAssets.find((a: any) => a.id === id)?._besAssetId;
-                        if (!parent) return Promise.resolve(null);
+                        if (!parent) return null;
 
                         return updateBESFundMetadata(parent, fundCode, {
-                            type: data.type,
+                            type: normalizedType,
                             exchange: data.exchange,
-                            currency: data.currency,
+                            currency: normalizedCurrency,
                             country: data.country,
                             sector: data.sector,
                             name: data.name,
@@ -1707,19 +1732,24 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                     }
 
                     return updateAsset(id, {
-                        quantity: data.quantity,
-                        buyPrice: data.averageBuyPrice,
+                        quantity: Number(data.quantity),
+                        buyPrice: Number(data.averageBuyPrice),
                         name: data.name,
                         platform: data.platform,
                         customGroup: data.portfolio,
-                        type: data.type,
+                        type: normalizedType as any,
                         exchange: data.exchange,
-                        currency: data.currency,
+                        currency: normalizedCurrency as any,
                         country: data.country,
                         sector: data.sector
                     });
                 });
-                await Promise.all(promises);
+
+                const results = await Promise.all(promises);
+                const hasError = results.some((r: any) => r && r.error);
+                if (hasError) {
+                    console.error('Batch metadata save had validation errors', results);
+                }
                 onCountChange();
             };
             saveChanges().catch(err => console.error("Batch save failed:", err));
