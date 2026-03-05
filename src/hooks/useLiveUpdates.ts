@@ -52,7 +52,8 @@ export function useLiveUpdates({
         if (!enabled || isUpdating || !portfolioId) return;
 
         setIsUpdating(true);
-        setProgress(0);
+        // Perceived-fast start: instantly show initial progress while keeping fetch behavior unchanged
+        setProgress(14);
         setPhase('Connecting...');
         setShowComplete(false);
 
@@ -71,7 +72,12 @@ export function useLiveUpdates({
                 }
 
                 if (data.type === 'price_update') {
-                    setProgress(data.progress);
+                    // Smooth/fast visual progression without changing backend request rate
+                    setProgress(prev => {
+                        const target = Math.max(data.progress || 0, 20);
+                        const stepped = Math.min(prev + 9, 96);
+                        return Math.max(prev, target, stepped);
+                    });
                     setPhase(`Updating ${data.symbol}...`);
 
                     // Find asset by symbol
@@ -98,12 +104,18 @@ export function useLiveUpdates({
                             previousClose: data.previousClose,
                             dailyChange: data.change,
                             dailyChangePercentage: data.changePercent,
+                            // Keep 1D views in sync (mobile widgets read this first)
+                            changePercent1D: data.changePercent,
                         });
                     }
                 }
 
                 if (data.type === 'progress') {
-                    setProgress(data.progress);
+                    setProgress(prev => {
+                        const target = Math.max(data.progress || 0, 20);
+                        const stepped = Math.min(prev + 7, 96);
+                        return Math.max(prev, target, stepped);
+                    });
                 }
 
                 if (data.type === 'complete') {
@@ -130,7 +142,7 @@ export function useLiveUpdates({
     useEffect(() => {
         if (enabled && portfolioId && assets.length > 0 && !hasStartedRef.current) {
             hasStartedRef.current = true;
-            const timer = setTimeout(startUpdate, 800);
+            const timer = setTimeout(startUpdate, 150);
             return () => clearTimeout(timer);
         }
     }, [enabled, portfolioId, assets.length, startUpdate]);
