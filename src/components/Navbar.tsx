@@ -206,7 +206,7 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
 
                         {session?.user && (((session.user as any)?.username || session.user.name) || username) && (
                             <Link
-                                href={`/${(((session.user as any)?.username || session.user.name || username) as string).toLowerCase()}/public`}
+                                href={`/${(((session.user as any)?.username || session.user.name || username) as string).toLowerCase()}/portfolio_public`}
                                 className="navbar-btn"
                                 title="Public share page"
                                 style={{ textDecoration: 'none' }}

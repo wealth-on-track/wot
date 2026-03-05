@@ -168,7 +168,7 @@ export function MobileHeader({
 
                 {/* Public Share Page (left of privacy eye) */}
                 <Link
-                    href={`/${username}/public`}
+                    href={`/${username}/portfolio_public`}
                     style={{ textDecoration: 'none' }}
                     title="Public share page"
                 >
