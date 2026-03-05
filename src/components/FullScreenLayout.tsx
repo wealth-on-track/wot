@@ -1510,7 +1510,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
 
     const getCurrencySymbol = (currency: string): string => {
         const symbols: Record<string, string> = {
-            'USD': '$', 'EUR': '€', 'GBP': '£', 'TRY': '₺', 'JPY': '¥', 'CNY': '¥', 'KRW': '₩', 'INR': '₹',
+            'USD': '$', 'EUR': '€', 'ORG': '€', 'GBP': '£', 'TRY': '₺', 'JPY': '¥', 'CNY': '¥', 'KRW': '₩', 'INR': '₹',
             'BRL': 'R$', 'CAD': 'C$', 'AUD': 'A$', 'CHF': 'CHF', 'SEK': 'kr', 'NOK': 'kr', 'DKK': 'kr',
             'PLN': 'zł', 'RUB': '₽', 'MXN': '$', 'ZAR': 'R', 'SGD': 'S$', 'HKD': 'HK$', 'NZD': 'NZ$'
         };
