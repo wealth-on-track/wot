@@ -6,7 +6,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { PrivacyToggle } from "./PrivacyToggle";
 
 import { NavbarActions } from "./NavbarActions";
-import { User, ShieldCheck } from "lucide-react";
+import { User, ShieldCheck, Link as LinkIcon } from "lucide-react";
 
 interface NavbarProps {
     totalBalance?: number;
@@ -203,6 +203,17 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
 
                         {/* View Mode Toggle (Portal Target) */}
 
+
+                        {session?.user && (((session.user as any)?.username || session.user.name) || username) && (
+                            <Link
+                                href={`/${(((session.user as any)?.username || session.user.name || username) as string).toLowerCase()}/public`}
+                                className="navbar-btn"
+                                title="Public share page"
+                                style={{ textDecoration: 'none' }}
+                            >
+                                <LinkIcon size={18} />
+                            </Link>
+                        )}
 
                         <PrivacyToggle />
 
