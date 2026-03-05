@@ -2383,6 +2383,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                             {displayAssets.map((asset, i) => {
                                                 const isLast = i === displayAssets.length - 1;
                                                 const isBESFund = asset.type === 'BES_FUND';
+                                                const isBESPortfolioAsset = (asset.customGroup || '').toUpperCase() === 'BES';
                                                 const isCash = asset.type === 'CASH';
 
                                                 // Calculations per row for consistent display
@@ -2828,7 +2829,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                             </td>
                                                             {/* P&L - Single Cell with % on top, AMT below */}
                                                             <td style={{ padding: sizing.rowPaddingLR, textAlign: 'right', verticalAlign: 'middle', borderBottom: isLast ? 'none' : '1px solid var(--border)', display: (isBatchEditMode && showMetadataEdit) ? 'none' : 'table-cell' }}>
-                                                                {(isBES || isCash) ? (
+                                                                {(isBES || isCash || isBESPortfolioAsset) ? (
                                                                     <>
                                                                         <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: 'var(--text-muted)' }}>-</div>
                                                                         <div style={{ fontSize: sizing.smallNumberSize, color: 'var(--text-muted)', marginTop: '2px' }}>-</div>
