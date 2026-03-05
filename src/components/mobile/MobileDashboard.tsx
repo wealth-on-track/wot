@@ -26,6 +26,7 @@ interface MobileDashboardProps {
     preferences?: any;
     isLiveUpdating?: boolean;
     liveProgress?: number;
+    buildTag?: string;
 }
 
 
@@ -37,7 +38,8 @@ export function MobileDashboard({
     exchangeRates,
     preferences,
     isLiveUpdating = false,
-    liveProgress = 0
+    liveProgress = 0,
+    buildTag
 }: MobileDashboardProps) {
     // --- Navigation State ---
     const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -53,6 +55,7 @@ export function MobileDashboard({
 
     // Highlight Logic
     const [highlightAssetId, setHighlightAssetId] = useState<string | null>(null);
+    const [positionsHorizon, setPositionsHorizon] = useState<'1D' | 'ALL'>('1D');
 
     // Auto-clear highlight after 3 seconds (properly handled in useEffect)
     useEffect(() => {
@@ -285,7 +288,8 @@ export function MobileDashboard({
                                         onAdd={() => setDashboardView('add')}
                                         totalValueEUR={totalValueEUR}
                                         exchangeRates={exchangeRates}
-                                        timeHorizon={selectedPeriod as '1D' | '1W' | '1M' | 'YTD' | '1Y' | 'ALL'}
+                                        timeHorizon={positionsHorizon}
+                                        onToggleHorizon={() => setPositionsHorizon(prev => prev === '1D' ? 'ALL' : '1D')}
                                     />
                                 </motion.div>
                             )}
@@ -331,22 +335,24 @@ export function MobileDashboard({
                 </div>
             </PullToRefresh>
 
-            {/* Build badge (fixed, always visible above bottom nav) */}
-            <div style={{
-                position: 'fixed',
-                left: 0,
-                right: 0,
-                bottom: 82,
-                textAlign: 'center',
-                fontSize: 11,
-                fontWeight: 700,
-                color: 'var(--text-muted)',
-                opacity: 0.9,
-                pointerEvents: 'none',
-                zIndex: 40
-            }}>
-                build b3ef53c
-            </div>
+            {/* Build badge (only on mobile home/dashboard) */}
+            {activeTab === 'dashboard' && dashboardView === 'home' && (
+                <div style={{
+                    position: 'fixed',
+                    left: 0,
+                    right: 0,
+                    bottom: 82,
+                    textAlign: 'center',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: 'var(--text-muted)',
+                    opacity: 0.9,
+                    pointerEvents: 'none',
+                    zIndex: 40
+                }}>
+                    build {buildTag || 'local'}
+                </div>
+            )}
 
             {/* Bottom Navigation */}
             <MobileBottomNav

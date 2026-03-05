@@ -16,6 +16,7 @@ interface MobileClientWrapperProps {
     preferences?: unknown;
     portfolioId?: string;
     enableLiveUpdates?: boolean;
+    buildTag?: string;
 }
 
 export function MobileClientWrapper({
@@ -26,7 +27,8 @@ export function MobileClientWrapper({
     exchangeRates,
     preferences,
     portfolioId,
-    enableLiveUpdates = false
+    enableLiveUpdates = false,
+    buildTag
 }: MobileClientWrapperProps) {
     const [assets, setAssets] = useState(initialAssets);
 
@@ -59,6 +61,7 @@ export function MobileClientWrapper({
                 preferences={preferences}
                 isLiveUpdating={isUpdating}
                 liveProgress={progress}
+                buildTag={buildTag}
             />
         </CurrencyProvider>
     );

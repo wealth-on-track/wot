@@ -109,6 +109,8 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
     // Use goals from initial query (already fetched)
     const displayedGoals = user.Portfolio.Goal;
 
+    const buildTag = (process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7);
+
     return (
         <MobileClientWrapper
             username={username}
@@ -120,6 +122,7 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
             preferences={user.preferences}
             portfolioId={user.Portfolio.id}
             enableLiveUpdates={isOwner}
+            buildTag={buildTag}
         />
     );
 }
