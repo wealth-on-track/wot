@@ -6,7 +6,7 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { useTheme } from "@/context/ThemeContext";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { handleSignOut } from "@/lib/authActions";
-import { LogOut, User, Eye, EyeOff } from "lucide-react";
+import { LogOut, User, Eye, EyeOff, Link as LinkIcon } from "lucide-react";
 
 import type { AssetDisplay } from "@/lib/types";
 
@@ -63,7 +63,8 @@ export function MobileHeader({
                 style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.5rem',
+                    gap: '0.45rem',
+                    flexWrap: 'nowrap',
                     cursor: onLogoClick ? 'pointer' : 'default'
                 }}
             >
@@ -164,6 +165,28 @@ export function MobileHeader({
 
             {/* Controls */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+
+                {/* Public Share Page (left of privacy eye) */}
+                <Link
+                    href={`/${username}/public`}
+                    style={{ textDecoration: 'none' }}
+                    title="Public share page"
+                >
+                    <div style={{
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        width: '36px',
+                        height: '36px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer'
+                    }}>
+                        <LinkIcon size={17} />
+                    </div>
+                </Link>
 
                 {/* Privacy Toggle */}
                 <button
