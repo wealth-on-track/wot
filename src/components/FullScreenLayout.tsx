@@ -2962,10 +2962,10 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                     </button>
                                                                 </div>
                                                             </td>
-                                                            {/* Expand chevron - hide for BES_FUND (no transaction details) */}
+                                                            {/* Expand chevron - hide for BES_FUND and BES portfolio rows */}
                                                             <td
                                                                 onClick={(e) => {
-                                                                    if (isBESFund) return; // No expand for BES funds
+                                                                    if (isBESFund || isBESPortfolioAsset) return; // No expand for BES area rows
                                                                     e.stopPropagation();
                                                                     toggleExpand(asset.id);
                                                                 }}
@@ -2975,18 +2975,18 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                     textAlign: 'center',
                                                                     verticalAlign: 'middle',
                                                                     borderBottom: isLast && !expandedAssets.has(asset.id) ? 'none' : '1px solid var(--border)',
-                                                                    cursor: isBESFund ? 'default' : 'pointer',
+                                                                    cursor: (isBESFund || isBESPortfolioAsset) ? 'default' : 'pointer',
                                                                     color: 'var(--text-secondary)'
                                                                 }}
                                                             >
-                                                                {/* Hide chevron for BES_FUND */}
-                                                                {!isBESFund && (expandedAssets.has(asset.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
+                                                                {/* Hide chevron for BES rows */}
+                                                                {!(isBESFund || isBESPortfolioAsset) && (expandedAssets.has(asset.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
                                                             </td>
                                                         </SortableRow>
 
-                                                        {/* Expanded row - skip for BES_FUND */}
+                                                        {/* Expanded row - skip for BES rows */}
                                                         {
-                                                            !isBESFund && expandedAssets.has(asset.id) && (
+                                                            !(isBESFund || isBESPortfolioAsset) && expandedAssets.has(asset.id) && (
                                                                 <tr style={{ background: 'var(--bg-secondary)' }}>
                                                                     <td colSpan={100} style={{ padding: '0 0.8rem 0.8rem 0.8rem', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
                                                                         <div style={{ marginTop: '0.8rem' }}>
