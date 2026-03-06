@@ -12,6 +12,7 @@ function mapCategory(type?: string, name?: string) {
 
   if (n.includes('altın') || n.includes('gold')) return 'Commodity';
   if (n.includes('hisse') || n.includes('equity')) return 'Stock';
+  if (n.includes('para piyas')) return 'Cash';
 
   if (t === 'CRYPTO') return 'Crypto';
   if (t === 'BOND') return 'Bond';
