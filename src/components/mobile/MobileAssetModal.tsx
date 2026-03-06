@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { AssetDisplay } from "@/lib/types";
-import { addAsset, updateAsset, deleteAsset } from "@/lib/actions";
+import { addAsset, updateAsset, deleteAsset, updateBESFundMetadata } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { Save, Trash2, X, Check } from "lucide-react";
 
@@ -37,19 +37,41 @@ export function MobileAssetModal({ asset, onClose, onAssetAdded }: MobileAssetMo
 
         try {
             if (isEdit && asset) {
-                const data = {
-                    quantity: parseFloat(formData.get('quantity') as string),
-                    buyPrice: parseFloat(formData.get('buyPrice') as string),
-                    customGroup: formData.get('customGroup') as string,
-                    platform: formData.get('platform') as string,
-                };
+                const editedName = String(formData.get('name') || '').trim();
+                const syntheticBes = String(asset.id || '').startsWith('mbes-kp-') || String(asset.id || '').startsWith('mbes-dk-');
 
-                const result = await updateAsset(asset.id, data);
-                if (result.error) {
-                    alert(result.error);
+                if (syntheticBes) {
+                    const fundCode = String(asset.id || '').startsWith('mbes-kp-')
+                        ? String(asset.id).replace('mbes-kp-', '')
+                        : 'AET';
+                    const parentId = (asset as any)._besAssetId;
+                    if (!parentId) {
+                        alert('BES parent not found');
+                    } else {
+                        const result = await updateBESFundMetadata(parentId, fundCode, { name: editedName || asset.name || '' });
+                        if ((result as any)?.error) {
+                            alert((result as any).error);
+                        } else {
+                            router.refresh();
+                            handleClose();
+                        }
+                    }
                 } else {
-                    router.refresh();
-                    handleClose();
+                    const data = {
+                        quantity: parseFloat(formData.get('quantity') as string),
+                        buyPrice: parseFloat(formData.get('buyPrice') as string),
+                        customGroup: formData.get('customGroup') as string,
+                        platform: formData.get('platform') as string,
+                        name: editedName || asset.name || '',
+                    };
+
+                    const result = await updateAsset(asset.id, data);
+                    if (result.error) {
+                        alert(result.error);
+                    } else {
+                        router.refresh();
+                        handleClose();
+                    }
                 }
             } else {
                 if (asset) {
@@ -216,7 +238,40 @@ export function MobileAssetModal({ asset, onClose, onAssetAdded }: MobileAssetMo
                         </div>
                     </div>
 
-                    {/* Row 2: Inputs Grid */}
+                    {/* Row 2: Editable Name */}
+                    <div style={{ position: 'relative' }}>
+                        <input
+                            type="text"
+                            name="name"
+                            defaultValue={asset?.name || ''}
+                            placeholder="Asset name"
+                            style={{
+                                width: '100%',
+                                background: 'var(--bg-secondary)',
+                                border: 'none',
+                                borderRadius: '12px',
+                                padding: '12px',
+                                paddingTop: '20px',
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                color: 'var(--text-primary)',
+                                outline: 'none'
+                            }}
+                        />
+                        <span style={{
+                            position: 'absolute',
+                            top: '6px',
+                            left: '12px',
+                            fontSize: '10px',
+                            color: 'var(--text-muted)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.4px'
+                        }}>
+                            Name
+                        </span>
+                    </div>
+
+                    {/* Row 3: Inputs Grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         {/* Quantity */}
                         <div style={{ position: 'relative' }}>
