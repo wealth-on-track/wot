@@ -143,9 +143,33 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
   const nonCash = flattened.filter((a: any) => !['CASH', 'CURRENCY', 'FX'].includes((a.type || '').toUpperCase()));
   const mergedCashValue = cashLike.reduce((s: number, a: any) => s + (a.totalValueEUR || 0), 0);
 
-  const normalized = [...nonCash];
+  // Merge duplicate assets (same symbol) for cleaner public view
+  const mergedBySymbol = new Map<string, any>();
+  for (const a of nonCash as any[]) {
+    const sym = String(a.symbol || a.name || a.id || '').toUpperCase();
+    const key = `${sym}`;
+
+    if (!mergedBySymbol.has(key)) {
+      mergedBySymbol.set(key, {
+        ...a,
+        _mergedIds: [a.id],
+      });
+      continue;
+    }
+
+    const prev = mergedBySymbol.get(key);
+    mergedBySymbol.set(key, {
+      ...prev,
+      totalValueEUR: (prev.totalValueEUR || 0) + (a.totalValueEUR || 0),
+      _mergedIds: [...(prev._mergedIds || []), a.id],
+      // merged rows are display-only; don't map to a single assetId for write actions
+      id: `merged-${key}`,
+    });
+  }
+
+  const normalized = Array.from(mergedBySymbol.values());
   if (mergedCashValue > 0) {
-    normalized.push({ id: 'merged-cash', name: 'Cash (Merged)', type: 'CASH', totalValueEUR: mergedCashValue } as any);
+    normalized.push({ id: 'merged-cash', symbol: 'CASH', name: 'Cash (Merged)', type: 'CASH', totalValueEUR: mergedCashValue } as any);
   }
 
   const grouped = new Map<string, any[]>();
@@ -166,7 +190,7 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
         id: i.id,
         name: i.name || i.symbol,
         pct: totalValueEUR > 0 ? ((i.totalValueEUR || 0) / totalValueEUR) * 100 : 0,
-        assetId: i.id?.startsWith('pp-bes-') ? undefined : i.id,
+        assetId: (String(i.id || '').startsWith('pp-bes-') || String(i.id || '').startsWith('merged-')) ? undefined : i.id,
         besParentId: i._besParentId,
         besFundCode: i._besFundCode,
       }))
