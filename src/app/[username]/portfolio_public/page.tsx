@@ -183,10 +183,9 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
     const sorted = items.sort((x, y) => (y.totalValueEUR || 0) - (x.totalValueEUR || 0));
     const value = sorted.reduce((s, i) => s + (i.totalValueEUR || 0), 0);
     const pct = totalValueEUR > 0 ? (value / totalValueEUR) * 100 : 0;
-    return {
-      name,
-      pct,
-      items: sorted.map((i: any) => ({
+
+    const visibleItems = sorted
+      .map((i: any) => ({
         id: i.id,
         name: i.name || i.symbol,
         pct: totalValueEUR > 0 ? ((i.totalValueEUR || 0) / totalValueEUR) * 100 : 0,
@@ -194,8 +193,16 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
         besParentId: i._besParentId,
         besFundCode: i._besFundCode,
       }))
+      .filter((i: any) => Math.round(i.pct) > 0);
+
+    return {
+      name,
+      pct,
+      items: visibleItems
     };
-  }).sort((a, b) => b.pct - a.pct);
+  })
+    .filter((c: any) => Math.round(c.pct) > 0 && c.items.length > 0)
+    .sort((a, b) => b.pct - a.pct);
 
   return <PublicPortfolioView categories={categories} canEdit={isOwner} />;
 }
