@@ -89,9 +89,54 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
 
   const open = assetsWithValues.filter((a: any) => (a.quantity || 0) > 0 && (a.totalValueEUR || 0) > 0);
 
+  // Flatten BES into independent visible funds (no single BES bucket row)
+  const flattened: any[] = [];
+  for (const a of open as any[]) {
+    if ((a.type || '').toUpperCase() === 'BES' && a.metadata) {
+      const meta: any = a.metadata || {};
+      const userFundOverrides = meta.userFundOverrides || {};
+
+      const totalKP = meta.contracts?.reduce((s: number, c: any) => s + (c.katkiPayi || 0), 0) || 0;
+      const totalDK = meta.contracts?.reduce((s: number, c: any) => s + (c.devletKatkisi || 0), 0) || 0;
+      const tryRate = rates?.TRY || 38.5;
+
+      if (meta.katkiPayiFunds && meta.katkiPayiFunds.length > 0) {
+        for (const fund of meta.katkiPayiFunds) {
+          const ov = userFundOverrides[fund.code] || {};
+          const valueTRY = (fund.percentage / 100) * totalKP;
+          const valueEUR = valueTRY / tryRate;
+          if (valueEUR <= 0) continue;
+
+          flattened.push({
+            id: `pp-bes-kp-${fund.code}`,
+            symbol: fund.code,
+            name: ov.name || fund.name,
+            type: ov.type || 'FUND',
+            totalValueEUR: valueEUR,
+          });
+        }
+      }
+
+      if (totalDK > 0) {
+        const ov = userFundOverrides['AET'] || {};
+        flattened.push({
+          id: 'pp-bes-dk-AET',
+          symbol: 'AET',
+          name: ov.name || 'Devlet Katkısı Fonu',
+          type: ov.type || 'FUND',
+          totalValueEUR: totalDK / tryRate,
+        });
+      }
+
+      continue;
+    }
+
+    flattened.push(a);
+  }
+
   // Merge all cash-like assets into one cash row
-  const cashLike = open.filter((a: any) => ['CASH', 'CURRENCY', 'FX'].includes((a.type || '').toUpperCase()));
-  const nonCash = open.filter((a: any) => !['CASH', 'CURRENCY', 'FX'].includes((a.type || '').toUpperCase()));
+  const cashLike = flattened.filter((a: any) => ['CASH', 'CURRENCY', 'FX'].includes((a.type || '').toUpperCase()));
+  const nonCash = flattened.filter((a: any) => !['CASH', 'CURRENCY', 'FX'].includes((a.type || '').toUpperCase()));
   const mergedCashValue = cashLike.reduce((s: number, a: any) => s + (a.totalValueEUR || 0), 0);
 
   const normalized = [...nonCash];
