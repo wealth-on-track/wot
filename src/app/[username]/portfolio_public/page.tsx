@@ -113,6 +113,8 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
             name: ov.name || fund.name,
             type: ov.type || 'FUND',
             totalValueEUR: valueEUR,
+            _besParentId: a.id,
+            _besFundCode: fund.code,
           });
         }
       }
@@ -125,6 +127,8 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
           name: ov.name || 'Devlet Katkısı Fonu',
           type: ov.type || 'FUND',
           totalValueEUR: totalDK / tryRate,
+          _besParentId: a.id,
+          _besFundCode: 'AET',
         });
       }
 
@@ -162,9 +166,12 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
         id: i.id,
         name: i.name || i.symbol,
         pct: totalValueEUR > 0 ? ((i.totalValueEUR || 0) / totalValueEUR) * 100 : 0,
+        assetId: i.id?.startsWith('pp-bes-') ? undefined : i.id,
+        besParentId: i._besParentId,
+        besFundCode: i._besFundCode,
       }))
     };
   }).sort((a, b) => b.pct - a.pct);
 
-  return <PublicPortfolioView categories={categories} />;
+  return <PublicPortfolioView categories={categories} canEdit={isOwner} />;
 }

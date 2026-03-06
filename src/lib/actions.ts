@@ -1067,3 +1067,68 @@ export async function deleteBESData(): Promise<{ success: boolean; error?: strin
         return { success: false, error: errorMessage };
     }
 }
+
+export async function movePublicCategory(params: {
+    assetId?: string;
+    besParentId?: string;
+    besFundCode?: string;
+    category: 'Stock' | 'Bond' | 'Cash' | 'Commodity' | 'Crypto' | 'Fund/ETF';
+}) {
+    const session = await auth();
+    if (!session?.user?.email) return { error: 'Unauthorized' };
+
+    const map: Record<string, string> = {
+        'Stock': 'STOCK',
+        'Bond': 'BOND',
+        'Cash': 'CASH',
+        'Commodity': 'COMMODITY',
+        'Crypto': 'CRYPTO',
+        'Fund/ETF': 'FUND',
+    };
+
+    const nextType = map[params.category] || 'FUND';
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            include: { Portfolio: true }
+        });
+        if (!user?.Portfolio) return { error: 'Portfolio not found' };
+
+        if (params.besParentId && params.besFundCode) {
+            const parent = await prisma.asset.findUnique({ where: { id: params.besParentId } });
+            if (!parent || parent.portfolioId !== user.Portfolio.id) return { error: 'Unauthorized' };
+
+            const meta: any = (parent.metadata as any) || {};
+            const userFundOverrides = meta.userFundOverrides || {};
+            const prev = userFundOverrides[params.besFundCode] || {};
+            userFundOverrides[params.besFundCode] = { ...prev, type: nextType };
+
+            await prisma.asset.update({
+                where: { id: params.besParentId },
+                data: { metadata: { ...meta, userFundOverrides } }
+            });
+
+            revalidatePath(`/${user.username}`);
+            revalidatePath(`/${user.username}/portfolio_public`);
+            return { success: true };
+        }
+
+        if (!params.assetId) return { error: 'Missing asset id' };
+
+        const asset = await prisma.asset.findUnique({ where: { id: params.assetId } });
+        if (!asset || asset.portfolioId !== user.Portfolio.id) return { error: 'Unauthorized' };
+
+        await prisma.asset.update({
+            where: { id: params.assetId },
+            data: { customType: nextType }
+        });
+
+        revalidatePath(`/${user.username}`);
+        revalidatePath(`/${user.username}/portfolio_public`);
+        return { success: true };
+    } catch (e) {
+        console.error('movePublicCategory error:', e);
+        return { error: 'Failed to move category' };
+    }
+}

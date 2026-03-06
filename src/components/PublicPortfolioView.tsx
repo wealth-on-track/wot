@@ -2,11 +2,20 @@
 
 import { useMemo, useState } from "react";
 
-type Item = { id: string; name: string; pct: number };
+type Item = {
+  id: string;
+  name: string;
+  pct: number;
+  assetId?: string;
+  besParentId?: string;
+  besFundCode?: string;
+};
+
 type Category = { name: string; pct: number; items: Item[] };
 
-export function PublicPortfolioView({ categories }: { categories: Category[] }) {
+export function PublicPortfolioView({ categories: initialCategories, canEdit }: { categories: Category[]; canEdit?: boolean }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
 
   const allExpanded = useMemo(() => categories.length > 0 && expanded.size >= categories.length, [expanded, categories.length]);
 
@@ -26,6 +35,36 @@ export function PublicPortfolioView({ categories }: { categories: Category[] }) 
     });
   };
 
+  const onDropToCategory = async (toCategory: string, item: Item) => {
+    // Local optimistic move
+    setCategories(prev => {
+      const next = prev.map(c => ({ ...c, items: [...c.items] }));
+      let moved: Item | null = null;
+      for (const c of next) {
+        const idx = c.items.findIndex(i => i.id === item.id);
+        if (idx >= 0) moved = c.items.splice(idx, 1)[0];
+      }
+      if (!moved) return prev;
+      const dst = next.find(c => c.name === toCategory);
+      if (!dst) return prev;
+      dst.items.push(moved);
+      return next;
+    });
+
+    if (!canEdit) return;
+
+    await fetch('/api/public/move-category', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        category: toCategory,
+        assetId: item.assetId,
+        besParentId: item.besParentId,
+        besFundCode: item.besFundCode,
+      })
+    });
+  };
+
   return (
     <div style={{ maxWidth: 980, margin: '0 auto', padding: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -35,12 +74,26 @@ export function PublicPortfolioView({ categories }: { categories: Category[] }) 
         </button>
       </div>
 
-      <div style={{ color: 'var(--text-muted)', marginBottom: 10, fontSize: 11 }}>Amounts hidden • Percent only</div>
+      <div style={{ color: 'var(--text-muted)', marginBottom: 10, fontSize: 11 }}>
+        Amounts hidden • Percent only {canEdit ? '• Drag to move between categories' : ''}
+      </div>
 
       {categories.map((c) => {
         const isOpen = expanded.has(c.name);
         return (
-          <div key={c.name} style={{ border: '1px solid var(--border)', borderRadius: 8, marginBottom: 8, overflow: 'hidden' }}>
+          <div
+            key={c.name}
+            style={{ border: '1px solid var(--border)', borderRadius: 8, marginBottom: 8, overflow: 'hidden' }}
+            onDragOver={(e) => canEdit && e.preventDefault()}
+            onDrop={(e) => {
+              if (!canEdit) return;
+              e.preventDefault();
+              const raw = e.dataTransfer.getData('application/json');
+              if (!raw) return;
+              const item: Item = JSON.parse(raw);
+              onDropToCategory(c.name, item);
+            }}
+          >
             <button onClick={() => toggleOne(c.name)} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', padding: '8px 10px', background: 'var(--surface)', border: 'none', cursor: 'pointer' }}>
               <b style={{ fontSize: 12 }}>{c.name}</b>
               <b style={{ fontSize: 12 }}>{Math.round(c.pct)}%</b>
@@ -48,7 +101,12 @@ export function PublicPortfolioView({ categories }: { categories: Category[] }) 
             {isOpen && (
               <div>
                 {c.items.map((a) => (
-                  <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', borderTop: '1px solid var(--border)', fontSize: 12 }}>
+                  <div
+                    key={a.id}
+                    draggable={!!canEdit}
+                    onDragStart={(e) => e.dataTransfer.setData('application/json', JSON.stringify(a))}
+                    style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', borderTop: '1px solid var(--border)', fontSize: 12, cursor: canEdit ? 'grab' : 'default' }}
+                  >
                     <span style={{ opacity: 0.9 }}>{a.name}</span>
                     <span>{Math.round(a.pct)}%</span>
                   </div>
