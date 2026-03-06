@@ -76,9 +76,6 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }: 
         </button>
       </div>
 
-      <div style={{ color: 'var(--text-muted)', marginBottom: 10, fontSize: 11 }}>
-        Amounts hidden • Percent only {canEdit ? '• Drag to move between categories' : ''}
-      </div>
 
       {categories.map((c) => {
         const isOpen = expanded.has(c.name);
