@@ -6,6 +6,8 @@ type Item = {
   id: string;
   name: string;
   pct: number;
+  oneDay?: number;
+  allTime?: number;
   assetId?: string;
   besParentId?: string;
   besFundCode?: string;
@@ -105,9 +107,11 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }: 
                     key={a.id}
                     draggable={!!canEdit}
                     onDragStart={(e) => e.dataTransfer.setData('application/json', JSON.stringify(a))}
-                    style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', borderTop: '1px solid var(--border)', fontSize: 12, cursor: canEdit ? 'grab' : 'default' }}
+                    style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 10, alignItems: 'center', padding: '6px 10px', borderTop: '1px solid var(--border)', fontSize: 12, cursor: canEdit ? 'grab' : 'default' }}
                   >
                     <span style={{ opacity: 0.9 }}>{a.name}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>1D {typeof a.oneDay === 'number' ? `${Math.round(a.oneDay)}%` : '-'}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>ALL {typeof a.allTime === 'number' ? `${Math.round(a.allTime)}%` : '-'}</span>
                     <span>{Math.round(a.pct)}%</span>
                   </div>
                 ))}

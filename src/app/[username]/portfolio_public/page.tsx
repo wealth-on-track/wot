@@ -153,6 +153,8 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
       mergedBySymbol.set(key, {
         ...a,
         _mergedIds: [a.id],
+        _ret1dWeighted: (a.changePercent1D || 0) * (a.totalValueEUR || 0),
+        _retAllWeighted: (a.plPercentage || 0) * (a.totalValueEUR || 0),
       });
       continue;
     }
@@ -161,6 +163,8 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
     mergedBySymbol.set(key, {
       ...prev,
       totalValueEUR: (prev.totalValueEUR || 0) + (a.totalValueEUR || 0),
+      _ret1dWeighted: (prev._ret1dWeighted || 0) + ((a.changePercent1D || 0) * (a.totalValueEUR || 0)),
+      _retAllWeighted: (prev._retAllWeighted || 0) + ((a.plPercentage || 0) * (a.totalValueEUR || 0)),
       _mergedIds: [...(prev._mergedIds || []), a.id],
       // merged rows are display-only; don't map to a single assetId for write actions
       id: `merged-${key}`,
@@ -185,14 +189,26 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
     const pct = totalValueEUR > 0 ? (value / totalValueEUR) * 100 : 0;
 
     const visibleItems = sorted
-      .map((i: any) => ({
-        id: i.id,
-        name: i.name || i.symbol,
-        pct: totalValueEUR > 0 ? ((i.totalValueEUR || 0) / totalValueEUR) * 100 : 0,
-        assetId: (String(i.id || '').startsWith('pp-bes-') || String(i.id || '').startsWith('merged-')) ? undefined : i.id,
-        besParentId: i._besParentId,
-        besFundCode: i._besFundCode,
-      }))
+      .map((i: any) => {
+        const val = i.totalValueEUR || 0;
+        const oneDay = val > 0
+          ? (typeof i._ret1dWeighted === 'number' ? i._ret1dWeighted / val : i.changePercent1D)
+          : undefined;
+        const allTime = val > 0
+          ? (typeof i._retAllWeighted === 'number' ? i._retAllWeighted / val : i.plPercentage)
+          : undefined;
+
+        return {
+          id: i.id,
+          name: i.name || i.symbol,
+          pct: totalValueEUR > 0 ? (val / totalValueEUR) * 100 : 0,
+          oneDay,
+          allTime,
+          assetId: (String(i.id || '').startsWith('pp-bes-') || String(i.id || '').startsWith('merged-')) ? undefined : i.id,
+          besParentId: i._besParentId,
+          besFundCode: i._besFundCode,
+        };
+      })
       .filter((i: any) => Math.round(i.pct) > 0);
 
     return {
