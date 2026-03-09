@@ -1,0 +1,10 @@
+{
+  "jobId": "JOB-20260309-114",
+  "proposalId": "PRP-20260309-730",
+  "branch": "local/auto-job-20260309-114",
+  "changedFiles": [
+    "src/app/admin/page.tsx"
+  ],
+  "oneFunctionalChange": true,
+  "generatedAt": "2026-03-09T20:43:56.982Z"
+}

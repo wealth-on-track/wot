@@ -12,3 +12,12 @@
 {"ts":"2026-03-09T20:25:25.050Z","jobId":"JOB-20260309-194114457-002","proposalId":"PRP-PILOT-20260309-003","stage":"approved","message":"Approved: GitHub push successful, live updated (commit=7fd8620)","meta":{}}
 {"ts":"2026-03-09T20:43:56.882Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P2)","meta":{}}
 {"ts":"2026-03-09T20:43:56.930Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-09T20:43:57.058Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-09T20:45:18.242Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-09T20:49:54.896Z","jobId":"JOB-20260309-204954895-001","proposalId":"PRP-20260309-204954850-003","stage":"proposal","message":"Planner created JOB-20260309-204954895-001 from PRP-20260309-204954850-003","meta":{}}
+{"ts":"2026-03-09T20:49:54.896Z","jobId":"JOB-20260309-204954896-002","proposalId":"PRP-20260309-204954850-005","stage":"proposal","message":"Planner created JOB-20260309-204954896-002 from PRP-20260309-204954850-005","meta":{}}
+{"ts":"2026-03-09T20:50:27.860Z","jobId":"JOB-20260309-204954895-001","proposalId":"PRP-20260309-204954850-003","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-09T20:50:27.906Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-09T20:55:28.222Z","jobId":"JOB-20260309-204954896-002","proposalId":"PRP-20260309-204954850-005","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-09T20:55:28.268Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-09T21:00:28.108Z","jobId":"JOB-20260309-204954895-001","proposalId":"PRP-20260309-204954850-003","stage":"build","message":"Builder started implementation","meta":{}}

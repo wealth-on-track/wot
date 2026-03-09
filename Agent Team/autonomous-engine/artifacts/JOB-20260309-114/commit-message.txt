@@ -1,0 +1,1 @@
+feat(local-auto): Review dependency update opportunities with local vulnerability context

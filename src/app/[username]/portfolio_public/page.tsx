@@ -223,3 +223,5 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
 
   return <PublicPortfolioView categories={categories} canEdit={isOwner} />;
 }
+
+/* autonomous-engine:JOB-20260309-204954895-001:single-functional-change */

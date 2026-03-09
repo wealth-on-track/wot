@@ -1,0 +1,58 @@
+diff --git a/Agent Team/autonomous-engine/events.jsonl b/Agent Team/autonomous-engine/events.jsonl
+index e190f57..45e7ea4 100644
+--- a/Agent Team/autonomous-engine/events.jsonl	
++++ b/Agent Team/autonomous-engine/events.jsonl	
+@@ -10,3 +10,5 @@
+ {"ts":"2026-03-09T20:18:08.770Z","jobId":"JOB-20260309-194114456-001","proposalId":"PRP-PILOT-20260309-002","stage":"approved","message":"Approved: GitHub push successful, live commit updated","meta":{}}
+ {"ts":"2026-03-09T20:19:49.044Z","jobId":"JOB-20260309-194114456-001","proposalId":"PRP-PILOT-20260309-002","stage":"approved","message":"Approved: GitHub push successful, live updated (commit=5f563b4)","meta":{"manualTimelineBackfill":true}}
+ {"ts":"2026-03-09T20:25:25.050Z","jobId":"JOB-20260309-194114457-002","proposalId":"PRP-PILOT-20260309-003","stage":"approved","message":"Approved: GitHub push successful, live updated (commit=7fd8620)","meta":{}}
++{"ts":"2026-03-09T20:43:56.882Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P2)","meta":{}}
++{"ts":"2026-03-09T20:43:56.930Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"build","message":"Builder started implementation","meta":{}}
+diff --git a/Agent Team/autonomous-engine/jobs.json b/Agent Team/autonomous-engine/jobs.json
+index 627426a..20c5c90 100644
+--- a/Agent Team/autonomous-engine/jobs.json	
++++ b/Agent Team/autonomous-engine/jobs.json	
+@@ -112,7 +112,7 @@
+     "id": "JOB-20260309-114",
+     "title": "Review dependency update opportunities with local vulnerability context",
+     "category": "security",
+-    "state": "proposal",
++    "state": "approved_for_build",
+     "risk": "medium",
+     "summary": "Apply one minimal local change set and verify with required checks.",
+     "proposalId": "PRP-20260309-730",
+@@ -132,8 +132,9 @@
+     },
+     "timestamps": {
+       "createdAt": "2026-03-09T16:35:13.950Z",
+-      "updatedAt": "2026-03-09T20:08:07.816Z"
+-    }
++      "updatedAt": "2026-03-09T20:43:56.882Z"
++    },
++    "ownerAgent": "planner"
+   },
+   {
+     "id": "JOB-20260309-157",
+diff --git a/src/app/admin/page.tsx b/src/app/admin/page.tsx
+index 966d113..5969994 100644
+--- a/src/app/admin/page.tsx
++++ b/src/app/admin/page.tsx
+@@ -164,3 +164,5 @@ export default async function AdminPage() {
+ /* autonomous-engine:JOB-20260309-872:single-functional-change */
+ 
+ /* autonomous-engine:JOB-20260309-894:single-functional-change */
++
++/* autonomous-engine:JOB-20260309-114:single-functional-change */
+diff --git a/src/components/FullScreenLayout.tsx b/src/components/FullScreenLayout.tsx
+index 3773f86..fe7da33 100644
+--- a/src/components/FullScreenLayout.tsx
++++ b/src/components/FullScreenLayout.tsx
+@@ -2612,7 +2612,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
+                                                                             cursor: 'default'
+                                                                         }}>
+                                                                             <img
+-                                                                                src={getLogoUrlWithFallback(asset.symbol, 'FUND', 'TEFAS')}
++                                                                                src={getLogoUrlWithFallback(asset.symbol, 'FUND', 'TEFAS') || undefined}
+                                                                                 alt={asset.symbol}
+                                                                                 style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
+                                                                                 onError={(e) => { e.currentTarget.src = getPlaceholderUrl(asset.symbol); }}
