@@ -21,13 +21,23 @@ if (!job) {
 job.timestamps.updatedAt = nowIso();
 
 if (action === 'approve') {
-  // Human approval gate: only now perform local deploy command
+  // One-click live trigger: build + push to origin/main
   let deployStatus = 'fail';
+  let pushStatus = 'fail';
   try {
     execSync('npm run -s build', { stdio: 'pipe', timeout: 900000 });
     deployStatus = 'pass';
   } catch (e) {
     await writeArtifact(job.id, 'deploy-error.txt', String(e.message || e));
+  }
+
+  if (deployStatus === 'pass') {
+    try {
+      execSync('git push origin HEAD:main', { stdio: 'pipe', timeout: 300000 });
+      pushStatus = 'pass';
+    } catch (e) {
+      await writeArtifact(job.id, 'push-error.txt', String(e.message || e));
+    }
   }
 
   const deployPack = {
@@ -36,16 +46,16 @@ if (action === 'approve') {
     changedFiles: job.changedFiles,
     testResults: job.testResults,
     deployStatus,
-    instructions: 'Human-approved local deploy executed after approval gate.',
+    pushStatus,
+    instructions: 'Human-approved. Build and push-to-main attempted for live trigger.',
     generatedAt: nowIso(),
   };
   await writeArtifact(job.id, 'deploy-ready.json', deployPack);
-  await writeArtifact(job.id, 'deploy-instructions.txt', 'Human-approved local deploy executed after approval gate.');
+  await writeArtifact(job.id, 'deploy-instructions.txt', 'Human-approved. One-click build + push-to-main flow executed.');
 
-  // Keep final state set strict
-  job.state = deployStatus === 'pass' ? 'review_ready' : 'abandoned_with_reason';
-  if (deployStatus !== 'pass') job.finalReason = 'deploy_failed_after_human_approval';
-  console.log(`[review] approved ${jobId}; deploy=${deployStatus}`);
+  job.state = pushStatus === 'pass' ? 'approved' : 'abandoned_with_reason';
+  if (pushStatus !== 'pass') job.finalReason = 'push_failed_after_human_approval';
+  console.log(`[review] approved ${jobId}; deploy=${deployStatus}; push=${pushStatus}`);
 } else {
   try { execSync('git reset --hard', { stdio: 'ignore' }); } catch {}
   job.state = 'reverted';

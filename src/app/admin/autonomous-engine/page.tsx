@@ -193,11 +193,25 @@ export default async function AutonomousEnginePage({
           {!selected ? <div>No item selected.</div> : (
             <>
               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {FLOW.map((s, idx) => {
-                    const current = FLOW.indexOf(selected.state);
-                    return <StepPill key={s} step={s} active={idx === current} done={idx < current} />;
-                  })}
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {FLOW.map((s, idx) => {
+                      const current = FLOW.indexOf(selected.state);
+                      return <StepPill key={s} step={s} active={idx === current} done={idx < current} />;
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <form action="/api/autonomous-engine/review" method="post">
+                      <input type="hidden" name="jobId" value={selected.id} />
+                      <input type="hidden" name="action" value="approve" />
+                      <button type="submit" style={{ border: '1px solid #86efac', background: '#ecfdf5', color: '#166534', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Approve</button>
+                    </form>
+                    <form action="/api/autonomous-engine/review" method="post">
+                      <input type="hidden" name="jobId" value={selected.id} />
+                      <input type="hidden" name="action" value="reject" />
+                      <button type="submit" style={{ border: '1px solid #fca5a5', background: '#fef2f2', color: '#991b1b', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Reject</button>
+                    </form>
+                  </div>
                 </div>
               </div>
 
@@ -238,20 +252,6 @@ export default async function AutonomousEnginePage({
                 </div>
               </div>
 
-              {selected.state === 'review_ready' ? (
-                <div className="card" style={{ padding: 10, display: 'flex', gap: 8 }}>
-                  <form action="/api/autonomous-engine/review" method="post">
-                    <input type="hidden" name="jobId" value={selected.id} />
-                    <input type="hidden" name="action" value="approve" />
-                    <button type="submit">Approve</button>
-                  </form>
-                  <form action="/api/autonomous-engine/review" method="post">
-                    <input type="hidden" name="jobId" value={selected.id} />
-                    <input type="hidden" name="action" value="reject" />
-                    <button type="submit">Reject</button>
-                  </form>
-                </div>
-              ) : null}
             </>
           )}
         </section>
