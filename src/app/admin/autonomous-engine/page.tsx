@@ -273,17 +273,15 @@ export default async function AutonomousEnginePage({
                 <div style={{ fontWeight: 800, marginBottom: 8 }}>Context Timeline</div>
                 <div style={{ display: 'grid', gap: 6, fontSize: 12 }}>
                   {selectedTimeline.map((e: any, idx: number) => (
-                    <div key={`${e.ts}-${idx}`} style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}>
-                      <div style={{ fontWeight: 700 }}>{String(e.stage || 'event').toUpperCase()}</div>
-                      <div style={{ opacity: 0.9 }}>{e.message}</div>
-                      <div style={{ opacity: 0.75 }}>{fmtDate(e.ts)}</div>
+                    <div key={`${e.ts}-${idx}`} style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px', fontSize: 12, whiteSpace: 'nowrap', overflowX: 'auto' }}>
+                      <strong>{String(e.stage || 'event').toUpperCase()}</strong> ({fmtDate(e.ts)}) ({e.message})
                     </div>
                   ))}
                   {selected && selectedTimeline.length === 0 ? (
                     <>
-                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}><div style={{ fontWeight: 700 }}>DISCOVER</div><div style={{ opacity: 0.75 }}>{fmtDate(selected.timestamps?.createdAt)}</div></div>
-                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}><div style={{ fontWeight: 700 }}>PROPOSAL</div><div style={{ opacity: 0.75 }}>{fmtDate(selected.timestamps?.createdAt)}</div></div>
-                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}><div style={{ fontWeight: 700 }}>{String(selected.state).toUpperCase()}</div><div style={{ opacity: 0.75 }}>{fmtDate(selected.timestamps?.updatedAt)}</div></div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px', fontSize: 12, whiteSpace: 'nowrap', overflowX: 'auto' }}><strong>DISCOVER</strong> ({fmtDate(selected.timestamps?.createdAt)}) (Opportunity detected from local scout scan)</div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px', fontSize: 12, whiteSpace: 'nowrap', overflowX: 'auto' }}><strong>PROPOSAL</strong> ({fmtDate(selected.timestamps?.createdAt)}) (Proposal structured and queued for dispatch)</div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px', fontSize: 12, whiteSpace: 'nowrap', overflowX: 'auto' }}><strong>{String(selected.state).toUpperCase()}</strong> ({fmtDate(selected.timestamps?.updatedAt)}) (Current workflow status)</div>
                     </>
                   ) : null}
                 </div>
