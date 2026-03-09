@@ -202,32 +202,12 @@ export default async function AutonomousEnginePage({
               </div>
 
               <div style={{ border: '1px solid #d7e0ee', borderRadius: 10, padding: 10, background: '#f8fafc', display: 'grid', gap: 8 }}>
-                <div style={{ fontSize: 12, opacity: 0.8 }}>Job ID: {selected.id} · Proposal: {selected.proposalId || '-'}</div>
-                <h2 style={{ margin: 0, fontSize: 20, lineHeight: 1.25 }}>{selected.title}</h2>
-
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ border: '1px solid #cfe0ff', background: '#f5f9ff', borderRadius: 8, padding: '4px 10px', fontSize: 12 }}>{stateIcon(selected.state)} <strong style={{ color: stateTone(selected.state, stale) }}>{selected.state}</strong></span>
-                  <span style={{ border: '1px solid #e2e8f0', background: '#fff', borderRadius: 8, padding: '4px 10px', fontSize: 12 }}>category: <strong>{selected.category}</strong></span>
-                  <span style={{ border: '1px solid #e2e8f0', background: '#fff', borderRadius: 8, padding: '4px 10px', fontSize: 12 }}>risk: <strong>{selected.risk}</strong></span>
+                <div style={{ border: '1px solid #d7e0ee', borderRadius: 8, padding: '8px 10px', background: '#fff', color: '#0f172a', fontWeight: 700, fontSize: 14 }}>
+                  {selected.title} &nbsp; | &nbsp; {compactJobId(selected.id)}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 140px', gap: 8 }}>
-                  <div style={{ border: '1px solid #d7e0ee', borderRadius: 8, padding: 8, background: '#fff' }}>
-                    <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 4 }}>Progress</div>
-                    <div style={{ fontSize: 12, marginBottom: 4 }}>{progress.label} ({progress.pct}%)</div>
-                    <div style={{ height: 8, borderRadius: 999, background: '#e2e8f0' }}>
-                      <div style={{ width: `${progress.pct}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg,#10b981,#2563eb)' }} />
-                    </div>
-                  </div>
-                  <div style={{ border: '1px solid #d7e0ee', borderRadius: 8, padding: 8, background: '#fff' }}>
-                    <div style={{ fontSize: 11, opacity: 0.7 }}>Updated</div>
-                    <div style={{ fontSize: 16, fontWeight: 800 }}>{ageMin}m</div>
-                  </div>
-                  <div style={{ border: '1px solid #d7e0ee', borderRadius: 8, padding: 8, background: '#fff' }}>
-                    <div style={{ fontSize: 11, opacity: 0.7 }}>SLA</div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: stale ? '#dc2626' : '#0f172a' }}>{sla ? `${sla}m` : '-'}</div>
-                    <div style={{ fontSize: 11, color: stale ? '#dc2626' : '#64748b' }}>{stale ? 'STALE' : 'ON TRACK'}</div>
-                  </div>
+                <div style={{ border: '1px solid #d7e0ee', borderRadius: 8, padding: '8px 10px', background: '#fff', color: '#0f172a', fontSize: 13, whiteSpace: 'nowrap', overflowX: 'auto' }}>
+                  Category: <strong>{selected.category}</strong> &nbsp; | &nbsp; Risk: <strong>{selected.risk}</strong> &nbsp; | &nbsp; Progress: <strong>{progress.label} ({progress.pct}%)</strong> &nbsp; | &nbsp; Updated: <strong>{ageMin}m</strong> &nbsp; | &nbsp; SLA: <strong>{sla ? `${sla}m` : '-'}</strong>
                 </div>
               </div>
 
