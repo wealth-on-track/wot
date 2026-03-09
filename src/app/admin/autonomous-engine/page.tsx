@@ -186,8 +186,8 @@ export default async function AutonomousEnginePage({
         </div>
       </header>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '220px 1fr 300px', gap: 8, minHeight: '78vh' }}>
-        <aside className="card" style={{ padding: 10, overflow: 'auto' }}>
+      <section style={{ display: 'grid', gridTemplateColumns: '220px 1fr 300px', gap: 8, minHeight: 'calc(100vh - 180px)' }}>
+        <aside className="card" style={{ padding: 10, overflow: 'auto', border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
           <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.8, marginBottom: 8 }}>UNIQUE IDs</div>
           <div style={{ display: 'grid', gap: 8 }}>
             {currentList.length === 0 ? <div style={{ opacity: 0.65 }}>No items.</div> : currentList.map((j) => (
@@ -196,10 +196,10 @@ export default async function AutonomousEnginePage({
           </div>
         </aside>
 
-        <section className="card" style={{ padding: 12, overflow: 'auto', display: 'grid', gap: 10 }}>
+        <section className="card" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#ffffff', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
           {!selected ? <div>No item selected.</div> : (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap', border: '1px solid #d7e0ee', borderRadius: 10, padding: 10, background: '#f8fafc' }}>
                 <div>
                   <div style={{ fontSize: 12, opacity: 0.8 }}>Job ID: {selected.id} · Proposal: {selected.proposalId || '-'}</div>
                   <h2 style={{ margin: '4px 0', fontSize: 22 }}>{selected.title}</h2>
@@ -218,7 +218,7 @@ export default async function AutonomousEnginePage({
                 </div>
               </div>
 
-              <div className="card" style={{ padding: 10 }}>
+              <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
                 <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 8, fontWeight: 700 }}>FLOW</div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {FLOW.map((s, idx) => {
@@ -228,14 +228,14 @@ export default async function AutonomousEnginePage({
                 </div>
               </div>
 
-              <details className="card" style={{ padding: 10 }}>
+              <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
                 <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Summary & Validation</summary>
                 <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{selected.summary || '-'}</div>
                 <div style={{ marginTop: 8, fontSize: 12 }}>Test results: <strong>{selected.testResults || '-'}</strong></div>
                 <div style={{ marginTop: 4, fontSize: 12 }}>Preview: {selected.previewInstructions || '-'}</div>
               </details>
 
-              <details className="card" style={{ padding: 10 }}>
+              <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
                 <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Changed Files</summary>
                 <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
                   {(selected.changedFiles || []).length === 0 ? <li>-</li> : selected.changedFiles.map((f: string) => <li key={f}>{f}</li>)}
@@ -260,15 +260,15 @@ export default async function AutonomousEnginePage({
           )}
         </section>
 
-        <aside className="card" style={{ padding: 12, overflow: 'auto', display: 'grid', gap: 10 }}>
-          <details className="card" style={{ padding: 10 }} open>
+        <aside className="card" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
+          <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#ffffff' }} open>
             <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.9, fontWeight: 800 }}>📡 Monitoring</summary>
             <div style={{ marginTop: 8, fontSize: 13 }}>Queue total: <strong>{total}</strong></div>
             <div style={{ marginTop: 4, fontSize: 13 }}>History: <strong>{history.length}</strong></div>
             <div style={{ marginTop: 4, fontSize: 13 }}>Selected stale: <strong style={{ color: stale ? '#ef4444' : '#10b981' }}>{selected ? (stale ? 'YES' : 'NO') : '-'}</strong></div>
           </details>
 
-          <details className="card" style={{ padding: 10 }}>
+          <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#ffffff' }}>
             <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.9, fontWeight: 800 }}>🔁 Retries</summary>
             {!selected ? <div style={{ marginTop: 6 }}>-</div> : (
               <div style={{ marginTop: 8, fontSize: 13 }}>
@@ -280,7 +280,7 @@ export default async function AutonomousEnginePage({
             )}
           </details>
 
-          <details className="card" style={{ padding: 10 }}>
+          <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#ffffff' }}>
             <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.9, fontWeight: 800 }}>🧾 Artifacts ({artifactNames.length})</summary>
             {artifactNames.length === 0 ? <div style={{ marginTop: 8, opacity: 0.7 }}>No artifacts.</div> : (
               <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
