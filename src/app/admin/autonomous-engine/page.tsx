@@ -187,21 +187,32 @@ export default async function AutonomousEnginePage({
         <section className="card" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#ffffff', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
           {!selected ? <div>No item selected.</div> : (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap', border: '1px solid #d7e0ee', borderRadius: 10, padding: 10, background: '#f8fafc' }}>
-                <div>
-                  <div style={{ fontSize: 12, opacity: 0.8 }}>Job ID: {selected.id} · Proposal: {selected.proposalId || '-'}</div>
-                  <h2 style={{ margin: '4px 0', fontSize: 22 }}>{selected.title}</h2>
-                  <div style={{ fontSize: 13 }}>
-                    {stateIcon(selected.state)} state: <strong style={{ color: stateTone(selected.state, stale) }}>{selected.state}</strong> · category: <strong>{selected.category}</strong> · risk: <strong>{selected.risk}</strong>
-                  </div>
+              <div style={{ border: '1px solid #d7e0ee', borderRadius: 10, padding: 10, background: '#f8fafc', display: 'grid', gap: 8 }}>
+                <div style={{ fontSize: 12, opacity: 0.8 }}>Job ID: {selected.id} · Proposal: {selected.proposalId || '-'}</div>
+                <h2 style={{ margin: 0, fontSize: 20, lineHeight: 1.25 }}>{selected.title}</h2>
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ border: '1px solid #d1d9e6', background: '#fff', borderRadius: 999, padding: '4px 10px', fontSize: 12 }}>{stateIcon(selected.state)} <strong style={{ color: stateTone(selected.state, stale) }}>{selected.state}</strong></span>
+                  <span style={{ border: '1px solid #d1d9e6', background: '#fff', borderRadius: 999, padding: '4px 10px', fontSize: 12 }}>category: <strong>{selected.category}</strong></span>
+                  <span style={{ border: '1px solid #d1d9e6', background: '#fff', borderRadius: 999, padding: '4px 10px', fontSize: 12 }}>risk: <strong>{selected.risk}</strong></span>
                 </div>
-                <div style={{ minWidth: 220 }}>
-                  <div style={{ fontSize: 12, marginBottom: 4 }}>Progress: {progress.label} ({progress.pct}%)</div>
-                  <div style={{ height: 9, borderRadius: 999, background: '#e2e8f0' }}>
-                    <div style={{ width: `${progress.pct}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg,#10b981,#2563eb)' }} />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 140px', gap: 8 }}>
+                  <div style={{ border: '1px solid #d7e0ee', borderRadius: 8, padding: 8, background: '#fff' }}>
+                    <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 4 }}>Progress</div>
+                    <div style={{ fontSize: 12, marginBottom: 4 }}>{progress.label} ({progress.pct}%)</div>
+                    <div style={{ height: 8, borderRadius: 999, background: '#e2e8f0' }}>
+                      <div style={{ width: `${progress.pct}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg,#10b981,#2563eb)' }} />
+                    </div>
                   </div>
-                  <div style={{ marginTop: 6, fontSize: 12, color: stale ? '#dc2626' : '#475569' }}>
-                    ⏱ {ageMin}m since update {sla ? `· SLA ${sla}m` : ''} {stale ? '· STALE' : ''}
+                  <div style={{ border: '1px solid #d7e0ee', borderRadius: 8, padding: 8, background: '#fff' }}>
+                    <div style={{ fontSize: 11, opacity: 0.7 }}>Updated</div>
+                    <div style={{ fontSize: 16, fontWeight: 800 }}>{ageMin}m</div>
+                  </div>
+                  <div style={{ border: '1px solid #d7e0ee', borderRadius: 8, padding: 8, background: '#fff' }}>
+                    <div style={{ fontSize: 11, opacity: 0.7 }}>SLA</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: stale ? '#dc2626' : '#0f172a' }}>{sla ? `${sla}m` : '-'}</div>
+                    <div style={{ fontSize: 11, color: stale ? '#dc2626' : '#64748b' }}>{stale ? 'STALE' : 'ON TRACK'}</div>
                   </div>
                 </div>
               </div>
@@ -229,6 +240,19 @@ export default async function AutonomousEnginePage({
                   {(selected.changedFiles || []).length === 0 ? <li>-</li> : selected.changedFiles.map((f: string) => <li key={f}>{f}</li>)}
                 </ul>
               </details>
+
+              <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc', minHeight: 160 }}>
+                <div style={{ fontWeight: 800, marginBottom: 8 }}>Context Timeline</div>
+                <div style={{ display: 'grid', gap: 6, fontSize: 12 }}>
+                  {(history.slice().reverse().slice(0, 6)).map((h: any) => (
+                    <div key={`${h.id}-${h.timestamps?.updatedAt || h.timestamps?.createdAt}`} style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}>
+                      <div style={{ fontWeight: 700 }}>{h.id}</div>
+                      <div style={{ opacity: 0.8 }}>{h.state} · {fmtDate(h.timestamps?.updatedAt || h.timestamps?.createdAt)}</div>
+                    </div>
+                  ))}
+                  {history.length === 0 ? <div style={{ opacity: 0.7 }}>No history yet.</div> : null}
+                </div>
+              </div>
 
               {selected.state === 'review_ready' ? (
                 <div className="card" style={{ padding: 10, display: 'flex', gap: 8 }}>
