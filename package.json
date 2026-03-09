@@ -5,7 +5,8 @@
   "scripts": {
     "predev": "rm -rf .next/dev/lock 2>/dev/null; lsof -ti :3000 | xargs kill -9 2>/dev/null; exit 0",
     "dev": "next dev",
-    "build": "prisma migrate deploy && next build",
+    "build": "next build",
+    "build:with-migrate": "prisma migrate deploy && next build",
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
@@ -28,6 +29,7 @@
     "auto:guarantee": "node scripts/autonomous-engine/guarantee.mjs",
     "auto:tick": "node scripts/autonomous-engine/tick.mjs",
     "auto:loop": "node scripts/autonomous-engine/loop.mjs 300",
+    "auto:ensure-loop": "node scripts/autonomous-engine/ensure-loop.mjs 300 630",
     "auto:approve": "node scripts/autonomous-engine/review-action.mjs approve",
     "auto:reject": "node scripts/autonomous-engine/review-action.mjs reject",
     "auto:strict": "node scripts/autonomous-engine/strict-audit.mjs"
