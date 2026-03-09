@@ -10,3 +10,5 @@
 {"ts":"2026-03-09T20:18:08.770Z","jobId":"JOB-20260309-194114456-001","proposalId":"PRP-PILOT-20260309-002","stage":"approved","message":"Approved: GitHub push successful, live commit updated","meta":{}}
 {"ts":"2026-03-09T20:19:49.044Z","jobId":"JOB-20260309-194114456-001","proposalId":"PRP-PILOT-20260309-002","stage":"approved","message":"Approved: GitHub push successful, live updated (commit=5f563b4)","meta":{"manualTimelineBackfill":true}}
 {"ts":"2026-03-09T20:25:25.050Z","jobId":"JOB-20260309-194114457-002","proposalId":"PRP-PILOT-20260309-003","stage":"approved","message":"Approved: GitHub push successful, live updated (commit=7fd8620)","meta":{}}
+{"ts":"2026-03-09T20:43:56.882Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P2)","meta":{}}
+{"ts":"2026-03-09T20:43:56.930Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"build","message":"Builder started implementation","meta":{}}

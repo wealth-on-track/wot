@@ -2612,7 +2612,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                             cursor: 'default'
                                                                         }}>
                                                                             <img
-                                                                                src={getLogoUrlWithFallback(asset.symbol, 'FUND', 'TEFAS')}
+                                                                                src={getLogoUrlWithFallback(asset.symbol, 'FUND', 'TEFAS') || undefined}
                                                                                 alt={asset.symbol}
                                                                                 style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
                                                                                 onError={(e) => { e.currentTarget.src = getPlaceholderUrl(asset.symbol); }}
