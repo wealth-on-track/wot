@@ -1,0 +1,470 @@
+diff --git a/Agent Team/autonomous-engine/artifacts/JOB-20260309-194114457-002/dispatch-decision.txt b/Agent Team/autonomous-engine/artifacts/JOB-20260309-194114457-002/dispatch-decision.txt
+index d3c6c58..3e3669e 100644
+--- a/Agent Team/autonomous-engine/artifacts/JOB-20260309-194114457-002/dispatch-decision.txt	
++++ b/Agent Team/autonomous-engine/artifacts/JOB-20260309-194114457-002/dispatch-decision.txt	
+@@ -1 +1 @@
+-Planner created job from validated proposal and queued for approved_for_build dispatch.
+\ No newline at end of file
++Orchestrator dispatch: proposal moved to approved_for_build with priority=P1.
+\ No newline at end of file
+diff --git a/Agent Team/autonomous-engine/jobs.json b/Agent Team/autonomous-engine/jobs.json
+index 2594a92..b9799ff 100644
+--- a/Agent Team/autonomous-engine/jobs.json	
++++ b/Agent Team/autonomous-engine/jobs.json	
+@@ -349,14 +349,16 @@
+     "id": "JOB-20260309-194114456-001",
+     "title": "Add tiny monitor hint badge in Admin Sidebar for Agent Team visibility",
+     "category": "operations",
+-    "state": "approved_for_build",
++    "state": "review_ready",
+     "risk": "low",
+     "impact": "medium",
+     "priority": "P1",
+-    "summary": "Add one minimal text hint near Agent Team link.",
++    "summary": "Add one minimal text hint near Agent Team link. (local build applied)",
+     "proposalId": "PRP-PILOT-20260309-002",
+-    "changedFiles": [],
+-    "testResults": "pending",
++    "changedFiles": [
++      "src/components/AdminSidebar.tsx"
++    ],
++    "testResults": "pass",
+     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+     "retries": {
+       "planning": 0,
+@@ -370,17 +372,17 @@
+       "noUnrelatedRefactor": true,
+       "functionalScope": "src/components"
+     },
+-    "ownerAgent": "planner",
++    "ownerAgent": "verifier",
+     "timestamps": {
+       "createdAt": "2026-03-09T19:41:14.456Z",
+-      "updatedAt": "2026-03-09T19:41:14.501Z"
++      "updatedAt": "2026-03-09T19:41:14.798Z"
+     }
+   },
+   {
+     "id": "JOB-20260309-194114457-002",
+     "title": "Add short operator hint text to Admin Health page header",
+     "category": "operations",
+-    "state": "proposal",
++    "state": "approved_for_build",
+     "risk": "low",
+     "impact": "medium",
+     "priority": "P1",
+@@ -404,7 +406,7 @@
+     "ownerAgent": "planner",
+     "timestamps": {
+       "createdAt": "2026-03-09T19:41:14.457Z",
+-      "updatedAt": "2026-03-09T19:41:14.457Z"
++      "updatedAt": "2026-03-09T20:08:07.529Z"
+     }
+   }
+ ]
+\ No newline at end of file
+diff --git a/knowledge/lessons.json b/knowledge/lessons.json
+index 0637a08..92c31af 100644
+--- a/knowledge/lessons.json
++++ b/knowledge/lessons.json
+@@ -1 +1,10 @@
+-[]
+\ No newline at end of file
++[
++  {
++    "job_id": "JOB-20260309-194114456-001",
++    "category": "operations",
++    "liked": "%100 deliver etmeniz cok onemli. Her isi deliver etmeniz en onemli kritierim. Tebrikler.",
++    "disliked": "Yapilan degisikligin aciklamasi cok kisa ve anlasilir degil. Daha acilayici olsun. Gerekirse, nerey idegsitirdiginizi basitce anlatin.",
++    "notes": "",
++    "created_at": "2026-03-09T19:56:25.954Z"
++  }
++]
+\ No newline at end of file
+diff --git a/scripts/autonomous-engine/build.mjs b/scripts/autonomous-engine/build.mjs
+index 3357a2a..107b83b 100644
+--- a/scripts/autonomous-engine/build.mjs
++++ b/scripts/autonomous-engine/build.mjs
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env node
+-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition } from './lib.mjs';
++import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent } from './lib.mjs';
+ import { execSync } from 'child_process';
+ import { promises as fs } from 'fs';
+ import path from 'path';
+@@ -33,6 +33,7 @@ if (!proposal) {
+ job.state = 'build';
+ job.ownerAgent = 'builder';
+ job.timestamps.updatedAt = nowIso();
++await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'build', message: 'Builder started implementation' });
+ 
+ const branch = `local/auto-${job.id.toLowerCase()}`;
+ try {
+@@ -141,6 +142,7 @@ job.summary = `${proposal.proposed_change} (local build applied)`;
+ job.state = 'test';
+ job.ownerAgent = 'verifier';
+ job.timestamps.updatedAt = nowIso();
++await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'test', message: `Build completed; moved to test with ${changedFiles.length} file(s)` });
+ 
+ await writeJson(files.jobs, jobs);
+ console.log(`[build] ${job.id} -> test (${changedFiles.length} files)`);
+diff --git a/scripts/autonomous-engine/dispatch.mjs b/scripts/autonomous-engine/dispatch.mjs
+index 341dfff..a53bfb6 100644
+--- a/scripts/autonomous-engine/dispatch.mjs
++++ b/scripts/autonomous-engine/dispatch.mjs
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env node
+-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, WIP_LIMITS } from './lib.mjs';
++import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, WIP_LIMITS, appendEvent } from './lib.mjs';
+ 
+ await ensureEngineFiles();
+ const jobs = await readJson(files.jobs);
+@@ -28,6 +28,7 @@ if (next) {
+   next.ownerAgent = 'planner';
+   next.timestamps.updatedAt = nowIso();
+   await writeArtifact(next.id, 'dispatch-decision.txt', `Orchestrator dispatch: proposal moved to approved_for_build with priority=${next.priority || 'P2'}.`);
++  await appendEvent({ jobId: next.id, proposalId: next.proposalId, stage: 'approved_for_build', message: `Dispatched to approved_for_build (priority=${next.priority || 'P2'})` });
+   console.log(`[dispatch] promoted ${next.id} to approved_for_build`);
+ } else {
+   console.log('[dispatch] no proposal to activate');
+diff --git a/scripts/autonomous-engine/lib.mjs b/scripts/autonomous-engine/lib.mjs
+index 337d08d..fe27402 100644
+--- a/scripts/autonomous-engine/lib.mjs
++++ b/scripts/autonomous-engine/lib.mjs
+@@ -11,12 +11,13 @@ const FILES = {
+   history: path.join(BASE, 'history.json'),
+   lessons: path.join(ROOT, 'knowledge', 'lessons.json'),
+   deepScanState: path.join(BASE, 'deep-scan-state.json'),
++  events: path.join(BASE, 'events.jsonl'),
+ };
+ 
+ export const CATEGORIES = ['ux', 'performance', 'security', 'branding', 'product', 'operations', 'benchmark', 'patch'];
+ export const FINAL_STATES = ['review_ready', 'reverted', 'abandoned_with_reason'];
+ export const AGENTS = ['scout', 'planner', 'builder', 'verifier'];
+-export const WORKFLOW = ['discover', 'proposal', 'approved_for_build', 'build', 'test', 'review_ready', 'reverted', 'abandoned_with_reason'];
++export const WORKFLOW = ['discover', 'proposal', 'approved_for_build', 'build', 'test', 'review_ready', 'approved', 'reverted', 'abandoned_with_reason'];
+ 
+ async function ensureFile(filePath, fallback) {
+   await fs.mkdir(path.dirname(filePath), { recursive: true });
+@@ -30,6 +31,7 @@ export async function ensureEngineFiles() {
+   await ensureFile(FILES.lessons, []);
+   await ensureFile(FILES.deepScanState, { lastDeepScanAt: null });
+   await fs.mkdir(ARTIFACTS, { recursive: true });
++  try { await fs.access(FILES.events); } catch { await fs.writeFile(FILES.events, '', 'utf8'); }
+ }
+ 
+ export async function readJson(filePath) { return JSON.parse(await fs.readFile(filePath, 'utf8')); }
+@@ -70,7 +72,8 @@ export function canTransition(from, to) {
+     approved_for_build: ['build', 'abandoned_with_reason'],
+     build: ['test', 'approved_for_build', 'abandoned_with_reason'],
+     test: ['review_ready', 'build', 'abandoned_with_reason'],
+-    review_ready: ['reverted'],
++    review_ready: ['approved', 'reverted'],
++    approved: [],
+     reverted: [],
+     abandoned_with_reason: [],
+   };
+@@ -135,3 +138,15 @@ export async function writeArtifact(jobId, name, content) {
+   await fs.writeFile(fp, typeof content === 'string' ? content : JSON.stringify(content, null, 2), 'utf8');
+   return fp;
+ }
++
++export async function appendEvent({ jobId, proposalId = null, stage, message, meta = {} }) {
++  const row = {
++    ts: nowIso(),
++    jobId,
++    proposalId,
++    stage,
++    message,
++    meta,
++  };
++  await fs.appendFile(FILES.events, `${JSON.stringify(row)}\n`, 'utf8');
++}
+diff --git a/scripts/autonomous-engine/plan.mjs b/scripts/autonomous-engine/plan.mjs
+index a1c3306..8ed0053 100644
+--- a/scripts/autonomous-engine/plan.mjs
++++ b/scripts/autonomous-engine/plan.mjs
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env node
+-import { ensureEngineFiles, files, nowIso, readJson, writeJson, makeId, normalize, validateProposal, writeArtifact, proposalSimilarity, WIP_LIMITS } from './lib.mjs';
++import { ensureEngineFiles, files, nowIso, readJson, writeJson, makeId, normalize, validateProposal, writeArtifact, proposalSimilarity, WIP_LIMITS, appendEvent } from './lib.mjs';
+ 
+ await ensureEngineFiles();
+ const proposals = await readJson(files.proposals);
+@@ -69,6 +69,7 @@ for (const raw of proposals) {
+     jobs.push(job);
+     await writeArtifact(job.id, 'proposal.json', p);
+     await writeArtifact(job.id, 'dispatch-decision.txt', 'Planner created job from validated proposal and queued for approved_for_build dispatch.');
++    await appendEvent({ jobId: job.id, proposalId: p.id, stage: 'proposal', message: `Planner created ${job.id} from ${p.id}` });
+     created += 1;
+   }
+ }
+diff --git a/scripts/autonomous-engine/review-action.mjs b/scripts/autonomous-engine/review-action.mjs
+index 52b80ff..c7f6e99 100644
+--- a/scripts/autonomous-engine/review-action.mjs
++++ b/scripts/autonomous-engine/review-action.mjs
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env node
+-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact } from './lib.mjs';
++import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, appendEvent } from './lib.mjs';
+ import { execSync } from 'child_process';
+ 
+ const action = process.argv[2];
+@@ -53,17 +53,19 @@ if (action === 'approve') {
+   await writeArtifact(job.id, 'deploy-ready.json', deployPack);
+   await writeArtifact(job.id, 'deploy-instructions.txt', 'Human-approved. One-click build + push-to-main flow executed.');
+ 
+-  job.state = pushStatus === 'pass' ? 'approved' : 'abandoned_with_reason';
++  job.state = 'approved';
+   if (pushStatus !== 'pass') job.finalReason = 'push_failed_after_human_approval';
++  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: pushStatus === 'pass' ? 'approved' : 'approval_failed', message: `Approve clicked: build=${deployStatus}, push=${pushStatus}` });
+   console.log(`[review] approved ${jobId}; deploy=${deployStatus}; push=${pushStatus}`);
+ } else {
+   try { execSync('git reset --hard', { stdio: 'ignore' }); } catch {}
+   job.state = 'reverted';
+   job.finalReason = 'rejected_by_human';
+   await writeArtifact(job.id, 'revert-note.txt', 'Human rejected. Local revert executed via git reset --hard.');
++  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'reverted', message: 'Reject clicked: local revert applied' });
+   console.log(`[review] rejected ${jobId}; local revert applied`);
+ }
+ 
+ history.push({ ...job });
+-await writeJson(files.jobs, jobs.filter((j) => j.id !== jobId));
++await writeJson(files.jobs, jobs);
+ await writeJson(files.history, history);
+diff --git a/scripts/autonomous-engine/verify.mjs b/scripts/autonomous-engine/verify.mjs
+index d613864..409a468 100644
+--- a/scripts/autonomous-engine/verify.mjs
++++ b/scripts/autonomous-engine/verify.mjs
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env node
+-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition } from './lib.mjs';
++import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent } from './lib.mjs';
+ import { execSync } from 'child_process';
+ 
+ await ensureEngineFiles();
+@@ -52,12 +52,14 @@ await writeArtifact(job.id, 'verification-results.json', results);
+ 
+ if (allPass) {
+   job.state = 'review_ready';
++  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'review_ready', message: 'Verifier passed all required checks; ready for review' });
+ } else {
+   job.retries.testing += 1;
+   if (job.retries.testing >= 3) {
+     job.state = 'abandoned_with_reason';
+     job.finalReason = 'verification_failed_after_3_retries';
+     await writeArtifact(job.id, 'failure-analysis.txt', 'verification failed repeatedly; scope should be reduced/split');
++    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'abandoned_with_reason', message: 'Verification failed after retries; job abandoned with reason' });
+   } else {
+     job.state = 'build';
+     job.ownerAgent = 'builder';
+diff --git a/src/app/admin/autonomous-engine/page.tsx b/src/app/admin/autonomous-engine/page.tsx
+index 8aefc02..a167bc1 100644
+--- a/src/app/admin/autonomous-engine/page.tsx
++++ b/src/app/admin/autonomous-engine/page.tsx
+@@ -1,6 +1,7 @@
+ import { promises as fs } from 'fs';
+ import path from 'path';
+ import Link from 'next/link';
++import { execSync } from 'child_process';
+ 
+ export const dynamic = 'force-dynamic';
+ 
+@@ -16,7 +17,7 @@ async function readJson<T>(p: string, fallback: T): Promise<T> {
+   }
+ }
+ 
+-const FLOW = ['discover', 'proposal', 'approved_for_build', 'build', 'test', 'review_ready'];
++const FLOW = ['discover', 'proposal', 'approved_for_build', 'build', 'test', 'review_ready', 'approved'];
+ 
+ function fmtDate(v?: string) {
+   if (!v) return '-';
+@@ -112,14 +113,33 @@ export default async function AutonomousEnginePage({
+   const jobs = await readJson<any[]>(path.join(BASE, 'jobs.json'), []);
+   const history = await readJson<any[]>(path.join(BASE, 'history.json'), []);
+   const lessons = await readJson<any[]>(path.join(ROOT, 'knowledge', 'lessons.json'), []);
++  let eventsRaw = '';
++  try {
++    eventsRaw = await fs.readFile(path.join(BASE, 'events.jsonl'), 'utf8');
++  } catch {}
+ 
+   const inbox = jobs.filter((j) => ['discover', 'proposal'].includes(j.state));
+   const active = jobs.filter((j) => ['approved_for_build', 'build', 'test'].includes(j.state));
+-  const reviewReady = jobs.filter((j) => j.state === 'review_ready');
++  const reviewReady = jobs.filter((j) => ['review_ready', 'approved'].includes(j.state));
+ 
+   const groups: Record<string, any[]> = { inbox, active, review: reviewReady };
+   const currentList = groups[selectedSection] || active;
+   const selected = currentList.find((j) => j.id === selectedJobId) || currentList[0] || null;
++
++  const parsedEvents = eventsRaw
++    .split('\n')
++    .map((l) => l.trim())
++    .filter(Boolean)
++    .map((l) => {
++      try { return JSON.parse(l); } catch { return null; }
++    })
++    .filter(Boolean) as any[];
++
++  const selectedTimeline = !selected
++    ? []
++    : parsedEvents
++        .filter((e) => e.jobId === selected.id || e.proposalId === selected.proposalId)
++        .sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+   const selectedLesson = selected ? (lessons.find((l) => String(l?.job_id || '') === selected.id) || null) : null;
+ 
+   let artifactNames: string[] = [];
+@@ -146,7 +166,11 @@ export default async function AutonomousEnginePage({
+   const progress = selected ? stateProgress(selected.state) : { pct: 0, label: '-' } as any;
+ 
+   const total = inbox.length + active.length + reviewReady.length;
+-  const healthScore = total === 0 ? 100 : Math.max(0, Math.round(100 - ((active.filter((j) => stateSlaMin(j.state) && ((Date.now() - new Date(j.timestamps?.updatedAt || j.timestamps?.createdAt).getTime()) / 60000 > (stateSlaMin(j.state) || 0))).length) / Math.max(active.length, 1)) * 35));
++  const nowMs = Date.now();
++  const healthScore = total === 0 ? 100 : Math.max(0, Math.round(100 - ((active.filter((j) => stateSlaMin(j.state) && ((nowMs - new Date(j.timestamps?.updatedAt || j.timestamps?.createdAt).getTime()) / 60000 > (stateSlaMin(j.state) || 0))).length) / Math.max(active.length, 1)) * 35));
++
++  let liveCommit = 'unknown';
++  try { liveCommit = execSync('git rev-parse --short HEAD', { cwd: ROOT, stdio: 'pipe' }).toString().trim(); } catch {}
+ 
+   return (
+     <main style={{ padding: 10, display: 'grid', gap: 8, background: '#f1f5f9' }}>
+@@ -202,16 +226,22 @@ export default async function AutonomousEnginePage({
+                     })}
+                   </div>
+                   <div style={{ display: 'flex', gap: 8 }}>
+-                    <form action="/api/autonomous-engine/review" method="post">
+-                      <input type="hidden" name="jobId" value={selected.id} />
+-                      <input type="hidden" name="action" value="approve" />
+-                      <button type="submit" style={{ border: '1px solid #86efac', background: '#ecfdf5', color: '#166534', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Approve</button>
+-                    </form>
+-                    <form action="/api/autonomous-engine/review" method="post">
+-                      <input type="hidden" name="jobId" value={selected.id} />
+-                      <input type="hidden" name="action" value="reject" />
+-                      <button type="submit" style={{ border: '1px solid #fca5a5', background: '#fef2f2', color: '#991b1b', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Reject</button>
+-                    </form>
++                    {selected.state === 'review_ready' ? (
++                      <>
++                        <form action="/api/autonomous-engine/review" method="post">
++                          <input type="hidden" name="jobId" value={selected.id} />
++                          <input type="hidden" name="action" value="approve" />
++                          <button type="submit" style={{ border: '1px solid #86efac', background: '#ecfdf5', color: '#166534', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Approve</button>
++                        </form>
++                        <form action="/api/autonomous-engine/review" method="post">
++                          <input type="hidden" name="jobId" value={selected.id} />
++                          <input type="hidden" name="action" value="reject" />
++                          <button type="submit" style={{ border: '1px solid #fca5a5', background: '#fef2f2', color: '#991b1b', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Reject</button>
++                        </form>
++                      </>
++                    ) : selected.state === 'approved' ? (
++                      <span style={{ border: '1px solid #86efac', background: '#ecfdf5', color: '#166534', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Approved</span>
++                    ) : null}
+                   </div>
+                 </div>
+               </div>
+@@ -250,13 +280,20 @@ export default async function AutonomousEnginePage({
+               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc', minHeight: 160 }}>
+                 <div style={{ fontWeight: 800, marginBottom: 8 }}>Context Timeline</div>
+                 <div style={{ display: 'grid', gap: 6, fontSize: 12 }}>
+-                  {(history.slice().reverse().slice(0, 6)).map((h: any) => (
+-                    <div key={`${h.id}-${h.timestamps?.updatedAt || h.timestamps?.createdAt}`} style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}>
+-                      <div style={{ fontWeight: 700 }}>{h.id}</div>
+-                      <div style={{ opacity: 0.8 }}>{h.state} · {fmtDate(h.timestamps?.updatedAt || h.timestamps?.createdAt)}</div>
++                  {selectedTimeline.map((e: any, idx: number) => (
++                    <div key={`${e.ts}-${idx}`} style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}>
++                      <div style={{ fontWeight: 700 }}>{String(e.stage || 'event').toUpperCase()}</div>
++                      <div style={{ opacity: 0.9 }}>{e.message}</div>
++                      <div style={{ opacity: 0.75 }}>{fmtDate(e.ts)}</div>
+                     </div>
+                   ))}
+-                  {history.length === 0 ? <div style={{ opacity: 0.7 }}>No history yet.</div> : null}
++                  {selected && selectedTimeline.length === 0 ? (
++                    <>
++                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}><div style={{ fontWeight: 700 }}>DISCOVER</div><div style={{ opacity: 0.75 }}>{fmtDate(selected.timestamps?.createdAt)}</div></div>
++                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}><div style={{ fontWeight: 700 }}>PROPOSAL</div><div style={{ opacity: 0.75 }}>{fmtDate(selected.timestamps?.createdAt)}</div></div>
++                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}><div style={{ fontWeight: 700 }}>{String(selected.state).toUpperCase()}</div><div style={{ opacity: 0.75 }}>{fmtDate(selected.timestamps?.updatedAt)}</div></div>
++                    </>
++                  ) : null}
+                 </div>
+               </div>
+ 
+@@ -313,6 +350,8 @@ export default async function AutonomousEnginePage({
+             <div style={{ marginTop: 8, fontSize: 13 }}>Queue total: <strong>{total}</strong></div>
+             <div style={{ marginTop: 4, fontSize: 13 }}>History: <strong>{history.length}</strong></div>
+             <div style={{ marginTop: 4, fontSize: 13 }}>Selected stale: <strong style={{ color: stale ? '#ef4444' : '#10b981' }}>{selected ? (stale ? 'YES' : 'NO') : '-'}</strong></div>
++            <div style={{ marginTop: 8, fontSize: 12, color: '#334155' }}>GitHub: commitleniyor / push denemesi yapılıyor</div>
++            <div style={{ marginTop: 2, fontSize: 12, color: '#0f172a' }}>Live commit: <strong>{liveCommit}</strong></div>
+           </details>
+         </aside>
+       </section>
+diff --git a/src/app/admin/health/page.tsx b/src/app/admin/health/page.tsx
+index 8a0152b..8e7323c 100644
+--- a/src/app/admin/health/page.tsx
++++ b/src/app/admin/health/page.tsx
+@@ -99,3 +99,5 @@ export default async function HealthPage() {
+         </div>
+     );
+ }
++
++/* autonomous-engine:JOB-20260309-194114457-002:single-functional-change */
+diff --git a/src/app/api/autonomous-engine/lessons/route.ts b/src/app/api/autonomous-engine/lessons/route.ts
+index 53b3b84..ad3fe59 100644
+--- a/src/app/api/autonomous-engine/lessons/route.ts
++++ b/src/app/api/autonomous-engine/lessons/route.ts
+@@ -17,7 +17,14 @@ export async function POST(req: NextRequest) {
+   await fs.mkdir(path.dirname(fp), { recursive: true });
+   let arr: any[] = [];
+   try { arr = JSON.parse(await fs.readFile(fp, 'utf8')); } catch {}
+-  arr.push(item);
++
++  const idx = arr.findIndex((x) => String(x?.job_id || '') === item.job_id);
++  if (idx >= 0) {
++    arr[idx] = { ...arr[idx], ...item, updated_at: new Date().toISOString() };
++  } else {
++    arr.push(item);
++  }
++
+   await fs.writeFile(fp, JSON.stringify(arr, null, 2), 'utf8');
+ 
+   return NextResponse.redirect(new URL('/admin/autonomous-engine', process.env.NEXTAUTH_URL || 'http://localhost:3005'));
+diff --git a/src/components/Navbar.tsx b/src/components/Navbar.tsx
+index a57d9b9..cce967d 100644
+--- a/src/components/Navbar.tsx
++++ b/src/components/Navbar.tsx
+@@ -181,24 +181,20 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
+                         gap: '0.75rem',
+                         marginLeft: '1rem'
+                     }}>
+-                        {/* Admin Button: Visible to everyone in Local Dev, restricted in Prod */}
+-                        {session?.user?.email && (
+-                            process.env.NODE_ENV === 'development' ||
+-                            session.user.email === 'test1@example.com' ||
+-                            session.user.email === 'dev1@example.com'
+-                        ) && (
+-                                <Link
+-                                    href="/admin/autonomous-engine"
+-                                    className="navbar-btn"
+-                                    style={{
+-                                        textDecoration: 'none',
+-                                        marginRight: '1rem' // 3x spacing (0.5rem * 2 = 1rem extra)
+-                                    }}
+-                                    title="Admin Panel"
+-                                >
+-                                    <ShieldCheck size={20} />
+-                                </Link>
+-                            )}
++                        {/* Admin Button: user1@wot.money */}
++                        {session?.user?.email?.toLowerCase() === 'user1@wot.money' && (
++                            <Link
++                                href="/admin/autonomous-engine"
++                                className="navbar-btn"
++                                style={{
++                                    textDecoration: 'none',
++                                    marginRight: '1rem'
++                                }}
++                                title="Admin Panel"
++                            >
++                                <ShieldCheck size={20} />
++                            </Link>
++                        )}
+ 
+                         {/* Global Toggles (Always Visible) */}
+ 

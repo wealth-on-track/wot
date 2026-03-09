@@ -17,7 +17,7 @@ async function readJson<T>(p: string, fallback: T): Promise<T> {
   }
 }
 
-const FLOW = ['discover', 'proposal', 'approved_for_build', 'build', 'test', 'review_ready', 'approved'];
+const FLOW = ['discover', 'proposal', 'approved_for_build', 'build', 'test', 'review_ready'];
 
 function fmtDate(v?: string) {
   if (!v) return '-';
@@ -109,6 +109,7 @@ export default async function AutonomousEnginePage({
   const sp = (await searchParams) || {};
   const selectedSection = String(sp.section || 'active');
   const selectedJobId = String(sp.job || '');
+  const savedJobId = String(sp.savedJob || '');
 
   const jobs = await readJson<any[]>(path.join(BASE, 'jobs.json'), []);
   const history = await readJson<any[]>(path.join(BASE, 'history.json'), []);
@@ -120,9 +121,10 @@ export default async function AutonomousEnginePage({
 
   const inbox = jobs.filter((j) => ['discover', 'proposal'].includes(j.state));
   const active = jobs.filter((j) => ['approved_for_build', 'build', 'test'].includes(j.state));
-  const reviewReady = jobs.filter((j) => ['review_ready', 'approved'].includes(j.state));
+  const reviewReady = jobs.filter((j) => j.state === 'review_ready');
+  const completed = jobs.filter((j) => ['approved', 'reverted'].includes(j.state));
 
-  const groups: Record<string, any[]> = { inbox, active, review: reviewReady };
+  const groups: Record<string, any[]> = { inbox, active, review: reviewReady, completed };
   const currentList = groups[selectedSection] || active;
   const selected = currentList.find((j) => j.id === selectedJobId) || currentList[0] || null;
 
@@ -141,6 +143,7 @@ export default async function AutonomousEnginePage({
         .filter((e) => e.jobId === selected.id || e.proposalId === selected.proposalId)
         .sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
   const selectedLesson = selected ? (lessons.find((l) => String(l?.job_id || '') === selected.id) || null) : null;
+  const justSaved = selected ? savedJobId === selected.id : false;
 
   let artifactNames: string[] = [];
   const artifactMap: Record<string, string> = {};
@@ -164,8 +167,14 @@ export default async function AutonomousEnginePage({
   const sla = selected ? stateSlaMin(selected.state) : null;
   const stale = selected && sla !== null ? ageMin > sla : false;
   const progress = selected ? stateProgress(selected.state) : { pct: 0, label: '-' } as any;
+  const flowForSelected = selected
+    ? ([
+        ...FLOW,
+        ...(selected.state === 'approved' ? ['approved'] : selected.state === 'reverted' ? ['rejected'] : []),
+      ] as string[])
+    : FLOW;
 
-  const total = inbox.length + active.length + reviewReady.length;
+  const total = inbox.length + active.length + reviewReady.length + completed.length;
   const nowMs = Date.now();
   const healthScore = total === 0 ? 100 : Math.max(0, Math.round(100 - ((active.filter((j) => stateSlaMin(j.state) && ((nowMs - new Date(j.timestamps?.updatedAt || j.timestamps?.createdAt).getTime()) / 60000 > (stateSlaMin(j.state) || 0))).length) / Math.max(active.length, 1)) * 35));
 
@@ -181,27 +190,25 @@ export default async function AutonomousEnginePage({
         background: 'linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)',
         boxShadow: '0 3px 10px rgba(15,23,42,0.06)',
       }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 6 }}>
-          <Link href="/admin/autonomous-engine?section=inbox" className="card" style={{ textDecoration: 'none', padding: 10, border: selectedSection === 'inbox' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <div style={{ fontSize: 11, opacity: 0.85 }}>📥 Inbox</div>
-            <div style={{ fontSize: 24, fontWeight: 900 }}>{inbox.length}</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', alignItems: 'center' }}>
+          <Link href="/admin/autonomous-engine?section=inbox" className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: selectedSection === 'inbox' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
+📥 Inbox ({inbox.length})
           </Link>
-          <Link href="/admin/autonomous-engine?section=active" className="card" style={{ textDecoration: 'none', padding: 10, border: selectedSection === 'active' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <div style={{ fontSize: 11, opacity: 0.85 }}>⚙️ Active</div>
-            <div style={{ fontSize: 24, fontWeight: 900 }}>{active.length}</div>
+          <Link href="/admin/autonomous-engine?section=active" className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: selectedSection === 'active' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
+⚙️ Active ({active.length})
           </Link>
-          <Link href="/admin/autonomous-engine?section=review" className="card" style={{ textDecoration: 'none', padding: 10, border: selectedSection === 'review' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <div style={{ fontSize: 11, opacity: 0.85 }}>✅ Review Ready</div>
-            <div style={{ fontSize: 24, fontWeight: 900 }}>{reviewReady.length}</div>
+          <Link href="/admin/autonomous-engine?section=review" className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: selectedSection === 'review' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
+✅ Review Ready ({reviewReady.length})
           </Link>
-          <div className="card" style={{ padding: 10, border: '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <div style={{ fontSize: 11, opacity: 0.85 }}>🧭 Workflow Health</div>
-            <div style={{ fontSize: 24, fontWeight: 900 }}>{healthScore}%</div>
-          </div>
-          <div className="card" style={{ padding: 10, border: '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
-            <div style={{ fontSize: 11, opacity: 0.85 }}>📚 Lessons</div>
-            <div style={{ fontSize: 24, fontWeight: 900 }}>{lessons.length}</div>
-          </div>
+          <Link href="/admin/autonomous-engine?section=completed" className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: selectedSection === 'completed' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
+🏁 Completed ({completed.length})
+          </Link>
+          <span className="card" style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 10px', border: '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
+            🧭 Health ({healthScore}%)
+          </span>
+          <span className="card" style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 10px', border: '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
+            📚 Lessons ({lessons.length})
+          </span>
         </div>
       </header>
 
@@ -220,12 +227,14 @@ export default async function AutonomousEnginePage({
               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                    {FLOW.map((s, idx) => {
-                      const current = FLOW.indexOf(selected.state);
+                    {flowForSelected.map((s, idx) => {
+                      const current = flowForSelected.indexOf(
+                        selected.state === 'reverted' ? 'rejected' : selected.state,
+                      );
                       return (
-                        <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <span key={`${s}-${idx}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                           <StepPill step={s} active={idx === current} done={idx < current} />
-                          {idx < FLOW.length - 1 ? <span style={{ fontSize: 12, opacity: 0.65, fontWeight: 800 }}>{'>'}</span> : null}
+                          {idx < flowForSelected.length - 1 ? <span style={{ fontSize: 12, opacity: 0.65, fontWeight: 800 }}>{'>'}</span> : null}
                         </span>
                       );
                     })}
@@ -244,8 +253,6 @@ export default async function AutonomousEnginePage({
                           <button type="submit" style={{ border: '1px solid #fca5a5', background: '#fef2f2', color: '#991b1b', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Reject</button>
                         </form>
                       </>
-                    ) : selected.state === 'approved' ? (
-                      <span style={{ border: '1px solid #86efac', background: '#ecfdf5', color: '#166534', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Approved</span>
                     ) : null}
                   </div>
                 </div>
@@ -307,18 +314,23 @@ export default async function AutonomousEnginePage({
                           <div style={{ whiteSpace: 'nowrap' }}>{fmtDate(e.ts)}</div>
                           <div>{e.message}</div>
                           <div>
-                            {String(e.stage).toLowerCase() === 'approved' ? '✅ live' : String(e.stage).toLowerCase() === 'approval_failed' ? '❌ not live' : '-'}
+                            {String(e.stage).toLowerCase() === 'live_verified'
+                              ? '✅ live'
+                              : String(e.stage).toLowerCase() === 'live_mismatch'
+                                ? '⚠️ mismatch'
+                                : String(e.stage).toLowerCase() === 'approval_failed'
+                                  ? '❌ not live'
+                                  : '-'}
                           </div>
                         </div>
                       </div>
-                      {idx < selectedTimeline.length - 1 ? <div style={{ textAlign: 'center', fontSize: 12, opacity: 0.6, padding: '2px 0' }}>↓</div> : null}
                     </div>
                   ))}
                   {selected && selectedTimeline.length === 0 ? (
                     <>
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '200px 170px 1fr 190px', gap: 8 }}><div style={{ fontWeight: 700 }}>{String(selected.state).toUpperCase()}</div><div>{fmtDate(selected.timestamps?.updatedAt)}</div><div>Current workflow status</div><div>{selected.state === 'approved' ? '✅ live' : '-'}</div></div></div>
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '200px 170px 1fr 190px', gap: 8 }}><div style={{ fontWeight: 700 }}>PROPOSAL</div><div>{fmtDate(selected.timestamps?.createdAt)}</div><div>Proposal structured and queued for dispatch</div><div>-</div></div></div>
-                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8 }}><div style={{ fontWeight: 700 }}>DISCOVER</div><div>{fmtDate(selected.timestamps?.createdAt)}</div><div>Opportunity detected from local scout scan</div></div></div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '200px 170px 1fr 190px', gap: 8 }}><div style={{ fontWeight: 700 }}>DISCOVER</div><div>{fmtDate(selected.timestamps?.createdAt)}</div><div>Opportunity detected from local scout scan</div><div>-</div></div></div>
                     </>
                   ) : null}
                 </div>
@@ -335,12 +347,21 @@ export default async function AutonomousEnginePage({
               <form action="/api/autonomous-engine/lessons" method="post" style={{ marginTop: 8, display: 'grid', gap: 6 }}>
                 <input type="hidden" name="job_id" value={selected.id} />
                 <input type="hidden" name="category" value={selected.category || ''} />
+                <input type="hidden" name="section" value={selectedSection} />
+                <input type="hidden" name="job" value={selected.id} />
                 <input name="liked" placeholder="Liked" defaultValue={selectedLesson?.liked || ''} style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
                 <input name="disliked" placeholder="Disliked" defaultValue={selectedLesson?.disliked || ''} style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
                 <textarea name="notes" placeholder="Notes" defaultValue={selectedLesson?.notes || ''} rows={2} style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <button type="submit" style={{ border: '1px solid #93c5fd', background: '#eff6ff', color: '#1e3a8a', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Save / Update Lesson</button>
-                  {selectedLesson ? <span style={{ fontSize: 11, color: '#166534', fontWeight: 700 }}>Saved</span> : null}
+                  <button
+                    type="submit"
+                    style={justSaved
+                      ? { border: '1px solid #86efac', background: '#ecfdf5', color: '#166534', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }
+                      : { border: '1px solid #93c5fd', background: '#eff6ff', color: '#1e3a8a', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}
+                  >
+                    {justSaved ? 'Saved' : 'Save / Update Lesson'}
+                  </button>
+                  {(selectedLesson || justSaved) ? <span style={{ fontSize: 11, color: '#166534', fontWeight: 700 }}>Saved</span> : null}
                 </div>
               </form>
             )}

@@ -32,5 +32,106 @@
       "updatedAt": "2026-03-09T19:39:34.241Z"
     },
     "finalReason": "deploy_failed_after_human_approval"
+  },
+  {
+    "id": "JOB-20260309-194114456-001",
+    "title": "Add tiny monitor hint badge in Admin Sidebar for Agent Team visibility",
+    "category": "operations",
+    "state": "approved",
+    "risk": "low",
+    "impact": "medium",
+    "priority": "P1",
+    "summary": "Add one minimal text hint near Agent Team link. (local build applied)",
+    "proposalId": "PRP-PILOT-20260309-002",
+    "changedFiles": [
+      "src/components/AdminSidebar.tsx"
+    ],
+    "testResults": "pass",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 1
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "verifier",
+    "timestamps": {
+      "createdAt": "2026-03-09T19:41:14.456Z",
+      "updatedAt": "2026-03-09T20:13:49.726Z"
+    },
+    "finalReason": "push_failed_after_human_approval"
+  },
+  {
+    "id": "JOB-20260309-194114456-001",
+    "title": "Add tiny monitor hint badge in Admin Sidebar for Agent Team visibility",
+    "category": "operations",
+    "state": "approved",
+    "risk": "low",
+    "impact": "medium",
+    "priority": "P1",
+    "summary": "Add one minimal text hint near Agent Team link. (local build applied)",
+    "proposalId": "PRP-PILOT-20260309-002",
+    "changedFiles": [
+      "src/components/AdminSidebar.tsx"
+    ],
+    "testResults": "pass",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 1
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "verifier",
+    "timestamps": {
+      "createdAt": "2026-03-09T19:41:14.456Z",
+      "updatedAt": "2026-03-09T20:18:08.355Z"
+    },
+    "finalReason": "push_failed_after_human_approval"
+  },
+  {
+    "id": "JOB-20260309-194114457-002",
+    "title": "Add short operator hint text to Admin Health page header",
+    "category": "operations",
+    "state": "approved",
+    "risk": "low",
+    "impact": "medium",
+    "priority": "P1",
+    "summary": "Add one short helper sentence in admin health header. (local build applied)",
+    "proposalId": "PRP-PILOT-20260309-003",
+    "changedFiles": [
+      "src/app/admin/health/page.tsx"
+    ],
+    "testResults": "pass",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/app"
+    },
+    "ownerAgent": "verifier",
+    "timestamps": {
+      "createdAt": "2026-03-09T19:41:14.457Z",
+      "updatedAt": "2026-03-09T20:25:24.075Z"
+    }
   }
 ]

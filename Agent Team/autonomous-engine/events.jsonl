@@ -1,2 +1,12 @@
 {"ts":"2026-03-09T20:08:07.529Z","jobId":"JOB-20260309-194114457-002","proposalId":"PRP-PILOT-20260309-003","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-09T20:08:07.578Z","jobId":"JOB-20260309-194114457-002","proposalId":"PRP-PILOT-20260309-003","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-09T20:08:07.721Z","jobId":"JOB-20260309-194114457-002","proposalId":"PRP-PILOT-20260309-003","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-09T20:08:07.770Z","jobId":"JOB-20260309-194114457-002","proposalId":"PRP-PILOT-20260309-003","stage":"review_ready","message":"Verifier passed all required checks; ready for review","meta":{}}
+{"ts":"2026-03-09T20:13:50.116Z","jobId":"JOB-20260309-194114456-001","proposalId":"PRP-PILOT-20260309-002","stage":"approval_failed","message":"Approved clicked: build=fail, github_push=fail (live not updated)","meta":{}}
+{"ts":"2026-03-09T20:15:31.385Z","jobId":"JOB-20260309-194114456-001","proposalId":"PRP-PILOT-20260309-002","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{"backfill":true}}
+{"ts":"2026-03-09T20:15:31.385Z","jobId":"JOB-20260309-194114456-001","proposalId":"PRP-PILOT-20260309-002","stage":"build","message":"Builder started implementation","meta":{"backfill":true}}
+{"ts":"2026-03-09T20:15:31.385Z","jobId":"JOB-20260309-194114456-001","proposalId":"PRP-PILOT-20260309-002","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{"backfill":true}}
+{"ts":"2026-03-09T20:15:31.385Z","jobId":"JOB-20260309-194114456-001","proposalId":"PRP-PILOT-20260309-002","stage":"review_ready","message":"Verifier passed all required checks; ready for review","meta":{"backfill":true}}
+{"ts":"2026-03-09T20:18:08.770Z","jobId":"JOB-20260309-194114456-001","proposalId":"PRP-PILOT-20260309-002","stage":"approved","message":"Approved: GitHub push successful, live commit updated","meta":{}}
+{"ts":"2026-03-09T20:19:49.044Z","jobId":"JOB-20260309-194114456-001","proposalId":"PRP-PILOT-20260309-002","stage":"approved","message":"Approved: GitHub push successful, live updated (commit=5f563b4)","meta":{"manualTimelineBackfill":true}}
+{"ts":"2026-03-09T20:25:25.050Z","jobId":"JOB-20260309-194114457-002","proposalId":"PRP-PILOT-20260309-003","stage":"approved","message":"Approved: GitHub push successful, live updated (commit=7fd8620)","meta":{}}

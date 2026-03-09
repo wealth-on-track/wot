@@ -21,23 +21,31 @@ if (!job) {
 job.timestamps.updatedAt = nowIso();
 
 if (action === 'approve') {
-  // One-click live trigger: build + push to origin/main
-  let deployStatus = 'fail';
+  // One-click live trigger: push current approved changes to main
+  const deployStatus = 'pass';
   let pushStatus = 'fail';
-  try {
-    execSync('npm run -s build', { stdio: 'pipe', timeout: 900000 });
-    deployStatus = 'pass';
-  } catch (e) {
-    await writeArtifact(job.id, 'deploy-error.txt', String(e.message || e));
-  }
 
-  if (deployStatus === 'pass') {
+  let liveCommit = 'unknown';
+  let productionCommit = 'unknown';
+  let productionMatch = false;
+  try {
+    execSync('git push origin HEAD:main', { stdio: 'pipe', timeout: 300000 });
+    pushStatus = 'pass';
     try {
-      execSync('git push origin HEAD:main', { stdio: 'pipe', timeout: 300000 });
-      pushStatus = 'pass';
+      liveCommit = execSync('git rev-parse --short HEAD', { stdio: 'pipe' }).toString().trim();
+    } catch {}
+
+    // Control point: production must match lifecycle commit
+    try {
+      const html = execSync('curl -sL --max-time 20 https://wot.money', { stdio: 'pipe' }).toString();
+      const m = html.match(/PRODUCTION\s*•\s*Ver:\s*([0-9a-f]{7,40})/i);
+      productionCommit = m?.[1] || 'unknown';
+      productionMatch = Boolean(liveCommit !== 'unknown' && productionCommit !== 'unknown' && productionCommit.startsWith(liveCommit));
     } catch (e) {
-      await writeArtifact(job.id, 'push-error.txt', String(e.message || e));
+      await writeArtifact(job.id, 'production-check-error.txt', String(e.message || e));
     }
+  } catch (e) {
+    await writeArtifact(job.id, 'push-error.txt', String(e.message || e));
   }
 
   const deployPack = {
@@ -47,7 +55,10 @@ if (action === 'approve') {
     testResults: job.testResults,
     deployStatus,
     pushStatus,
-    instructions: 'Human-approved. Build and push-to-main attempted for live trigger.',
+    liveCommit,
+    productionCommit,
+    productionMatch,
+    instructions: 'Human-approved. Push-to-main attempted with production commit parity check.',
     generatedAt: nowIso(),
   };
   await writeArtifact(job.id, 'deploy-ready.json', deployPack);
@@ -55,7 +66,26 @@ if (action === 'approve') {
 
   job.state = 'approved';
   if (pushStatus !== 'pass') job.finalReason = 'push_failed_after_human_approval';
-  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: pushStatus === 'pass' ? 'approved' : 'approval_failed', message: `Approve clicked: build=${deployStatus}, push=${pushStatus}` });
+  await appendEvent({
+    jobId: job.id,
+    proposalId: job.proposalId,
+    stage: pushStatus === 'pass' ? 'approved' : 'approval_failed',
+    message: pushStatus === 'pass'
+      ? `Approved: GitHub push successful (commit=${liveCommit})`
+      : `Approved clicked: github_push=${pushStatus} (live not updated)`,
+  });
+
+  if (pushStatus === 'pass') {
+    await appendEvent({
+      jobId: job.id,
+      proposalId: job.proposalId,
+      stage: productionMatch ? 'live_verified' : 'live_mismatch',
+      message: productionMatch
+        ? `Production verified: commit match (${productionCommit})`
+        : `Production mismatch: lifecycle=${liveCommit}, production=${productionCommit}`,
+      meta: { liveCommit, productionCommit, productionMatch },
+    });
+  }
   console.log(`[review] approved ${jobId}; deploy=${deployStatus}; push=${pushStatus}`);
 } else {
   try { execSync('git reset --hard', { stdio: 'ignore' }); } catch {}

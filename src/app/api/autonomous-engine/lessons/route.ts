@@ -27,5 +27,12 @@ export async function POST(req: NextRequest) {
 
   await fs.writeFile(fp, JSON.stringify(arr, null, 2), 'utf8');
 
-  return NextResponse.redirect(new URL('/admin/autonomous-engine', process.env.NEXTAUTH_URL || 'http://localhost:3005'));
+  const section = String(fd.get('section') || 'review');
+  const job = String(fd.get('job') || item.job_id || '');
+  const redirectUrl = new URL('/admin/autonomous-engine', req.url);
+  if (section) redirectUrl.searchParams.set('section', section);
+  if (job) redirectUrl.searchParams.set('job', job);
+  if (item.job_id) redirectUrl.searchParams.set('savedJob', item.job_id);
+
+  return NextResponse.redirect(redirectUrl);
 }

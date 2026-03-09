@@ -84,10 +84,38 @@
     "id": "JOB-20260309-740",
     "title": "Compare portfolio table UX against top 3 fintech competitors",
     "category": "benchmark",
-    "state": "proposal",
+    "state": "abandoned_with_reason",
     "risk": "low",
     "summary": "Apply one minimal local change set and verify with required checks.",
     "proposalId": "PRP-20260309-363",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "npm run dev and validate only local branch behavior.",
+    "retries": {
+      "planning": 3,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-09T16:11:07.249Z",
+      "updatedAt": "2026-03-09T20:08:07.816Z"
+    },
+    "finalReason": "planning_timeout_after_3_retries"
+  },
+  {
+    "id": "JOB-20260309-114",
+    "title": "Review dependency update opportunities with local vulnerability context",
+    "category": "security",
+    "state": "proposal",
+    "risk": "medium",
+    "summary": "Apply one minimal local change set and verify with required checks.",
+    "proposalId": "PRP-20260309-730",
     "changedFiles": [],
     "testResults": "pending",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
@@ -103,35 +131,8 @@
       "noUnrelatedRefactor": true
     },
     "timestamps": {
-      "createdAt": "2026-03-09T16:11:07.249Z",
-      "updatedAt": "2026-03-09T19:26:23.602Z"
-    }
-  },
-  {
-    "id": "JOB-20260309-114",
-    "title": "Review dependency update opportunities with local vulnerability context",
-    "category": "security",
-    "state": "proposal",
-    "risk": "medium",
-    "summary": "Apply one minimal local change set and verify with required checks.",
-    "proposalId": "PRP-20260309-730",
-    "changedFiles": [],
-    "testResults": "pending",
-    "previewInstructions": "npm run dev and validate only local branch behavior.",
-    "retries": {
-      "planning": 1,
-      "build": 0,
-      "testing": 0,
-      "verification": 0
-    },
-    "constraints": {
-      "maxFiles": 5,
-      "maxFunctionalChanges": 1,
-      "noUnrelatedRefactor": true
-    },
-    "timestamps": {
       "createdAt": "2026-03-09T16:35:13.950Z",
-      "updatedAt": "2026-03-09T19:26:23.602Z"
+      "updatedAt": "2026-03-09T20:08:07.816Z"
     }
   },
   {
@@ -146,7 +147,7 @@
     "testResults": "pending",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 1,
+      "planning": 2,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -158,7 +159,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:35:13.951Z",
-      "updatedAt": "2026-03-09T19:26:23.602Z"
+      "updatedAt": "2026-03-09T20:08:07.816Z"
     }
   },
   {
@@ -173,7 +174,7 @@
     "testResults": "pending",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 1,
+      "planning": 2,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -185,7 +186,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:35:13.951Z",
-      "updatedAt": "2026-03-09T19:26:23.602Z"
+      "updatedAt": "2026-03-09T20:08:07.816Z"
     }
   },
   {
@@ -200,7 +201,7 @@
     "testResults": "pending",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 1,
+      "planning": 2,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -212,7 +213,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:35:13.951Z",
-      "updatedAt": "2026-03-09T19:26:23.602Z"
+      "updatedAt": "2026-03-09T20:08:07.816Z"
     }
   },
   {
@@ -349,7 +350,7 @@
     "id": "JOB-20260309-194114456-001",
     "title": "Add tiny monitor hint badge in Admin Sidebar for Agent Team visibility",
     "category": "operations",
-    "state": "review_ready",
+    "state": "approved",
     "risk": "low",
     "impact": "medium",
     "priority": "P1",
@@ -364,7 +365,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 0
+      "verification": 1
     },
     "constraints": {
       "maxFiles": 5,
@@ -375,21 +376,24 @@
     "ownerAgent": "verifier",
     "timestamps": {
       "createdAt": "2026-03-09T19:41:14.456Z",
-      "updatedAt": "2026-03-09T19:41:14.798Z"
-    }
+      "updatedAt": "2026-03-09T20:18:08.355Z"
+    },
+    "finalReason": "push_failed_after_human_approval"
   },
   {
     "id": "JOB-20260309-194114457-002",
     "title": "Add short operator hint text to Admin Health page header",
     "category": "operations",
-    "state": "approved_for_build",
+    "state": "approved",
     "risk": "low",
     "impact": "medium",
     "priority": "P1",
-    "summary": "Add one short helper sentence in admin health header.",
+    "summary": "Add one short helper sentence in admin health header. (local build applied)",
     "proposalId": "PRP-PILOT-20260309-003",
-    "changedFiles": [],
-    "testResults": "pending",
+    "changedFiles": [
+      "src/app/admin/health/page.tsx"
+    ],
+    "testResults": "pass",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
@@ -403,10 +407,10 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/app"
     },
-    "ownerAgent": "planner",
+    "ownerAgent": "verifier",
     "timestamps": {
       "createdAt": "2026-03-09T19:41:14.457Z",
-      "updatedAt": "2026-03-09T20:08:07.529Z"
+      "updatedAt": "2026-03-09T20:25:24.075Z"
     }
   }
 ]
