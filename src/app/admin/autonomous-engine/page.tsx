@@ -292,28 +292,32 @@ export default async function AutonomousEnginePage({
               </details>
 
               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc', minHeight: 160 }}>
-                <div style={{ marginBottom: 8 }}>
-                  <span style={{ border: '1px solid #dbe3ef', background: '#fff', borderRadius: 8, padding: '5px 9px', fontSize: 11, fontWeight: 800 }}>Lifecycle ↓</span>
-                </div>
                 <div style={{ display: 'grid', gap: 6, fontSize: 12 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8, padding: '0 4px', fontSize: 11, fontWeight: 800, opacity: 0.75, textTransform: 'uppercase' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '200px 170px 1fr 190px', gap: 8, padding: '0 4px', fontSize: 11, fontWeight: 800, opacity: 0.75, textTransform: 'uppercase' }}>
                     <div>Stage</div>
                     <div>Time</div>
                     <div>Comment</div>
+                    <div>Live</div>
                   </div>
                   {selectedTimeline.map((e: any, idx: number) => (
-                    <div key={`${e.ts}-${idx}`} style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8, alignItems: 'start' }}>
-                        <div style={{ fontWeight: 700 }}>{String(e.stage || 'event').toUpperCase()}</div>
-                        <div style={{ whiteSpace: 'nowrap' }}>{fmtDate(e.ts)}</div>
-                        <div>{e.message}</div>
+                    <div key={`${e.ts}-${idx}`}>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '200px 170px 1fr 190px', gap: 8, alignItems: 'start' }}>
+                          <div style={{ fontWeight: 700 }}>{String(e.stage || 'event').toUpperCase()}</div>
+                          <div style={{ whiteSpace: 'nowrap' }}>{fmtDate(e.ts)}</div>
+                          <div>{e.message}</div>
+                          <div>
+                            {String(e.stage).toLowerCase() === 'approved' ? '✅ live' : String(e.stage).toLowerCase() === 'approval_failed' ? '❌ not live' : '-'}
+                          </div>
+                        </div>
                       </div>
+                      {idx < selectedTimeline.length - 1 ? <div style={{ textAlign: 'center', fontSize: 12, opacity: 0.6, padding: '2px 0' }}>↓</div> : null}
                     </div>
                   ))}
                   {selected && selectedTimeline.length === 0 ? (
                     <>
-                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8 }}><div style={{ fontWeight: 700 }}>{String(selected.state).toUpperCase()}</div><div>{fmtDate(selected.timestamps?.updatedAt)}</div><div>Current workflow status</div></div></div>
-                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8 }}><div style={{ fontWeight: 700 }}>PROPOSAL</div><div>{fmtDate(selected.timestamps?.createdAt)}</div><div>Proposal structured and queued for dispatch</div></div></div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '200px 170px 1fr 190px', gap: 8 }}><div style={{ fontWeight: 700 }}>{String(selected.state).toUpperCase()}</div><div>{fmtDate(selected.timestamps?.updatedAt)}</div><div>Current workflow status</div><div>{selected.state === 'approved' ? '✅ live' : '-'}</div></div></div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '200px 170px 1fr 190px', gap: 8 }}><div style={{ fontWeight: 700 }}>PROPOSAL</div><div>{fmtDate(selected.timestamps?.createdAt)}</div><div>Proposal structured and queued for dispatch</div><div>-</div></div></div>
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8 }}><div style={{ fontWeight: 700 }}>DISCOVER</div><div>{fmtDate(selected.timestamps?.createdAt)}</div><div>Opportunity detected from local scout scan</div></div></div>
                     </>
                   ) : null}
