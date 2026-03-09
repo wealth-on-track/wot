@@ -6,7 +6,7 @@ import { useCurrency } from "@/context/CurrencyContext";
 import { useTheme } from "@/context/ThemeContext";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { handleSignOut } from "@/lib/authActions";
-import { LogOut, User, Eye, EyeOff, Link as LinkIcon } from "lucide-react";
+import { LogOut, User, Eye, EyeOff, Link as LinkIcon, Shield } from "lucide-react";
 
 import type { AssetDisplay } from "@/lib/types";
 
@@ -187,6 +187,30 @@ export function MobileHeader({
                         <LinkIcon size={17} />
                     </div>
                 </Link>
+
+                {/* Admin (dev1/user1 owner only) */}
+                {isOwner && (username === 'dev1' || username === 'user1') && (
+                    <Link
+                        href="/admin/autonomous-engine"
+                        style={{ textDecoration: 'none' }}
+                        title="Admin"
+                    >
+                        <div style={{
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '8px',
+                            width: '36px',
+                            height: '36px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer'
+                        }}>
+                            <Shield size={17} />
+                        </div>
+                    </Link>
+                )}
 
                 {/* Privacy Toggle */}
                 <button
