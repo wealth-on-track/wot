@@ -142,17 +142,17 @@ export default async function AutonomousEnginePage({
   const healthScore = total === 0 ? 100 : Math.max(0, Math.round(100 - ((active.filter((j) => stateSlaMin(j.state) && ((Date.now() - new Date(j.timestamps?.updatedAt || j.timestamps?.createdAt).getTime()) / 60000 > (stateSlaMin(j.state) || 0))).length) / Math.max(active.length, 1)) * 35));
 
   return (
-    <main style={{ padding: 14, display: 'grid', gap: 12 }}>
+    <main style={{ padding: 10, display: 'grid', gap: 8 }}>
       <header style={{
         border: '1px solid #dbe7ff',
-        borderRadius: 14,
-        padding: 14,
+        borderRadius: 12,
+        padding: 10,
         background: 'linear-gradient(135deg, #f8fbff 0%, #eef4ff 55%, #f5f8ff 100%)',
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: 12, color: '#2563eb', fontWeight: 800, letterSpacing: '0.08em' }}>WOT AUTONOMOUS IMPROVEMENT ENGINE</div>
-            <h1 style={{ margin: '4px 0 0', fontSize: 24, color: '#0f172a' }}>Agent Team Control Center</h1>
+            <h1 style={{ margin: '2px 0 0', fontSize: 20, color: '#0f172a' }}>Agent Team Control Center</h1>
           </div>
           <form action="/api/autonomous-engine/run" method="post">
             <button type="submit" style={{ padding: '9px 14px', borderRadius: 10, border: '1px solid #2563eb', background: '#2563eb', color: '#ffffff', fontWeight: 800 }}>
@@ -161,7 +161,7 @@ export default async function AutonomousEnginePage({
           </form>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8, marginTop: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 6, marginTop: 8 }}>
           <Link href="/admin/autonomous-engine?section=inbox" className="card" style={{ textDecoration: 'none', padding: 10, border: selectedSection === 'inbox' ? '1px solid #60a5fa' : undefined }}>
             <div style={{ fontSize: 11, opacity: 0.85 }}>📥 Inbox</div>
             <div style={{ fontSize: 24, fontWeight: 900 }}>{inbox.length}</div>
@@ -185,7 +185,7 @@ export default async function AutonomousEnginePage({
         </div>
       </header>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '260px 1fr 340px', gap: 12, minHeight: '72vh' }}>
+      <section style={{ display: 'grid', gridTemplateColumns: '220px 1fr 300px', gap: 8, minHeight: '78vh' }}>
         <aside className="card" style={{ padding: 10, overflow: 'auto' }}>
           <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.8, marginBottom: 8 }}>UNIQUE IDs</div>
           <div style={{ display: 'grid', gap: 8 }}>
@@ -227,19 +227,19 @@ export default async function AutonomousEnginePage({
                 </div>
               </div>
 
-              <div className="card" style={{ padding: 10 }}>
-                <strong>Summary</strong>
-                <div style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{selected.summary || '-'}</div>
+              <details className="card" style={{ padding: 10 }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Summary & Validation</summary>
+                <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{selected.summary || '-'}</div>
                 <div style={{ marginTop: 8, fontSize: 12 }}>Test results: <strong>{selected.testResults || '-'}</strong></div>
                 <div style={{ marginTop: 4, fontSize: 12 }}>Preview: {selected.previewInstructions || '-'}</div>
-              </div>
+              </details>
 
-              <div className="card" style={{ padding: 10 }}>
-                <strong>Changed Files</strong>
-                <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+              <details className="card" style={{ padding: 10 }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Changed Files</summary>
+                <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
                   {(selected.changedFiles || []).length === 0 ? <li>-</li> : selected.changedFiles.map((f: string) => <li key={f}>{f}</li>)}
                 </ul>
-              </div>
+              </details>
 
               {selected.state === 'review_ready' ? (
                 <div className="card" style={{ padding: 10, display: 'flex', gap: 8 }}>
@@ -260,29 +260,29 @@ export default async function AutonomousEnginePage({
         </section>
 
         <aside className="card" style={{ padding: 12, overflow: 'auto', display: 'grid', gap: 10 }}>
-          <div className="card" style={{ padding: 10 }}>
-            <div style={{ fontSize: 12, opacity: 0.8, fontWeight: 700 }}>📡 Monitoring</div>
-            <div style={{ marginTop: 6, fontSize: 13 }}>Queue total: <strong>{total}</strong></div>
+          <details className="card" style={{ padding: 10 }} open>
+            <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.9, fontWeight: 800 }}>📡 Monitoring</summary>
+            <div style={{ marginTop: 8, fontSize: 13 }}>Queue total: <strong>{total}</strong></div>
             <div style={{ marginTop: 4, fontSize: 13 }}>History: <strong>{history.length}</strong></div>
             <div style={{ marginTop: 4, fontSize: 13 }}>Selected stale: <strong style={{ color: stale ? '#ef4444' : '#10b981' }}>{selected ? (stale ? 'YES' : 'NO') : '-'}</strong></div>
-          </div>
+          </details>
 
-          <div className="card" style={{ padding: 10 }}>
-            <div style={{ fontSize: 12, opacity: 0.8, fontWeight: 700 }}>🔁 Retries</div>
+          <details className="card" style={{ padding: 10 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.9, fontWeight: 800 }}>🔁 Retries</summary>
             {!selected ? <div style={{ marginTop: 6 }}>-</div> : (
-              <div style={{ marginTop: 6, fontSize: 13 }}>
+              <div style={{ marginTop: 8, fontSize: 13 }}>
                 planning: {selected.retries?.planning || 0}<br />
                 build: {selected.retries?.build || 0}<br />
                 testing: {selected.retries?.testing || 0}<br />
                 verification: {selected.retries?.verification || 0}
               </div>
             )}
-          </div>
+          </details>
 
-          <div className="card" style={{ padding: 10 }}>
-            <div style={{ fontSize: 12, opacity: 0.8, fontWeight: 700 }}>🧾 Artifacts ({artifactNames.length})</div>
-            {artifactNames.length === 0 ? <div style={{ marginTop: 6, opacity: 0.7 }}>No artifacts.</div> : (
-              <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
+          <details className="card" style={{ padding: 10 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.9, fontWeight: 800 }}>🧾 Artifacts ({artifactNames.length})</summary>
+            {artifactNames.length === 0 ? <div style={{ marginTop: 8, opacity: 0.7 }}>No artifacts.</div> : (
+              <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
                 {artifactNames.map((n) => (
                   <details key={n}>
                     <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 12 }}>{n}</summary>
@@ -291,7 +291,7 @@ export default async function AutonomousEnginePage({
                 ))}
               </div>
             )}
-          </div>
+          </details>
         </aside>
       </section>
     </main>
