@@ -358,7 +358,7 @@ export function MobileDashboard({
             <MobileBottomNav
                 activeTab={activeTab}
                 onTabChange={handleTabChange}
-                showAdmin={username === 'dev1'}
+                showAdmin={isOwner && (username === 'dev1' || username === 'user1')}
                 adminHref="/admin/autonomous-engine"
             />
 
