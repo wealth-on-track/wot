@@ -61,12 +61,12 @@ function stateIcon(state: string) {
 }
 
 function StepPill({ step, active, done }: { step: string; active: boolean; done: boolean }) {
-  const bg = done ? 'rgba(16,185,129,0.15)' : active ? 'rgba(59,130,246,0.16)' : 'rgba(148,163,184,0.12)';
-  const border = done ? '1px solid rgba(16,185,129,0.45)' : active ? '1px solid rgba(59,130,246,0.5)' : '1px solid rgba(148,163,184,0.35)';
-  const color = done ? '#10b981' : active ? '#60a5fa' : '#94a3b8';
+  const bg = done ? '#ecfdf5' : active ? '#eff6ff' : '#f8fafc';
+  const border = done ? '1px solid #86efac' : active ? '1px solid #93c5fd' : '1px solid #dbe3ef';
+  const color = done ? '#047857' : active ? '#1d4ed8' : '#64748b';
 
   return (
-    <div style={{ border, background: bg, color, borderRadius: 999, padding: '6px 10px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>
+    <div style={{ border, background: bg, color, borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)' }}>
       {step.replaceAll('_', ' ')}
     </div>
   );
@@ -150,11 +150,11 @@ export default async function AutonomousEnginePage({
   return (
     <main style={{ padding: 10, display: 'grid', gap: 8, background: '#f1f5f9' }}>
       <header style={{
-        border: '1px solid #cbd5e1',
+        border: '1px solid #d8e1ee',
         borderRadius: 12,
         padding: 10,
-        background: 'linear-gradient(135deg, #f8fbff 0%, #eef4ff 55%, #f5f8ff 100%)',
-        boxShadow: '0 6px 18px rgba(15,23,42,0.08)',
+        background: 'linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)',
+        boxShadow: '0 3px 10px rgba(15,23,42,0.06)',
       }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 6 }}>
           <Link href="/admin/autonomous-engine?section=inbox" className="card" style={{ textDecoration: 'none', padding: 10, border: selectedSection === 'inbox' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
@@ -193,7 +193,6 @@ export default async function AutonomousEnginePage({
           {!selected ? <div>No item selected.</div> : (
             <>
               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
-                <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 8, fontWeight: 700 }}>FLOW</div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {FLOW.map((s, idx) => {
                     const current = FLOW.indexOf(selected.state);
@@ -207,9 +206,9 @@ export default async function AutonomousEnginePage({
                 <h2 style={{ margin: 0, fontSize: 20, lineHeight: 1.25 }}>{selected.title}</h2>
 
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ border: '1px solid #d1d9e6', background: '#fff', borderRadius: 999, padding: '4px 10px', fontSize: 12 }}>{stateIcon(selected.state)} <strong style={{ color: stateTone(selected.state, stale) }}>{selected.state}</strong></span>
-                  <span style={{ border: '1px solid #d1d9e6', background: '#fff', borderRadius: 999, padding: '4px 10px', fontSize: 12 }}>category: <strong>{selected.category}</strong></span>
-                  <span style={{ border: '1px solid #d1d9e6', background: '#fff', borderRadius: 999, padding: '4px 10px', fontSize: 12 }}>risk: <strong>{selected.risk}</strong></span>
+                  <span style={{ border: '1px solid #cfe0ff', background: '#f5f9ff', borderRadius: 8, padding: '4px 10px', fontSize: 12 }}>{stateIcon(selected.state)} <strong style={{ color: stateTone(selected.state, stale) }}>{selected.state}</strong></span>
+                  <span style={{ border: '1px solid #e2e8f0', background: '#fff', borderRadius: 8, padding: '4px 10px', fontSize: 12 }}>category: <strong>{selected.category}</strong></span>
+                  <span style={{ border: '1px solid #e2e8f0', background: '#fff', borderRadius: 8, padding: '4px 10px', fontSize: 12 }}>risk: <strong>{selected.risk}</strong></span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 140px', gap: 8 }}>
