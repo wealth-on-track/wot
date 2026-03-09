@@ -2630,7 +2630,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                             cursor: 'default'
                                                                         }}>
                                                                             <img
-                                                                                src={getLogoUrlWithFallback(asset.symbol, asset.type || 'STOCK', asset.exchange, asset.country)}
+                                                                                src={getLogoUrlWithFallback(asset.symbol, asset.type || 'STOCK', asset.exchange, asset.country) || undefined}
                                                                                 alt={asset.symbol}
                                                                                 style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
                                                                                 onError={(e) => { e.currentTarget.src = getPlaceholderUrl(asset.symbol); }}
@@ -3125,7 +3125,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                             boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
                                                         }}>
                                                             <img
-                                                                src={getLogoUrlWithFallback(tx.assetSymbol, tx.assetType, tx.assetExchange, tx.assetCountry)}
+                                                                src={getLogoUrlWithFallback(tx.assetSymbol, tx.assetType, tx.assetExchange, tx.assetCountry) || undefined}
                                                                 alt={tx.assetSymbol}
                                                                 style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }}
                                                                 onError={(e) => { e.currentTarget.src = getPlaceholderUrl(tx.assetSymbol); }}

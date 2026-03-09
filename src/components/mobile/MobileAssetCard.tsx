@@ -25,6 +25,7 @@ interface MobileAssetCardProps {
     highlightId?: string | null;
     isDndDragging?: boolean;
     exchangeRates?: Record<string, number>;
+    hidePriceCost?: boolean;
 }
 
 export const MobileAssetCard = memo(function MobileAssetCard({
