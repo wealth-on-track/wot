@@ -150,19 +150,7 @@ export default async function AutonomousEnginePage({
         background: 'linear-gradient(135deg, #f8fbff 0%, #eef4ff 55%, #f5f8ff 100%)',
         boxShadow: '0 6px 18px rgba(15,23,42,0.08)',
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 12, color: '#2563eb', fontWeight: 800, letterSpacing: '0.08em' }}>WOT AUTONOMOUS IMPROVEMENT ENGINE</div>
-            <h1 style={{ margin: '2px 0 0', fontSize: 20, color: '#0f172a' }}>Agent Team Control Center</h1>
-          </div>
-          <form action="/api/autonomous-engine/run" method="post">
-            <button type="submit" style={{ padding: '9px 14px', borderRadius: 10, border: '1px solid #2563eb', background: '#2563eb', color: '#ffffff', fontWeight: 800 }}>
-              ▶ Run Tick
-            </button>
-          </form>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 6, marginTop: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 6 }}>
           <Link href="/admin/autonomous-engine?section=inbox" className="card" style={{ textDecoration: 'none', padding: 10, border: selectedSection === 'inbox' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
             <div style={{ fontSize: 11, opacity: 0.85 }}>📥 Inbox</div>
             <div style={{ fontSize: 24, fontWeight: 900 }}>{inbox.length}</div>
