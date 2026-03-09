@@ -219,10 +219,15 @@ export default async function AutonomousEnginePage({
             <>
               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                     {FLOW.map((s, idx) => {
                       const current = FLOW.indexOf(selected.state);
-                      return <StepPill key={s} step={s} active={idx === current} done={idx < current} />;
+                      return (
+                        <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <StepPill step={s} active={idx === current} done={idx < current} />
+                          {idx < FLOW.length - 1 ? <span style={{ fontSize: 12, opacity: 0.65, fontWeight: 800 }}>{'>'}</span> : null}
+                        </span>
+                      );
                     })}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -287,7 +292,9 @@ export default async function AutonomousEnginePage({
               </details>
 
               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc', minHeight: 160 }}>
-                <div style={{ fontWeight: 800, marginBottom: 8 }}>Context Timeline</div>
+                <div style={{ marginBottom: 8 }}>
+                  <span style={{ border: '1px solid #dbe3ef', background: '#fff', borderRadius: 8, padding: '5px 9px', fontSize: 11, fontWeight: 800 }}>Lifecycle ↓</span>
+                </div>
                 <div style={{ display: 'grid', gap: 6, fontSize: 12 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8, padding: '0 4px', fontSize: 11, fontWeight: 800, opacity: 0.75, textTransform: 'uppercase' }}>
                     <div>Stage</div>
@@ -305,9 +312,9 @@ export default async function AutonomousEnginePage({
                   ))}
                   {selected && selectedTimeline.length === 0 ? (
                     <>
-                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8 }}><div style={{ fontWeight: 700 }}>DISCOVER</div><div>{fmtDate(selected.timestamps?.createdAt)}</div><div>Opportunity detected from local scout scan</div></div></div>
-                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8 }}><div style={{ fontWeight: 700 }}>PROPOSAL</div><div>{fmtDate(selected.timestamps?.createdAt)}</div><div>Proposal structured and queued for dispatch</div></div></div>
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8 }}><div style={{ fontWeight: 700 }}>{String(selected.state).toUpperCase()}</div><div>{fmtDate(selected.timestamps?.updatedAt)}</div><div>Current workflow status</div></div></div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8 }}><div style={{ fontWeight: 700 }}>PROPOSAL</div><div>{fmtDate(selected.timestamps?.createdAt)}</div><div>Proposal structured and queued for dispatch</div></div></div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8 }}><div style={{ fontWeight: 700 }}>DISCOVER</div><div>{fmtDate(selected.timestamps?.createdAt)}</div><div>Opportunity detected from local scout scan</div></div></div>
                     </>
                   ) : null}
                 </div>
