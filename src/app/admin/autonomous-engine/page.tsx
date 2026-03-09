@@ -170,6 +170,9 @@ export default async function AutonomousEnginePage({
         boxShadow: '0 3px 10px rgba(15,23,42,0.06)',
       }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', alignItems: 'center' }}>
+          <Link href={`/admin/autonomous-engine?section=${selectedSection}&list=${showList ? '0' : '1'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 900, color: '#1d4ed8' }}>
+            {showList ? '🗂️ Listeyi Gizle' : '🗂️ Listeyi Aç'}
+          </Link>
           <Link href="/admin/autonomous-engine?section=inbox" className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: selectedSection === 'inbox' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
 📥 Inbox ({inbox.length})
           </Link>
@@ -190,12 +193,6 @@ export default async function AutonomousEnginePage({
           </span>
         </div>
       </header>
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <Link href={`/admin/autonomous-engine?section=${selectedSection}&list=${showList ? '0' : '1'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
-          {showList ? '🗂️ Listeyi Gizle' : '🗂️ Listeyi Aç'}
-        </Link>
-      </div>
 
       <section className="ae-layout-grid" style={{ display: 'grid', gridTemplateColumns: showList ? '220px 1fr 300px' : '1fr 300px', gap: 8 }}>
         {showList ? (
