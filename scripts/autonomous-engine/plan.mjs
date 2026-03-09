@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, makeId, normalize, validateProposal, writeArtifact } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, makeId, normalize, validateProposal, writeArtifact, proposalSimilarity, WIP_LIMITS } from './lib.mjs';
 
 await ensureEngineFiles();
 const proposals = await readJson(files.proposals);
@@ -28,6 +28,21 @@ for (const raw of proposals) {
 
   const parts = splitProposal(raw);
   for (const p of parts) {
+    const planningCount = jobs.filter((j) => j.state === 'proposal').length;
+    if (planningCount >= WIP_LIMITS.planning) continue;
+
+    const similarJob = jobs.find((j) => {
+      const sim = proposalSimilarity(
+        { title: j.title, problem: j.summary, files_expected: j.changedFiles || [] },
+        { title: p.title, problem: p.problem, files_expected: p.files_expected || [] },
+      );
+      return sim.titleSimilar || sim.problemSimilar;
+    });
+    if (similarJob) {
+      await writeArtifact(similarJob.id, 'proposal-merge-note.txt', `Merged duplicate proposal ${p.id}`);
+      continue;
+    }
+
     const exists = jobs.some((j) => j.proposalId === p.id || normalize(j.title) === normalize(p.title));
     if (exists) continue;
 
@@ -38,20 +53,22 @@ for (const raw of proposals) {
       category: p.category,
       state: 'proposal',
       risk: p.risk,
+      impact: p.impact,
+      priority: p.priority,
       summary: p.proposed_change,
       proposalId: p.id,
       changedFiles: [],
       testResults: 'pending',
       previewInstructions: 'Run locally, verify changed files, and capture screenshots/logs for review.',
       retries: { planning: 0, build: 0, testing: 0, verification: 0 },
-      constraints: { maxFiles: 5, maxFunctionalChanges: 1, noUnrelatedRefactor: true },
+      constraints: { maxFiles: 5, maxFunctionalChanges: 1, noUnrelatedRefactor: true, functionalScope: String((p.files_expected?.[0] || '')).split('/').slice(0, 2).join('/') },
       ownerAgent: 'planner',
       timestamps: { createdAt: now, updatedAt: now },
     };
 
     jobs.push(job);
     await writeArtifact(job.id, 'proposal.json', p);
-    await writeArtifact(job.id, 'dispatch-decision.txt', 'Planner created job from validated proposal and queued for approval_for_build dispatch.');
+    await writeArtifact(job.id, 'dispatch-decision.txt', 'Planner created job from validated proposal and queued for approved_for_build dispatch.');
     created += 1;
   }
 }

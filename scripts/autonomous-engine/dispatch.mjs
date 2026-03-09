@@ -1,23 +1,36 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, WIP_LIMITS } from './lib.mjs';
 
 await ensureEngineFiles();
 const jobs = await readJson(files.jobs);
 
-const hasActive = jobs.some((j) => ['approved_for_build', 'build', 'test'].includes(j.state));
-if (!hasActive) {
-  const next = jobs.find((j) => j.state === 'proposal');
-  if (next) {
-    next.state = 'approved_for_build';
-    next.ownerAgent = 'planner';
-    next.timestamps.updatedAt = nowIso();
-    await writeArtifact(next.id, 'dispatch-decision.txt', 'Orchestrator dispatch: proposal moved to approved_for_build.');
-    console.log(`[dispatch] promoted ${next.id} to approved_for_build`);
-  } else {
-    console.log('[dispatch] no proposal to activate');
-  }
+const buildingCount = jobs.filter((j) => ['approved_for_build', 'build'].includes(j.state)).length;
+const testingCount = jobs.filter((j) => j.state === 'test').length;
+const reviewReadyCount = jobs.filter((j) => j.state === 'review_ready').length;
+
+if (reviewReadyCount >= WIP_LIMITS.reviewReady) {
+  console.log('[dispatch] review_ready WIP limit reached');
+  process.exit(0);
+}
+
+if (buildingCount >= WIP_LIMITS.building || testingCount >= WIP_LIMITS.testing) {
+  console.log('[dispatch] build/test WIP limits reached');
+  process.exit(0);
+}
+
+const priorityRank = { P1: 1, P2: 2, P3: 3 };
+const next = jobs
+  .filter((j) => j.state === 'proposal')
+  .sort((a, b) => (priorityRank[a.priority] || 9) - (priorityRank[b.priority] || 9) || new Date(a.timestamps.createdAt).getTime() - new Date(b.timestamps.createdAt).getTime())[0];
+
+if (next) {
+  next.state = 'approved_for_build';
+  next.ownerAgent = 'planner';
+  next.timestamps.updatedAt = nowIso();
+  await writeArtifact(next.id, 'dispatch-decision.txt', `Orchestrator dispatch: proposal moved to approved_for_build with priority=${next.priority || 'P2'}.`);
+  console.log(`[dispatch] promoted ${next.id} to approved_for_build`);
 } else {
-  console.log('[dispatch] active job already exists');
+  console.log('[dispatch] no proposal to activate');
 }
 
 await writeJson(files.jobs, jobs);

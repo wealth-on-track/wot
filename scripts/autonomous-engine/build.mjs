@@ -7,6 +7,7 @@ import path from 'path';
 await ensureEngineFiles();
 const proposals = await readJson(files.proposals);
 const jobs = await readJson(files.jobs);
+const history = await readJson(files.history);
 
 const job = jobs.find((j) => j.state === 'approved_for_build' || j.state === 'build');
 if (!job) {
@@ -41,8 +42,16 @@ try {
   execSync(`git checkout -b ${branch}`, { stdio: 'ignore' });
 }
 
+const cooldownCutoff = Date.now() - 24 * 60 * 60 * 1000;
+const recentlyTouched = new Set(
+  [...jobs, ...history]
+    .filter((j) => new Date(j.timestamps?.updatedAt || j.timestamps?.createdAt || 0).getTime() >= cooldownCutoff)
+    .flatMap((j) => j.changedFiles || []),
+);
+
 const changedFiles = [];
 for (const rel of (proposal.files_expected || []).slice(0, 5)) {
+  if (recentlyTouched.has(rel)) continue;
   const full = path.join(process.cwd(), rel);
   try {
     await fs.access(full);
@@ -57,12 +66,14 @@ for (const rel of (proposal.files_expected || []).slice(0, 5)) {
 
 job.changedFiles = changedFiles;
 const functionalAreas = [...new Set(changedFiles.map((f) => f.split('/').slice(0, 2).join('/')))].filter(Boolean);
-if (functionalAreas.length > 1) {
+const expectedScope = String(job.constraints?.functionalScope || functionalAreas[0] || '');
+const outOfScope = changedFiles.filter((f) => !String(f).startsWith(expectedScope));
+if (functionalAreas.length > 1 || outOfScope.length > 0) {
   job.retries.build += 1;
   if (job.retries.build >= 3) {
     job.state = 'abandoned_with_reason';
     job.finalReason = 'multiple_functional_areas_detected';
-    await writeArtifact(job.id, 'failure-analysis.txt', `Multiple functional areas changed: ${functionalAreas.join(', ')}`);
+    await writeArtifact(job.id, 'failure-analysis.txt', `Scope violation. functionalAreas=${functionalAreas.join(', ')} outOfScope=${outOfScope.join(', ')}`);
   } else {
     job.state = 'approved_for_build';
     job.summary = `${job.summary} | scope reduced required (multiple functional areas)`;
@@ -75,13 +86,16 @@ if (functionalAreas.length > 1) {
 
 if (changedFiles.length === 0) {
   job.retries.build += 1;
+  const cooldownBlocked = (proposal.files_expected || []).slice(0, 5).every((f) => recentlyTouched.has(f));
   if (job.retries.build >= 3) {
     job.state = 'abandoned_with_reason';
-    job.finalReason = 'build_produced_no_changes_after_3_retries';
-    await writeArtifact(job.id, 'failure-analysis.txt', 'Build produced no file changes after retries; abandoning with reason.');
+    job.finalReason = cooldownBlocked ? 'file_cooldown_24h_blocked' : 'build_produced_no_changes_after_3_retries';
+    await writeArtifact(job.id, 'failure-analysis.txt', cooldownBlocked
+      ? 'All target files are in 24h cooldown window.'
+      : 'Build produced no file changes after retries; abandoning with reason.');
   } else {
     job.state = 'approved_for_build';
-    job.summary = `${job.summary} | retry build (no changed files)`;
+    job.summary = `${job.summary} | retry build (no changed files${cooldownBlocked ? ', cooldown active' : ''})`;
   }
   job.timestamps.updatedAt = nowIso();
   await writeJson(files.jobs, jobs);
@@ -116,6 +130,12 @@ await writeArtifact(job.id, 'commit-sha.txt', commitSha || 'no-commit-sha');
 await writeArtifact(job.id, 'changed-files.json', changedFiles);
 await writeArtifact(job.id, 'test-plan.txt', testPlan);
 await writeArtifact(job.id, 'summary-report.json', summary);
+await writeArtifact(job.id, 'preview.json', {
+  previewUrl: '/dev1',
+  screenshot: null,
+  beforeAfterDiff: 'code.diff.patch',
+  generatedAt: nowIso(),
+});
 
 job.summary = `${proposal.proposed_change} (local build applied)`;
 job.state = 'test';

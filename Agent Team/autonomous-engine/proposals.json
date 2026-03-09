@@ -17,7 +17,9 @@
     "tests_required": [
       "manual-mobile-nav-check"
     ],
-    "rollback_plan": "Revert navbar spacing/touch-target style changes."
+    "rollback_plan": "Revert navbar spacing/touch-target style changes.",
+    "impact": "medium",
+    "priority": "P2"
   },
   {
     "id": "PRP-20260309-677",
@@ -25,7 +27,8 @@
     "category": "operations",
     "problem": "Detected opportunity in operations via local project scan.",
     "evidence": [
-      "source: local scan @ 2026-03-09T16:11:07.198Z"
+      "source: local scan @ 2026-03-09T16:11:07.198Z",
+      "lint command failed in local scan"
     ],
     "proposed_change": "Apply one minimal local change set and verify with required checks.",
     "expected_benefit": "Safer and incremental project quality improvement.",
@@ -37,7 +40,9 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts.",
+    "impact": "medium",
+    "priority": "P2"
   },
   {
     "id": "PRP-20260309-874",
@@ -45,7 +50,8 @@
     "category": "performance",
     "problem": "Detected opportunity in performance via local project scan.",
     "evidence": [
-      "source: local scan @ 2026-03-09T16:11:07.199Z"
+      "source: local scan @ 2026-03-09T16:11:07.199Z",
+      "performance category periodic proposal seed"
     ],
     "proposed_change": "Apply one minimal local change set and verify with required checks.",
     "expected_benefit": "Safer and incremental project quality improvement.",
@@ -57,7 +63,9 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts.",
+    "impact": "medium",
+    "priority": "P2"
   },
   {
     "id": "PRP-20260309-363",
@@ -77,7 +85,9 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts.",
+    "impact": "medium",
+    "priority": "P2"
   },
   {
     "id": "PRP-20260309-730",
@@ -97,7 +107,9 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts.",
+    "impact": "medium",
+    "priority": "P2"
   },
   {
     "id": "PRP-20260309-224",
@@ -105,7 +117,8 @@
     "category": "patch",
     "problem": "Detected opportunity in patch via local project scan.",
     "evidence": [
-      "source: local scan @ 2026-03-09T16:35:13.902Z"
+      "source: local scan @ 2026-03-09T16:35:13.902Z",
+      "unit test command failed in local scan"
     ],
     "proposed_change": "Apply one minimal local change set and verify with required checks.",
     "expected_benefit": "Safer and incremental project quality improvement.",
@@ -117,7 +130,9 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts.",
+    "impact": "medium",
+    "priority": "P2"
   },
   {
     "id": "PRP-20260309-162",
@@ -138,7 +153,9 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts.",
+    "impact": "medium",
+    "priority": "P2"
   },
   {
     "id": "PRP-20260309-602",
@@ -146,13 +163,60 @@
     "category": "benchmark",
     "problem": "Detected opportunity in benchmark via local project scan.",
     "evidence": [
-      "source: local scan @ 2026-03-09T16:35:13.902Z"
+      "source: local scan @ 2026-03-09T16:35:13.902Z",
+      "benchmark_result: performance:pass"
     ],
     "proposed_change": "Apply one minimal local change set and verify with required checks.",
     "expected_benefit": "Safer and incremental project quality improvement.",
     "risk": "low",
     "files_expected": [
       "src/app/admin/page.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts.",
+    "impact": "medium",
+    "priority": "P2"
+  },
+  {
+    "id": "PRP-20260309-003",
+    "title": "Add empty state CTA when portfolio has no assets",
+    "category": "ux",
+    "problem": "Detected actionable ux issue via local scout scan.",
+    "evidence": [
+      "actionable ux flow gap detected"
+    ],
+    "proposed_change": "Apply one minimal local change set and verify with required checks.",
+    "expected_benefit": "Safer and incremental project quality improvement.",
+    "risk": "low",
+    "impact": "medium",
+    "priority": "P2",
+    "files_expected": [
+      "src/app/admin/autonomous-engine/page.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+  },
+  {
+    "id": "PRP-20260309-006",
+    "title": "Weekly deep benchmark scan for competitor UX patterns and missing features",
+    "category": "benchmark",
+    "problem": "Detected actionable benchmark issue via local scout scan.",
+    "evidence": [
+      "weekly deep scan trigger"
+    ],
+    "proposed_change": "Apply one minimal local change set and verify with required checks.",
+    "expected_benefit": "Safer and incremental project quality improvement.",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P2",
+    "files_expected": [
+      "src/lib/autonomousEngine.ts"
     ],
     "tests_required": [
       "lint",
