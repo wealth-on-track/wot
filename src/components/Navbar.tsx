@@ -17,6 +17,7 @@ interface NavbarProps {
 
 export async function Navbar({ totalBalance, username, isOwner, showPortfolioButton }: NavbarProps) {
     const session = await auth();
+    const currentUsername = (((session?.user as any)?.username || session?.user?.name || username) as string | undefined)?.toLowerCase();
 
     return (
         <nav
@@ -187,7 +188,7 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                             session.user.email === 'dev1@example.com'
                         ) && (
                                 <Link
-                                    href="/admin"
+                                    href="/admin/autonomous-engine"
                                     className="navbar-btn"
                                     style={{
                                         textDecoration: 'none',
@@ -204,9 +205,9 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                         {/* View Mode Toggle (Portal Target) */}
 
 
-                        {session?.user && (((session.user as any)?.username || session.user.name) || username) && (
+                        {session?.user && currentUsername && (
                             <Link
-                                href={`/${(((session.user as any)?.username || session.user.name || username) as string).toLowerCase()}/portfolio_public`}
+                                href={`/${currentUsername}/portfolio_public`}
                                 className="navbar-btn"
                                 title="Public share page"
                                 style={{ textDecoration: 'none' }}

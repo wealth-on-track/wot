@@ -1,0 +1,1 @@
+All target files are in 24h cooldown window.

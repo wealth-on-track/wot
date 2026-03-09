@@ -142,12 +142,13 @@ export default async function AutonomousEnginePage({
   const healthScore = total === 0 ? 100 : Math.max(0, Math.round(100 - ((active.filter((j) => stateSlaMin(j.state) && ((Date.now() - new Date(j.timestamps?.updatedAt || j.timestamps?.createdAt).getTime()) / 60000 > (stateSlaMin(j.state) || 0))).length) / Math.max(active.length, 1)) * 35));
 
   return (
-    <main style={{ padding: 10, display: 'grid', gap: 8 }}>
+    <main style={{ padding: 10, display: 'grid', gap: 8, background: '#f1f5f9' }}>
       <header style={{
-        border: '1px solid #dbe7ff',
+        border: '1px solid #cbd5e1',
         borderRadius: 12,
         padding: 10,
         background: 'linear-gradient(135deg, #f8fbff 0%, #eef4ff 55%, #f5f8ff 100%)',
+        boxShadow: '0 6px 18px rgba(15,23,42,0.08)',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <div>
@@ -162,23 +163,23 @@ export default async function AutonomousEnginePage({
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 6, marginTop: 8 }}>
-          <Link href="/admin/autonomous-engine?section=inbox" className="card" style={{ textDecoration: 'none', padding: 10, border: selectedSection === 'inbox' ? '1px solid #60a5fa' : undefined }}>
+          <Link href="/admin/autonomous-engine?section=inbox" className="card" style={{ textDecoration: 'none', padding: 10, border: selectedSection === 'inbox' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
             <div style={{ fontSize: 11, opacity: 0.85 }}>📥 Inbox</div>
             <div style={{ fontSize: 24, fontWeight: 900 }}>{inbox.length}</div>
           </Link>
-          <Link href="/admin/autonomous-engine?section=active" className="card" style={{ textDecoration: 'none', padding: 10, border: selectedSection === 'active' ? '1px solid #60a5fa' : undefined }}>
+          <Link href="/admin/autonomous-engine?section=active" className="card" style={{ textDecoration: 'none', padding: 10, border: selectedSection === 'active' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
             <div style={{ fontSize: 11, opacity: 0.85 }}>⚙️ Active</div>
             <div style={{ fontSize: 24, fontWeight: 900 }}>{active.length}</div>
           </Link>
-          <Link href="/admin/autonomous-engine?section=review" className="card" style={{ textDecoration: 'none', padding: 10, border: selectedSection === 'review' ? '1px solid #60a5fa' : undefined }}>
+          <Link href="/admin/autonomous-engine?section=review" className="card" style={{ textDecoration: 'none', padding: 10, border: selectedSection === 'review' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
             <div style={{ fontSize: 11, opacity: 0.85 }}>✅ Review Ready</div>
             <div style={{ fontSize: 24, fontWeight: 900 }}>{reviewReady.length}</div>
           </Link>
-          <div className="card" style={{ padding: 10 }}>
+          <div className="card" style={{ padding: 10, border: '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
             <div style={{ fontSize: 11, opacity: 0.85 }}>🧭 Workflow Health</div>
             <div style={{ fontSize: 24, fontWeight: 900 }}>{healthScore}%</div>
           </div>
-          <div className="card" style={{ padding: 10 }}>
+          <div className="card" style={{ padding: 10, border: '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)' }}>
             <div style={{ fontSize: 11, opacity: 0.85 }}>📚 Lessons</div>
             <div style={{ fontSize: 24, fontWeight: 900 }}>{lessons.length}</div>
           </div>

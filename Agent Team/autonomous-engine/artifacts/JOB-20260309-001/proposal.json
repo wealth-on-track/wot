@@ -1,0 +1,22 @@
+{
+  "id": "PRP-20260309-900",
+  "title": "Add admin activity page empty-state helper text for observability",
+  "category": "operations",
+  "problem": "Activity page lacks explicit empty-state guidance for monitor users.",
+  "evidence": [
+    "manual request for better observability details"
+  ],
+  "proposed_change": "Add concise empty-state helper text in admin activity page.",
+  "expected_benefit": "Faster operator understanding during low-activity periods.",
+  "risk": "low",
+  "impact": "medium",
+  "priority": "P2",
+  "files_expected": [
+    "src/app/admin/activity/page.tsx"
+  ],
+  "tests_required": [
+    "lint",
+    "unit"
+  ],
+  "rollback_plan": "Revert single file change."
+}

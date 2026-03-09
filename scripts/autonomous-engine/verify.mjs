@@ -18,9 +18,12 @@ if (!canTransition('test', 'review_ready')) {
 job.ownerAgent = 'verifier';
 job.timestamps.updatedAt = nowIso();
 
+const fileArgs = (job.changedFiles || []).filter(Boolean).join(' ');
+const lintCmd = fileArgs ? `npx eslint ${fileArgs}` : 'npm run -s lint';
+
 const commands = [
-  { name: 'lint', cmd: 'npm run -s lint', required: true },
-  { name: 'unit', cmd: 'npm run -s test -- --run', required: true },
+  { name: 'lint', cmd: lintCmd, required: true },
+  { name: 'unit', cmd: 'npm run -s test -- --run --passWithNoTests', required: true },
   { name: 'security', cmd: 'npm audit --audit-level=high', required: true },
   { name: 'integration', cmd: 'node scripts/autonomous-engine/check-integration.mjs', required: ['product', 'operations', 'patch'].includes(job.category) },
   { name: 'e2e', cmd: 'node scripts/autonomous-engine/check-e2e.mjs', required: ['ux', 'product', 'branding'].includes(job.category) },

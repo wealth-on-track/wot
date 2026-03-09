@@ -22,6 +22,13 @@ interface NavItem {
 
 const navItems: NavItem[] = [
     {
+        label: "Agent Team",
+        href: "/admin/autonomous-engine",
+        icon: <LayoutDashboard size={18} />, 
+        color: "#10b981",
+        bgColor: "rgba(16, 185, 129, 0.1)"
+    },
+    {
         label: "Dashboard",
         href: "/admin",
         icon: <LayoutDashboard size={18} />,
@@ -226,3 +233,5 @@ export function AdminSidebar({ username }: { username: string }) {
         </div>
     );
 }
+
+/* autonomous-engine:JOB-20260309-002:single-functional-change */

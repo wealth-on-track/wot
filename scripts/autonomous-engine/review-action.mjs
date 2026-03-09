@@ -21,18 +21,31 @@ if (!job) {
 job.timestamps.updatedAt = nowIso();
 
 if (action === 'approve') {
-  job.state = 'approved';
+  // Human approval gate: only now perform local deploy command
+  let deployStatus = 'fail';
+  try {
+    execSync('npm run -s build', { stdio: 'pipe', timeout: 900000 });
+    deployStatus = 'pass';
+  } catch (e) {
+    await writeArtifact(job.id, 'deploy-error.txt', String(e.message || e));
+  }
+
   const deployPack = {
     jobId: job.id,
     title: job.title,
     changedFiles: job.changedFiles,
     testResults: job.testResults,
-    instructions: 'Human-approved. Deploy manually if desired. Agents never deploy automatically.',
+    deployStatus,
+    instructions: 'Human-approved local deploy executed after approval gate.',
     generatedAt: nowIso(),
   };
   await writeArtifact(job.id, 'deploy-ready.json', deployPack);
-  await writeArtifact(job.id, 'deploy-instructions.txt', 'Human-approved. Deploy manually if desired. Agents never deploy automatically.');
-  console.log(`[review] approved ${jobId} (local only)`);
+  await writeArtifact(job.id, 'deploy-instructions.txt', 'Human-approved local deploy executed after approval gate.');
+
+  // Keep final state set strict
+  job.state = deployStatus === 'pass' ? 'review_ready' : 'abandoned_with_reason';
+  if (deployStatus !== 'pass') job.finalReason = 'deploy_failed_after_human_approval';
+  console.log(`[review] approved ${jobId}; deploy=${deployStatus}`);
 } else {
   try { execSync('git reset --hard', { stdio: 'ignore' }); } catch {}
   job.state = 'reverted';

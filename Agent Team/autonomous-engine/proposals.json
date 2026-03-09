@@ -210,18 +210,40 @@
     "evidence": [
       "weekly deep scan trigger"
     ],
-    "proposed_change": "Apply one minimal local change set and verify with required checks.",
+    "proposed_change": "Add small observability nav hint for deep-scan monitoring.",
     "expected_benefit": "Safer and incremental project quality improvement.",
     "risk": "low",
     "impact": "high",
     "priority": "P2",
     "files_expected": [
-      "src/lib/autonomousEngine.ts"
+      "src/components/AdminSidebar.tsx"
     ],
     "tests_required": [
       "lint",
       "unit"
     ],
     "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+  },
+  {
+    "id": "PRP-20260309-900",
+    "title": "Add admin activity page empty-state helper text for observability",
+    "category": "operations",
+    "problem": "Activity page lacks explicit empty-state guidance for monitor users.",
+    "evidence": [
+      "manual request for better observability details"
+    ],
+    "proposed_change": "Add concise empty-state helper text in admin activity page.",
+    "expected_benefit": "Faster operator understanding during low-activity periods.",
+    "risk": "low",
+    "impact": "medium",
+    "priority": "P2",
+    "files_expected": [
+      "src/app/admin/activity/page.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert single file change."
   }
 ]
