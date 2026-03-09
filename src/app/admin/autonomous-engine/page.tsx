@@ -262,7 +262,7 @@ export default async function AutonomousEnginePage({
 
         <aside className="card" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
           <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#ffffff' }} open>
-            <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.9, fontWeight: 800 }}>📝 Lessons Learned (before Approve/Reject)</summary>
+            <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.9, fontWeight: 800 }}>📝 Lessons Learned</summary>
             {!selected ? <div style={{ marginTop: 8, opacity: 0.7 }}>Select a job first.</div> : (
               <form action="/api/autonomous-engine/lessons" method="post" style={{ marginTop: 8, display: 'grid', gap: 6 }}>
                 <input type="hidden" name="job_id" value={selected.id} />
