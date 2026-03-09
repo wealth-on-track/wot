@@ -212,8 +212,8 @@ export default async function AutonomousEnginePage({
         </div>
       </header>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '220px 1fr 300px', gap: 8 }}>
-        <aside className="card" style={{ padding: 10, overflow: 'auto', border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
+      <section className="ae-layout-grid" style={{ display: 'grid', gridTemplateColumns: '220px 1fr 300px', gap: 8 }}>
+        <aside className="card ae-left-panel" style={{ padding: 10, overflow: 'auto', border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
           <div style={{ display: 'grid', gap: 8 }}>
             {currentList.length === 0 ? <div style={{ opacity: 0.65 }}>No items.</div> : currentList.map((j) => (
               <IdRow key={j.id} job={j} selected={selected?.id === j.id} section={selectedSection} />
@@ -221,7 +221,7 @@ export default async function AutonomousEnginePage({
           </div>
         </aside>
 
-        <section className="card" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#ffffff', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
+        <section className="card ae-center-panel" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#ffffff', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
           {!selected ? <div>No item selected.</div> : (
             <>
               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
@@ -309,7 +309,7 @@ export default async function AutonomousEnginePage({
 
               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc', minHeight: 160 }}>
                 <div style={{ display: 'grid', gap: 6, fontSize: 12 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '200px 170px 1fr 190px', gap: 8, padding: '0 4px', fontSize: 11, fontWeight: 800, opacity: 0.75, textTransform: 'uppercase' }}>
+                  <div className="ae-timeline-head" style={{ display: 'grid', gridTemplateColumns: '200px 170px 1fr 190px', gap: 8, padding: '0 4px', fontSize: 11, fontWeight: 800, opacity: 0.75, textTransform: 'uppercase' }}>
                     <div>Stage</div>
                     <div>Time</div>
                     <div>Comment</div>
@@ -318,7 +318,7 @@ export default async function AutonomousEnginePage({
                   {selectedTimeline.map((e: any, idx: number) => (
                     <div key={`${e.ts}-${idx}`}>
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '200px 170px 1fr 190px', gap: 8, alignItems: 'start' }}>
+                        <div className="ae-timeline-row" style={{ display: 'grid', gridTemplateColumns: '200px 170px 1fr 190px', gap: 8, alignItems: 'start' }}>
                           <div style={{ fontWeight: 700 }}>{String(e.stage || 'event').toUpperCase()}</div>
                           <div style={{ whiteSpace: 'nowrap' }}>{fmtDate(e.ts)}</div>
                           <div>{e.message}</div>
@@ -349,7 +349,7 @@ export default async function AutonomousEnginePage({
           )}
         </section>
 
-        <aside className="card" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
+        <aside className="card ae-right-panel" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
           <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#ffffff' }} open>
             <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.9, fontWeight: 800 }}>📝 Lessons Learned</summary>
             {!selected ? <div style={{ marginTop: 8, opacity: 0.7 }}>Select a job first.</div> : (
@@ -412,6 +412,30 @@ export default async function AutonomousEnginePage({
           </details>
         </aside>
       </section>
+
+      <style>{`
+        @media (max-width: 960px) {
+          .ae-layout-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .ae-left-panel,
+          .ae-right-panel,
+          .ae-center-panel {
+            max-height: none !important;
+          }
+          .ae-left-panel { order: 1; }
+          .ae-center-panel { order: 2; }
+          .ae-right-panel { order: 3; }
+          .ae-timeline-head,
+          .ae-timeline-row {
+            grid-template-columns: 130px 130px 1fr !important;
+          }
+          .ae-timeline-head > :last-child,
+          .ae-timeline-row > :last-child {
+            display: none;
+          }
+        }
+      `}</style>
     </main>
   );
 }
