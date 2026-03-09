@@ -78,12 +78,12 @@ function IdRow({ job, selected, section }: { job: any; selected: boolean; sectio
       href={`/admin/autonomous-engine?section=${section}&job=${job.id}`}
       style={{
         display: 'block',
-        border: selected ? '1px solid rgba(96,165,250,0.8)' : '1px solid rgba(148,163,184,0.3)',
-        background: selected ? 'linear-gradient(180deg, rgba(59,130,246,0.18), rgba(59,130,246,0.08))' : 'rgba(15,23,42,0.3)',
+        border: selected ? '1px solid #3b82f6' : '1px solid #dbe3f0',
+        background: selected ? 'linear-gradient(180deg, #eff6ff, #dbeafe)' : '#ffffff',
         borderRadius: 10,
         padding: '10px 12px',
         textDecoration: 'none',
-        color: selected ? '#dbeafe' : '#cbd5e1',
+        color: selected ? '#1e40af' : '#334155',
         fontWeight: 800,
         letterSpacing: '0.02em',
         fontSize: 13,
@@ -144,18 +144,18 @@ export default async function AutonomousEnginePage({
   return (
     <main style={{ padding: 14, display: 'grid', gap: 12 }}>
       <header style={{
-        border: '1px solid rgba(148,163,184,0.35)',
+        border: '1px solid #dbe7ff',
         borderRadius: 14,
         padding: 14,
-        background: 'radial-gradient(1200px 300px at 20% -20%, rgba(59,130,246,0.25), rgba(2,6,23,0.6)), linear-gradient(180deg, rgba(15,23,42,0.85), rgba(2,6,23,0.85))',
+        background: 'linear-gradient(135deg, #f8fbff 0%, #eef4ff 55%, #f5f8ff 100%)',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 12, color: '#93c5fd', fontWeight: 800, letterSpacing: '0.08em' }}>WOT AUTONOMOUS IMPROVEMENT ENGINE</div>
-            <h1 style={{ margin: '4px 0 0', fontSize: 24, color: '#e2e8f0' }}>Agent Team Control Center</h1>
+            <div style={{ fontSize: 12, color: '#2563eb', fontWeight: 800, letterSpacing: '0.08em' }}>WOT AUTONOMOUS IMPROVEMENT ENGINE</div>
+            <h1 style={{ margin: '4px 0 0', fontSize: 24, color: '#0f172a' }}>Agent Team Control Center</h1>
           </div>
           <form action="/api/autonomous-engine/run" method="post">
-            <button type="submit" style={{ padding: '9px 14px', borderRadius: 10, border: '1px solid rgba(96,165,250,0.6)', background: 'rgba(59,130,246,0.2)', color: '#dbeafe', fontWeight: 800 }}>
+            <button type="submit" style={{ padding: '9px 14px', borderRadius: 10, border: '1px solid #2563eb', background: '#2563eb', color: '#ffffff', fontWeight: 800 }}>
               ▶ Run Tick
             </button>
           </form>
@@ -208,10 +208,10 @@ export default async function AutonomousEnginePage({
                 </div>
                 <div style={{ minWidth: 220 }}>
                   <div style={{ fontSize: 12, marginBottom: 4 }}>Progress: {progress.label} ({progress.pct}%)</div>
-                  <div style={{ height: 9, borderRadius: 999, background: 'rgba(148,163,184,0.25)' }}>
-                    <div style={{ width: `${progress.pct}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg,#22c55e,#3b82f6)' }} />
+                  <div style={{ height: 9, borderRadius: 999, background: '#e2e8f0' }}>
+                    <div style={{ width: `${progress.pct}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg,#10b981,#2563eb)' }} />
                   </div>
-                  <div style={{ marginTop: 6, fontSize: 12, color: stale ? '#ef4444' : '#94a3b8' }}>
+                  <div style={{ marginTop: 6, fontSize: 12, color: stale ? '#dc2626' : '#475569' }}>
                     ⏱ {ageMin}m since update {sla ? `· SLA ${sla}m` : ''} {stale ? '· STALE' : ''}
                   </div>
                 </div>
