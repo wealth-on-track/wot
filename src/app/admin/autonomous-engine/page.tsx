@@ -278,6 +278,15 @@ export default async function AutonomousEnginePage({
                   <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '7px 10px', fontSize: 12 }}>
                     SLA: <strong>{sla ? `${sla}M` : '-'}</strong>
                   </div>
+                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '7px 10px', fontSize: 12 }}>
+                    Impact: <strong>{selected.impactScore || '-'}/5</strong>
+                  </div>
+                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '7px 10px', fontSize: 12 }}>
+                    Confidence: <strong>{selected.confidenceScore || '-'}/5</strong>
+                  </div>
+                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '7px 10px', fontSize: 12 }}>
+                    Effort: <strong>{selected.effortScore || '-'}/5</strong>
+                  </div>
                 </div>
               </div>
 
