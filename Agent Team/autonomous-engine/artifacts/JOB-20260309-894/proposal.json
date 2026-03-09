@@ -1,0 +1,20 @@
+{
+  "id": "PRP-20260309-874",
+  "title": "Reduce initial bundle execution in dashboard route",
+  "category": "performance",
+  "problem": "Detected opportunity in performance via local project scan.",
+  "evidence": [
+    "source: local scan @ 2026-03-09T16:11:07.199Z"
+  ],
+  "proposed_change": "Apply one minimal local change set and verify with required checks.",
+  "expected_benefit": "Safer and incremental project quality improvement.",
+  "risk": "low",
+  "files_expected": [
+    "src/app/admin/page.tsx"
+  ],
+  "tests_required": [
+    "lint",
+    "unit"
+  ],
+  "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+}

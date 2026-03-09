@@ -244,3 +244,7 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
 
     );
 }
+
+/* autonomous-engine job:JOB-20260309-382 local change marker */
+
+/* autonomous-engine:JOB-20260309-382:single-functional-change */

@@ -1,0 +1,163 @@
+[
+  {
+    "id": "PRP-20260309-131",
+    "title": "Improve navbar interaction clarity on mobile",
+    "category": "ux",
+    "problem": "Mobile top actions are visually dense and easy to mis-tap.",
+    "evidence": [
+      "Observed compact tap targets around nav actions in mobile layout."
+    ],
+    "proposed_change": "Increase spacing and target size for top nav action buttons.",
+    "expected_benefit": "Lower tap errors and smoother primary flow.",
+    "risk": "low",
+    "files_expected": [
+      "src/components/Navbar.tsx",
+      "src/app/mobile.css"
+    ],
+    "tests_required": [
+      "manual-mobile-nav-check"
+    ],
+    "rollback_plan": "Revert navbar spacing/touch-target style changes."
+  },
+  {
+    "id": "PRP-20260309-677",
+    "title": "Resolve lint failures blocking autonomous verification",
+    "category": "operations",
+    "problem": "Detected opportunity in operations via local project scan.",
+    "evidence": [
+      "source: local scan @ 2026-03-09T16:11:07.198Z"
+    ],
+    "proposed_change": "Apply one minimal local change set and verify with required checks.",
+    "expected_benefit": "Safer and incremental project quality improvement.",
+    "risk": "low",
+    "files_expected": [
+      "src/app/admin/page.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+  },
+  {
+    "id": "PRP-20260309-874",
+    "title": "Reduce initial bundle execution in dashboard route",
+    "category": "performance",
+    "problem": "Detected opportunity in performance via local project scan.",
+    "evidence": [
+      "source: local scan @ 2026-03-09T16:11:07.199Z"
+    ],
+    "proposed_change": "Apply one minimal local change set and verify with required checks.",
+    "expected_benefit": "Safer and incremental project quality improvement.",
+    "risk": "low",
+    "files_expected": [
+      "src/app/admin/page.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+  },
+  {
+    "id": "PRP-20260309-363",
+    "title": "Compare portfolio table UX against top 3 fintech competitors",
+    "category": "benchmark",
+    "problem": "Detected opportunity in benchmark via local project scan.",
+    "evidence": [
+      "source: local scan @ 2026-03-09T16:11:07.199Z"
+    ],
+    "proposed_change": "Apply one minimal local change set and verify with required checks.",
+    "expected_benefit": "Safer and incremental project quality improvement.",
+    "risk": "low",
+    "files_expected": [
+      "src/app/admin/page.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+  },
+  {
+    "id": "PRP-20260309-730",
+    "title": "Review dependency update opportunities with local vulnerability context",
+    "category": "security",
+    "problem": "Detected opportunity in security via local project scan.",
+    "evidence": [
+      "source: local scan @ 2026-03-09T16:35:13.902Z"
+    ],
+    "proposed_change": "Apply one minimal local change set and verify with required checks.",
+    "expected_benefit": "Safer and incremental project quality improvement.",
+    "risk": "medium",
+    "files_expected": [
+      "src/app/admin/page.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+  },
+  {
+    "id": "PRP-20260309-224",
+    "title": "Fix failing unit/integration test path discovered in local test run",
+    "category": "patch",
+    "problem": "Detected opportunity in patch via local project scan.",
+    "evidence": [
+      "source: local scan @ 2026-03-09T16:35:13.902Z"
+    ],
+    "proposed_change": "Apply one minimal local change set and verify with required checks.",
+    "expected_benefit": "Safer and incremental project quality improvement.",
+    "risk": "low",
+    "files_expected": [
+      "src/app/admin/page.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+  },
+  {
+    "id": "PRP-20260309-162",
+    "title": "Refine UI structure consistency across admin and mobile surfaces",
+    "category": "ux",
+    "problem": "Detected opportunity in ux via local project scan.",
+    "evidence": [
+      "source: local scan @ 2026-03-09T16:35:13.902Z"
+    ],
+    "proposed_change": "Apply one minimal local change set and verify with required checks.",
+    "expected_benefit": "Safer and incremental project quality improvement.",
+    "risk": "low",
+    "files_expected": [
+      "src/components/Navbar.tsx",
+      "src/app/mobile.css"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+  },
+  {
+    "id": "PRP-20260309-602",
+    "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
+    "category": "benchmark",
+    "problem": "Detected opportunity in benchmark via local project scan.",
+    "evidence": [
+      "source: local scan @ 2026-03-09T16:35:13.902Z"
+    ],
+    "proposed_change": "Apply one minimal local change set and verify with required checks.",
+    "expected_benefit": "Safer and incremental project quality improvement.",
+    "risk": "low",
+    "files_expected": [
+      "src/app/admin/page.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+  }
+]

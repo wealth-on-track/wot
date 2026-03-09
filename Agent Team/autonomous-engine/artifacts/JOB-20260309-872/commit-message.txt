@@ -1,0 +1,1 @@
+feat(local-auto): Resolve lint failures blocking autonomous verification

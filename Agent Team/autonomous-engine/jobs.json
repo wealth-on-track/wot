@@ -1,0 +1,217 @@
+[
+  {
+    "id": "JOB-20260309-382",
+    "title": "Improve navbar interaction clarity on mobile",
+    "category": "ux",
+    "state": "abandoned_with_reason",
+    "risk": "low",
+    "summary": "Increase spacing and target size for top nav action buttons. (local build applied) | retry build (no changed files)",
+    "proposalId": "PRP-20260309-131",
+    "changedFiles": [],
+    "testResults": "fail",
+    "previewInstructions": "Run local dev and validate manually before approval.",
+    "retries": {
+      "planning": 0,
+      "build": 3,
+      "testing": 2,
+      "verification": 0
+    },
+    "timestamps": {
+      "createdAt": "2026-03-09T15:58:09.265Z",
+      "updatedAt": "2026-03-09T16:21:03.777Z"
+    },
+    "finalReason": "build_produced_no_changes_after_3_retries"
+  },
+  {
+    "id": "JOB-20260309-872",
+    "title": "Resolve lint failures blocking autonomous verification",
+    "category": "operations",
+    "state": "abandoned_with_reason",
+    "risk": "low",
+    "summary": "Apply one minimal local change set and verify with required checks. (local build applied) | retry build (no changed files) | retry build (no changed files)",
+    "proposalId": "PRP-20260309-677",
+    "changedFiles": [],
+    "testResults": "fail",
+    "previewInstructions": "npm run dev and validate only local branch behavior.",
+    "retries": {
+      "planning": 0,
+      "build": 3,
+      "testing": 1,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-09T16:11:07.248Z",
+      "updatedAt": "2026-03-09T16:42:42.172Z"
+    },
+    "ownerAgent": "builder",
+    "finalReason": "build_produced_no_changes_after_3_retries"
+  },
+  {
+    "id": "JOB-20260309-894",
+    "title": "Reduce initial bundle execution in dashboard route",
+    "category": "performance",
+    "state": "approved_for_build",
+    "risk": "low",
+    "summary": "Apply one minimal local change set and verify with required checks.",
+    "proposalId": "PRP-20260309-874",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "npm run dev and validate only local branch behavior.",
+    "retries": {
+      "planning": 1,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-09T16:11:07.249Z",
+      "updatedAt": "2026-03-09T16:44:30.654Z"
+    },
+    "ownerAgent": "planner"
+  },
+  {
+    "id": "JOB-20260309-740",
+    "title": "Compare portfolio table UX against top 3 fintech competitors",
+    "category": "benchmark",
+    "state": "proposal",
+    "risk": "low",
+    "summary": "Apply one minimal local change set and verify with required checks.",
+    "proposalId": "PRP-20260309-363",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "npm run dev and validate only local branch behavior.",
+    "retries": {
+      "planning": 1,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-09T16:11:07.249Z",
+      "updatedAt": "2026-03-09T16:35:14.176Z"
+    }
+  },
+  {
+    "id": "JOB-20260309-114",
+    "title": "Review dependency update opportunities with local vulnerability context",
+    "category": "security",
+    "state": "proposal",
+    "risk": "medium",
+    "summary": "Apply one minimal local change set and verify with required checks.",
+    "proposalId": "PRP-20260309-730",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "npm run dev and validate only local branch behavior.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-09T16:35:13.950Z",
+      "updatedAt": "2026-03-09T16:35:13.950Z"
+    }
+  },
+  {
+    "id": "JOB-20260309-157",
+    "title": "Fix failing unit/integration test path discovered in local test run",
+    "category": "patch",
+    "state": "proposal",
+    "risk": "low",
+    "summary": "Apply one minimal local change set and verify with required checks.",
+    "proposalId": "PRP-20260309-224",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "npm run dev and validate only local branch behavior.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-09T16:35:13.951Z",
+      "updatedAt": "2026-03-09T16:35:13.951Z"
+    }
+  },
+  {
+    "id": "JOB-20260309-873",
+    "title": "Refine UI structure consistency across admin and mobile surfaces",
+    "category": "ux",
+    "state": "proposal",
+    "risk": "low",
+    "summary": "Apply one minimal local change set and verify with required checks.",
+    "proposalId": "PRP-20260309-162",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "npm run dev and validate only local branch behavior.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-09T16:35:13.951Z",
+      "updatedAt": "2026-03-09T16:35:13.951Z"
+    }
+  },
+  {
+    "id": "JOB-20260309-903",
+    "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
+    "category": "benchmark",
+    "state": "proposal",
+    "risk": "low",
+    "summary": "Apply one minimal local change set and verify with required checks.",
+    "proposalId": "PRP-20260309-602",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "npm run dev and validate only local branch behavior.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-09T16:35:13.951Z",
+      "updatedAt": "2026-03-09T16:35:13.951Z"
+    }
+  }
+]

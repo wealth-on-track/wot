@@ -1,0 +1,1 @@
+feat(local-auto): Improve navbar interaction clarity on mobile

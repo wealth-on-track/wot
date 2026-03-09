@@ -233,6 +233,23 @@ export const getLogoUrl = (symbol: string, type: string, exchange?: string, coun
     return null;
 };
 
+// Lightweight placeholder generator (works without static assets)
+export const getPlaceholderUrl = (symbol?: string): string => {
+    const letter = (symbol || '?').trim().charAt(0).toUpperCase() || '?';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#1f2937"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="28" font-weight="700">${letter}</text></svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+// Backward-compatible alias used across older components
+export const getLogoUrlWithFallback = (
+    symbol: string,
+    type: string,
+    exchange?: string,
+    country?: string
+): string | null => {
+    return getLogoUrl(symbol, type, exchange, country);
+};
+
 // Helper to determine which provider a logo URL belongs to
 export const getLogoProvider = (logoUrl: string | null): string | null => {
     if (!logoUrl) return null;

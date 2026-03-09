@@ -1,0 +1,20 @@
+{
+  "id": "PRP-20260309-730",
+  "title": "Review dependency update opportunities with local vulnerability context",
+  "category": "security",
+  "problem": "Detected opportunity in security via local project scan.",
+  "evidence": [
+    "source: local scan @ 2026-03-09T16:35:13.902Z"
+  ],
+  "proposed_change": "Apply one minimal local change set and verify with required checks.",
+  "expected_benefit": "Safer and incremental project quality improvement.",
+  "risk": "medium",
+  "files_expected": [
+    "src/app/admin/page.tsx"
+  ],
+  "tests_required": [
+    "lint",
+    "unit"
+  ],
+  "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+}

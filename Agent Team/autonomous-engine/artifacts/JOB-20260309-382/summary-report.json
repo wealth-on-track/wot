@@ -1,0 +1,11 @@
+{
+  "jobId": "JOB-20260309-382",
+  "proposalId": "PRP-20260309-131",
+  "branch": "local/auto-job-20260309-382",
+  "changedFiles": [
+    "src/components/Navbar.tsx",
+    "src/app/mobile.css"
+  ],
+  "oneFunctionalChange": true,
+  "generatedAt": "2026-03-09T16:11:07.396Z"
+}

@@ -19,7 +19,18 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "prod:build": "npm run type-check && npm run lint && npm run build",
-    "prod:start": "NODE_ENV=production npm start"
+    "prod:start": "NODE_ENV=production npm start",
+    "auto:discover": "node scripts/autonomous-engine/discover.mjs",
+    "auto:plan": "node scripts/autonomous-engine/plan.mjs",
+    "auto:dispatch": "node scripts/autonomous-engine/dispatch.mjs",
+    "auto:build": "node scripts/autonomous-engine/build.mjs",
+    "auto:verify": "node scripts/autonomous-engine/verify.mjs",
+    "auto:guarantee": "node scripts/autonomous-engine/guarantee.mjs",
+    "auto:tick": "node scripts/autonomous-engine/tick.mjs",
+    "auto:loop": "node scripts/autonomous-engine/loop.mjs 300",
+    "auto:approve": "node scripts/autonomous-engine/review-action.mjs approve",
+    "auto:reject": "node scripts/autonomous-engine/review-action.mjs reject",
+    "auto:strict": "node scripts/autonomous-engine/strict-audit.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
