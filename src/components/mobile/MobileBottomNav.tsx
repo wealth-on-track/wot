@@ -1,15 +1,17 @@
 "use client";
 
-import { Home, Layers, PieChart, Eye } from "lucide-react";
+import { Home, Layers, PieChart, Eye, Shield } from "lucide-react";
 
 export type Tab = 'dashboard' | 'positions' | 'allocation' | 'vision';
 
 interface MobileBottomNavProps {
     activeTab: Tab;
     onTabChange: (tab: Tab) => void;
+    showAdmin?: boolean;
+    adminHref?: string;
 }
 
-export function MobileBottomNav({ activeTab, onTabChange }: MobileBottomNavProps) {
+export function MobileBottomNav({ activeTab, onTabChange, showAdmin = false, adminHref = '/admin/autonomous-engine' }: MobileBottomNavProps) {
     const tabs = [
         { id: 'dashboard', label: 'Home', icon: Home },
         { id: 'positions', label: 'Positions', icon: Layers },
@@ -71,6 +73,28 @@ export function MobileBottomNav({ activeTab, onTabChange }: MobileBottomNavProps
                     </button>
                 );
             })}
+
+            {showAdmin && (
+                <button
+                    onClick={() => { window.location.href = adminHref; }}
+                    style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: 'transparent',
+                        border: 'none',
+                        padding: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        color: 'var(--text-muted)'
+                    }}
+                >
+                    <Shield size={22} strokeWidth={2} />
+                    <span style={{ fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.02em' }}>Admin</span>
+                </button>
+            )}
         </nav>
     );
 }
