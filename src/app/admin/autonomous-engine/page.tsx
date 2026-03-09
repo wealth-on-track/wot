@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import Link from 'next/link';
+import { execSync } from 'child_process';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ async function readJson<T>(p: string, fallback: T): Promise<T> {
   }
 }
 
-const FLOW = ['discover', 'proposal', 'approved_for_build', 'build', 'test', 'review_ready'];
+const FLOW = ['discover', 'proposal', 'approved_for_build', 'build', 'test', 'review_ready', 'approved'];
 
 function fmtDate(v?: string) {
   if (!v) return '-';
@@ -112,14 +113,33 @@ export default async function AutonomousEnginePage({
   const jobs = await readJson<any[]>(path.join(BASE, 'jobs.json'), []);
   const history = await readJson<any[]>(path.join(BASE, 'history.json'), []);
   const lessons = await readJson<any[]>(path.join(ROOT, 'knowledge', 'lessons.json'), []);
+  let eventsRaw = '';
+  try {
+    eventsRaw = await fs.readFile(path.join(BASE, 'events.jsonl'), 'utf8');
+  } catch {}
 
   const inbox = jobs.filter((j) => ['discover', 'proposal'].includes(j.state));
   const active = jobs.filter((j) => ['approved_for_build', 'build', 'test'].includes(j.state));
-  const reviewReady = jobs.filter((j) => j.state === 'review_ready');
+  const reviewReady = jobs.filter((j) => ['review_ready', 'approved'].includes(j.state));
 
   const groups: Record<string, any[]> = { inbox, active, review: reviewReady };
   const currentList = groups[selectedSection] || active;
   const selected = currentList.find((j) => j.id === selectedJobId) || currentList[0] || null;
+
+  const parsedEvents = eventsRaw
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((l) => {
+      try { return JSON.parse(l); } catch { return null; }
+    })
+    .filter(Boolean) as any[];
+
+  const selectedTimeline = !selected
+    ? []
+    : parsedEvents
+        .filter((e) => e.jobId === selected.id || e.proposalId === selected.proposalId)
+        .sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
   const selectedLesson = selected ? (lessons.find((l) => String(l?.job_id || '') === selected.id) || null) : null;
 
   let artifactNames: string[] = [];
@@ -146,7 +166,11 @@ export default async function AutonomousEnginePage({
   const progress = selected ? stateProgress(selected.state) : { pct: 0, label: '-' } as any;
 
   const total = inbox.length + active.length + reviewReady.length;
-  const healthScore = total === 0 ? 100 : Math.max(0, Math.round(100 - ((active.filter((j) => stateSlaMin(j.state) && ((Date.now() - new Date(j.timestamps?.updatedAt || j.timestamps?.createdAt).getTime()) / 60000 > (stateSlaMin(j.state) || 0))).length) / Math.max(active.length, 1)) * 35));
+  const nowMs = Date.now();
+  const healthScore = total === 0 ? 100 : Math.max(0, Math.round(100 - ((active.filter((j) => stateSlaMin(j.state) && ((nowMs - new Date(j.timestamps?.updatedAt || j.timestamps?.createdAt).getTime()) / 60000 > (stateSlaMin(j.state) || 0))).length) / Math.max(active.length, 1)) * 35));
+
+  let liveCommit = 'unknown';
+  try { liveCommit = execSync('git rev-parse --short HEAD', { cwd: ROOT, stdio: 'pipe' }).toString().trim(); } catch {}
 
   return (
     <main style={{ padding: 10, display: 'grid', gap: 8, background: '#f1f5f9' }}>
@@ -202,16 +226,22 @@ export default async function AutonomousEnginePage({
                     })}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <form action="/api/autonomous-engine/review" method="post">
-                      <input type="hidden" name="jobId" value={selected.id} />
-                      <input type="hidden" name="action" value="approve" />
-                      <button type="submit" style={{ border: '1px solid #86efac', background: '#ecfdf5', color: '#166534', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Approve</button>
-                    </form>
-                    <form action="/api/autonomous-engine/review" method="post">
-                      <input type="hidden" name="jobId" value={selected.id} />
-                      <input type="hidden" name="action" value="reject" />
-                      <button type="submit" style={{ border: '1px solid #fca5a5', background: '#fef2f2', color: '#991b1b', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Reject</button>
-                    </form>
+                    {selected.state === 'review_ready' ? (
+                      <>
+                        <form action="/api/autonomous-engine/review" method="post">
+                          <input type="hidden" name="jobId" value={selected.id} />
+                          <input type="hidden" name="action" value="approve" />
+                          <button type="submit" style={{ border: '1px solid #86efac', background: '#ecfdf5', color: '#166534', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Approve</button>
+                        </form>
+                        <form action="/api/autonomous-engine/review" method="post">
+                          <input type="hidden" name="jobId" value={selected.id} />
+                          <input type="hidden" name="action" value="reject" />
+                          <button type="submit" style={{ border: '1px solid #fca5a5', background: '#fef2f2', color: '#991b1b', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Reject</button>
+                        </form>
+                      </>
+                    ) : selected.state === 'approved' ? (
+                      <span style={{ border: '1px solid #86efac', background: '#ecfdf5', color: '#166534', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Approved</span>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -250,13 +280,20 @@ export default async function AutonomousEnginePage({
               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc', minHeight: 160 }}>
                 <div style={{ fontWeight: 800, marginBottom: 8 }}>Context Timeline</div>
                 <div style={{ display: 'grid', gap: 6, fontSize: 12 }}>
-                  {(history.slice().reverse().slice(0, 6)).map((h: any) => (
-                    <div key={`${h.id}-${h.timestamps?.updatedAt || h.timestamps?.createdAt}`} style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}>
-                      <div style={{ fontWeight: 700 }}>{h.id}</div>
-                      <div style={{ opacity: 0.8 }}>{h.state} · {fmtDate(h.timestamps?.updatedAt || h.timestamps?.createdAt)}</div>
+                  {selectedTimeline.map((e: any, idx: number) => (
+                    <div key={`${e.ts}-${idx}`} style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}>
+                      <div style={{ fontWeight: 700 }}>{String(e.stage || 'event').toUpperCase()}</div>
+                      <div style={{ opacity: 0.9 }}>{e.message}</div>
+                      <div style={{ opacity: 0.75 }}>{fmtDate(e.ts)}</div>
                     </div>
                   ))}
-                  {history.length === 0 ? <div style={{ opacity: 0.7 }}>No history yet.</div> : null}
+                  {selected && selectedTimeline.length === 0 ? (
+                    <>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}><div style={{ fontWeight: 700 }}>DISCOVER</div><div style={{ opacity: 0.75 }}>{fmtDate(selected.timestamps?.createdAt)}</div></div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}><div style={{ fontWeight: 700 }}>PROPOSAL</div><div style={{ opacity: 0.75 }}>{fmtDate(selected.timestamps?.createdAt)}</div></div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '6px 8px' }}><div style={{ fontWeight: 700 }}>{String(selected.state).toUpperCase()}</div><div style={{ opacity: 0.75 }}>{fmtDate(selected.timestamps?.updatedAt)}</div></div>
+                    </>
+                  ) : null}
                 </div>
               </div>
 
@@ -313,6 +350,8 @@ export default async function AutonomousEnginePage({
             <div style={{ marginTop: 8, fontSize: 13 }}>Queue total: <strong>{total}</strong></div>
             <div style={{ marginTop: 4, fontSize: 13 }}>History: <strong>{history.length}</strong></div>
             <div style={{ marginTop: 4, fontSize: 13 }}>Selected stale: <strong style={{ color: stale ? '#ef4444' : '#10b981' }}>{selected ? (stale ? 'YES' : 'NO') : '-'}</strong></div>
+            <div style={{ marginTop: 8, fontSize: 12, color: '#334155' }}>GitHub: commitleniyor / push denemesi yapılıyor</div>
+            <div style={{ marginTop: 2, fontSize: 12, color: '#0f172a' }}>Live commit: <strong>{liveCommit}</strong></div>
           </details>
         </aside>
       </section>

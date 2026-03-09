@@ -1,0 +1,2 @@
+{"ts":"2026-03-09T20:08:07.529Z","jobId":"JOB-20260309-194114457-002","proposalId":"PRP-PILOT-20260309-003","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-09T20:08:07.578Z","jobId":"JOB-20260309-194114457-002","proposalId":"PRP-PILOT-20260309-003","stage":"build","message":"Builder started implementation","meta":{}}

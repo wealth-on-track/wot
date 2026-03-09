@@ -11,12 +11,13 @@ const FILES = {
   history: path.join(BASE, 'history.json'),
   lessons: path.join(ROOT, 'knowledge', 'lessons.json'),
   deepScanState: path.join(BASE, 'deep-scan-state.json'),
+  events: path.join(BASE, 'events.jsonl'),
 };
 
 export const CATEGORIES = ['ux', 'performance', 'security', 'branding', 'product', 'operations', 'benchmark', 'patch'];
 export const FINAL_STATES = ['review_ready', 'reverted', 'abandoned_with_reason'];
 export const AGENTS = ['scout', 'planner', 'builder', 'verifier'];
-export const WORKFLOW = ['discover', 'proposal', 'approved_for_build', 'build', 'test', 'review_ready', 'reverted', 'abandoned_with_reason'];
+export const WORKFLOW = ['discover', 'proposal', 'approved_for_build', 'build', 'test', 'review_ready', 'approved', 'reverted', 'abandoned_with_reason'];
 
 async function ensureFile(filePath, fallback) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
@@ -30,6 +31,7 @@ export async function ensureEngineFiles() {
   await ensureFile(FILES.lessons, []);
   await ensureFile(FILES.deepScanState, { lastDeepScanAt: null });
   await fs.mkdir(ARTIFACTS, { recursive: true });
+  try { await fs.access(FILES.events); } catch { await fs.writeFile(FILES.events, '', 'utf8'); }
 }
 
 export async function readJson(filePath) { return JSON.parse(await fs.readFile(filePath, 'utf8')); }
@@ -70,7 +72,8 @@ export function canTransition(from, to) {
     approved_for_build: ['build', 'abandoned_with_reason'],
     build: ['test', 'approved_for_build', 'abandoned_with_reason'],
     test: ['review_ready', 'build', 'abandoned_with_reason'],
-    review_ready: ['reverted'],
+    review_ready: ['approved', 'reverted'],
+    approved: [],
     reverted: [],
     abandoned_with_reason: [],
   };
@@ -134,4 +137,16 @@ export async function writeArtifact(jobId, name, content) {
   const fp = path.join(dir, name);
   await fs.writeFile(fp, typeof content === 'string' ? content : JSON.stringify(content, null, 2), 'utf8');
   return fp;
+}
+
+export async function appendEvent({ jobId, proposalId = null, stage, message, meta = {} }) {
+  const row = {
+    ts: nowIso(),
+    jobId,
+    proposalId,
+    stage,
+    message,
+    meta,
+  };
+  await fs.appendFile(FILES.events, `${JSON.stringify(row)}\n`, 'utf8');
 }

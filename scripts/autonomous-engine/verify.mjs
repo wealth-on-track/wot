@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent } from './lib.mjs';
 import { execSync } from 'child_process';
 
 await ensureEngineFiles();
@@ -52,12 +52,14 @@ await writeArtifact(job.id, 'verification-results.json', results);
 
 if (allPass) {
   job.state = 'review_ready';
+  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'review_ready', message: 'Verifier passed all required checks; ready for review' });
 } else {
   job.retries.testing += 1;
   if (job.retries.testing >= 3) {
     job.state = 'abandoned_with_reason';
     job.finalReason = 'verification_failed_after_3_retries';
     await writeArtifact(job.id, 'failure-analysis.txt', 'verification failed repeatedly; scope should be reduced/split');
+    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'abandoned_with_reason', message: 'Verification failed after retries; job abandoned with reason' });
   } else {
     job.state = 'build';
     job.ownerAgent = 'builder';

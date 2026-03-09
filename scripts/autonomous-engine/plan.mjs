@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, makeId, normalize, validateProposal, writeArtifact, proposalSimilarity, WIP_LIMITS } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, makeId, normalize, validateProposal, writeArtifact, proposalSimilarity, WIP_LIMITS, appendEvent } from './lib.mjs';
 
 await ensureEngineFiles();
 const proposals = await readJson(files.proposals);
@@ -69,6 +69,7 @@ for (const raw of proposals) {
     jobs.push(job);
     await writeArtifact(job.id, 'proposal.json', p);
     await writeArtifact(job.id, 'dispatch-decision.txt', 'Planner created job from validated proposal and queued for approved_for_build dispatch.');
+    await appendEvent({ jobId: job.id, proposalId: p.id, stage: 'proposal', message: `Planner created ${job.id} from ${p.id}` });
     created += 1;
   }
 }

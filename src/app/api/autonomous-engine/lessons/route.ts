@@ -17,7 +17,14 @@ export async function POST(req: NextRequest) {
   await fs.mkdir(path.dirname(fp), { recursive: true });
   let arr: any[] = [];
   try { arr = JSON.parse(await fs.readFile(fp, 'utf8')); } catch {}
-  arr.push(item);
+
+  const idx = arr.findIndex((x) => String(x?.job_id || '') === item.job_id);
+  if (idx >= 0) {
+    arr[idx] = { ...arr[idx], ...item, updated_at: new Date().toISOString() };
+  } else {
+    arr.push(item);
+  }
+
   await fs.writeFile(fp, JSON.stringify(arr, null, 2), 'utf8');
 
   return NextResponse.redirect(new URL('/admin/autonomous-engine', process.env.NEXTAUTH_URL || 'http://localhost:3005'));

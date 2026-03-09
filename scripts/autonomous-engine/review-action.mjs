@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, appendEvent } from './lib.mjs';
 import { execSync } from 'child_process';
 
 const action = process.argv[2];
@@ -53,17 +53,19 @@ if (action === 'approve') {
   await writeArtifact(job.id, 'deploy-ready.json', deployPack);
   await writeArtifact(job.id, 'deploy-instructions.txt', 'Human-approved. One-click build + push-to-main flow executed.');
 
-  job.state = pushStatus === 'pass' ? 'approved' : 'abandoned_with_reason';
+  job.state = 'approved';
   if (pushStatus !== 'pass') job.finalReason = 'push_failed_after_human_approval';
+  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: pushStatus === 'pass' ? 'approved' : 'approval_failed', message: `Approve clicked: build=${deployStatus}, push=${pushStatus}` });
   console.log(`[review] approved ${jobId}; deploy=${deployStatus}; push=${pushStatus}`);
 } else {
   try { execSync('git reset --hard', { stdio: 'ignore' }); } catch {}
   job.state = 'reverted';
   job.finalReason = 'rejected_by_human';
   await writeArtifact(job.id, 'revert-note.txt', 'Human rejected. Local revert executed via git reset --hard.');
+  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'reverted', message: 'Reject clicked: local revert applied' });
   console.log(`[review] rejected ${jobId}; local revert applied`);
 }
 
 history.push({ ...job });
-await writeJson(files.jobs, jobs.filter((j) => j.id !== jobId));
+await writeJson(files.jobs, jobs);
 await writeJson(files.history, history);

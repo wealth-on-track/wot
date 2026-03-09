@@ -181,24 +181,20 @@ export async function Navbar({ totalBalance, username, isOwner, showPortfolioBut
                         gap: '0.75rem',
                         marginLeft: '1rem'
                     }}>
-                        {/* Admin Button: Visible to everyone in Local Dev, restricted in Prod */}
-                        {session?.user?.email && (
-                            process.env.NODE_ENV === 'development' ||
-                            session.user.email === 'test1@example.com' ||
-                            session.user.email === 'dev1@example.com'
-                        ) && (
-                                <Link
-                                    href="/admin/autonomous-engine"
-                                    className="navbar-btn"
-                                    style={{
-                                        textDecoration: 'none',
-                                        marginRight: '1rem' // 3x spacing (0.5rem * 2 = 1rem extra)
-                                    }}
-                                    title="Admin Panel"
-                                >
-                                    <ShieldCheck size={20} />
-                                </Link>
-                            )}
+                        {/* Admin Button: user1@wot.money */}
+                        {session?.user?.email?.toLowerCase() === 'user1@wot.money' && (
+                            <Link
+                                href="/admin/autonomous-engine"
+                                className="navbar-btn"
+                                style={{
+                                    textDecoration: 'none',
+                                    marginRight: '1rem'
+                                }}
+                                title="Admin Panel"
+                            >
+                                <ShieldCheck size={20} />
+                            </Link>
+                        )}
 
                         {/* Global Toggles (Always Visible) */}
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent } from './lib.mjs';
 import { execSync } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -33,6 +33,7 @@ if (!proposal) {
 job.state = 'build';
 job.ownerAgent = 'builder';
 job.timestamps.updatedAt = nowIso();
+await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'build', message: 'Builder started implementation' });
 
 const branch = `local/auto-${job.id.toLowerCase()}`;
 try {
@@ -141,6 +142,7 @@ job.summary = `${proposal.proposed_change} (local build applied)`;
 job.state = 'test';
 job.ownerAgent = 'verifier';
 job.timestamps.updatedAt = nowIso();
+await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'test', message: `Build completed; moved to test with ${changedFiles.length} file(s)` });
 
 await writeJson(files.jobs, jobs);
 console.log(`[build] ${job.id} -> test (${changedFiles.length} files)`);

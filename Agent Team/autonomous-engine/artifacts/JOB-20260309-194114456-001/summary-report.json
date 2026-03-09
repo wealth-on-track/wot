@@ -1,0 +1,10 @@
+{
+  "jobId": "JOB-20260309-194114456-001",
+  "proposalId": "PRP-PILOT-20260309-002",
+  "branch": "local/auto-job-20260309-194114456-001",
+  "changedFiles": [
+    "src/components/AdminSidebar.tsx"
+  ],
+  "oneFunctionalChange": true,
+  "generatedAt": "2026-03-09T19:41:14.603Z"
+}

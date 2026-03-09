@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, WIP_LIMITS } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, WIP_LIMITS, appendEvent } from './lib.mjs';
 
 await ensureEngineFiles();
 const jobs = await readJson(files.jobs);
@@ -28,6 +28,7 @@ if (next) {
   next.ownerAgent = 'planner';
   next.timestamps.updatedAt = nowIso();
   await writeArtifact(next.id, 'dispatch-decision.txt', `Orchestrator dispatch: proposal moved to approved_for_build with priority=${next.priority || 'P2'}.`);
+  await appendEvent({ jobId: next.id, proposalId: next.proposalId, stage: 'approved_for_build', message: `Dispatched to approved_for_build (priority=${next.priority || 'P2'})` });
   console.log(`[dispatch] promoted ${next.id} to approved_for_build`);
 } else {
   console.log('[dispatch] no proposal to activate');
