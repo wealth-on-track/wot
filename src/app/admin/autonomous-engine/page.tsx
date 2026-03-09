@@ -87,7 +87,8 @@ export default async function AutonomousEnginePage({
   const sp = (await searchParams) || {};
   const selectedSection = String(sp.section || 'active');
   const selectedJobId = String(sp.job || '');
-  const showList = String(sp.list || '0') === '1';
+  // New behavior: left list is closed by default; legacy ?list=1 is ignored.
+  const showList = String(sp.panel || '0') === '1';
   const savedJobId = String(sp.savedJob || '');
 
   const jobs = await readJson<any[]>(path.join(BASE, 'jobs.json'), []);
@@ -170,7 +171,7 @@ export default async function AutonomousEnginePage({
         boxShadow: '0 3px 10px rgba(15,23,42,0.06)',
       }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', alignItems: 'center' }}>
-          <Link href={`/admin/autonomous-engine?section=${selectedSection}&list=${showList ? '0' : '1'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 900, color: '#1d4ed8' }}>
+          <Link href={`/admin/autonomous-engine?section=${selectedSection}&panel=${showList ? '0' : '1'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 900, color: '#1d4ed8' }}>
             {showList ? '🗂️ Listeyi Gizle' : '🗂️ Listeyi Aç'}
           </Link>
           <Link href="/admin/autonomous-engine?section=inbox" className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: selectedSection === 'inbox' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
@@ -201,7 +202,7 @@ export default async function AutonomousEnginePage({
               {currentList.length === 0 ? <div style={{ opacity: 0.65 }}>No items.</div> : currentList.map((j) => (
                 <Link
                   key={j.id}
-                  href={`/admin/autonomous-engine?section=${selectedSection}&list=1&job=${encodeURIComponent(j.id)}`}
+                  href={`/admin/autonomous-engine?section=${selectedSection}&panel=1&job=${encodeURIComponent(j.id)}`}
                   style={{
                     display: 'block',
                     border: selected?.id === j.id ? '1px solid #3b82f6' : '1px solid #dbe3f0',
