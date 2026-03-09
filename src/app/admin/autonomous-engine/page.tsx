@@ -246,17 +246,9 @@ export default async function AutonomousEnginePage({
                 </div>
               </div>
 
-              <div style={{ border: '1px solid #d7e0ee', borderRadius: 10, padding: 10, background: '#f8fafc', display: 'grid', gap: 6 }}>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <div style={{ border: '1px solid #93c5fd', background: '#eff6ff', color: '#1d4ed8', borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 800 }}>{compactJobId(selected.id)}</div>
-                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 700 }}>{selected.title}</div>
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 12 }}>Category: <strong style={{ textTransform: 'capitalize' }}>{selected.category}</strong></div>
-                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 12 }}>Risk: <strong style={{ textTransform: 'capitalize' }}>{selected.risk}</strong></div>
-                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 12 }}>Progress: <strong>{progress.label}</strong></div>
-                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 12 }}>Updated: <strong>{ageMin}M</strong></div>
-                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 12 }}>SLA: <strong>{sla ? `${sla}M` : '-'}</strong></div>
+              <div style={{ border: '1px solid #d7e0ee', borderRadius: 10, padding: 10, background: '#f8fafc' }}>
+                <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '8px 10px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', overflowX: 'auto' }}>
+                  {selected.title} &nbsp; | &nbsp; Category: <strong style={{ textTransform: 'capitalize' }}>{selected.category}</strong> &nbsp; | &nbsp; Risk: <strong style={{ textTransform: 'capitalize' }}>{selected.risk}</strong> &nbsp; | &nbsp; Progress: <strong>{progress.label}</strong> &nbsp; | &nbsp; Updated: <strong>{ageMin}M</strong> &nbsp; | &nbsp; SLA: <strong>{sla ? `${sla}M` : '-'}</strong>
                 </div>
               </div>
 
