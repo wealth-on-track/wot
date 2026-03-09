@@ -8,7 +8,10 @@ const proposals = await readJson(files.proposals);
 const deepState = await readJson(files.deepScanState);
 
 const { liked, disliked, byCategory } = parseLessons(lessons);
+const neverDoAgain = String((lessons || []).map((l) => `${l?.disliked || ''} ${l?.notes || ''}`).join(' ')).toLowerCase();
 const scanHints = [];
+const USER_FACING_KEYS = ['portfolio', 'dashboard', 'onboarding', 'insight', 'clarity', 'trust', 'branding', 'mobile', 'performance'];
+const LOW_VALUE_PATTERNS = [/tiny/i, /small hint/i, /badge/i, /minor/i, /cosmetic/i, /text tweak/i, /helper sentence/i, /admin ui/i];
 
 try {
   const out = execSync('npm audit --json', { stdio: 'pipe', timeout: 20000 }).toString();
@@ -29,14 +32,14 @@ try {
   scanHints.push({ category: 'patch', title: 'Fix failing unit/integration test path discovered in local test run', evidence: ['unit test command failed in local scan'] });
 }
 
-scanHints.push({ category: 'ux', title: 'Add empty state CTA when portfolio has no assets', evidence: ['actionable ux flow gap detected'] });
+scanHints.push({ category: 'ux', title: 'Improve empty portfolio onboarding with clearer next actions', evidence: ['observed UX friction: users with zero assets lack guided next step'] });
 try {
   const bench = execSync('node scripts/autonomous-engine/check-performance.mjs', { stdio: 'pipe', timeout: 120000 }).toString();
   scanHints.push({ category: 'benchmark', title: 'Compare critical portfolio flows against benchmark scripts and align best practices', evidence: [`benchmark_result: ${bench.trim()}`] });
 } catch {
   scanHints.push({ category: 'benchmark', title: 'Compare critical portfolio flows against benchmark scripts and align best practices', evidence: ['benchmark_result: fail'] });
 }
-scanHints.push({ category: 'performance', title: 'Reduce initial bundle execution in dashboard route with lazy chunking', evidence: ['performance category periodic proposal seed'] });
+scanHints.push({ category: 'performance', title: 'Reduce portfolio dashboard load latency via route-level lazy chunking', evidence: ['performance measurement needed: dashboard load path is a frequent user-facing surface'] });
 
 // weekly deep scan
 const lastDeep = deepState?.lastDeepScanAt ? new Date(deepState.lastDeepScanAt).getTime() : 0;
@@ -66,13 +69,24 @@ const candidates = scanHints
   .sort((a, b) => b.score - a.score);
 
 let created = 0;
+let createdUserFacing = 0;
 
 for (const c of candidates) {
   const n = normalize(c.title);
   if (disliked && n.split(' ').some((w) => w.length > 4 && disliked.includes(w))) continue;
+  if (LOW_VALUE_PATTERNS.some((r) => r.test(c.title))) continue;
+  if (neverDoAgain.includes('never_do_again') && neverDoAgain.split('never_do_again').pop()?.includes(n.slice(0, 20))) continue;
+
+  const userFacing = USER_FACING_KEYS.some((k) => n.includes(k));
+  const impactScore = c.category === 'security' ? 4 : userFacing ? 4 : 3;
+  const confidenceScore = c.evidence?.length ? 4 : 2;
+  const effortScore = c.category === 'benchmark' ? 3 : 2;
+
+  // quality gate
+  if (impactScore < 3 || confidenceScore < 3) continue;
 
   const risk = c.category === 'security' ? 'high' : c.category === 'performance' ? 'medium' : 'low';
-  const impact = c.forceImpact || (c.category === 'product' || c.category === 'performance' ? 'high' : 'medium');
+  const impact = c.forceImpact || (impactScore >= 4 ? 'high' : 'medium');
   const priority = c.forcePriority || (risk === 'high' || impact === 'high' ? 'P1' : 'P2');
 
   const proposal = {
@@ -81,12 +95,16 @@ for (const c of candidates) {
     category: c.category,
     problem: `Detected actionable ${c.category} issue via local scout scan.`,
     evidence: c.evidence?.length ? c.evidence : [`source: local scout scan @ ${nowIso()}`],
-    proposed_change: 'Apply one minimal local change set and verify with required checks.',
-    expected_benefit: 'Safer and incremental project quality improvement.',
+    proposed_change: 'Apply one meaningful local change set and verify with required checks.',
+    expected_benefit: 'Meaningful user/system quality improvement.',
     risk,
     impact,
     priority,
-    files_expected: c.category === 'ux' ? ['src/app/admin/autonomous-engine/page.tsx'] : ['src/lib/autonomousEngine.ts'],
+    impactScore,
+    confidenceScore,
+    effortScore,
+    userFacing,
+    files_expected: c.category === 'ux' ? ['src/app/[username]/portfolio_public/page.tsx'] : c.category === 'performance' ? ['src/components/PublicPortfolioView.tsx'] : ['src/services/marketData.ts'],
     tests_required: ['lint', 'unit'],
     rollback_plan: 'Revert local branch to previous commit and remove generated job artifacts.',
   };
@@ -100,8 +118,14 @@ for (const c of candidates) {
     continue;
   }
 
+  const projectedTotal = created + 1;
+  const projectedUser = createdUserFacing + (proposal.userFacing ? 1 : 0);
+  const projectedRatio = projectedUser / projectedTotal;
+  if (!proposal.userFacing && projectedRatio < 0.7) continue;
+
   proposals.push(proposal);
   created += 1;
+  if (proposal.userFacing) createdUserFacing += 1;
 }
 
 await writeJson(files.proposals, proposals);

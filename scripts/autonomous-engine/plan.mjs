@@ -25,6 +25,8 @@ function splitProposal(p) {
 for (const raw of proposals) {
   const v = validateProposal(raw);
   if (!v.ok) continue;
+  if (Number(raw.impactScore || 0) < 3) continue;
+  if (Number(raw.confidenceScore || 0) < 3) continue;
 
   const parts = splitProposal(raw);
   for (const p of parts) {
@@ -55,6 +57,10 @@ for (const raw of proposals) {
       risk: p.risk,
       impact: p.impact,
       priority: p.priority,
+      impactScore: p.impactScore,
+      confidenceScore: p.confidenceScore,
+      effortScore: p.effortScore,
+      userFacing: !!p.userFacing,
       summary: p.proposed_change,
       proposalId: p.id,
       changedFiles: [],
