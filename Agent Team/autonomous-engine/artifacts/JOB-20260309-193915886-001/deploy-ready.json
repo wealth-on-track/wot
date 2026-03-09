@@ -1,0 +1,11 @@
+{
+  "jobId": "JOB-20260309-193915886-001",
+  "title": "Add tiny monitor hint badge in Admin Sidebar for Agent Team visibility",
+  "changedFiles": [
+    "src/components/AdminSidebar.tsx"
+  ],
+  "testResults": "pass",
+  "deployStatus": "fail",
+  "instructions": "Human-approved local deploy executed after approval gate.",
+  "generatedAt": "2026-03-09T19:39:35.131Z"
+}

@@ -1,0 +1,5 @@
+Command failed: npm run -s build
+Error: P3005
+
+The database schema is not empty. Read more about how to baseline an existing production database: https://pris.ly/d/migrate-baseline
+

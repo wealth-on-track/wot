@@ -1,0 +1,1 @@
+feat(local-auto): Add tiny monitor hint badge in Admin Sidebar for Agent Team visibility
