@@ -417,18 +417,32 @@ export default async function AutonomousEnginePage({
         @media (max-width: 960px) {
           .ae-layout-grid {
             grid-template-columns: 1fr !important;
+            gap: 6px !important;
           }
           .ae-left-panel,
           .ae-right-panel,
           .ae-center-panel {
             max-height: none !important;
+            padding: 8px !important;
           }
           .ae-left-panel { order: 1; }
           .ae-center-panel { order: 2; }
           .ae-right-panel { order: 3; }
+          .ae-center-panel .card,
+          .ae-right-panel .card,
+          .ae-left-panel .card {
+            padding: 8px !important;
+            border-radius: 9px !important;
+          }
+          .ae-center-panel details summary,
+          .ae-right-panel details summary {
+            font-size: 11px !important;
+          }
           .ae-timeline-head,
           .ae-timeline-row {
-            grid-template-columns: 130px 130px 1fr !important;
+            grid-template-columns: 112px 116px 1fr !important;
+            gap: 6px !important;
+            font-size: 11px !important;
           }
           .ae-timeline-head > :last-child,
           .ae-timeline-row > :last-child {
