@@ -60,9 +60,13 @@ function stateIcon(state: string) {
   return '📌';
 }
 
-function StepPill({ step }: { step: string; active: boolean; done: boolean }) {
+function StepPill({ step, active, done }: { step: string; active: boolean; done: boolean }) {
+  const bg = done ? '#ecfdf5' : active ? '#eff6ff' : '#f8fafc';
+  const border = done ? '1px solid #86efac' : active ? '1px solid #93c5fd' : '1px solid #dbe3ef';
+  const color = done ? '#047857' : active ? '#1d4ed8' : '#64748b';
+
   return (
-    <div style={{ border: '1px solid #d7e0ee', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+    <div style={{ border, background: bg, color, borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)' }}>
       {step.replaceAll('_', ' ')}
     </div>
   );
@@ -188,20 +192,6 @@ export default async function AutonomousEnginePage({
         <section className="card" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#ffffff', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
           {!selected ? <div>No item selected.</div> : (
             <>
-              <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#fff' }}>
-                <div style={{ fontWeight: 800, marginBottom: 6 }}>Lessons Learned (before Approve/Reject)</div>
-                <form action="/api/autonomous-engine/lessons" method="post" style={{ display: 'grid', gap: 6 }}>
-                  <input type="hidden" name="job_id" value={selected.id} />
-                  <input type="hidden" name="category" value={selected.category || ''} />
-                  <input name="liked" placeholder="Liked" style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
-                  <input name="disliked" placeholder="Disliked" style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
-                  <textarea name="notes" placeholder="Notes" rows={2} style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
-                  <div>
-                    <button type="submit" style={{ border: '1px solid #93c5fd', background: '#eff6ff', color: '#1e3a8a', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Save Lesson</button>
-                  </div>
-                </form>
-              </div>
-
               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -214,23 +204,28 @@ export default async function AutonomousEnginePage({
                     <form action="/api/autonomous-engine/review" method="post">
                       <input type="hidden" name="jobId" value={selected.id} />
                       <input type="hidden" name="action" value="approve" />
-                      <button type="submit" style={{ border: '1px solid #d7e0ee', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Approve</button>
+                      <button type="submit" style={{ border: '1px solid #86efac', background: '#ecfdf5', color: '#166534', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Approve</button>
                     </form>
                     <form action="/api/autonomous-engine/review" method="post">
                       <input type="hidden" name="jobId" value={selected.id} />
                       <input type="hidden" name="action" value="reject" />
-                      <button type="submit" style={{ border: '1px solid #d7e0ee', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Reject</button>
+                      <button type="submit" style={{ border: '1px solid #fca5a5', background: '#fef2f2', color: '#991b1b', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Reject</button>
                     </form>
                   </div>
                 </div>
               </div>
 
               <div style={{ border: '1px solid #d7e0ee', borderRadius: 10, padding: 10, background: '#f8fafc', display: 'grid', gap: 6 }}>
-                <div style={{ border: '1px solid #d7e0ee', borderRadius: 8, padding: '8px 10px', background: '#fff', color: '#0f172a', fontSize: 13, whiteSpace: 'nowrap', overflowX: 'auto' }}>
-                  <strong>{compactJobId(selected.id)}</strong> &nbsp; | &nbsp; <strong>{selected.title}</strong>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ border: '1px solid #93c5fd', background: '#eff6ff', color: '#1d4ed8', borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 800 }}>{compactJobId(selected.id)}</div>
+                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 700 }}>{selected.title}</div>
                 </div>
-                <div style={{ border: '1px solid #d7e0ee', borderRadius: 8, padding: '8px 10px', background: '#fff', color: '#0f172a', fontSize: 13, whiteSpace: 'nowrap', overflowX: 'auto' }}>
-                  Category: <strong style={{ textTransform: 'capitalize' }}>{selected.category}</strong> &nbsp; | &nbsp; Risk: <strong style={{ textTransform: 'capitalize' }}>{selected.risk}</strong> &nbsp; | &nbsp; Progress: <strong>{progress.label}</strong> &nbsp; | &nbsp; Updated: <strong>{ageMin}M</strong> &nbsp; | &nbsp; SLA: <strong>{sla ? `${sla}M` : '-'}</strong>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 12 }}>Category: <strong style={{ textTransform: 'capitalize' }}>{selected.category}</strong></div>
+                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 12 }}>Risk: <strong style={{ textTransform: 'capitalize' }}>{selected.risk}</strong></div>
+                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 12 }}>Progress: <strong>{progress.label}</strong></div>
+                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 12 }}>Updated: <strong>{ageMin}M</strong></div>
+                  <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '6px 10px', fontSize: 12 }}>SLA: <strong>{sla ? `${sla}M` : '-'}</strong></div>
                 </div>
               </div>
 
@@ -267,10 +262,19 @@ export default async function AutonomousEnginePage({
 
         <aside className="card" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
           <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#ffffff' }} open>
-            <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.9, fontWeight: 800 }}>📡 Monitoring</summary>
-            <div style={{ marginTop: 8, fontSize: 13 }}>Queue total: <strong>{total}</strong></div>
-            <div style={{ marginTop: 4, fontSize: 13 }}>History: <strong>{history.length}</strong></div>
-            <div style={{ marginTop: 4, fontSize: 13 }}>Selected stale: <strong style={{ color: stale ? '#ef4444' : '#10b981' }}>{selected ? (stale ? 'YES' : 'NO') : '-'}</strong></div>
+            <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.9, fontWeight: 800 }}>📝 Lessons Learned (before Approve/Reject)</summary>
+            {!selected ? <div style={{ marginTop: 8, opacity: 0.7 }}>Select a job first.</div> : (
+              <form action="/api/autonomous-engine/lessons" method="post" style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+                <input type="hidden" name="job_id" value={selected.id} />
+                <input type="hidden" name="category" value={selected.category || ''} />
+                <input name="liked" placeholder="Liked" style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
+                <input name="disliked" placeholder="Disliked" style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
+                <textarea name="notes" placeholder="Notes" rows={2} style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
+                <div>
+                  <button type="submit" style={{ border: '1px solid #93c5fd', background: '#eff6ff', color: '#1e3a8a', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Save Lesson</button>
+                </div>
+              </form>
+            )}
           </details>
 
           <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#ffffff' }}>
@@ -297,6 +301,13 @@ export default async function AutonomousEnginePage({
                 ))}
               </div>
             )}
+          </details>
+
+          <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#ffffff' }}>
+            <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.9, fontWeight: 800 }}>📡 Monitoring</summary>
+            <div style={{ marginTop: 8, fontSize: 13 }}>Queue total: <strong>{total}</strong></div>
+            <div style={{ marginTop: 4, fontSize: 13 }}>History: <strong>{history.length}</strong></div>
+            <div style={{ marginTop: 4, fontSize: 13 }}>Selected stale: <strong style={{ color: stale ? '#ef4444' : '#10b981' }}>{selected ? (stale ? 'YES' : 'NO') : '-'}</strong></div>
           </details>
         </aside>
       </section>
