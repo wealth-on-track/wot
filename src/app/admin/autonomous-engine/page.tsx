@@ -289,16 +289,25 @@ export default async function AutonomousEnginePage({
               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc', minHeight: 160 }}>
                 <div style={{ fontWeight: 800, marginBottom: 8 }}>Context Timeline</div>
                 <div style={{ display: 'grid', gap: 6, fontSize: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8, padding: '0 4px', fontSize: 11, fontWeight: 800, opacity: 0.75, textTransform: 'uppercase' }}>
+                    <div>Stage</div>
+                    <div>Time</div>
+                    <div>Comment</div>
+                  </div>
                   {selectedTimeline.map((e: any, idx: number) => (
-                    <div key={`${e.ts}-${idx}`} style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px', fontSize: 12, whiteSpace: 'nowrap', overflowX: 'auto' }}>
-                      <strong>{String(e.stage || 'event').toUpperCase()}</strong> ({fmtDate(e.ts)}) ({e.message})
+                    <div key={`${e.ts}-${idx}`} style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8, alignItems: 'start' }}>
+                        <div style={{ fontWeight: 700 }}>{String(e.stage || 'event').toUpperCase()}</div>
+                        <div style={{ whiteSpace: 'nowrap' }}>{fmtDate(e.ts)}</div>
+                        <div>{e.message}</div>
+                      </div>
                     </div>
                   ))}
                   {selected && selectedTimeline.length === 0 ? (
                     <>
-                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px', fontSize: 12, whiteSpace: 'nowrap', overflowX: 'auto' }}><strong>DISCOVER</strong> ({fmtDate(selected.timestamps?.createdAt)}) (Opportunity detected from local scout scan)</div>
-                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px', fontSize: 12, whiteSpace: 'nowrap', overflowX: 'auto' }}><strong>PROPOSAL</strong> ({fmtDate(selected.timestamps?.createdAt)}) (Proposal structured and queued for dispatch)</div>
-                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px', fontSize: 12, whiteSpace: 'nowrap', overflowX: 'auto' }}><strong>{String(selected.state).toUpperCase()}</strong> ({fmtDate(selected.timestamps?.updatedAt)}) (Current workflow status)</div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8 }}><div style={{ fontWeight: 700 }}>DISCOVER</div><div>{fmtDate(selected.timestamps?.createdAt)}</div><div>Opportunity detected from local scout scan</div></div></div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8 }}><div style={{ fontWeight: 700 }}>PROPOSAL</div><div>{fmtDate(selected.timestamps?.createdAt)}</div><div>Proposal structured and queued for dispatch</div></div></div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', padding: '7px 10px' }}><div style={{ display: 'grid', gridTemplateColumns: '220px 170px 1fr', gap: 8 }}><div style={{ fontWeight: 700 }}>{String(selected.state).toUpperCase()}</div><div>{fmtDate(selected.timestamps?.updatedAt)}</div><div>Current workflow status</div></div></div>
                     </>
                   ) : null}
                 </div>
