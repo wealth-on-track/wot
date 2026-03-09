@@ -174,7 +174,7 @@ export default async function AutonomousEnginePage({
         </div>
       </header>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '220px 1fr 300px', gap: 8, minHeight: 'calc(100vh - 180px)' }}>
+      <section style={{ display: 'grid', gridTemplateColumns: '220px 1fr 300px', gap: 8 }}>
         <aside className="card" style={{ padding: 10, overflow: 'auto', border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
           <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.8, marginBottom: 8 }}>UNIQUE IDs</div>
           <div style={{ display: 'grid', gap: 8 }}>
@@ -187,6 +187,16 @@ export default async function AutonomousEnginePage({
         <section className="card" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#ffffff', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
           {!selected ? <div>No item selected.</div> : (
             <>
+              <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
+                <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 8, fontWeight: 700 }}>FLOW</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {FLOW.map((s, idx) => {
+                    const current = FLOW.indexOf(selected.state);
+                    return <StepPill key={s} step={s} active={idx === current} done={idx < current} />;
+                  })}
+                </div>
+              </div>
+
               <div style={{ border: '1px solid #d7e0ee', borderRadius: 10, padding: 10, background: '#f8fafc', display: 'grid', gap: 8 }}>
                 <div style={{ fontSize: 12, opacity: 0.8 }}>Job ID: {selected.id} · Proposal: {selected.proposalId || '-'}</div>
                 <h2 style={{ margin: 0, fontSize: 20, lineHeight: 1.25 }}>{selected.title}</h2>
@@ -214,16 +224,6 @@ export default async function AutonomousEnginePage({
                     <div style={{ fontSize: 14, fontWeight: 800, color: stale ? '#dc2626' : '#0f172a' }}>{sla ? `${sla}m` : '-'}</div>
                     <div style={{ fontSize: 11, color: stale ? '#dc2626' : '#64748b' }}>{stale ? 'STALE' : 'ON TRACK'}</div>
                   </div>
-                </div>
-              </div>
-
-              <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
-                <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 8, fontWeight: 700 }}>FLOW</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {FLOW.map((s, idx) => {
-                    const current = FLOW.indexOf(selected.state);
-                    return <StepPill key={s} step={s} active={idx === current} done={idx < current} />;
-                  })}
                 </div>
               </div>
 
