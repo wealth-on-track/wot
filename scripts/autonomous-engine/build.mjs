@@ -51,7 +51,7 @@ const recentlyTouched = new Set(
 
 const changedFiles = [];
 for (const rel of (proposal.files_expected || []).slice(0, 5)) {
-  if (recentlyTouched.has(rel)) continue;
+  if (proposal.priority !== 'P1' && recentlyTouched.has(rel)) continue;
   const full = path.join(process.cwd(), rel);
   try {
     await fs.access(full);

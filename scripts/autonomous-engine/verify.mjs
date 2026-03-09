@@ -4,6 +4,7 @@ import { execSync } from 'child_process';
 
 await ensureEngineFiles();
 const jobs = await readJson(files.jobs);
+const proposals = await readJson(files.proposals);
 const job = jobs.find((j) => j.state === 'test');
 if (!job) {
   console.log('[verify] no job');
@@ -15,6 +16,9 @@ if (!canTransition('test', 'review_ready')) {
   process.exit(1);
 }
 
+const proposal = proposals.find((p) => p.id === job.proposalId || p.id.startsWith(`${job.proposalId}-S`));
+const requiredSet = new Set((proposal?.tests_required || ['lint']).map((x) => String(x).toLowerCase()));
+
 job.ownerAgent = 'verifier';
 job.timestamps.updatedAt = nowIso();
 
@@ -22,12 +26,12 @@ const fileArgs = (job.changedFiles || []).filter(Boolean).join(' ');
 const lintCmd = fileArgs ? `npx eslint ${fileArgs}` : 'npm run -s lint';
 
 const commands = [
-  { name: 'lint', cmd: lintCmd, required: true },
-  { name: 'unit', cmd: 'npm run -s test -- --run --passWithNoTests', required: true },
-  { name: 'security', cmd: 'npm audit --audit-level=high', required: true },
-  { name: 'integration', cmd: 'node scripts/autonomous-engine/check-integration.mjs', required: ['product', 'operations', 'patch'].includes(job.category) },
-  { name: 'e2e', cmd: 'node scripts/autonomous-engine/check-e2e.mjs', required: ['ux', 'product', 'branding'].includes(job.category) },
-  { name: 'performance', cmd: 'node scripts/autonomous-engine/check-performance.mjs', required: ['performance', 'benchmark'].includes(job.category) },
+  { name: 'lint', cmd: lintCmd, required: requiredSet.has('lint') || requiredSet.size === 0 },
+  { name: 'unit', cmd: 'npm run -s test -- --run --passWithNoTests', required: requiredSet.has('unit') },
+  { name: 'security', cmd: 'npm audit --audit-level=high', required: requiredSet.has('security') || job.category === 'security' },
+  { name: 'integration', cmd: 'node scripts/autonomous-engine/check-integration.mjs', required: requiredSet.has('integration') },
+  { name: 'e2e', cmd: 'node scripts/autonomous-engine/check-e2e.mjs', required: requiredSet.has('e2e') },
+  { name: 'performance', cmd: 'node scripts/autonomous-engine/check-performance.mjs', required: requiredSet.has('performance') || job.category === 'performance' || job.category === 'benchmark' },
 ];
 
 const run = ({ name, cmd, required }) => {

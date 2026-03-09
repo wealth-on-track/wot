@@ -45,9 +45,12 @@ export function makeId(prefix) {
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, '0');
   const day = String(d.getUTCDate()).padStart(2, '0');
+  const h = String(d.getUTCHours()).padStart(2, '0');
+  const mi = String(d.getUTCMinutes()).padStart(2, '0');
+  const s = String(d.getUTCSeconds()).padStart(2, '0');
+  const ms = String(d.getUTCMilliseconds()).padStart(3, '0');
   __seq += 1;
-  const seq = String(__seq).padStart(3, '0');
-  return `${prefix}-${y}${m}${day}-${seq}`;
+  return `${prefix}-${y}${m}${day}-${h}${mi}${s}${ms}-${String(__seq).padStart(3, '0')}`;
 }
 
 export function normalize(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
