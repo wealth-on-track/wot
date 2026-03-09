@@ -73,34 +73,6 @@ function StepPill({ step, active, done }: { step: string; active: boolean; done:
   );
 }
 
-function compactJobId(id: string) {
-  const m = String(id || '').match(/JOB-(\d{8})-.*?(\d{3})$/);
-  if (!m) return id;
-  return `${m[1]} - ${m[2]}`;
-}
-
-function IdRow({ job, selected, section }: { job: any; selected: boolean; section: string }) {
-  return (
-    <Link
-      href={`/admin/autonomous-engine?section=${section}&job=${job.id}`}
-      style={{
-        display: 'block',
-        border: selected ? '1px solid #3b82f6' : '1px solid #dbe3f0',
-        background: selected ? 'linear-gradient(180deg, #eff6ff, #dbeafe)' : '#ffffff',
-        borderRadius: 10,
-        padding: '10px 12px',
-        textDecoration: 'none',
-        color: selected ? '#1e40af' : '#334155',
-        fontWeight: 800,
-        letterSpacing: '0.02em',
-        fontSize: 13,
-      }}
-    >
-      {compactJobId(job.id)}
-    </Link>
-  );
-}
-
 export default async function AutonomousEnginePage({
   searchParams,
 }: {
@@ -212,15 +184,7 @@ export default async function AutonomousEnginePage({
         </div>
       </header>
 
-      <section className="ae-layout-grid" style={{ display: 'grid', gridTemplateColumns: '220px 1fr 300px', gap: 8 }}>
-        <aside className="card ae-left-panel" style={{ padding: 10, overflow: 'auto', border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
-          <div style={{ display: 'grid', gap: 8 }}>
-            {currentList.length === 0 ? <div style={{ opacity: 0.65 }}>No items.</div> : currentList.map((j) => (
-              <IdRow key={j.id} job={j} selected={selected?.id === j.id} section={selectedSection} />
-            ))}
-          </div>
-        </aside>
-
+      <section className="ae-layout-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 8 }}>
         <section className="card ae-center-panel" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#ffffff', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
           {!selected ? <div>No item selected.</div> : (
             <>
