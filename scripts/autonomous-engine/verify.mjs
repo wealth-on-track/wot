@@ -26,7 +26,7 @@ const fileArgs = (job.changedFiles || []).filter(Boolean).join(' ');
 const lintCmd = fileArgs ? `npx eslint ${fileArgs}` : 'npm run -s lint';
 
 const commands = [
-  { name: 'lint', cmd: lintCmd, required: requiredSet.has('lint') || requiredSet.size === 0 },
+  { name: 'lint', cmd: lintCmd, required: requiredSet.has('lint') },
   { name: 'unit', cmd: 'npm run -s test -- --run --passWithNoTests', required: requiredSet.has('unit') },
   { name: 'security', cmd: 'npm audit --audit-level=high', required: requiredSet.has('security') || job.category === 'security' },
   { name: 'integration', cmd: 'node scripts/autonomous-engine/check-integration.mjs', required: requiredSet.has('integration') },

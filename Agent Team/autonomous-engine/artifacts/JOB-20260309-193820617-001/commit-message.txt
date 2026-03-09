@@ -1,0 +1,1 @@
+feat(local-auto): Add explicit Active-state explainer text in autonomous dashboard detail panel

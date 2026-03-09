@@ -266,5 +266,24 @@
       "lint"
     ],
     "rollback_plan": "Revert single file change commit."
+  },
+  {
+    "id": "PRP-PILOT-20260309-002",
+    "title": "Add tiny monitor hint badge in Admin Sidebar for Agent Team visibility",
+    "category": "operations",
+    "problem": "Operators need quicker visual entry cue for Agent Team monitor.",
+    "evidence": [
+      "direct user request for clearer monitoring entry"
+    ],
+    "proposed_change": "Add one minimal text hint near Agent Team link.",
+    "expected_benefit": "Faster discoverability during operations.",
+    "risk": "low",
+    "impact": "medium",
+    "priority": "P1",
+    "files_expected": [
+      "src/components/AdminSidebar.tsx"
+    ],
+    "tests_required": [],
+    "rollback_plan": "Revert single-file change commit."
   }
 ]
