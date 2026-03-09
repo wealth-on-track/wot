@@ -72,6 +72,12 @@ function StepPill({ step, active, done }: { step: string; active: boolean; done:
   );
 }
 
+function compactJobId(id: string) {
+  const m = String(id || '').match(/JOB-(\d{8})-.*?(\d{3})$/);
+  if (!m) return id;
+  return `${m[1]} - ${m[2]}`;
+}
+
 function IdRow({ job, selected, section }: { job: any; selected: boolean; section: string }) {
   return (
     <Link
@@ -89,7 +95,7 @@ function IdRow({ job, selected, section }: { job: any; selected: boolean; sectio
         fontSize: 13,
       }}
     >
-      {job.id}
+      {compactJobId(job.id)}
     </Link>
   );
 }
@@ -176,7 +182,6 @@ export default async function AutonomousEnginePage({
 
       <section style={{ display: 'grid', gridTemplateColumns: '220px 1fr 300px', gap: 8 }}>
         <aside className="card" style={{ padding: 10, overflow: 'auto', border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
-          <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.8, marginBottom: 8 }}>UNIQUE IDs</div>
           <div style={{ display: 'grid', gap: 8 }}>
             {currentList.length === 0 ? <div style={{ opacity: 0.65 }}>No items.</div> : currentList.map((j) => (
               <IdRow key={j.id} job={j} selected={selected?.id === j.id} section={selectedSection} />
