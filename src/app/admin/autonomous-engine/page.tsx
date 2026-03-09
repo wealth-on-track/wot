@@ -247,13 +247,6 @@ export default async function AutonomousEnginePage({
                 </div>
               </details>
 
-              <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
-                <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Changed Files</summary>
-                <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
-                  {(selected.changedFiles || []).length === 0 ? <li>-</li> : selected.changedFiles.map((f: string) => <li key={f}>{f}</li>)}
-                </ul>
-              </details>
-
               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc', minHeight: 160 }}>
                 <div style={{ fontWeight: 800, marginBottom: 8 }}>Context Timeline</div>
                 <div style={{ display: 'grid', gap: 6, fontSize: 12 }}>
