@@ -21,3 +21,8 @@
 {"ts":"2026-03-09T20:55:28.222Z","jobId":"JOB-20260309-204954896-002","proposalId":"PRP-20260309-204954850-005","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-09T20:55:28.268Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"build","message":"Builder started implementation","meta":{}}
 {"ts":"2026-03-09T21:00:28.108Z","jobId":"JOB-20260309-204954895-001","proposalId":"PRP-20260309-204954850-003","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-09T21:00:28.218Z","jobId":"JOB-20260309-204954895-001","proposalId":"PRP-20260309-204954850-003","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-09T21:05:27.521Z","jobId":"JOB-20260309-204954895-001","proposalId":"PRP-20260309-204954850-003","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-09T21:10:28.390Z","jobId":"JOB-20260309-204954895-001","proposalId":"PRP-20260309-204954850-003","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-09T21:15:28.334Z","jobId":"JOB-20260309-204954895-001","proposalId":"PRP-20260309-204954850-003","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-09T21:20:28.565Z","jobId":"JOB-20260309-204954896-002","proposalId":"PRP-20260309-204954850-005","stage":"build","message":"Builder started implementation","meta":{}}

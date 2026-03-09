@@ -422,7 +422,7 @@
     "id": "JOB-20260309-204954895-001",
     "title": "Improve empty portfolio onboarding with clearer next actions",
     "category": "ux",
-    "state": "approved_for_build",
+    "state": "abandoned_with_reason",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -430,15 +430,15 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Apply one meaningful local change set and verify with required checks.",
+    "summary": "Apply one meaningful local change set and verify with required checks. (local build applied) | retry build (no changed files, cooldown active) | retry build (no changed files)",
     "proposalId": "PRP-20260309-204954850-003",
     "changedFiles": [],
-    "testResults": "pending",
+    "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
-      "build": 0,
-      "testing": 0,
+      "build": 3,
+      "testing": 1,
       "verification": 0
     },
     "constraints": {
@@ -447,11 +447,12 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/app"
     },
-    "ownerAgent": "planner",
+    "ownerAgent": "builder",
     "timestamps": {
       "createdAt": "2026-03-09T20:49:54.895Z",
-      "updatedAt": "2026-03-09T20:50:27.859Z"
-    }
+      "updatedAt": "2026-03-09T21:15:28.372Z"
+    },
+    "finalReason": "build_produced_no_changes_after_3_retries"
   },
   {
     "id": "JOB-20260309-204954896-002",
