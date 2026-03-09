@@ -120,6 +120,7 @@ export default async function AutonomousEnginePage({
   const groups: Record<string, any[]> = { inbox, active, review: reviewReady };
   const currentList = groups[selectedSection] || active;
   const selected = currentList.find((j) => j.id === selectedJobId) || currentList[0] || null;
+  const selectedLesson = selected ? (lessons.find((l) => String(l?.job_id || '') === selected.id) || null) : null;
 
   let artifactNames: string[] = [];
   const artifactMap: Record<string, string> = {};
@@ -229,11 +230,21 @@ export default async function AutonomousEnginePage({
                 </div>
               </div>
 
-              <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
-                <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Summary & Validation</summary>
-                <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{selected.summary || '-'}</div>
-                <div style={{ marginTop: 8, fontSize: 12 }}>Test results: <strong>{selected.testResults || '-'}</strong></div>
-                <div style={{ marginTop: 4, fontSize: 12 }}>Preview: {selected.previewInstructions || '-'}</div>
+              <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#ffffff' }} open>
+                <summary style={{ cursor: 'pointer', fontWeight: 800, fontSize: 12, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#334155' }}>Summary & Validation</summary>
+                <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#f8fafc', padding: '8px 10px', fontSize: 13, color: '#0f172a' }}>
+                    {selected.summary || '-'}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <div style={{ border: '1px solid #dbe3ef', borderRadius: 8, background: '#ffffff', padding: '6px 10px', fontSize: 12, color: '#0f172a' }}>
+                      Test results: <strong style={{ textTransform: 'uppercase' }}>{selected.testResults || '-'}</strong>
+                    </div>
+                    <div style={{ border: '1px solid #dbe3ef', borderRadius: 8, background: '#ffffff', padding: '6px 10px', fontSize: 12, color: '#0f172a', flex: 1, minWidth: 260 }}>
+                      Preview: <strong style={{ fontWeight: 600 }}>{selected.previewInstructions || '-'}</strong>
+                    </div>
+                  </div>
+                </div>
               </details>
 
               <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
@@ -267,11 +278,12 @@ export default async function AutonomousEnginePage({
               <form action="/api/autonomous-engine/lessons" method="post" style={{ marginTop: 8, display: 'grid', gap: 6 }}>
                 <input type="hidden" name="job_id" value={selected.id} />
                 <input type="hidden" name="category" value={selected.category || ''} />
-                <input name="liked" placeholder="Liked" style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
-                <input name="disliked" placeholder="Disliked" style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
-                <textarea name="notes" placeholder="Notes" rows={2} style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
-                <div>
-                  <button type="submit" style={{ border: '1px solid #93c5fd', background: '#eff6ff', color: '#1e3a8a', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Save Lesson</button>
+                <input name="liked" placeholder="Liked" defaultValue={selectedLesson?.liked || ''} style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
+                <input name="disliked" placeholder="Disliked" defaultValue={selectedLesson?.disliked || ''} style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
+                <textarea name="notes" placeholder="Notes" defaultValue={selectedLesson?.notes || ''} rows={2} style={{ padding: '6px 8px', border: '1px solid #cbd5e1', borderRadius: 6 }} />
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button type="submit" style={{ border: '1px solid #93c5fd', background: '#eff6ff', color: '#1e3a8a', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Save / Update Lesson</button>
+                  {selectedLesson ? <span style={{ fontSize: 11, color: '#166534', fontWeight: 700 }}>Saved</span> : null}
                 </div>
               </form>
             )}
