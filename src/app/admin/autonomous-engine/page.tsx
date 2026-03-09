@@ -61,6 +61,12 @@ function stateIcon(state: string) {
   return '📌';
 }
 
+function compactJobId(id: string) {
+  const m = String(id || '').match(/JOB-(\d{8})-.*?(\d{3})$/);
+  if (!m) return id;
+  return `${m[1]} - ${m[2]}`;
+}
+
 function StepPill({ step, active, done }: { step: string; active: boolean; done: boolean }) {
   const bg = done ? '#ecfdf5' : active ? '#eff6ff' : '#f8fafc';
   const border = done ? '1px solid #86efac' : active ? '1px solid #93c5fd' : '1px solid #dbe3ef';
@@ -81,6 +87,7 @@ export default async function AutonomousEnginePage({
   const sp = (await searchParams) || {};
   const selectedSection = String(sp.section || 'active');
   const selectedJobId = String(sp.job || '');
+  const showList = String(sp.list || '0') === '1';
   const savedJobId = String(sp.savedJob || '');
 
   const jobs = await readJson<any[]>(path.join(BASE, 'jobs.json'), []);
@@ -181,10 +188,40 @@ export default async function AutonomousEnginePage({
           <span className="card" style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 10px', border: '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
             📚 Lessons ({lessons.length})
           </span>
+          <Link href={`/admin/autonomous-engine?section=${selectedSection}&list=${showList ? '0' : '1'}`} className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
+            {showList ? '🗂️ Listeyi Gizle' : '🗂️ Listeyi Aç'}
+          </Link>
         </div>
       </header>
 
-      <section className="ae-layout-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 8 }}>
+      <section className="ae-layout-grid" style={{ display: 'grid', gridTemplateColumns: showList ? '220px 1fr 300px' : '1fr 300px', gap: 8 }}>
+        {showList ? (
+          <aside className="card ae-left-panel" style={{ padding: 10, overflow: 'auto', border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {currentList.length === 0 ? <div style={{ opacity: 0.65 }}>No items.</div> : currentList.map((j) => (
+                <Link
+                  key={j.id}
+                  href={`/admin/autonomous-engine?section=${selectedSection}&list=1&job=${encodeURIComponent(j.id)}`}
+                  style={{
+                    display: 'block',
+                    border: selected?.id === j.id ? '1px solid #3b82f6' : '1px solid #dbe3f0',
+                    background: selected?.id === j.id ? 'linear-gradient(180deg, #eff6ff, #dbeafe)' : '#ffffff',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    textDecoration: 'none',
+                    color: selected?.id === j.id ? '#1e40af' : '#334155',
+                    fontWeight: 800,
+                    letterSpacing: '0.02em',
+                    fontSize: 13,
+                  }}
+                >
+                  {compactJobId(j.id)}
+                </Link>
+              ))}
+            </div>
+          </aside>
+        ) : null}
+
         <section className="card ae-center-panel" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#ffffff', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
           {!selected ? <div>No item selected.</div> : (
             <>
