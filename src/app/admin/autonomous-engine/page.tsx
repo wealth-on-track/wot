@@ -215,13 +215,9 @@ export default async function AutonomousEnginePage({
                 </div>
               </div>
 
-              <div style={{ border: '1px solid #d7e0ee', borderRadius: 10, padding: 10, background: '#f8fafc', display: 'grid', gap: 8 }}>
-                <div style={{ border: '1px solid #d7e0ee', borderRadius: 8, padding: '8px 10px', background: '#fff', color: '#0f172a', fontWeight: 700, fontSize: 14 }}>
-                  {selected.title} &nbsp; | &nbsp; {compactJobId(selected.id)}
-                </div>
-
+              <div style={{ border: '1px solid #d7e0ee', borderRadius: 10, padding: 10, background: '#f8fafc' }}>
                 <div style={{ border: '1px solid #d7e0ee', borderRadius: 8, padding: '8px 10px', background: '#fff', color: '#0f172a', fontSize: 13, whiteSpace: 'nowrap', overflowX: 'auto' }}>
-                  Category: <strong>{selected.category}</strong> &nbsp; | &nbsp; Risk: <strong>{selected.risk}</strong> &nbsp; | &nbsp; Progress: <strong>{progress.label} ({progress.pct}%)</strong> &nbsp; | &nbsp; Updated: <strong>{ageMin}m</strong> &nbsp; | &nbsp; SLA: <strong>{sla ? `${sla}m` : '-'}</strong>
+                  <strong>{compactJobId(selected.id)}</strong> &nbsp; | &nbsp; <strong>{selected.title}</strong> &nbsp; | &nbsp; Category: <strong style={{ textTransform: 'capitalize' }}>{selected.category}</strong> &nbsp; | &nbsp; Risk: <strong style={{ textTransform: 'capitalize' }}>{selected.risk}</strong> &nbsp; | &nbsp; Progress: <strong>{progress.label}</strong> &nbsp; | &nbsp; Updated: <strong>{ageMin}M</strong> &nbsp; | &nbsp; SLA: <strong>{sla ? `${sla}M` : '-'}</strong>
                 </div>
               </div>
 
