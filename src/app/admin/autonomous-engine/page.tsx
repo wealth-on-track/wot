@@ -91,6 +91,7 @@ export default async function AutonomousEnginePage({
   const showList = String(sp.panel || '0') === '1';
   const showRight = String(sp.right || '1') === '1';
   const showAdminPanel = String(sp.admin || '1') === '1';
+  const showSidebar = String(sp.sidebar || '0') === '1';
   const savedJobId = String(sp.savedJob || '');
 
   const jobs = await readJson<any[]>(path.join(BASE, 'jobs.json'), []);
@@ -174,13 +175,16 @@ export default async function AutonomousEnginePage({
         boxShadow: '0 3px 10px rgba(15,23,42,0.06)',
       }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', alignItems: 'center' }}>
-          <Link href={`/admin/autonomous-engine?section=${selectedSection}&admin=${showAdminPanel ? '0' : '1'}&panel=${showList ? '1' : '0'}&right=${showRight ? '1' : '0'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} title={showAdminPanel ? 'Admin panelini gizle' : 'Admin panelini aç'} className="card" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', width: 34, height: 34, border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', fontWeight: 900, color: '#1d4ed8' }}>
+          <Link href={`/admin/autonomous-engine?section=${selectedSection}&sidebar=${showSidebar ? '0' : '1'}&admin=${showAdminPanel ? '1' : '1'}&panel=${showList ? '1' : '0'}&right=${showRight ? '1' : '0'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} title={showSidebar ? 'Sol admin menüyü gizle' : 'Sol admin menüyü aç'} className="card" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', width: 34, height: 34, border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', fontWeight: 900, color: '#1d4ed8' }}>
+            🧭
+          </Link>
+          <Link href={`/admin/autonomous-engine?section=${selectedSection}&sidebar=${showSidebar ? '1' : '0'}&admin=${showAdminPanel ? '0' : '1'}&panel=${showList ? '1' : '0'}&right=${showRight ? '1' : '0'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} title={showAdminPanel ? 'Agent Team panelini gizle' : 'Agent Team panelini aç'} className="card" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', width: 34, height: 34, border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', fontWeight: 900, color: '#1d4ed8' }}>
             🧩
           </Link>
-          <Link href={`/admin/autonomous-engine?section=${selectedSection}&admin=${showAdminPanel ? '1' : '0'}&panel=${showList ? '0' : '1'}&right=${showRight ? '1' : '0'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} title={showList ? 'Listeyi gizle' : 'Listeyi aç'} className="card" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', width: 34, height: 34, border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', fontWeight: 900, color: '#1d4ed8' }}>
+          <Link href={`/admin/autonomous-engine?section=${selectedSection}&sidebar=${showSidebar ? '1' : '0'}&admin=${showAdminPanel ? '1' : '0'}&panel=${showList ? '0' : '1'}&right=${showRight ? '1' : '0'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} title={showList ? 'Listeyi gizle' : 'Listeyi aç'} className="card" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', width: 34, height: 34, border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', fontWeight: 900, color: '#1d4ed8' }}>
             🗂️
           </Link>
-          <Link href={`/admin/autonomous-engine?section=${selectedSection}&admin=${showAdminPanel ? '1' : '0'}&panel=${showList ? '1' : '0'}&right=${showRight ? '0' : '1'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} title={showRight ? 'Lessons panelini gizle' : 'Lessons panelini aç'} className="card" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', width: 34, height: 34, border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', fontWeight: 900, color: '#1d4ed8' }}>
+          <Link href={`/admin/autonomous-engine?section=${selectedSection}&sidebar=${showSidebar ? '1' : '0'}&admin=${showAdminPanel ? '1' : '0'}&panel=${showList ? '1' : '0'}&right=${showRight ? '0' : '1'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} title={showRight ? 'Lessons panelini gizle' : 'Lessons panelini aç'} className="card" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', width: 34, height: 34, border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', fontWeight: 900, color: '#1d4ed8' }}>
             📚
           </Link>
           <Link href="/admin/autonomous-engine?section=inbox" className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: selectedSection === 'inbox' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>

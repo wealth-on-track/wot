@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
     LayoutDashboard,
     Users,
@@ -95,9 +95,11 @@ const navItems: NavItem[] = [
 
 export function AdminSidebar({ username }: { username: string }) {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
 
-    // Hide left admin menu on Agent Team dashboard page
-    if (pathname === '/admin/autonomous-engine') {
+    // Hide left admin menu on Agent Team dashboard page unless explicitly opened
+    const sidebarOpen = searchParams.get('sidebar') === '1';
+    if (pathname === '/admin/autonomous-engine' && !sidebarOpen) {
         return null;
     }
 
