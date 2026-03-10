@@ -102,13 +102,13 @@ export default async function AutonomousEnginePage({
     eventsRaw = await fs.readFile(path.join(BASE, 'events.jsonl'), 'utf8');
   } catch {}
 
-  const inbox = jobs.filter((j) => ['discover', 'proposal'].includes(j.state));
+  const proposal = jobs.filter((j) => j.state === 'proposal');
+  const inbox = jobs.filter((j) => j.state === 'discover');
   const active = jobs.filter((j) => ['approved_for_build', 'build', 'test'].includes(j.state));
   const reviewReady = jobs.filter((j) => j.state === 'review_ready');
   const completed = jobs.filter((j) => ['approved', 'reverted'].includes(j.state));
-  const abandoned = jobs.filter((j) => j.state === 'abandoned_with_reason');
 
-  const groups: Record<string, any[]> = { inbox, active, review: reviewReady, completed, abandoned };
+  const groups: Record<string, any[]> = { proposal, inbox, active, review: reviewReady, completed };
   const currentList = groups[selectedSection] || active;
   const selected = currentList.find((j) => j.id === selectedJobId) || currentList[0] || null;
 
@@ -158,7 +158,7 @@ export default async function AutonomousEnginePage({
       ] as string[])
     : FLOW;
 
-  const total = inbox.length + active.length + reviewReady.length + completed.length + abandoned.length;
+  const total = proposal.length + inbox.length + active.length + reviewReady.length + completed.length;
   const nowMs = Date.now();
   const healthScore = total === 0 ? 100 : Math.max(0, Math.round(100 - ((active.filter((j) => stateSlaMin(j.state) && ((nowMs - new Date(j.timestamps?.updatedAt || j.timestamps?.createdAt).getTime()) / 60000 > (stateSlaMin(j.state) || 0))).length) / Math.max(active.length, 1)) * 35));
 
@@ -187,6 +187,9 @@ export default async function AutonomousEnginePage({
           <Link href={`/admin/autonomous-engine?section=${selectedSection}&sidebar=${showSidebar ? '1' : '0'}&admin=${showAdminPanel ? '1' : '0'}&panel=${showList ? '1' : '0'}&right=${showRight ? '0' : '1'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} title={showRight ? 'Lessons panelini gizle' : 'Lessons panelini aç'} className="card" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', width: 34, height: 34, border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', fontWeight: 900, color: '#1d4ed8' }}>
             📚
           </Link>
+          <Link href="/admin/autonomous-engine?section=proposal" className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: selectedSection === 'proposal' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
+🧠 Proposal ({proposal.length})
+          </Link>
           <Link href="/admin/autonomous-engine?section=inbox" className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: selectedSection === 'inbox' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
 📥 Inbox ({inbox.length})
           </Link>
@@ -198,9 +201,6 @@ export default async function AutonomousEnginePage({
           </Link>
           <Link href="/admin/autonomous-engine?section=completed" className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: selectedSection === 'completed' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
 🏁 Completed ({completed.length})
-          </Link>
-          <Link href="/admin/autonomous-engine?section=abandoned" className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: selectedSection === 'abandoned' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
-🛑 Abandoned ({abandoned.length})
           </Link>
           <span className="card" style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 10px', border: '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
             🧭 Health ({healthScore}%)

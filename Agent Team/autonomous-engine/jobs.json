@@ -3,40 +3,60 @@
     "id": "JOB-20260309-382",
     "title": "Improve navbar interaction clarity on mobile",
     "category": "ux",
-    "state": "abandoned_with_reason",
+    "state": "proposal",
     "risk": "low",
-    "summary": "Increase spacing and target size for top nav action buttons. (local build applied) | retry build (no changed files)",
+    "summary": "Increase spacing and target size for top nav action buttons. (quality-revised)",
     "proposalId": "PRP-20260309-131",
     "changedFiles": [],
     "testResults": "fail",
     "previewInstructions": "Run local dev and validate manually before approval.",
     "retries": {
       "planning": 0,
-      "build": 3,
-      "testing": 2,
+      "build": 0,
+      "testing": 0,
       "verification": 0
     },
     "timestamps": {
       "createdAt": "2026-03-09T15:58:09.265Z",
-      "updatedAt": "2026-03-09T16:21:03.777Z"
+      "updatedAt": "2026-03-10T08:18:05.691Z"
     },
-    "finalReason": "build_produced_no_changes_after_3_retries"
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T08:18:15.474Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "must_fix": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW",
+          "USER_FACING_MISS"
+        ],
+        "evidence_gap": "Need at least 2 evidence points"
+      },
+      "revised": true
+    }
   },
   {
     "id": "JOB-20260309-872",
     "title": "Resolve lint failures blocking autonomous verification",
     "category": "operations",
-    "state": "abandoned_with_reason",
+    "state": "proposal",
     "risk": "low",
-    "summary": "Apply one minimal local change set and verify with required checks. (local build applied) | retry build (no changed files) | retry build (no changed files)",
+    "summary": "Apply one minimal local change set and verify with required checks. (quality-revised)",
     "proposalId": "PRP-20260309-677",
     "changedFiles": [],
     "testResults": "fail",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
       "planning": 0,
-      "build": 3,
-      "testing": 1,
+      "build": 0,
+      "testing": 0,
       "verification": 0
     },
     "constraints": {
@@ -46,53 +66,42 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:11:07.248Z",
-      "updatedAt": "2026-03-09T16:42:42.172Z"
+      "updatedAt": "2026-03-10T08:18:05.691Z"
     },
-    "ownerAgent": "builder",
-    "finalReason": "build_produced_no_changes_after_3_retries"
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T08:18:15.474Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW",
+          "USER_FACING_MISS"
+        ],
+        "must_fix": [
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW",
+          "USER_FACING_MISS"
+        ],
+        "evidence_gap": null
+      },
+      "revised": true
+    }
   },
   {
     "id": "JOB-20260309-894",
     "title": "Reduce initial bundle execution in dashboard route",
     "category": "performance",
-    "state": "abandoned_with_reason",
+    "state": "proposal",
     "risk": "low",
-    "summary": "Apply one minimal local change set and verify with required checks. (local build applied) | retry build (no changed files, cooldown active) | retry build (no changed files)",
+    "summary": "Apply one minimal local change set and verify with required checks. (quality-revised)",
     "proposalId": "PRP-20260309-874",
     "changedFiles": [],
     "testResults": "fail",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 1,
-      "build": 2,
-      "testing": 1,
-      "verification": 0
-    },
-    "constraints": {
-      "maxFiles": 5,
-      "maxFunctionalChanges": 1,
-      "noUnrelatedRefactor": true
-    },
-    "timestamps": {
-      "createdAt": "2026-03-09T16:11:07.249Z",
-      "updatedAt": "2026-03-09T19:32:52.065Z"
-    },
-    "ownerAgent": "builder",
-    "finalReason": "manual_unblock_for_demo_delivery"
-  },
-  {
-    "id": "JOB-20260309-740",
-    "title": "Compare portfolio table UX against top 3 fintech competitors",
-    "category": "benchmark",
-    "state": "abandoned_with_reason",
-    "risk": "low",
-    "summary": "Apply one minimal local change set and verify with required checks.",
-    "proposalId": "PRP-20260309-363",
-    "changedFiles": [],
-    "testResults": "pending",
-    "previewInstructions": "npm run dev and validate only local branch behavior.",
-    "retries": {
-      "planning": 3,
+      "planning": 0,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -104,25 +113,89 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:11:07.249Z",
-      "updatedAt": "2026-03-09T20:08:07.816Z"
+      "updatedAt": "2026-03-10T08:18:05.691Z"
     },
-    "finalReason": "planning_timeout_after_3_retries"
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T08:18:15.474Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "must_fix": [
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "evidence_gap": null
+      },
+      "revised": true
+    }
+  },
+  {
+    "id": "JOB-20260309-740",
+    "title": "Compare portfolio table UX against top 3 fintech competitors",
+    "category": "benchmark",
+    "state": "proposal",
+    "risk": "low",
+    "summary": "Apply one minimal local change set and verify with required checks. (quality-revised)",
+    "proposalId": "PRP-20260309-363",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "npm run dev and validate only local branch behavior.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-09T16:11:07.249Z",
+      "updatedAt": "2026-03-10T08:18:05.691Z"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T08:18:15.474Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "must_fix": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "evidence_gap": "Need at least 2 evidence points"
+      },
+      "revised": true
+    }
   },
   {
     "id": "JOB-20260309-114",
     "title": "Review dependency update opportunities with local vulnerability context",
     "category": "security",
-    "state": "abandoned_with_reason",
+    "state": "proposal",
     "risk": "medium",
-    "summary": "Apply one minimal local change set and verify with required checks. (local build applied) | retry build (no changed files, cooldown active) | retry build (no changed files)",
+    "summary": "Apply one minimal local change set and verify with required checks. (quality-revised)",
     "proposalId": "PRP-20260309-730",
     "changedFiles": [],
     "testResults": "fail",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 2,
-      "build": 3,
-      "testing": 1,
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
       "verification": 0
     },
     "constraints": {
@@ -132,24 +205,43 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:35:13.950Z",
-      "updatedAt": "2026-03-09T20:55:28.295Z"
+      "updatedAt": "2026-03-10T08:18:05.691Z"
     },
-    "ownerAgent": "builder",
-    "finalReason": "build_produced_no_changes_after_3_retries"
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T08:18:15.474Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "must_fix": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW",
+          "USER_FACING_MISS"
+        ],
+        "evidence_gap": "Need at least 2 evidence points"
+      },
+      "revised": true
+    }
   },
   {
     "id": "JOB-20260309-157",
     "title": "Fix failing unit/integration test path discovered in local test run",
     "category": "patch",
-    "state": "abandoned_with_reason",
+    "state": "proposal",
     "risk": "low",
-    "summary": "Apply one minimal local change set and verify with required checks.",
+    "summary": "Apply one minimal local change set and verify with required checks. (quality-revised)",
     "proposalId": "PRP-20260309-224",
     "changedFiles": [],
     "testResults": "pending",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 3,
+      "planning": 0,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -161,23 +253,42 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:35:13.951Z",
-      "updatedAt": "2026-03-09T20:44:01.032Z"
+      "updatedAt": "2026-03-10T08:18:05.691Z"
     },
-    "finalReason": "planning_timeout_after_3_retries"
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T08:18:15.475Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW",
+          "USER_FACING_MISS"
+        ],
+        "must_fix": [
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW",
+          "USER_FACING_MISS"
+        ],
+        "evidence_gap": null
+      },
+      "revised": true
+    }
   },
   {
     "id": "JOB-20260309-873",
     "title": "Refine UI structure consistency across admin and mobile surfaces",
     "category": "ux",
-    "state": "abandoned_with_reason",
+    "state": "proposal",
     "risk": "low",
-    "summary": "Apply one minimal local change set and verify with required checks.",
+    "summary": "Apply one minimal local change set and verify with required checks. (quality-revised)",
     "proposalId": "PRP-20260309-162",
     "changedFiles": [],
     "testResults": "pending",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 3,
+      "planning": 0,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -189,23 +300,43 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:35:13.951Z",
-      "updatedAt": "2026-03-09T20:44:01.032Z"
+      "updatedAt": "2026-03-10T08:18:05.691Z"
     },
-    "finalReason": "planning_timeout_after_3_retries"
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T08:18:15.475Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "must_fix": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW",
+          "USER_FACING_MISS"
+        ],
+        "evidence_gap": "Need at least 2 evidence points"
+      },
+      "revised": true
+    }
   },
   {
     "id": "JOB-20260309-903",
     "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
     "category": "benchmark",
-    "state": "abandoned_with_reason",
+    "state": "proposal",
     "risk": "low",
-    "summary": "Apply one minimal local change set and verify with required checks.",
+    "summary": "Apply one minimal local change set and verify with required checks. (quality-revised)",
     "proposalId": "PRP-20260309-602",
     "changedFiles": [],
     "testResults": "pending",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 3,
+      "planning": 0,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -217,19 +348,36 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:35:13.951Z",
-      "updatedAt": "2026-03-09T20:44:01.032Z"
+      "updatedAt": "2026-03-10T08:18:05.691Z"
     },
-    "finalReason": "planning_timeout_after_3_retries"
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T08:18:15.475Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "must_fix": [
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "evidence_gap": null
+      },
+      "revised": true
+    }
   },
   {
     "id": "JOB-20260309-001",
     "title": "Add empty state CTA when portfolio has no assets",
     "category": "ux",
-    "state": "abandoned_with_reason",
+    "state": "proposal",
     "risk": "low",
     "impact": "medium",
     "priority": "P2",
-    "summary": "Apply one minimal local change set and verify with required checks.",
+    "summary": "Apply one minimal local change set and verify with required checks. (quality-revised)",
     "proposalId": "PRP-20260309-003",
     "changedFiles": [],
     "testResults": "pending",
@@ -249,26 +397,44 @@
     "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T19:26:23.390Z",
-      "updatedAt": "2026-03-09T19:32:52.066Z"
+      "updatedAt": "2026-03-10T08:18:05.691Z"
     },
-    "finalReason": "manual_unblock_for_demo_delivery"
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T08:18:15.475Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "must_fix": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "evidence_gap": "Need at least 2 evidence points"
+      },
+      "revised": true
+    }
   },
   {
     "id": "JOB-20260309-002",
     "title": "Weekly deep benchmark scan for competitor UX patterns and missing features",
     "category": "benchmark",
-    "state": "abandoned_with_reason",
+    "state": "proposal",
     "risk": "low",
     "impact": "high",
     "priority": "P2",
-    "summary": "Apply one minimal local change set and verify with required checks. | retry build (no changed files) | scope reduced required (multiple functional areas)",
+    "summary": "Add small observability nav hint for deep-scan monitoring. (quality-revised)",
     "proposalId": "PRP-20260309-006",
     "changedFiles": [],
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
-      "build": 3,
+      "build": 0,
       "testing": 0,
       "verification": 0
     },
@@ -278,30 +444,49 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/components"
     },
-    "ownerAgent": "builder",
+    "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T19:26:23.391Z",
-      "updatedAt": "2026-03-09T19:33:42.810Z"
+      "updatedAt": "2026-03-10T08:18:05.691Z"
     },
-    "finalReason": "file_cooldown_24h_blocked"
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T08:18:15.475Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "must_fix": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW",
+          "USER_FACING_MISS"
+        ],
+        "evidence_gap": "Need at least 2 evidence points"
+      },
+      "revised": true
+    }
   },
   {
     "id": "JOB-20260309-001",
     "title": "Add admin activity page empty-state helper text for observability",
     "category": "operations",
-    "state": "abandoned_with_reason",
+    "state": "proposal",
     "risk": "low",
     "impact": "medium",
     "priority": "P2",
-    "summary": "Add concise empty-state helper text in admin activity page. (local build applied) | retry build (no changed files, cooldown active) | retry build (no changed files)",
+    "summary": "Add concise empty-state helper text in admin activity page. (quality-revised)",
     "proposalId": "PRP-20260309-900",
     "changedFiles": [],
     "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
-      "build": 3,
-      "testing": 1,
+      "build": 0,
+      "testing": 0,
       "verification": 0
     },
     "constraints": {
@@ -310,22 +495,41 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/app"
     },
-    "ownerAgent": "builder",
+    "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T19:34:16.046Z",
-      "updatedAt": "2026-03-09T19:34:38.922Z"
+      "updatedAt": "2026-03-10T08:18:05.691Z"
     },
-    "finalReason": "build_produced_no_changes_after_3_retries"
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T08:18:15.475Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "must_fix": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW",
+          "USER_FACING_MISS"
+        ],
+        "evidence_gap": "Need at least 2 evidence points"
+      },
+      "revised": true
+    }
   },
   {
     "id": "JOB-20260309-193820617-001",
     "title": "Add explicit Active-state explainer text in autonomous dashboard detail panel",
     "category": "operations",
-    "state": "abandoned_with_reason",
+    "state": "proposal",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
-    "summary": "Add one short explainer line under progress to clarify blocked/progressing interpretation. (local build applied)",
+    "summary": "Add one short explainer line under progress to clarify blocked/progressing interpretation. (quality-revised)",
     "proposalId": "PRP-PILOT-20260309-001",
     "changedFiles": [
       "src/app/admin/autonomous-engine/page.tsx"
@@ -335,7 +539,7 @@
     "retries": {
       "planning": 0,
       "build": 0,
-      "testing": 1,
+      "testing": 0,
       "verification": 0
     },
     "constraints": {
@@ -344,12 +548,30 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/app"
     },
-    "ownerAgent": "builder",
+    "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T19:38:20.617Z",
-      "updatedAt": "2026-03-09T19:39:11.326Z"
+      "updatedAt": "2026-03-10T08:18:05.691Z"
     },
-    "finalReason": "reset_for_clean_pilot"
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T08:18:15.475Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "must_fix": [
+          "EVIDENCE_WEAK",
+          "IMPACT_LOW",
+          "CONFIDENCE_LOW"
+        ],
+        "evidence_gap": "Need at least 2 evidence points"
+      },
+      "revised": true
+    }
   },
   {
     "id": "JOB-20260309-194114456-001",
@@ -422,7 +644,7 @@
     "id": "JOB-20260309-204954895-001",
     "title": "Improve empty portfolio onboarding with clearer next actions",
     "category": "ux",
-    "state": "abandoned_with_reason",
+    "state": "proposal",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -430,15 +652,15 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Apply one meaningful local change set and verify with required checks. (local build applied) | retry build (no changed files, cooldown active) | retry build (no changed files)",
+    "summary": "Apply one meaningful local change set and verify with required checks. (quality-revised)",
     "proposalId": "PRP-20260309-204954850-003",
     "changedFiles": [],
     "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
-      "build": 3,
-      "testing": 1,
+      "build": 0,
+      "testing": 0,
       "verification": 0
     },
     "constraints": {
@@ -447,18 +669,32 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/app"
     },
-    "ownerAgent": "builder",
+    "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T20:49:54.895Z",
-      "updatedAt": "2026-03-09T21:15:28.372Z"
+      "updatedAt": "2026-03-10T08:18:05.691Z"
     },
-    "finalReason": "build_produced_no_changes_after_3_retries"
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T08:18:15.475Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "EVIDENCE_WEAK"
+        ],
+        "must_fix": [
+          "EVIDENCE_WEAK"
+        ],
+        "evidence_gap": "Need at least 2 evidence points"
+      },
+      "revised": true
+    }
   },
   {
     "id": "JOB-20260309-204954896-002",
     "title": "Reduce portfolio dashboard load latency via route-level lazy chunking",
     "category": "performance",
-    "state": "approved_for_build",
+    "state": "proposal",
     "risk": "medium",
     "impact": "high",
     "priority": "P1",
@@ -466,10 +702,10 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Apply one meaningful local change set and verify with required checks.",
+    "summary": "Apply one meaningful local change set and verify with required checks. (quality-revised)",
     "proposalId": "PRP-20260309-204954850-005",
     "changedFiles": [],
-    "testResults": "pending",
+    "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
@@ -486,7 +722,22 @@
     "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T20:49:54.896Z",
-      "updatedAt": "2026-03-09T20:55:28.221Z"
+      "updatedAt": "2026-03-10T08:18:05.691Z"
+    },
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T08:18:15.475Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "EVIDENCE_WEAK"
+        ],
+        "must_fix": [
+          "EVIDENCE_WEAK"
+        ],
+        "evidence_gap": "Need at least 2 evidence points"
+      },
+      "revised": true
     }
   }
 ]
