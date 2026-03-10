@@ -25,11 +25,12 @@ job.timestamps.updatedAt = nowIso();
 const fileArgs = (job.changedFiles || []).filter(Boolean).join(' ');
 const lintCmd = fileArgs ? `npx eslint ${fileArgs}` : 'npm run -s lint';
 
+const changedEnv = `CHANGED_FILES=${(job.changedFiles || []).join(',')}`;
 const commands = [
   { name: 'lint', cmd: lintCmd, required: requiredSet.has('lint') },
-  { name: 'unit', cmd: 'npm run -s test -- --run --passWithNoTests', required: requiredSet.has('unit') },
+  { name: 'unit', cmd: `${changedEnv} node scripts/autonomous-engine/check-unit.mjs`, required: requiredSet.has('unit') },
   { name: 'security', cmd: 'npm audit --audit-level=high', required: requiredSet.has('security') || job.category === 'security' },
-  { name: 'integration', cmd: 'node scripts/autonomous-engine/check-integration.mjs', required: requiredSet.has('integration') },
+  { name: 'integration', cmd: `${changedEnv} node scripts/autonomous-engine/check-integration.mjs`, required: requiredSet.has('integration') },
   { name: 'e2e', cmd: 'node scripts/autonomous-engine/check-e2e.mjs', required: requiredSet.has('e2e') },
   { name: 'performance', cmd: 'node scripts/autonomous-engine/check-performance.mjs', required: requiredSet.has('performance') || job.category === 'performance' || job.category === 'benchmark' },
 ];

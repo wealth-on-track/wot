@@ -234,5 +234,39 @@
         "Increase confidence with concrete checks"
       ]
     }
+  },
+  {
+    "id": "PRP-PILOT-20260310-FINAL2",
+    "title": "Pilot Final2: add explicit confidence legend to portfolio insight card",
+    "category": "ux",
+    "problem": "Users may misread confidence labels in insight cards, reducing trust in generated insights.",
+    "evidence": [
+      "ux friction observed in manual review",
+      "benchmark comparison indicates explicit legend pattern"
+    ],
+    "proposed_change": "Add explicit confidence legend and concise subtitle in portfolio insight card component only.",
+    "expected_benefit": "Improves clarity and trust in insights with low implementation risk.",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "success_metrics": [
+      "Legend visible on mobile and desktop",
+      "No visual regressions"
+    ],
+    "non_goals": [
+      "No broad dashboard redesign"
+    ],
+    "files_expected": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert legend text commit."
   }
 ]
