@@ -49,8 +49,11 @@ for (const raw of proposals) {
     if (exists) continue;
 
     const now = nowIso();
+    const existingIds = new Set(jobs.map((x) => x.id));
+    let nextId = makeId('JOB');
+    while (existingIds.has(nextId)) nextId = makeId('JOB');
     const job = {
-      id: makeId('JOB'),
+      id: nextId,
       title: p.title,
       category: p.category,
       state: 'proposal',

@@ -11,35 +11,20 @@
     "testResults": "fail",
     "previewInstructions": "Run local dev and validate manually before approval.",
     "retries": {
-      "planning": 0,
+      "planning": 1,
       "build": 0,
       "testing": 0,
       "verification": 0
     },
     "timestamps": {
       "createdAt": "2026-03-09T15:58:09.265Z",
-      "updatedAt": "2026-03-10T08:18:05.691Z"
+      "updatedAt": "2026-03-10T08:30:29.198Z"
     },
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T08:18:15.474Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "must_fix": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW",
-          "USER_FACING_MISS"
-        ],
-        "evidence_gap": "Need at least 2 evidence points"
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T08:30:28.971Z",
+      "sessionCount": 1
     }
   },
   {
@@ -54,7 +39,7 @@
     "testResults": "fail",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 0,
+      "planning": 1,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -66,27 +51,13 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:11:07.248Z",
-      "updatedAt": "2026-03-10T08:18:05.691Z"
+      "updatedAt": "2026-03-10T08:30:29.198Z"
     },
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T08:18:15.474Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW",
-          "USER_FACING_MISS"
-        ],
-        "must_fix": [
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW",
-          "USER_FACING_MISS"
-        ],
-        "evidence_gap": null
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T08:30:28.972Z",
+      "sessionCount": 1
     }
   },
   {
@@ -101,7 +72,7 @@
     "testResults": "fail",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 0,
+      "planning": 1,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -113,25 +84,13 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:11:07.249Z",
-      "updatedAt": "2026-03-10T08:18:05.691Z"
+      "updatedAt": "2026-03-10T08:30:29.198Z"
     },
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T08:18:15.474Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "must_fix": [
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "evidence_gap": null
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T08:30:28.972Z",
+      "sessionCount": 1
     }
   },
   {
@@ -146,7 +105,7 @@
     "testResults": "pending",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 0,
+      "planning": 1,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -158,27 +117,13 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:11:07.249Z",
-      "updatedAt": "2026-03-10T08:18:05.691Z"
+      "updatedAt": "2026-03-10T08:30:29.198Z"
     },
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T08:18:15.474Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "must_fix": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "evidence_gap": "Need at least 2 evidence points"
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T08:30:28.972Z",
+      "sessionCount": 1
     }
   },
   {
@@ -193,7 +138,7 @@
     "testResults": "fail",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 0,
+      "planning": 1,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -205,28 +150,13 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:35:13.950Z",
-      "updatedAt": "2026-03-10T08:18:05.691Z"
+      "updatedAt": "2026-03-10T08:30:29.198Z"
     },
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T08:18:15.474Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "must_fix": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW",
-          "USER_FACING_MISS"
-        ],
-        "evidence_gap": "Need at least 2 evidence points"
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T08:30:28.972Z",
+      "sessionCount": 1
     }
   },
   {
@@ -241,7 +171,7 @@
     "testResults": "pending",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 0,
+      "planning": 1,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -253,27 +183,13 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:35:13.951Z",
-      "updatedAt": "2026-03-10T08:18:05.691Z"
+      "updatedAt": "2026-03-10T08:30:29.198Z"
     },
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T08:18:15.475Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW",
-          "USER_FACING_MISS"
-        ],
-        "must_fix": [
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW",
-          "USER_FACING_MISS"
-        ],
-        "evidence_gap": null
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T08:30:28.972Z",
+      "sessionCount": 1
     }
   },
   {
@@ -288,7 +204,7 @@
     "testResults": "pending",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 0,
+      "planning": 1,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -300,28 +216,13 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:35:13.951Z",
-      "updatedAt": "2026-03-10T08:18:05.691Z"
+      "updatedAt": "2026-03-10T08:30:29.198Z"
     },
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T08:18:15.475Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "must_fix": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW",
-          "USER_FACING_MISS"
-        ],
-        "evidence_gap": "Need at least 2 evidence points"
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T08:30:28.972Z",
+      "sessionCount": 1
     }
   },
   {
@@ -336,7 +237,7 @@
     "testResults": "pending",
     "previewInstructions": "npm run dev and validate only local branch behavior.",
     "retries": {
-      "planning": 0,
+      "planning": 1,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -348,25 +249,13 @@
     },
     "timestamps": {
       "createdAt": "2026-03-09T16:35:13.951Z",
-      "updatedAt": "2026-03-10T08:18:05.691Z"
+      "updatedAt": "2026-03-10T08:30:29.198Z"
     },
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T08:18:15.475Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "must_fix": [
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "evidence_gap": null
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T08:30:28.972Z",
+      "sessionCount": 1
     }
   },
   {
@@ -383,7 +272,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 0,
+      "planning": 1,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -397,26 +286,12 @@
     "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T19:26:23.390Z",
-      "updatedAt": "2026-03-10T08:18:05.691Z"
+      "updatedAt": "2026-03-10T08:30:29.198Z"
     },
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T08:18:15.475Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "must_fix": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "evidence_gap": "Need at least 2 evidence points"
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T08:30:28.972Z",
+      "sessionCount": 1
     }
   },
   {
@@ -433,7 +308,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 0,
+      "planning": 1,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -447,31 +322,16 @@
     "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T19:26:23.391Z",
-      "updatedAt": "2026-03-10T08:18:05.691Z"
+      "updatedAt": "2026-03-10T08:30:29.198Z"
     },
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T08:18:15.475Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "must_fix": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW",
-          "USER_FACING_MISS"
-        ],
-        "evidence_gap": "Need at least 2 evidence points"
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T08:30:28.972Z",
+      "sessionCount": 1
     }
   },
   {
-    "id": "JOB-20260309-001",
+    "id": "JOB-20260309-001-R2",
     "title": "Add admin activity page empty-state helper text for observability",
     "category": "operations",
     "state": "proposal",
@@ -484,7 +344,7 @@
     "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 0,
+      "planning": 1,
       "build": 0,
       "testing": 0,
       "verification": 0
@@ -498,34 +358,19 @@
     "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T19:34:16.046Z",
-      "updatedAt": "2026-03-10T08:18:05.691Z"
+      "updatedAt": "2026-03-10T08:30:29.198Z"
     },
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T08:18:15.475Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "must_fix": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW",
-          "USER_FACING_MISS"
-        ],
-        "evidence_gap": "Need at least 2 evidence points"
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T08:30:28.972Z",
+      "sessionCount": 1
     }
   },
   {
     "id": "JOB-20260309-193820617-001",
     "title": "Add explicit Active-state explainer text in autonomous dashboard detail panel",
     "category": "operations",
-    "state": "proposal",
+    "state": "approved_for_build",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -551,26 +396,12 @@
     "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T19:38:20.617Z",
-      "updatedAt": "2026-03-10T08:18:05.691Z"
+      "updatedAt": "2026-03-10T08:20:29.185Z"
     },
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T08:18:15.475Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "must_fix": [
-          "EVIDENCE_WEAK",
-          "IMPACT_LOW",
-          "CONFIDENCE_LOW"
-        ],
-        "evidence_gap": "Need at least 2 evidence points"
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T08:20:29.140Z",
+      "sessionCount": 1
     }
   },
   {
@@ -644,7 +475,7 @@
     "id": "JOB-20260309-204954895-001",
     "title": "Improve empty portfolio onboarding with clearer next actions",
     "category": "ux",
-    "state": "proposal",
+    "state": "approved_for_build",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -672,29 +503,19 @@
     "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T20:49:54.895Z",
-      "updatedAt": "2026-03-10T08:18:05.691Z"
+      "updatedAt": "2026-03-10T08:25:30.242Z"
     },
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T08:18:15.475Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "EVIDENCE_WEAK"
-        ],
-        "must_fix": [
-          "EVIDENCE_WEAK"
-        ],
-        "evidence_gap": "Need at least 2 evidence points"
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T08:25:30.197Z",
+      "sessionCount": 1
     }
   },
   {
     "id": "JOB-20260309-204954896-002",
     "title": "Reduce portfolio dashboard load latency via route-level lazy chunking",
     "category": "performance",
-    "state": "proposal",
+    "state": "approved_for_build",
     "risk": "medium",
     "impact": "high",
     "priority": "P1",
@@ -722,22 +543,12 @@
     "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T20:49:54.896Z",
-      "updatedAt": "2026-03-10T08:18:05.691Z"
+      "updatedAt": "2026-03-10T08:30:29.016Z"
     },
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T08:18:15.475Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "EVIDENCE_WEAK"
-        ],
-        "must_fix": [
-          "EVIDENCE_WEAK"
-        ],
-        "evidence_gap": "Need at least 2 evidence points"
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T08:30:28.972Z",
+      "sessionCount": 1
     }
   }
 ]
