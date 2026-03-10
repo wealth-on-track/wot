@@ -240,7 +240,7 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Add a concise legend near summary cards clarifying gain/loss semantics and neutral states; keep scope to one user-facing component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
+    "summary": "Add a concise legend near summary cards clarifying gain/loss semantics and neutral states; keep scope to one user-facing component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
     "proposalId": "PRP-PILOT-20260310-001",
     "changedFiles": [
       "src/components/PublicPortfolioView.tsx"
@@ -250,7 +250,7 @@
     "retries": {
       "planning": 0,
       "build": 1,
-      "testing": 2,
+      "testing": 3,
       "verification": 0
     },
     "constraints": {
@@ -262,7 +262,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T14:41:55.380Z",
+      "checkedAt": "2026-03-10T14:42:08.939Z",
       "sessionCount": 1,
       "feedback": {
         "reject_reason_codes": [
@@ -297,7 +297,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T14:40:14.278Z",
-      "updatedAt": "2026-03-10T14:41:55.426Z"
+      "updatedAt": "2026-03-10T14:42:08.987Z"
     }
   }
 ]

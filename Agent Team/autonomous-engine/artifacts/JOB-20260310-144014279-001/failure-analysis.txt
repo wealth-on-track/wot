@@ -1,1 +1,1 @@
-Verification failed checks: unit
+Verification failed checks: unit, integration
