@@ -13,33 +13,29 @@ const scanHints = [];
 const USER_FACING_KEYS = ['portfolio', 'dashboard', 'onboarding', 'insight', 'clarity', 'trust', 'branding', 'mobile', 'performance'];
 const LOW_VALUE_PATTERNS = [/tiny/i, /small hint/i, /badge/i, /minor/i, /cosmetic/i, /text tweak/i, /helper sentence/i, /admin ui/i];
 
+let ds = {};
 try {
-  const out = execSync('npm audit --json', { stdio: 'pipe', timeout: 20000 }).toString();
-  const parsed = JSON.parse(out);
-  const vulns = Number(parsed?.metadata?.vulnerabilities?.high || 0) + Number(parsed?.metadata?.vulnerabilities?.critical || 0);
-  if (vulns > 0) scanHints.push({ category: 'security', title: `Address ${vulns} high/critical dependency vulnerabilities`, evidence: [`npm audit high+critical=${vulns}`] });
+  ds = JSON.parse(execSync('node scripts/autonomous-engine/discovery-sources.mjs', { stdio: 'pipe', timeout: 120000 }).toString() || '{}');
 } catch {}
 
-try {
-  execSync('npm run -s lint', { stdio: 'pipe', timeout: 30000 });
-} catch {
-  scanHints.push({ category: 'operations', title: 'Resolve lint failures blocking autonomous verification', evidence: ['lint command failed in local scan'] });
+if (Number(ds.auditHighCritical || 0) > 0) {
+  scanHints.push({ category: 'security', title: `Address ${ds.auditHighCritical} high/critical dependency vulnerabilities`, evidence: [`npm audit high+critical=${ds.auditHighCritical}`] });
 }
+if (ds.lintFail) scanHints.push({ category: 'operations', title: 'Resolve lint failures blocking autonomous verification', evidence: ['lint command failed in local scan'] });
+if (ds.testFail) scanHints.push({ category: 'patch', title: 'Fix failing unit/integration test path discovered in local test run', evidence: ['unit test command failed in local scan'] });
 
-try {
-  execSync('npm run -s test -- --run', { stdio: 'pipe', timeout: 120000 });
-} catch {
-  scanHints.push({ category: 'patch', title: 'Fix failing unit/integration test path discovered in local test run', evidence: ['unit test command failed in local scan'] });
+if (Number(ds.onboardingTouches || 0) > 0) {
+  scanHints.push({ category: 'ux', title: 'Improve empty portfolio onboarding with clearer next actions', evidence: [`onboarding-related code touch count=${ds.onboardingTouches}`] });
 }
+if (Number(ds.portfolioTouches || 0) > 0) {
+  scanHints.push({ category: 'performance', title: 'Reduce portfolio dashboard load latency via route-level lazy chunking', evidence: [`portfolio-related touch count=${ds.portfolioTouches}`] });
+}
+scanHints.push({ category: 'benchmark', title: 'Compare critical portfolio flows against benchmark scripts and align best practices', evidence: [`benchmark_result: ${String(ds.benchmarkSignal || 'fail')}`] });
 
-scanHints.push({ category: 'ux', title: 'Improve empty portfolio onboarding with clearer next actions', evidence: ['observed UX friction: users with zero assets lack guided next step'] });
-try {
-  const bench = execSync('node scripts/autonomous-engine/check-performance.mjs', { stdio: 'pipe', timeout: 120000 }).toString();
-  scanHints.push({ category: 'benchmark', title: 'Compare critical portfolio flows against benchmark scripts and align best practices', evidence: [`benchmark_result: ${bench.trim()}`] });
-} catch {
-  scanHints.push({ category: 'benchmark', title: 'Compare critical portfolio flows against benchmark scripts and align best practices', evidence: ['benchmark_result: fail'] });
+// fallback seed (keep minimal discover alive)
+if (scanHints.length === 0) {
+  scanHints.push({ category: 'ux', title: 'Improve portfolio clarity in summary cards with explicit context labels', evidence: ['periodic fallback discovery seed'] });
 }
-scanHints.push({ category: 'performance', title: 'Reduce portfolio dashboard load latency via route-level lazy chunking', evidence: ['performance measurement needed: dashboard load path is a frequent user-facing surface'] });
 
 // weekly deep scan
 const lastDeep = deepState?.lastDeepScanAt ? new Date(deepState.lastDeepScanAt).getTime() : 0;

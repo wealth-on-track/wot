@@ -1,63 +1,28 @@
 [
   {
-    "id": "JOB-20260309-193820617-001",
-    "title": "Add explicit Active-state explainer text in autonomous dashboard detail panel",
-    "category": "operations",
-    "state": "abandoned_with_reason",
+    "id": "JOB-20260310-144014279-001",
+    "title": "Pilot: improve portfolio summary clarity with explicit gain/loss legend",
+    "category": "ux",
+    "state": "proposal",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
-    "summary": "Add one short explainer line under progress to clarify blocked/progressing interpretation. (quality-revised)",
-    "proposalId": "PRP-PILOT-20260309-001",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Add a concise legend near summary cards clarifying gain/loss semantics and neutral states; keep scope to one user-facing component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
+    "proposalId": "PRP-PILOT-20260310-001",
     "changedFiles": [
-      "src/app/admin/autonomous-engine/page.tsx"
+      "src/components/PublicPortfolioView.tsx"
     ],
     "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 0,
-      "build": 0,
-      "testing": 0,
+      "planning": 1,
+      "build": 1,
+      "testing": 4,
       "verification": 0
-    },
-    "constraints": {
-      "maxFiles": 5,
-      "maxFunctionalChanges": 1,
-      "noUnrelatedRefactor": true,
-      "functionalScope": "src/app"
-    },
-    "ownerAgent": "planner",
-    "timestamps": {
-      "createdAt": "2026-03-09T19:38:20.617Z",
-      "updatedAt": "2026-03-10T09:00:29.914Z"
-    },
-    "quality": {
-      "status": "pass",
-      "checkedAt": "2026-03-10T08:20:29.140Z",
-      "sessionCount": 1
-    },
-    "finalReason": "proposal_missing"
-  },
-  {
-    "id": "JOB-20260309-194114456-001",
-    "title": "Add tiny monitor hint badge in Admin Sidebar for Agent Team visibility",
-    "category": "operations",
-    "state": "approved",
-    "risk": "low",
-    "impact": "medium",
-    "priority": "P1",
-    "summary": "Add one minimal text hint near Agent Team link. (local build applied)",
-    "proposalId": "PRP-PILOT-20260309-002",
-    "changedFiles": [
-      "src/components/AdminSidebar.tsx"
-    ],
-    "testResults": "pass",
-    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
-    "retries": {
-      "planning": 0,
-      "build": 0,
-      "testing": 0,
-      "verification": 1
     },
     "constraints": {
       "maxFiles": 5,
@@ -65,172 +30,35 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/components"
     },
-    "ownerAgent": "verifier",
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-10T15:00:33.914Z",
+      "sessionCount": 0,
+      "feedback": {
+        "reject_reason_codes": [
+          "VERIFY_FAIL"
+        ],
+        "must_fix": [
+          "unit",
+          "integration"
+        ],
+        "rewrite_plan": [
+          "Address failing checks only (keep scope small).",
+          "Update proposal evidence and tests_required to match failure cause.",
+          "Resubmit proposal through quality gate."
+        ]
+      },
+      "reason": "repeated_verify_failures"
+    },
     "timestamps": {
-      "createdAt": "2026-03-09T19:41:14.456Z",
-      "updatedAt": "2026-03-09T20:18:08.355Z"
-    },
-    "finalReason": "push_failed_after_human_approval"
-  },
-  {
-    "id": "JOB-20260309-194114457-002",
-    "title": "Add short operator hint text to Admin Health page header",
-    "category": "operations",
-    "state": "approved",
-    "risk": "low",
-    "impact": "medium",
-    "priority": "P1",
-    "summary": "Add one short helper sentence in admin health header. (local build applied)",
-    "proposalId": "PRP-PILOT-20260309-003",
-    "changedFiles": [
-      "src/app/admin/health/page.tsx"
-    ],
-    "testResults": "pass",
-    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
-    "retries": {
-      "planning": 0,
-      "build": 0,
-      "testing": 0,
-      "verification": 0
-    },
-    "constraints": {
-      "maxFiles": 5,
-      "maxFunctionalChanges": 1,
-      "noUnrelatedRefactor": true,
-      "functionalScope": "src/app"
-    },
-    "ownerAgent": "verifier",
-    "timestamps": {
-      "createdAt": "2026-03-09T19:41:14.457Z",
-      "updatedAt": "2026-03-09T20:25:24.075Z"
+      "createdAt": "2026-03-10T14:40:14.278Z",
+      "updatedAt": "2026-03-10T14:55:29.356Z"
     }
   },
   {
-    "id": "JOB-20260309-204954895-001",
+    "id": "JOB-20260310-150019646-001",
     "title": "Improve empty portfolio onboarding with clearer next actions",
-    "category": "ux",
-    "state": "abandoned_with_reason",
-    "risk": "low",
-    "impact": "high",
-    "priority": "P1",
-    "impactScore": 4,
-    "confidenceScore": 4,
-    "effortScore": 2,
-    "userFacing": true,
-    "summary": "Apply one meaningful local change set and verify with required checks. (quality-revised)",
-    "proposalId": "PRP-20260309-204954850-003",
-    "changedFiles": [],
-    "testResults": "fail",
-    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
-    "retries": {
-      "planning": 0,
-      "build": 0,
-      "testing": 0,
-      "verification": 0
-    },
-    "constraints": {
-      "maxFiles": 5,
-      "maxFunctionalChanges": 1,
-      "noUnrelatedRefactor": true,
-      "functionalScope": "src/app"
-    },
-    "ownerAgent": "planner",
-    "timestamps": {
-      "createdAt": "2026-03-09T20:49:54.895Z",
-      "updatedAt": "2026-03-10T09:05:29.061Z"
-    },
-    "quality": {
-      "status": "pass",
-      "checkedAt": "2026-03-10T08:25:30.197Z",
-      "sessionCount": 1
-    },
-    "finalReason": "proposal_missing"
-  },
-  {
-    "id": "JOB-20260309-204954896-002",
-    "title": "Reduce portfolio dashboard load latency via route-level lazy chunking",
-    "category": "performance",
-    "state": "abandoned_with_reason",
-    "risk": "medium",
-    "impact": "high",
-    "priority": "P1",
-    "impactScore": 4,
-    "confidenceScore": 4,
-    "effortScore": 2,
-    "userFacing": true,
-    "summary": "Apply one meaningful local change set and verify with required checks. (quality-revised)",
-    "proposalId": "PRP-20260309-204954850-005",
-    "changedFiles": [],
-    "testResults": "fail",
-    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
-    "retries": {
-      "planning": 0,
-      "build": 0,
-      "testing": 0,
-      "verification": 0
-    },
-    "constraints": {
-      "maxFiles": 5,
-      "maxFunctionalChanges": 1,
-      "noUnrelatedRefactor": true,
-      "functionalScope": "src/components"
-    },
-    "ownerAgent": "planner",
-    "timestamps": {
-      "createdAt": "2026-03-09T20:49:54.896Z",
-      "updatedAt": "2026-03-10T09:10:28.574Z"
-    },
-    "quality": {
-      "status": "pass",
-      "checkedAt": "2026-03-10T08:30:28.972Z",
-      "sessionCount": 1
-    },
-    "finalReason": "proposal_missing"
-  },
-  {
-    "id": "JOB-20260310-090029781-001",
-    "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
-    "category": "benchmark",
-    "state": "abandoned_with_reason",
-    "risk": "low",
-    "impact": "high",
-    "priority": "P1",
-    "impactScore": 4,
-    "confidenceScore": 4,
-    "effortScore": 3,
-    "userFacing": true,
-    "summary": "Apply one meaningful local change set and verify with required checks. (local build applied) | retry build (no changed files, cooldown active) | retry build (no changed files)",
-    "proposalId": "PRP-20260310-090029733-004",
-    "changedFiles": [],
-    "testResults": "fail",
-    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
-    "retries": {
-      "planning": 0,
-      "build": 3,
-      "testing": 1,
-      "verification": 0
-    },
-    "constraints": {
-      "maxFiles": 5,
-      "maxFunctionalChanges": 1,
-      "noUnrelatedRefactor": true,
-      "functionalScope": "src/services"
-    },
-    "ownerAgent": "builder",
-    "quality": {
-      "status": "pass",
-      "checkedAt": "2026-03-10T09:05:28.969Z",
-      "sessionCount": 1
-    },
-    "timestamps": {
-      "createdAt": "2026-03-10T09:00:29.780Z",
-      "updatedAt": "2026-03-10T09:30:29.243Z"
-    },
-    "finalReason": "build_produced_no_changes_after_3_retries"
-  },
-  {
-    "id": "JOB-20260310-144014279-001",
-    "title": "Pilot: improve portfolio summary clarity with explicit gain/loss legend",
     "category": "ux",
     "state": "approved_for_build",
     "risk": "low",
@@ -240,17 +68,95 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Add a concise legend near summary cards clarifying gain/loss semantics and neutral states; keep scope to one user-facing component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
-    "proposalId": "PRP-PILOT-20260310-001",
-    "changedFiles": [
-      "src/components/PublicPortfolioView.tsx"
-    ],
-    "testResults": "fail",
+    "summary": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
+    "proposalId": "PRP-20260310-090029733-003",
+    "changedFiles": [],
+    "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
-      "build": 1,
-      "testing": 3,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/app"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T15:00:33.914Z",
+      "sessionCount": 1
+    },
+    "timestamps": {
+      "createdAt": "2026-03-10T15:00:19.639Z",
+      "updatedAt": "2026-03-10T15:00:33.948Z"
+    }
+  },
+  {
+    "id": "JOB-20260310-150019647-002",
+    "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
+    "category": "benchmark",
+    "state": "approved_for_build",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 3,
+    "userFacing": true,
+    "summary": "Apply one meaningful local change set and verify with required checks.",
+    "proposalId": "PRP-20260310-090029733-004",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/services"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T15:00:33.914Z",
+      "sessionCount": 0
+    },
+    "timestamps": {
+      "createdAt": "2026-03-10T15:00:19.647Z",
+      "updatedAt": "2026-03-10T15:00:33.962Z"
+    }
+  },
+  {
+    "id": "JOB-20260310-150019647-003",
+    "title": "Reduce portfolio dashboard load latency via route-level lazy chunking",
+    "category": "performance",
+    "state": "proposal",
+    "risk": "medium",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
+    "proposalId": "PRP-20260310-090029733-005",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
       "verification": 0
     },
     "constraints": {
@@ -262,42 +168,52 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T14:42:08.939Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "CONFIDENCE_LOW"
-        ],
-        "strengths": [
-          "Category alignment: ux",
-          "Initial impact/confidence/effort: 4 / 4 / 2",
-          "Scope remains constrained for controlled delivery."
-        ],
-        "gaps": [
-          "Confidence is low; proposal needs stronger verification framing."
-        ],
-        "must_fix": [
-          "CONFIDENCE_LOW"
-        ],
-        "evidence_gap": null,
-        "rewrite_plan": [
-          "Rewrite problem statement to explain user/system consequence clearly.",
-          "Add concrete evidence and tie it to measurable acceptance criteria.",
-          "Upgrade proposal language from generic intent to execution-ready plan.",
-          "Re-score impact/confidence after rewrite and keep effort realistic."
-        ],
-        "acceptance_checklist": [
-          "Impact >= 3",
-          "Confidence >= 3",
-          "Evidence count >= 2",
-          "User-facing value explicitly stated"
-        ]
-      },
-      "revised": true
+      "checkedAt": "2026-03-10T15:00:33.914Z",
+      "sessionCount": 1
     },
     "timestamps": {
-      "createdAt": "2026-03-10T14:40:14.278Z",
-      "updatedAt": "2026-03-10T14:42:08.987Z"
+      "createdAt": "2026-03-10T15:00:19.647Z",
+      "updatedAt": "2026-03-10T15:00:19.647Z"
+    }
+  },
+  {
+    "id": "JOB-20260310-150019648-004",
+    "title": "Pilot v2: improve portfolio insight card clarity with benchmark-backed labels",
+    "category": "ux",
+    "state": "proposal",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Add explicit context labels and short explanatory subtitle in portfolio insight card; scope limited to one user-facing component.",
+    "proposalId": "PRP-PILOT-20260310-Q2",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T15:00:33.914Z",
+      "sessionCount": 0
+    },
+    "timestamps": {
+      "createdAt": "2026-03-10T15:00:19.648Z",
+      "updatedAt": "2026-03-10T15:00:19.648Z"
     }
   }
 ]

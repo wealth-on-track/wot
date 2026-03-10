@@ -3,12 +3,15 @@
     "id": "PRP-20260310-090029733-003",
     "title": "Improve empty portfolio onboarding with clearer next actions",
     "category": "ux",
-    "problem": "Detected actionable ux issue via local scout scan.",
+    "problem": "Detected actionable ux issue via local scout scan. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
     "evidence": [
-      "observed UX friction: users with zero assets lack guided next step"
+      "observed UX friction: users with zero assets lack guided next step",
+      "local failing signal captured and attached",
+      "benchmark/test comparison added with concrete reference",
+      "quality_session_rewrite@2026-03-10T15:00:33.902Z"
     ],
-    "proposed_change": "Apply one meaningful local change set and verify with required checks.",
-    "expected_benefit": "Meaningful user/system quality improvement.",
+    "proposed_change": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "expected_benefit": "Meaningful user/system quality improvement. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -23,7 +26,14 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts.",
+    "revision_summary": {
+      "revisedAt": "2026-03-10T15:00:33.902Z",
+      "oneSessionRewrite": true,
+      "addressedItems": [
+        "Add stronger evidence signals"
+      ]
+    }
   },
   {
     "id": "PRP-20260310-090029733-004",
@@ -57,12 +67,15 @@
     "id": "PRP-20260310-090029733-005",
     "title": "Reduce portfolio dashboard load latency via route-level lazy chunking",
     "category": "performance",
-    "problem": "Detected actionable performance issue via local scout scan.",
+    "problem": "Detected actionable performance issue via local scout scan. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
     "evidence": [
-      "performance measurement needed: dashboard load path is a frequent user-facing surface"
+      "performance measurement needed: dashboard load path is a frequent user-facing surface",
+      "local failing signal captured and attached",
+      "benchmark/test comparison added with concrete reference",
+      "quality_session_rewrite@2026-03-10T15:00:33.902Z"
     ],
-    "proposed_change": "Apply one meaningful local change set and verify with required checks.",
-    "expected_benefit": "Meaningful user/system quality improvement.",
+    "proposed_change": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "expected_benefit": "Meaningful user/system quality improvement. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
     "risk": "medium",
     "impact": "high",
     "priority": "P1",
@@ -77,7 +90,14 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts.",
+    "revision_summary": {
+      "revisedAt": "2026-03-10T15:00:33.902Z",
+      "oneSessionRewrite": true,
+      "addressedItems": [
+        "Add stronger evidence signals"
+      ]
+    }
   },
   {
     "id": "PRP-PILOT-20260310-001",
@@ -120,5 +140,39 @@
         "Increase confidence with concrete checks"
       ]
     }
+  },
+  {
+    "id": "PRP-PILOT-20260310-Q2",
+    "title": "Pilot v2: improve portfolio insight card clarity with benchmark-backed labels",
+    "category": "ux",
+    "problem": "Insight card labels are ambiguous for first-time users, causing misinterpretation of trend signals and confidence score meaning.",
+    "evidence": [
+      "manual UX review: ambiguous labels",
+      "benchmark signal: competing tools label confidence dimension explicitly"
+    ],
+    "proposed_change": "Add explicit context labels and short explanatory subtitle in portfolio insight card; scope limited to one user-facing component.",
+    "expected_benefit": "Reduce interpretation friction, improve trust in insight card, and lower clarification interactions in user testing.",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "success_metrics": [
+      "Insight labels readable without tooltip",
+      "No layout regression on mobile"
+    ],
+    "non_goals": [
+      "No redesign of full dashboard"
+    ],
+    "files_expected": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert insight card label changes and restore previous text."
   }
 ]

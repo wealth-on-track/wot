@@ -1,0 +1,34 @@
+{
+  "id": "PRP-PILOT-20260310-Q2",
+  "title": "Pilot v2: improve portfolio insight card clarity with benchmark-backed labels",
+  "category": "ux",
+  "problem": "Insight card labels are ambiguous for first-time users, causing misinterpretation of trend signals and confidence score meaning.",
+  "evidence": [
+    "manual UX review: ambiguous labels",
+    "benchmark signal: competing tools label confidence dimension explicitly"
+  ],
+  "proposed_change": "Add explicit context labels and short explanatory subtitle in portfolio insight card; scope limited to one user-facing component.",
+  "expected_benefit": "Reduce interpretation friction, improve trust in insight card, and lower clarification interactions in user testing.",
+  "risk": "low",
+  "impact": "high",
+  "priority": "P1",
+  "impactScore": 4,
+  "confidenceScore": 4,
+  "effortScore": 2,
+  "userFacing": true,
+  "success_metrics": [
+    "Insight labels readable without tooltip",
+    "No layout regression on mobile"
+  ],
+  "non_goals": [
+    "No redesign of full dashboard"
+  ],
+  "files_expected": [
+    "src/components/PublicPortfolioView.tsx"
+  ],
+  "tests_required": [
+    "lint",
+    "unit"
+  ],
+  "rollback_plan": "Revert insight card label changes and restore previous text."
+}
