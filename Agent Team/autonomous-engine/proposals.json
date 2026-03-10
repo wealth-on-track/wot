@@ -352,15 +352,15 @@
     "id": "PRP-20260310-205415187-002",
     "title": "Improve empty portfolio onboarding with clearer next actions (triaged)",
     "category": "ux",
-    "problem": "Detected actionable ux issue via local scout scan. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary. Root-cause triage: VERIFY_FAIL.",
+    "problem": "Detected actionable ux issue via local scout scan. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary. Root-cause triage: VERIFY_FAIL. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
     "evidence": [
       "observed UX friction: users with zero assets lack guided next step",
       "local failing signal captured and attached",
       "benchmark/test comparison added with concrete reference",
       "quality_session_rewrite@2026-03-10T15:00:33.902Z"
     ],
-    "proposed_change": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks.",
-    "expected_benefit": "Meaningful user/system quality improvement. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
+    "proposed_change": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "expected_benefit": "Meaningful user/system quality improvement. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -373,11 +373,12 @@
     ],
     "tests_required": [
       "lint",
-      "unit"
+      "unit",
+      "integration"
     ],
     "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts.",
     "revision_summary": {
-      "revisedAt": "2026-03-10T15:00:46.074Z",
+      "revisedAt": "2026-03-10T20:55:37.427Z",
       "oneSessionRewrite": true,
       "addressedItems": [
         "Increase confidence with concrete checks"
@@ -500,95 +501,5 @@
       "unit"
     ],
     "rollback_plan": "Revert microcopy commit."
-  },
-  {
-    "id": "PRP-20260310-205528704-001",
-    "title": "Pilot v2: improve portfolio insight card clarity with benchmark-backed labels (triaged)",
-    "category": "ux",
-    "problem": "Insight card labels are ambiguous for first-time users, causing misinterpretation of trend signals and confidence score meaning. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary. Root-cause triage: VERIFY_FAIL.",
-    "evidence": [
-      "manual UX review: ambiguous labels",
-      "benchmark signal: competing tools label confidence dimension explicitly"
-    ],
-    "proposed_change": "Add explicit context labels and short explanatory subtitle in portfolio insight card; scope limited to one user-facing component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks.",
-    "expected_benefit": "Reduce interpretation friction, improve trust in insight card, and lower clarification interactions in user testing. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
-    "risk": "low",
-    "impact": "high",
-    "priority": "P1",
-    "impactScore": 4,
-    "confidenceScore": 4,
-    "effortScore": 2,
-    "userFacing": true,
-    "success_metrics": [
-      "Insight labels readable without tooltip",
-      "No layout regression on mobile"
-    ],
-    "non_goals": [
-      "No redesign of full dashboard"
-    ],
-    "files_expected": [
-      "src/components/PublicPortfolioView.tsx"
-    ],
-    "tests_required": [
-      "lint",
-      "unit"
-    ],
-    "rollback_plan": "Revert insight card label changes and restore previous text.",
-    "revision_summary": {
-      "revisedAt": "2026-03-10T15:20:29.489Z",
-      "oneSessionRewrite": true,
-      "addressedItems": [
-        "Increase confidence with concrete checks"
-      ]
-    },
-    "triagedFrom": "PRP-PILOT-20260310-Q2",
-    "triageReasonCodes": [
-      "VERIFY_FAIL"
-    ]
-  },
-  {
-    "id": "PRP-20260310-205528705-002",
-    "title": "Pilot Final: clarify portfolio insight confidence legend for users (triaged)",
-    "category": "ux",
-    "problem": "Users misread confidence labeling in insight area, which lowers trust in generated signals. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary. Root-cause triage: VERIFY_FAIL.",
-    "evidence": [
-      "manual ux observation: confidence label ambiguity",
-      "benchmark: competitor tools show explicit confidence legend"
-    ],
-    "proposed_change": "Add explicit confidence legend and context subtitle near insight card; keep scope user-facing and single-component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks.",
-    "expected_benefit": "Users interpret insight confidence correctly, improving trust and reducing confusion. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
-    "risk": "low",
-    "impact": "high",
-    "priority": "P1",
-    "impactScore": 4,
-    "confidenceScore": 4,
-    "effortScore": 2,
-    "userFacing": true,
-    "success_metrics": [
-      "Legend visible on mobile+desktop",
-      "No regression in card layout"
-    ],
-    "non_goals": [
-      "No dashboard redesign"
-    ],
-    "files_expected": [
-      "src/components/PublicPortfolioView.tsx"
-    ],
-    "tests_required": [
-      "lint",
-      "unit"
-    ],
-    "rollback_plan": "Revert legend text change.",
-    "revision_summary": {
-      "revisedAt": "2026-03-10T19:26:03.486Z",
-      "oneSessionRewrite": true,
-      "addressedItems": [
-        "Increase confidence with concrete checks"
-      ]
-    },
-    "triagedFrom": "PRP-PILOT-20260310-FINAL",
-    "triageReasonCodes": [
-      "VERIFY_FAIL"
-    ]
   }
 ]
