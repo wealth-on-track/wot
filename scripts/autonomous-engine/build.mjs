@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent, getActiveJobLock, setActiveJobLock } from './lib.mjs';
 import { execSync } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -10,6 +10,8 @@ const jobs = await readJson(files.jobs);
 const history = await readJson(files.history);
 
 const priorityRank = { P1: 1, P2: 2, P3: 3 };
+const lock = await getActiveJobLock();
+const locked = lock?.activeJobId ? jobs.find((j) => j.id === lock.activeJobId && ['approved_for_build', 'build'].includes(j.state)) : null;
 const approvedQueue = jobs
   .filter((j) => j.state === 'approved_for_build')
   .sort((a, b) => (priorityRank[a.priority] || 9) - (priorityRank[b.priority] || 9) || new Date(a.timestamps?.updatedAt || a.timestamps?.createdAt || 0).getTime() - new Date(b.timestamps?.updatedAt || b.timestamps?.createdAt || 0).getTime());
@@ -17,7 +19,7 @@ const buildQueue = jobs
   .filter((j) => j.state === 'build')
   .sort((a, b) => new Date(a.timestamps?.updatedAt || a.timestamps?.createdAt || 0).getTime() - new Date(b.timestamps?.updatedAt || b.timestamps?.createdAt || 0).getTime());
 
-const job = approvedQueue[0] || buildQueue[0];
+const job = locked || approvedQueue[0] || buildQueue[0];
 if (!job) {
   console.log('[build] no approved job');
   process.exit(0);

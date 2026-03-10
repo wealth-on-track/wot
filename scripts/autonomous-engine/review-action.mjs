@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, appendEvent } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, appendEvent, setActiveJobLock } from './lib.mjs';
 import { execSync } from 'child_process';
 
 const action = process.argv[2];
@@ -99,3 +99,4 @@ if (action === 'approve') {
 history.push({ ...job });
 await writeJson(files.jobs, jobs);
 await writeJson(files.history, history);
+await setActiveJobLock(null);

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, WIP_LIMITS, appendEvent } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, WIP_LIMITS, appendEvent, getActiveJobLock, setActiveJobLock } from './lib.mjs';
 
 await ensureEngineFiles();
 const jobs = await readJson(files.jobs);
@@ -18,6 +18,13 @@ if (buildingCount >= WIP_LIMITS.building || testingCount >= WIP_LIMITS.testing) 
   process.exit(0);
 }
 
+const lock = await getActiveJobLock();
+const hasLockedActive = lock?.activeJobId && jobs.some((j) => j.id === lock.activeJobId && ['approved_for_build', 'build', 'test', 'review_ready'].includes(j.state));
+if (hasLockedActive) {
+  console.log(`[dispatch] active lock in place (${lock.activeJobId})`);
+  process.exit(0);
+}
+
 const priorityRank = { P1: 1, P2: 2, P3: 3 };
 const next = jobs
   .filter((j) => j.state === 'proposal' && j.quality?.status === 'pass')
@@ -29,6 +36,7 @@ if (next) {
   next.timestamps.updatedAt = nowIso();
   await writeArtifact(next.id, 'dispatch-decision.txt', `Orchestrator dispatch: proposal moved to approved_for_build with priority=${next.priority || 'P2'}.`);
   await appendEvent({ jobId: next.id, proposalId: next.proposalId, stage: 'approved_for_build', message: `Dispatched to approved_for_build (priority=${next.priority || 'P2'})` });
+  await setActiveJobLock(next.id);
   console.log(`[dispatch] promoted ${next.id} to approved_for_build`);
 } else {
   console.log('[dispatch] no proposal to activate');

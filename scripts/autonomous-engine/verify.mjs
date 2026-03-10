@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent, setActiveJobLock } from './lib.mjs';
 import { execSync } from 'child_process';
 
 await ensureEngineFiles();
@@ -70,6 +70,7 @@ if (allPass) {
   job.state = 'proposal';
   job.ownerAgent = 'planner';
   job.quality = { status: 'needs_revision', checkedAt: nowIso(), sessionCount: 0, feedback };
+  await setActiveJobLock(null);
   await writeArtifact(job.id, 'failure-analysis.txt', `Verification failed checks: ${failedChecks.join(', ')}`);
   await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'proposal', message: `Verification failed (${failedChecks.join(', ')}); sent back to proposal for revision` });
 }

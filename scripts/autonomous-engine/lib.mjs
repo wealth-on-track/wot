@@ -4,6 +4,7 @@ import path from 'path';
 const ROOT = process.cwd();
 const BASE = path.join(ROOT, 'Agent Team', 'autonomous-engine');
 const ARTIFACTS = path.join(BASE, 'artifacts');
+const RUNTIME = path.join(BASE, 'runtime');
 
 const FILES = {
   proposals: path.join(BASE, 'proposals.json'),
@@ -12,6 +13,7 @@ const FILES = {
   lessons: path.join(ROOT, 'knowledge', 'lessons.json'),
   deepScanState: path.join(BASE, 'deep-scan-state.json'),
   events: path.join(BASE, 'events.jsonl'),
+  activeJob: path.join(RUNTIME, 'active-job.json'),
 };
 
 export const CATEGORIES = ['ux', 'performance', 'security', 'branding', 'product', 'operations', 'benchmark', 'patch'];
@@ -31,14 +33,16 @@ export async function ensureEngineFiles() {
   await ensureFile(FILES.lessons, []);
   await ensureFile(FILES.deepScanState, { lastDeepScanAt: null });
   await fs.mkdir(ARTIFACTS, { recursive: true });
+  await fs.mkdir(RUNTIME, { recursive: true });
   try { await fs.access(FILES.events); } catch { await fs.writeFile(FILES.events, '', 'utf8'); }
+  try { await fs.access(FILES.activeJob); } catch { await fs.writeFile(FILES.activeJob, JSON.stringify({ activeJobId: null, updatedAt: null }, null, 2), 'utf8'); }
 }
 
 export async function readJson(filePath) { return JSON.parse(await fs.readFile(filePath, 'utf8')); }
 export async function writeJson(filePath, data) { await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8'); }
 
 export const files = FILES;
-export const paths = { ROOT, BASE, ARTIFACTS };
+export const paths = { ROOT, BASE, ARTIFACTS, RUNTIME };
 
 export function nowIso() { return new Date().toISOString(); }
 let __seq = 0;
@@ -149,4 +153,13 @@ export async function appendEvent({ jobId, proposalId = null, stage, message, me
     meta,
   };
   await fs.appendFile(FILES.events, `${JSON.stringify(row)}\n`, 'utf8');
+}
+
+export async function getActiveJobLock() {
+  try { return JSON.parse(await fs.readFile(FILES.activeJob, 'utf8')); } catch { return { activeJobId: null, updatedAt: null }; }
+}
+
+export async function setActiveJobLock(activeJobId) {
+  const payload = { activeJobId: activeJobId || null, updatedAt: nowIso() };
+  await fs.writeFile(FILES.activeJob, JSON.stringify(payload, null, 2), 'utf8');
 }
