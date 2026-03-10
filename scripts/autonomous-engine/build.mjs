@@ -104,17 +104,28 @@ if (functionalAreas.length > 1 || outOfScope.length > 0) {
 if (changedFiles.length === 0) {
   job.retries.build += 1;
   const cooldownBlocked = (proposal.files_expected || []).slice(0, 5).every((f) => recentlyTouched.has(f));
-  if (job.retries.build >= 3) {
-    job.state = 'abandoned_with_reason';
-    job.finalReason = cooldownBlocked ? 'file_cooldown_24h_blocked' : 'build_produced_no_changes_after_3_retries';
-    await writeArtifact(job.id, 'failure-analysis.txt', cooldownBlocked
-      ? 'All target files are in 24h cooldown window.'
-      : 'Build produced no file changes after retries; abandoning with reason.');
-  } else {
-    job.state = 'approved_for_build';
-    job.summary = `${job.summary} | retry build (no changed files${cooldownBlocked ? ', cooldown active' : ''})`;
-  }
+
+  // systematik çözüm: no-change durumunda ping-pong yerine proposal revizyona dön
+  job.state = 'proposal';
+  job.ownerAgent = 'planner';
+  job.quality = {
+    status: 'needs_revision',
+    checkedAt: nowIso(),
+    sessionCount: 0,
+    feedback: {
+      reject_reason_codes: ['NO_CHANGED_FILES'],
+      must_fix: ['Adjust target file/scope so build can produce a meaningful diff'],
+      rewrite_plan: [
+        cooldownBlocked
+          ? 'Select an alternative non-cooldown user-facing file with same intent.'
+          : 'Refine proposed change to produce a concrete patch in scoped files.',
+      ],
+    },
+  };
+  job.summary = `${job.summary} | sent back to proposal (no changed files${cooldownBlocked ? ', cooldown active' : ''})`;
   job.timestamps.updatedAt = nowIso();
+  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'proposal', message: `Build produced no changed files${cooldownBlocked ? ' (cooldown active)' : ''}; sent back for proposal revision` });
+  await setActiveJobLock(null);
   await writeJson(files.jobs, jobs);
   console.log('[build] no changed files');
   process.exit(0);

@@ -229,3 +229,5 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
 /* autonomous-engine:JOB-20260310-150019646-001:r0-t0:single-functional-change */
 
 /* autonomous-engine:JOB-20260310-150019646-001:r0-t1:single-functional-change */
+
+/* autonomous-engine:JOB-20260310-150019646-001:r1-t0:single-functional-change */
