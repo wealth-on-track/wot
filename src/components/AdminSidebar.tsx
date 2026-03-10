@@ -96,6 +96,11 @@ const navItems: NavItem[] = [
 export function AdminSidebar({ username }: { username: string }) {
     const pathname = usePathname();
 
+    // Hide left admin menu on Agent Team dashboard page
+    if (pathname === '/admin/autonomous-engine') {
+        return null;
+    }
+
     return (
         <div
             style={{
