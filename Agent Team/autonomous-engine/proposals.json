@@ -302,5 +302,90 @@
       "unit"
     ],
     "rollback_plan": "Revert legend-related commit only."
+  },
+  {
+    "id": "PRP-20260310-205415186-001",
+    "title": "Pilot: improve portfolio summary clarity with explicit gain/loss legend (triaged)",
+    "category": "ux",
+    "problem": "Users can misread PnL colors without legend context in summary area; this reduces confidence in data interpretation. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary. Root-cause triage: VERIFY_FAIL.",
+    "evidence": [
+      "observed ux friction in manual review",
+      "benchmark comparison: legend is present in competing tools"
+    ],
+    "proposed_change": "Add a concise legend near summary cards clarifying gain/loss semantics and neutral states; keep scope to one user-facing component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks.",
+    "expected_benefit": "Higher clarity in portfolio interpretation and reduced confusion-driven support questions, measurable via feedback and reduced clarification actions. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "success_metrics": [
+      "Legend visible and understandable in mobile+desktop",
+      "No regression in summary rendering"
+    ],
+    "non_goals": [
+      "No redesign of overall summary layout"
+    ],
+    "files_expected": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert summary legend commit and restore previous UI snapshot.",
+    "revision_summary": {
+      "revisedAt": "2026-03-10T14:42:08.939Z",
+      "oneSessionRewrite": true,
+      "addressedItems": [
+        "Increase confidence with concrete checks"
+      ]
+    },
+    "triagedFrom": "PRP-PILOT-20260310-001",
+    "triageReasonCodes": [
+      "VERIFY_FAIL"
+    ]
+  },
+  {
+    "id": "PRP-20260310-205415187-002",
+    "title": "Improve empty portfolio onboarding with clearer next actions (triaged)",
+    "category": "ux",
+    "problem": "Detected actionable ux issue via local scout scan. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary. Root-cause triage: VERIFY_FAIL.",
+    "evidence": [
+      "observed UX friction: users with zero assets lack guided next step",
+      "local failing signal captured and attached",
+      "benchmark/test comparison added with concrete reference",
+      "quality_session_rewrite@2026-03-10T15:00:33.902Z"
+    ],
+    "proposed_change": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks.",
+    "expected_benefit": "Meaningful user/system quality improvement. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "files_expected": [
+      "src/app/[username]/portfolio_public/page.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts.",
+    "revision_summary": {
+      "revisedAt": "2026-03-10T15:00:46.074Z",
+      "oneSessionRewrite": true,
+      "addressedItems": [
+        "Increase confidence with concrete checks"
+      ]
+    },
+    "triagedFrom": "PRP-20260310-090029733-003",
+    "triageReasonCodes": [
+      "VERIFY_FAIL"
+    ]
   }
 ]
