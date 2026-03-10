@@ -63,7 +63,7 @@ function stateIcon(state: string) {
 
 function compactJobId(id: string) {
   const s = String(id || '');
-  const m = s.match(/^JOB-(\d{8})-(.+)$/);
+  const m = s.match(/^JOB-(\d{8})-.*?(\d{3})$/);
   if (!m) return s;
   return `${m[1]} - ${m[2]}`;
 }
