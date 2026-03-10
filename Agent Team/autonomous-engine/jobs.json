@@ -3,7 +3,7 @@
     "id": "JOB-20260309-193820617-001",
     "title": "Add explicit Active-state explainer text in autonomous dashboard detail panel",
     "category": "operations",
-    "state": "approved_for_build",
+    "state": "abandoned_with_reason",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -29,13 +29,14 @@
     "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T19:38:20.617Z",
-      "updatedAt": "2026-03-10T08:20:29.185Z"
+      "updatedAt": "2026-03-10T09:00:29.914Z"
     },
     "quality": {
       "status": "pass",
       "checkedAt": "2026-03-10T08:20:29.140Z",
       "sessionCount": 1
-    }
+    },
+    "finalReason": "proposal_missing"
   },
   {
     "id": "JOB-20260309-194114456-001",
@@ -108,7 +109,7 @@
     "id": "JOB-20260309-204954895-001",
     "title": "Improve empty portfolio onboarding with clearer next actions",
     "category": "ux",
-    "state": "approved_for_build",
+    "state": "abandoned_with_reason",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -136,19 +137,20 @@
     "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T20:49:54.895Z",
-      "updatedAt": "2026-03-10T08:25:30.242Z"
+      "updatedAt": "2026-03-10T09:05:29.061Z"
     },
     "quality": {
       "status": "pass",
       "checkedAt": "2026-03-10T08:25:30.197Z",
       "sessionCount": 1
-    }
+    },
+    "finalReason": "proposal_missing"
   },
   {
     "id": "JOB-20260309-204954896-002",
     "title": "Reduce portfolio dashboard load latency via route-level lazy chunking",
     "category": "performance",
-    "state": "approved_for_build",
+    "state": "abandoned_with_reason",
     "risk": "medium",
     "impact": "high",
     "priority": "P1",
@@ -176,12 +178,53 @@
     "ownerAgent": "planner",
     "timestamps": {
       "createdAt": "2026-03-09T20:49:54.896Z",
-      "updatedAt": "2026-03-10T08:30:29.016Z"
+      "updatedAt": "2026-03-10T09:10:28.574Z"
     },
     "quality": {
       "status": "pass",
       "checkedAt": "2026-03-10T08:30:28.972Z",
       "sessionCount": 1
+    },
+    "finalReason": "proposal_missing"
+  },
+  {
+    "id": "JOB-20260310-090029781-001",
+    "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
+    "category": "benchmark",
+    "state": "approved_for_build",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 3,
+    "userFacing": true,
+    "summary": "Apply one meaningful local change set and verify with required checks. (quality-revised)",
+    "proposalId": "PRP-20260310-090029733-004",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/services"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T09:05:28.969Z",
+      "sessionCount": 1
+    },
+    "timestamps": {
+      "createdAt": "2026-03-10T09:00:29.780Z",
+      "updatedAt": "2026-03-10T09:05:29.014Z"
     }
   }
 ]

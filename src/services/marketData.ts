@@ -893,3 +893,5 @@ import { convertCurrency as sharedConvert } from '@/lib/currency';
 export async function convertCurrency(amount: number, from: string, to: string, customRates?: Record<string, number>): Promise<number> {
     return sharedConvert(amount, from, to, customRates);
 }
+
+/* autonomous-engine:JOB-20260310-090029781-001:single-functional-change */
