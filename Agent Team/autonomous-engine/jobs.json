@@ -45,7 +45,7 @@
     "id": "JOB-20260310-150019646-001",
     "title": "Improve empty portfolio onboarding with clearer next actions",
     "category": "ux",
-    "state": "approved_for_build",
+    "state": "review_ready",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -53,12 +53,12 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised) | scope reduced required (multiple functional areas)",
+    "summary": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
     "proposalId": "PRP-20260310-205652346-001",
     "changedFiles": [
       "src/components/PublicPortfolioView.tsx"
     ],
-    "testResults": "fail",
+    "testResults": "pass",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
@@ -72,7 +72,7 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/app"
     },
-    "ownerAgent": "builder",
+    "ownerAgent": "verifier",
     "quality": {
       "status": "pass",
       "checkedAt": "2026-03-10T20:57:33.259Z",
@@ -113,15 +113,15 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.639Z",
-      "updatedAt": "2026-03-10T20:57:33.395Z"
+      "updatedAt": "2026-03-10T20:58:22.487Z"
     },
-    "buildAttempt": 1
+    "buildAttempt": 2
   },
   {
     "id": "JOB-20260310-150019647-002",
     "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
     "category": "benchmark",
-    "state": "proposal",
+    "state": "approved_for_build",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -149,12 +149,12 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T20:58:20.445Z",
+      "checkedAt": "2026-03-10T21:00:29.042Z",
       "sessionCount": 1
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.647Z",
-      "updatedAt": "2026-03-10T20:55:48.481Z"
+      "updatedAt": "2026-03-10T21:00:29.086Z"
     }
   },
   {
@@ -191,7 +191,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T20:58:20.445Z",
+      "checkedAt": "2026-03-10T21:00:29.042Z",
       "sessionCount": 0
     },
     "timestamps": {
@@ -399,7 +399,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T20:58:20.445Z",
+      "checkedAt": "2026-03-10T21:00:29.042Z",
       "sessionCount": 0
     },
     "timestamps": {

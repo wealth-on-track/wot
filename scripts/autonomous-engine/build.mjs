@@ -67,7 +67,9 @@ const recentlyTouched = new Set(
 );
 
 const changedFiles = [];
-for (const rel of (proposal.files_expected || []).slice(0, 5)) {
+const targetFiles = (proposal.files_expected || []).slice(0, 5);
+job.quality = { ...(job.quality || {}), lastTriedFile: targetFiles[0] || null };
+for (const rel of targetFiles) {
   if (proposal.priority !== 'P1' && recentlyTouched.has(rel)) continue;
   const full = path.join(process.cwd(), rel);
   try {

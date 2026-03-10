@@ -25,7 +25,7 @@ const scoreProposal = (p) => {
   return { pass: codes.length === 0, codes, evidenceCount, impact, confidence, userFacing };
 };
 
-const rewriteOnce = (p, result) => {
+const rewriteOnce = (p, result, job) => {
   const np = { ...p };
   const mustFix = [];
 
@@ -50,7 +50,10 @@ const rewriteOnce = (p, result) => {
   if ((result.codes || []).includes('NO_CHANGED_FILES')) {
     const candidates = ['src/components/PublicPortfolioView.tsx','src/components/mobile/MobileDashboard.tsx','src/components/mobile/MobileHeader.tsx'];
     const current = (np.files_expected || [])[0];
-    np.files_expected = [candidates.find((c)=>c!==current) || candidates[0]];
+    const prev = String(job?.quality?.lastTriedFile || '');
+    const next = candidates.find((c)=>c!==current && c!==prev) || candidates.find((c)=>c!==current) || candidates[0];
+    np.files_expected = [next];
+    np.revision_summary = { ...(np.revision_summary || {}), rotatedFileFrom: current, rotatedFileTo: next };
     mustFix.push('Switch target file to avoid no-diff path');
   }
 
@@ -140,7 +143,7 @@ for (const job of jobs) {
     continue;
   }
 
-  const rewritten = rewriteOnce(p, first);
+  const rewritten = rewriteOnce(p, first, job);
   Object.assign(p, rewritten.proposal);
   const second = scoreProposal(p);
 
