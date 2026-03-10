@@ -9,6 +9,7 @@ const run = (cmd) => {
 
 run('node scripts/autonomous-engine/discover.mjs');
 run('node scripts/autonomous-engine/plan.mjs');
+run('node scripts/autonomous-engine/quality-gate.mjs');
 run('node scripts/autonomous-engine/dispatch.mjs');
 run('node scripts/autonomous-engine/build.mjs');
 run('node scripts/autonomous-engine/verify.mjs');

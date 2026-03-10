@@ -69,6 +69,7 @@ for (const raw of proposals) {
       retries: { planning: 0, build: 0, testing: 0, verification: 0 },
       constraints: { maxFiles: 5, maxFunctionalChanges: 1, noUnrelatedRefactor: true, functionalScope: String((p.files_expected?.[0] || '')).split('/').slice(0, 2).join('/') },
       ownerAgent: 'planner',
+      quality: { status: 'pending', sessionCount: 0, checkedAt: null },
       timestamps: { createdAt: now, updatedAt: now },
     };
 

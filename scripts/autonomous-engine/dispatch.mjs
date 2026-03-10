@@ -20,7 +20,7 @@ if (buildingCount >= WIP_LIMITS.building || testingCount >= WIP_LIMITS.testing) 
 
 const priorityRank = { P1: 1, P2: 2, P3: 3 };
 const next = jobs
-  .filter((j) => j.state === 'proposal')
+  .filter((j) => j.state === 'proposal' && j.quality?.status === 'pass')
   .sort((a, b) => (priorityRank[a.priority] || 9) - (priorityRank[b.priority] || 9) || new Date(a.timestamps.createdAt).getTime() - new Date(b.timestamps.createdAt).getTime())[0];
 
 if (next) {

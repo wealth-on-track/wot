@@ -24,6 +24,7 @@
     "auto:discover": "node scripts/autonomous-engine/discover.mjs",
     "auto:plan": "node scripts/autonomous-engine/plan.mjs",
     "auto:dispatch": "node scripts/autonomous-engine/dispatch.mjs",
+    "auto:quality": "node scripts/autonomous-engine/quality-gate.mjs",
     "auto:build": "node scripts/autonomous-engine/build.mjs",
     "auto:verify": "node scripts/autonomous-engine/verify.mjs",
     "auto:guarantee": "node scripts/autonomous-engine/guarantee.mjs",
