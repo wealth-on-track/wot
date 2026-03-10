@@ -1,0 +1,1 @@
+feat(local-auto): Pilot v2: improve portfolio insight card clarity with benchmark-backed labels
