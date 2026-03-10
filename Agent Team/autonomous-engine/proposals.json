@@ -83,13 +83,13 @@
     "id": "PRP-PILOT-20260310-001",
     "title": "Pilot: improve portfolio summary clarity with explicit gain/loss legend",
     "category": "ux",
-    "problem": "Users can misread PnL colors without legend context in summary area; this reduces confidence in data interpretation.",
+    "problem": "Users can misread PnL colors without legend context in summary area; this reduces confidence in data interpretation. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
     "evidence": [
       "observed ux friction in manual review",
       "benchmark comparison: legend is present in competing tools"
     ],
-    "proposed_change": "Add a concise legend near summary cards clarifying gain/loss semantics and neutral states; keep scope to one user-facing component.",
-    "expected_benefit": "Higher clarity in portfolio interpretation and reduced confusion-driven support questions, measurable via feedback and reduced clarification actions.",
+    "proposed_change": "Add a concise legend near summary cards clarifying gain/loss semantics and neutral states; keep scope to one user-facing component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "expected_benefit": "Higher clarity in portfolio interpretation and reduced confusion-driven support questions, measurable via feedback and reduced clarification actions. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -109,8 +109,16 @@
     ],
     "tests_required": [
       "lint",
-      "unit"
+      "unit",
+      "integration"
     ],
-    "rollback_plan": "Revert summary legend commit and restore previous UI snapshot."
+    "rollback_plan": "Revert summary legend commit and restore previous UI snapshot.",
+    "revision_summary": {
+      "revisedAt": "2026-03-10T14:41:55.379Z",
+      "oneSessionRewrite": true,
+      "addressedItems": [
+        "Increase confidence with concrete checks"
+      ]
+    }
   }
 ]

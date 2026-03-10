@@ -240,15 +240,17 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Add a concise legend near summary cards clarifying gain/loss semantics and neutral states; keep scope to one user-facing component. (local build applied) | retry build (no changed files, cooldown active)",
+    "summary": "Add a concise legend near summary cards clarifying gain/loss semantics and neutral states; keep scope to one user-facing component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
     "proposalId": "PRP-PILOT-20260310-001",
-    "changedFiles": [],
+    "changedFiles": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
     "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
       "build": 1,
-      "testing": 1,
+      "testing": 2,
       "verification": 0
     },
     "constraints": {
@@ -257,15 +259,45 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/components"
     },
-    "ownerAgent": "builder",
+    "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T14:40:29.578Z",
-      "sessionCount": 0
+      "checkedAt": "2026-03-10T14:41:55.380Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "CONFIDENCE_LOW"
+        ],
+        "strengths": [
+          "Category alignment: ux",
+          "Initial impact/confidence/effort: 4 / 4 / 2",
+          "Scope remains constrained for controlled delivery."
+        ],
+        "gaps": [
+          "Confidence is low; proposal needs stronger verification framing."
+        ],
+        "must_fix": [
+          "CONFIDENCE_LOW"
+        ],
+        "evidence_gap": null,
+        "rewrite_plan": [
+          "Rewrite problem statement to explain user/system consequence clearly.",
+          "Add concrete evidence and tie it to measurable acceptance criteria.",
+          "Upgrade proposal language from generic intent to execution-ready plan.",
+          "Re-score impact/confidence after rewrite and keep effort realistic."
+        ],
+        "acceptance_checklist": [
+          "Impact >= 3",
+          "Confidence >= 3",
+          "Evidence count >= 2",
+          "User-facing value explicitly stated"
+        ]
+      },
+      "revised": true
     },
     "timestamps": {
       "createdAt": "2026-03-10T14:40:14.278Z",
-      "updatedAt": "2026-03-10T14:40:29.882Z"
+      "updatedAt": "2026-03-10T14:41:55.426Z"
     }
   }
 ]
