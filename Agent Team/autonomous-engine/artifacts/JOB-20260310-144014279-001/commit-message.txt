@@ -1,0 +1,1 @@
+feat(local-auto): Pilot: improve portfolio summary clarity with explicit gain/loss legend

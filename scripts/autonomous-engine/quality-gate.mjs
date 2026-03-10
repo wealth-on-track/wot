@@ -75,14 +75,16 @@ for (const job of jobs) {
   const p = proposals.find((x) => x.id === job.proposalId || String(job.proposalId || '').startsWith(String(x.id || '')));
   if (!p) continue;
 
+  const needsRevision = job.quality?.status === 'needs_revision';
   const first = scoreProposal(p);
-  if (first.pass) {
+  if (first.pass && !needsRevision) {
     job.quality = { status: 'pass', checkedAt: nowIso(), sessionCount: job.quality?.sessionCount || 0 };
     updated += 1;
     continue;
   }
 
   const sessionCount = Number(job.quality?.sessionCount || 0) + 1;
+  if (needsRevision && !first.codes.includes('CONFIDENCE_LOW')) first.codes.push('CONFIDENCE_LOW');
   const feedback = {
     reject_reason_codes: first.codes.slice(0, 3),
     strengths: [

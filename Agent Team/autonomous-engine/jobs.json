@@ -240,15 +240,15 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Add a concise legend near summary cards clarifying gain/loss semantics and neutral states; keep scope to one user-facing component.",
+    "summary": "Add a concise legend near summary cards clarifying gain/loss semantics and neutral states; keep scope to one user-facing component. (local build applied) | retry build (no changed files, cooldown active)",
     "proposalId": "PRP-PILOT-20260310-001",
     "changedFiles": [],
-    "testResults": "pending",
+    "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
-      "build": 0,
-      "testing": 0,
+      "build": 1,
+      "testing": 1,
       "verification": 0
     },
     "constraints": {
@@ -257,15 +257,15 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/components"
     },
-    "ownerAgent": "planner",
+    "ownerAgent": "builder",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T14:40:14.324Z",
+      "checkedAt": "2026-03-10T14:40:29.578Z",
       "sessionCount": 0
     },
     "timestamps": {
       "createdAt": "2026-03-10T14:40:14.278Z",
-      "updatedAt": "2026-03-10T14:40:14.370Z"
+      "updatedAt": "2026-03-10T14:40:29.882Z"
     }
   }
 ]

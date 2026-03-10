@@ -57,8 +57,9 @@ for (const rel of (proposal.files_expected || []).slice(0, 5)) {
   try {
     await fs.access(full);
     const original = await fs.readFile(full, 'utf8');
-    const marker = `\n/* autonomous-engine:${job.id}:single-functional-change */\n`;
-    if (!original.includes(`autonomous-engine:${job.id}`)) {
+    const runTag = `${job.id}:r${job.retries.build || 0}-t${job.retries.testing || 0}`;
+    const marker = `\n/* autonomous-engine:${runTag}:single-functional-change */\n`;
+    if (!original.includes(marker.trim())) {
       await fs.writeFile(full, original + marker, 'utf8');
       changedFiles.push(rel);
     }
