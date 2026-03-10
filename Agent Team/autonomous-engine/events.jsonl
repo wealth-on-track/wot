@@ -78,3 +78,8 @@
 {"ts":"2026-03-10T15:00:33.962Z","jobId":"JOB-20260310-150019647-002","proposalId":"PRP-20260310-090029733-004","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-10T15:00:33.998Z","jobId":"JOB-20260310-150019646-001","proposalId":"PRP-20260310-090029733-003","stage":"build","message":"Builder started implementation","meta":{}}
 {"ts":"2026-03-10T15:00:34.013Z","jobId":"JOB-20260310-150019646-001","proposalId":"PRP-20260310-090029733-003","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-10T15:00:34.151Z","jobId":"JOB-20260310-150019646-001","proposalId":"PRP-20260310-090029733-003","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-10T15:00:39.023Z","jobId":"JOB-20260310-150019646-001","proposalId":"PRP-20260310-090029733-003","stage":"proposal","message":"Verification failed (lint, unit); sent back to proposal for revision","meta":{}}
+{"ts":"2026-03-10T15:00:46.074Z","jobId":"JOB-20260310-150019646-001","proposalId":"PRP-20260310-090029733-003","stage":"proposal","message":"Proposal revised in one feedback session and passed quality gate","meta":{}}
+{"ts":"2026-03-10T15:00:46.120Z","jobId":"JOB-20260310-150019646-001","proposalId":"PRP-20260310-090029733-003","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-10T15:00:46.168Z","jobId":"JOB-20260310-150019646-001","proposalId":"PRP-20260310-090029733-003","stage":"build","message":"Builder started implementation","meta":{}}

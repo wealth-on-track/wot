@@ -33,7 +33,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T15:00:33.914Z",
+      "checkedAt": "2026-03-10T15:00:46.073Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -68,15 +68,17 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
+    "summary": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
     "proposalId": "PRP-20260310-090029733-003",
-    "changedFiles": [],
-    "testResults": "pending",
+    "changedFiles": [
+      "src/app/[username]/portfolio_public/page.tsx"
+    ],
+    "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
       "build": 0,
-      "testing": 0,
+      "testing": 1,
       "verification": 0
     },
     "constraints": {
@@ -88,12 +90,42 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T15:00:33.914Z",
-      "sessionCount": 1
+      "checkedAt": "2026-03-10T15:00:46.074Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "CONFIDENCE_LOW"
+        ],
+        "strengths": [
+          "Category alignment: ux",
+          "Initial impact/confidence/effort: 4 / 4 / 2",
+          "Scope remains constrained for controlled delivery."
+        ],
+        "gaps": [
+          "Confidence is low; proposal needs stronger verification framing."
+        ],
+        "must_fix": [
+          "CONFIDENCE_LOW"
+        ],
+        "evidence_gap": null,
+        "rewrite_plan": [
+          "Rewrite problem statement to explain user/system consequence clearly.",
+          "Add concrete evidence and tie it to measurable acceptance criteria.",
+          "Upgrade proposal language from generic intent to execution-ready plan.",
+          "Re-score impact/confidence after rewrite and keep effort realistic."
+        ],
+        "acceptance_checklist": [
+          "Impact >= 3",
+          "Confidence >= 3",
+          "Evidence count >= 2",
+          "User-facing value explicitly stated"
+        ]
+      },
+      "revised": true
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.639Z",
-      "updatedAt": "2026-03-10T15:00:33.948Z"
+      "updatedAt": "2026-03-10T15:00:46.120Z"
     }
   },
   {
@@ -168,7 +200,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T15:00:33.914Z",
+      "checkedAt": "2026-03-10T15:00:46.074Z",
       "sessionCount": 1
     },
     "timestamps": {
@@ -208,7 +240,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T15:00:33.914Z",
+      "checkedAt": "2026-03-10T15:00:46.074Z",
       "sessionCount": 0
     },
     "timestamps": {
