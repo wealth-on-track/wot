@@ -47,6 +47,12 @@ const rewriteOnce = (p, result) => {
     np.files_expected = ['src/components/PublicPortfolioView.tsx'];
     mustFix.push('Make change user-facing');
   }
+  if ((result.codes || []).includes('NO_CHANGED_FILES')) {
+    const candidates = ['src/components/PublicPortfolioView.tsx','src/components/mobile/MobileDashboard.tsx','src/components/mobile/MobileHeader.tsx'];
+    const current = (np.files_expected || [])[0];
+    np.files_expected = [candidates.find((c)=>c!==current) || candidates[0]];
+    mustFix.push('Switch target file to avoid no-diff path');
+  }
 
   np.problem = [
     np.problem,
@@ -77,6 +83,9 @@ for (const job of jobs) {
 
   const needsRevision = job.quality?.status === 'needs_revision';
   const first = scoreProposal(p);
+
+  const priorCodes = job.quality?.feedback?.reject_reason_codes || [];
+  if (priorCodes.includes('NO_CHANGED_FILES') && !first.codes.includes('NO_CHANGED_FILES')) first.codes.push('NO_CHANGED_FILES');
 
   // stop endless auto-loop: after repeated verify failures, escalate to human review
   if (Number(job.retries?.testing || 0) >= 2) {

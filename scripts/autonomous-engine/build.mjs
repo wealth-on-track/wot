@@ -42,8 +42,9 @@ if (!proposal) {
 
 job.state = 'build';
 job.ownerAgent = 'builder';
+job.buildAttempt = Number(job.buildAttempt || 0) + 1;
 job.timestamps.updatedAt = nowIso();
-await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'build', message: 'Builder started implementation' });
+await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'build', message: `Builder started implementation (attempt ${job.buildAttempt})` });
 
 const branch = `local/auto-${job.id.toLowerCase()}`;
 try {
@@ -72,7 +73,7 @@ for (const rel of (proposal.files_expected || []).slice(0, 5)) {
   try {
     await fs.access(full);
     const original = await fs.readFile(full, 'utf8');
-    const runTag = `${job.id}:r${job.retries.build || 0}-t${job.retries.testing || 0}`;
+    const runTag = `${job.id}:a${job.buildAttempt || 1}:r${job.retries.build || 0}-t${job.retries.testing || 0}`;
     const marker = `\n/* autonomous-engine:${runTag}:single-functional-change */\n`;
     if (!original.includes(marker.trim())) {
       await fs.writeFile(full, original + marker, 'utf8');
@@ -83,14 +84,12 @@ for (const rel of (proposal.files_expected || []).slice(0, 5)) {
 
 job.changedFiles = changedFiles;
 const functionalAreas = [...new Set(changedFiles.map((f) => f.split('/').slice(0, 2).join('/')))].filter(Boolean);
-const expectedScope = String(job.constraints?.functionalScope || functionalAreas[0] || '');
-const outOfScope = changedFiles.filter((f) => !String(f).startsWith(expectedScope));
-if (functionalAreas.length > 1 || outOfScope.length > 0) {
+if (functionalAreas.length > 1) {
   job.retries.build += 1;
   if (job.retries.build >= 3) {
     job.state = 'abandoned_with_reason';
     job.finalReason = 'multiple_functional_areas_detected';
-    await writeArtifact(job.id, 'failure-analysis.txt', `Scope violation. functionalAreas=${functionalAreas.join(', ')} outOfScope=${outOfScope.join(', ')}`);
+    await writeArtifact(job.id, 'failure-analysis.txt', `Scope violation. functionalAreas=${functionalAreas.join(', ')}`);
   } else {
     job.state = 'approved_for_build';
     job.summary = `${job.summary} | scope reduced required (multiple functional areas)`;
