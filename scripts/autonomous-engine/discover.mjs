@@ -93,10 +93,22 @@ for (const c of candidates) {
     id: makeId('PRP'),
     title: c.title,
     category: c.category,
-    problem: `Detected actionable ${c.category} issue via local scout scan.`,
+    problem: [
+      `Observed ${c.category} friction from local scout signals.`,
+      'Current behavior leaves measurable value on the table for end-users or operators.',
+      'Without intervention, this problem repeats and reduces trust, clarity, or delivery speed.',
+    ].join(' '),
     evidence: c.evidence?.length ? c.evidence : [`source: local scout scan @ ${nowIso()}`],
-    proposed_change: 'Apply one meaningful local change set and verify with required checks.',
-    expected_benefit: 'Meaningful user/system quality improvement.',
+    proposed_change: [
+      'Scope: deliver one focused functional improvement with clear acceptance criteria.',
+      'Implementation approach: touch only the highest-leverage files, keep blast-radius small, and add explicit verification steps.',
+      'Validation plan: run required checks and provide reproducible artifacts (diff, tests, outcome summary).',
+    ].join(' '),
+    expected_benefit: [
+      'Primary outcome: concrete improvement in user-facing quality or system reliability.',
+      'Secondary outcome: clearer operational visibility and lower chance of repeat regressions.',
+      'Decision outcome: human reviewer can approve/reject with transparent evidence.',
+    ].join(' '),
     risk,
     impact,
     priority,
@@ -104,9 +116,19 @@ for (const c of candidates) {
     confidenceScore,
     effortScore,
     userFacing,
+    success_metrics: [
+      'At least one measurable before/after signal is present in artifacts.',
+      'All required quality checks pass.',
+      'Reviewer can verify impact from summary + evidence without guessing intent.',
+    ],
+    non_goals: [
+      'No unrelated refactor.',
+      'No broad redesign outside scoped files.',
+      'No production deploy automation without explicit human approval.',
+    ],
     files_expected: c.category === 'ux' ? ['src/app/[username]/portfolio_public/page.tsx'] : c.category === 'performance' ? ['src/components/PublicPortfolioView.tsx'] : ['src/services/marketData.ts'],
     tests_required: ['lint', 'unit'],
-    rollback_plan: 'Revert local branch to previous commit and remove generated job artifacts.',
+    rollback_plan: 'Revert local branch to previous commit, remove generated artifacts for this job, and restore previous state snapshot.',
   };
 
   const dup = proposals.find((p) => {

@@ -342,8 +342,18 @@ export default async function AutonomousEnginePage({
                       {initialProposal ? (
                         <>
                           <div><strong>Problem:</strong> {initialProposal.problem || '-'}</div>
-                          <div><strong>Proposed change:</strong> {initialProposal.proposed_change || '-'}</div>
-                          <div><strong>Expected benefit:</strong> {initialProposal.expected_benefit || '-'}</div>
+                          <div style={{ marginTop: 4 }}><strong>Proposed change:</strong> {initialProposal.proposed_change || '-'}</div>
+                          <div style={{ marginTop: 4 }}><strong>Expected benefit:</strong> {initialProposal.expected_benefit || '-'}</div>
+                          <div style={{ marginTop: 6 }}><strong>Success metrics:</strong></div>
+                          <ul style={{ margin: '4px 0 0 18px' }}>
+                            {(initialProposal.success_metrics || []).map((m: string, i: number) => <li key={`ism-${i}`}>{m}</li>)}
+                            {!(initialProposal.success_metrics || []).length ? <li>-</li> : null}
+                          </ul>
+                          <div style={{ marginTop: 6 }}><strong>Non-goals:</strong></div>
+                          <ul style={{ margin: '4px 0 0 18px' }}>
+                            {(initialProposal.non_goals || []).map((m: string, i: number) => <li key={`ing-${i}`}>{m}</li>)}
+                            {!(initialProposal.non_goals || []).length ? <li>-</li> : null}
+                          </ul>
                         </>
                       ) : 'Initial proposal artifact not found for this job.'}
                     </div>
@@ -355,8 +365,22 @@ export default async function AutonomousEnginePage({
                       {selected.quality?.feedback ? (
                         <>
                           <div><strong>Reason codes:</strong> {(selected.quality.feedback.reject_reason_codes || []).join(', ') || '-'}</div>
-                          <div><strong>Must fix:</strong> {(selected.quality.feedback.must_fix || []).join(', ') || '-'}</div>
-                          <div><strong>Evidence gap:</strong> {selected.quality.feedback.evidence_gap || '-'}</div>
+                          <div style={{ marginTop: 4 }}><strong>Strengths:</strong></div>
+                          <ul style={{ margin: '4px 0 0 18px' }}>
+                            {(selected.quality.feedback.strengths || []).map((m: string, i: number) => <li key={`fs-${i}`}>{m}</li>)}
+                            {!(selected.quality.feedback.strengths || []).length ? <li>-</li> : null}
+                          </ul>
+                          <div style={{ marginTop: 4 }}><strong>Gaps:</strong></div>
+                          <ul style={{ margin: '4px 0 0 18px' }}>
+                            {(selected.quality.feedback.gaps || []).map((m: string, i: number) => <li key={`fg-${i}`}>{m}</li>)}
+                            {!(selected.quality.feedback.gaps || []).length ? <li>-</li> : null}
+                          </ul>
+                          <div style={{ marginTop: 4 }}><strong>Rewrite plan:</strong></div>
+                          <ul style={{ margin: '4px 0 0 18px' }}>
+                            {(selected.quality.feedback.rewrite_plan || []).map((m: string, i: number) => <li key={`fr-${i}`}>{m}</li>)}
+                            {!(selected.quality.feedback.rewrite_plan || []).length ? <li>-</li> : null}
+                          </ul>
+                          <div style={{ marginTop: 4 }}><strong>Evidence gap:</strong> {selected.quality.feedback.evidence_gap || '-'}</div>
                         </>
                       ) : 'No quality feedback recorded.'}
                     </div>
@@ -367,9 +391,12 @@ export default async function AutonomousEnginePage({
                     <div style={{ fontSize: 12, lineHeight: 1.45 }}>
                       {updatedProposal ? (
                         <>
-                          <div><strong>Updated change:</strong> {updatedProposal.proposed_change || '-'}</div>
-                          <div><strong>Impact/Confidence/Effort:</strong> {updatedProposal.impactScore || '-'} / {updatedProposal.confidenceScore || '-'} / {updatedProposal.effortScore || '-'}</div>
+                          <div><strong>Updated problem framing:</strong> {updatedProposal.problem || '-'}</div>
+                          <div style={{ marginTop: 4 }}><strong>Updated change:</strong> {updatedProposal.proposed_change || '-'}</div>
+                          <div style={{ marginTop: 4 }}><strong>Updated expected benefit:</strong> {updatedProposal.expected_benefit || '-'}</div>
+                          <div style={{ marginTop: 4 }}><strong>Impact/Confidence/Effort:</strong> {updatedProposal.impactScore || '-'} / {updatedProposal.confidenceScore || '-'} / {updatedProposal.effortScore || '-'}</div>
                           <div><strong>User-facing:</strong> {updatedProposal.userFacing ? 'yes' : 'no'}</div>
+                          <div style={{ marginTop: 6 }}><strong>Revision summary:</strong> {updatedProposal.revision_summary ? `${updatedProposal.revision_summary.revisedAt || '-'} | one-session=${updatedProposal.revision_summary.oneSessionRewrite ? 'yes' : 'no'}` : '-'}</div>
                         </>
                       ) : 'Updated proposal not found in proposal store.'}
                     </div>
