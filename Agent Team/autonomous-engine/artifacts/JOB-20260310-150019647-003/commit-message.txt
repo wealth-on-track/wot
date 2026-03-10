@@ -1,0 +1,1 @@
+feat(local-auto): Reduce portfolio dashboard load latency via route-level lazy chunking

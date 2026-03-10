@@ -92,3 +92,8 @@
 {"ts":"2026-03-10T15:02:33.173Z","jobId":"JOB-20260310-150019647-002","proposalId":"PRP-20260310-090029733-004","stage":"proposal","message":"Proposal revised in one feedback session and passed quality gate","meta":{}}
 {"ts":"2026-03-10T15:02:33.219Z","jobId":"JOB-20260310-150019647-002","proposalId":"PRP-20260310-090029733-004","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-10T15:02:33.267Z","jobId":"JOB-20260310-150019647-003","proposalId":"PRP-20260310-090029733-005","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-10T15:02:33.377Z","jobId":"JOB-20260310-150019647-003","proposalId":"PRP-20260310-090029733-005","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-10T15:02:36.997Z","jobId":"JOB-20260310-150019647-003","proposalId":"PRP-20260310-090029733-005","stage":"proposal","message":"Verification failed (unit); sent back to proposal for revision","meta":{}}
+{"ts":"2026-03-10T15:05:29.025Z","jobId":"JOB-20260310-150019647-003","proposalId":"PRP-20260310-090029733-005","stage":"proposal","message":"Proposal revised in one feedback session and passed quality gate","meta":{}}
+{"ts":"2026-03-10T15:05:29.069Z","jobId":"JOB-20260310-150019647-003","proposalId":"PRP-20260310-090029733-005","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-10T15:05:29.116Z","jobId":"JOB-20260310-150019647-002","proposalId":"PRP-20260310-090029733-004","stage":"build","message":"Builder started implementation","meta":{}}
