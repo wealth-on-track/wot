@@ -14,8 +14,6 @@
 {"ts":"2026-03-09T20:43:56.930Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"build","message":"Builder started implementation","meta":{}}
 {"ts":"2026-03-09T20:43:57.058Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
 {"ts":"2026-03-09T20:45:18.242Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"build","message":"Builder started implementation","meta":{}}
-{"ts":"2026-03-09T20:49:54.896Z","jobId":"JOB-20260309-204954895-001","proposalId":"PRP-20260309-204954850-003","stage":"proposal","message":"Planner created JOB-20260309-204954895-001 from PRP-20260309-204954850-003","meta":{}}
-{"ts":"2026-03-09T20:49:54.896Z","jobId":"JOB-20260309-204954896-002","proposalId":"PRP-20260309-204954850-005","stage":"proposal","message":"Planner created JOB-20260309-204954896-002 from PRP-20260309-204954850-005","meta":{}}
 {"ts":"2026-03-09T20:50:27.860Z","jobId":"JOB-20260309-204954895-001","proposalId":"PRP-20260309-204954850-003","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-09T20:50:27.906Z","jobId":"JOB-20260309-114","proposalId":"PRP-20260309-730","stage":"build","message":"Builder started implementation","meta":{}}
 {"ts":"2026-03-09T20:55:28.222Z","jobId":"JOB-20260309-204954896-002","proposalId":"PRP-20260309-204954850-005","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
@@ -26,3 +24,18 @@
 {"ts":"2026-03-09T21:10:28.390Z","jobId":"JOB-20260309-204954895-001","proposalId":"PRP-20260309-204954850-003","stage":"build","message":"Builder started implementation","meta":{}}
 {"ts":"2026-03-09T21:15:28.334Z","jobId":"JOB-20260309-204954895-001","proposalId":"PRP-20260309-204954850-003","stage":"build","message":"Builder started implementation","meta":{}}
 {"ts":"2026-03-09T21:20:28.565Z","jobId":"JOB-20260309-204954896-002","proposalId":"PRP-20260309-204954850-005","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-09T21:20:28.669Z","jobId":"JOB-20260309-204954896-002","proposalId":"PRP-20260309-204954850-005","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-09T21:25:28.169Z","jobId":"JOB-20260309-204954896-002","proposalId":"PRP-20260309-204954850-005","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-09T21:30:28.751Z","jobId":"JOB-20260309-204954896-002","proposalId":"PRP-20260309-204954850-005","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-09T21:35:28.529Z","jobId":"JOB-20260309-204954896-002","proposalId":"PRP-20260309-204954850-005","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-10T08:20:29.186Z","jobId":"JOB-20260309-193820617-001","proposalId":"PRP-PILOT-20260309-001","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-10T08:20:29.233Z","jobId":"JOB-20260309-193820617-001","proposalId":"PRP-PILOT-20260309-001","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-10T08:25:30.243Z","jobId":"JOB-20260309-204954895-001","proposalId":"PRP-20260309-204954850-003","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-10T08:25:30.291Z","jobId":"JOB-20260309-193820617-001","proposalId":"PRP-PILOT-20260309-001","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-10T08:30:29.016Z","jobId":"JOB-20260309-204954896-002","proposalId":"PRP-20260309-204954850-005","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-10T08:30:29.063Z","jobId":"JOB-20260309-193820617-001","proposalId":"PRP-PILOT-20260309-001","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-10T08:35:29.530Z","jobId":"JOB-20260309-193820617-001","proposalId":"PRP-PILOT-20260309-001","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-10T08:40:28.905Z","jobId":"JOB-20260309-193820617-001","proposalId":"PRP-PILOT-20260309-001","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-10T08:45:29.066Z","jobId":"JOB-20260309-193820617-001","proposalId":"PRP-PILOT-20260309-001","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-10T08:50:28.785Z","jobId":"JOB-20260309-193820617-001","proposalId":"PRP-PILOT-20260309-001","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-10T08:55:29.343Z","jobId":"JOB-20260309-193820617-001","proposalId":"PRP-PILOT-20260309-001","stage":"build","message":"Builder started implementation","meta":{}}
