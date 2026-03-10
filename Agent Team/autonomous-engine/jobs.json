@@ -165,7 +165,7 @@
     "id": "JOB-20260310-150019647-003",
     "title": "Reduce portfolio dashboard load latency via route-level lazy chunking",
     "category": "performance",
-    "state": "proposal",
+    "state": "approved_for_build",
     "risk": "medium",
     "impact": "high",
     "priority": "P1",
@@ -195,12 +195,12 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T21:03:02.828Z",
+      "checkedAt": "2026-03-10T21:05:28.749Z",
       "sessionCount": 0
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.647Z",
-      "updatedAt": "2026-03-10T20:54:26.201Z"
+      "updatedAt": "2026-03-10T21:05:28.793Z"
     }
   },
   {
@@ -408,7 +408,7 @@
     "id": "JOB-20260310-205527358-001",
     "title": "Pilot Loop4: improve portfolio insight microcopy clarity",
     "category": "ux",
-    "state": "approved_for_build",
+    "state": "review_ready",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -416,10 +416,12 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Update insight microcopy in PublicPortfolioView with explicit confidence + direction explanation.",
+    "summary": "Update insight microcopy in PublicPortfolioView with explicit confidence + direction explanation. (local build applied)",
     "proposalId": "PRP-PILOT-20260310-LOOP4",
-    "changedFiles": [],
-    "testResults": "pending",
+    "changedFiles": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "testResults": "pass",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
@@ -433,16 +435,18 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/components"
     },
-    "ownerAgent": "planner",
+    "ownerAgent": "verifier",
     "quality": {
       "status": "pass",
       "checkedAt": "2026-03-10T21:03:02.829Z",
-      "sessionCount": 0
+      "sessionCount": 0,
+      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
     },
     "timestamps": {
       "createdAt": "2026-03-10T20:55:27.357Z",
-      "updatedAt": "2026-03-10T21:03:02.874Z"
-    }
+      "updatedAt": "2026-03-10T21:03:04.294Z"
+    },
+    "buildAttempt": 1
   },
   {
     "id": "JOB-20260310-210108325-001",
