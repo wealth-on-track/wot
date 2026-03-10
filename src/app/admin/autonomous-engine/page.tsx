@@ -216,9 +216,9 @@ export default async function AutonomousEnginePage({
         {showList ? (
           <aside className="card ae-left-panel" style={{ padding: 10, overflow: 'auto', border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
             <div style={{ display: 'grid', gap: 8 }}>
-              {currentList.length === 0 ? <div style={{ opacity: 0.65 }}>No items.</div> : currentList.map((j) => (
+              {currentList.length === 0 ? <div style={{ opacity: 0.65 }}>No items.</div> : currentList.map((j, idx) => (
                 <Link
-                  key={j.id}
+                  key={`${j.id}-${idx}`}
                   href={`/admin/autonomous-engine?section=${selectedSection}&panel=1&job=${encodeURIComponent(j.id)}`}
                   style={{
                     display: 'block',
