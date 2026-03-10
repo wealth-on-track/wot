@@ -89,6 +89,7 @@ export default async function AutonomousEnginePage({
   const selectedJobId = String(sp.job || '');
   // New behavior: left list is closed by default; legacy ?list=1 is ignored.
   const showList = String(sp.panel || '0') === '1';
+  const showRight = String(sp.right || '1') === '1';
   const savedJobId = String(sp.savedJob || '');
 
   const jobs = await readJson<any[]>(path.join(BASE, 'jobs.json'), []);
@@ -172,8 +173,11 @@ export default async function AutonomousEnginePage({
         boxShadow: '0 3px 10px rgba(15,23,42,0.06)',
       }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', alignItems: 'center' }}>
-          <Link href={`/admin/autonomous-engine?section=${selectedSection}&panel=${showList ? '0' : '1'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 900, color: '#1d4ed8' }}>
-            {showList ? '🗂️ Listeyi Gizle' : '🗂️ Listeyi Aç'}
+          <Link href={`/admin/autonomous-engine?section=${selectedSection}&panel=${showList ? '0' : '1'}&right=${showRight ? '1' : '0'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} title={showList ? 'Listeyi gizle' : 'Listeyi aç'} className="card" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', width: 34, height: 34, border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', fontWeight: 900, color: '#1d4ed8' }}>
+            🗂️
+          </Link>
+          <Link href={`/admin/autonomous-engine?section=${selectedSection}&panel=${showList ? '1' : '0'}&right=${showRight ? '0' : '1'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} title={showRight ? 'Lessons panelini gizle' : 'Lessons panelini aç'} className="card" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', width: 34, height: 34, border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', fontWeight: 900, color: '#1d4ed8' }}>
+            📚
           </Link>
           <Link href="/admin/autonomous-engine?section=inbox" className="card" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', padding: '8px 10px', border: selectedSection === 'inbox' ? '1px solid #60a5fa' : '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
 📥 Inbox ({inbox.length})
@@ -199,7 +203,7 @@ export default async function AutonomousEnginePage({
         </div>
       </header>
 
-      <section className="ae-layout-grid" style={{ display: 'grid', gridTemplateColumns: showList ? '220px 1fr 300px' : '1fr 300px', gap: 8 }}>
+      <section className="ae-layout-grid" style={{ display: 'grid', gridTemplateColumns: showList ? (showRight ? '220px 1fr 300px' : '220px 1fr') : (showRight ? '1fr 300px' : '1fr'), gap: 8 }}>
         {showList ? (
           <aside className="card ae-left-panel" style={{ padding: 10, overflow: 'auto', border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
             <div style={{ display: 'grid', gap: 8 }}>
@@ -355,6 +359,7 @@ export default async function AutonomousEnginePage({
           )}
         </section>
 
+        {showRight ? (
         <aside className="card ae-right-panel" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
           <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#ffffff' }} open>
             <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.9, fontWeight: 800 }}>📝 Lessons Learned</summary>
@@ -417,6 +422,7 @@ export default async function AutonomousEnginePage({
             <div style={{ marginTop: 2, fontSize: 12, color: '#0f172a' }}>Live commit: <strong>{liveCommit}</strong></div>
           </details>
         </aside>
+        ) : null}
       </section>
 
       <style>{`
