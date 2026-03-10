@@ -77,6 +77,14 @@ for (const job of jobs) {
 
   const needsRevision = job.quality?.status === 'needs_revision';
   const first = scoreProposal(p);
+
+  // stop endless auto-loop: after repeated verify failures, escalate to human review
+  if (Number(job.retries?.testing || 0) >= 2) {
+    job.quality = { ...(job.quality || {}), status: 'needs_human_review', checkedAt: nowIso(), reason: 'repeated_verify_failures' };
+    updated += 1;
+    continue;
+  }
+
   if (first.pass && !needsRevision) {
     job.quality = { status: 'pass', checkedAt: nowIso(), sessionCount: job.quality?.sessionCount || 0 };
     updated += 1;
