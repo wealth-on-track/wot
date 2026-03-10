@@ -1,10 +1,10 @@
 {
   "jobId": "JOB-20260310-150019648-004",
-  "proposalId": "PRP-PILOT-20260310-Q2",
+  "proposalId": "PRP-20260310-210251696-001",
   "branch": "local/auto-job-20260310-150019648-004",
   "changedFiles": [
     "src/components/PublicPortfolioView.tsx"
   ],
   "oneFunctionalChange": true,
-  "generatedAt": "2026-03-10T15:20:29.630Z"
+  "generatedAt": "2026-03-10T21:02:51.950Z"
 }
