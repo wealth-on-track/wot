@@ -30,6 +30,7 @@
     "auto:verify": "node scripts/autonomous-engine/verify.mjs",
     "auto:guarantee": "node scripts/autonomous-engine/guarantee.mjs",
     "auto:maintenance": "node scripts/autonomous-engine/maintenance.mjs",
+    "auto:health": "node scripts/autonomous-engine/health-report.mjs",
     "auto:tick": "node scripts/autonomous-engine/tick.mjs",
     "auto:loop": "node scripts/autonomous-engine/loop.mjs 300",
     "auto:ensure-loop": "node scripts/autonomous-engine/ensure-loop.mjs 300 630",

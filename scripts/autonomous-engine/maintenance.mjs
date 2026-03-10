@@ -20,11 +20,21 @@ if (state.lastRunAt && now - new Date(state.lastRunAt).getTime() < DAY) {
   process.exit(0);
 }
 
-// archive old finished jobs to history and keep jobs.json clean
+// archive old finished jobs + stale human-review jobs to history and keep jobs.json clean
 const keep = [];
 let archived = 0;
+let archivedHumanReview = 0;
+const nowMs = Date.now();
 for (const j of jobs) {
-  if (['approved', 'reverted', 'abandoned_with_reason'].includes(j.state)) {
+  const updatedAt = new Date(j.timestamps?.updatedAt || j.timestamps?.createdAt || 0).getTime();
+  const staleHumanReview = j.state === 'proposal' && j.quality?.status === 'needs_human_review' && updatedAt > 0 && (nowMs - updatedAt) > (48 * 60 * 60 * 1000);
+
+  if (['approved', 'reverted', 'abandoned_with_reason'].includes(j.state) || staleHumanReview) {
+    if (staleHumanReview) {
+      j.state = 'abandoned_with_reason';
+      j.finalReason = 'stale_needs_human_review_archived';
+      archivedHumanReview += 1;
+    }
     history.push(j);
     archived += 1;
   } else {
@@ -45,4 +55,4 @@ await writeJson(files.history, history.slice(-1500));
 state.lastRunAt = nowIso();
 await fs.writeFile(stateFile, JSON.stringify(state, null, 2), 'utf8');
 
-console.log(`[maintenance] archived=${archived} keep=${keep.length}`);
+console.log(`[maintenance] archived=${archived} (human_review_archived=${archivedHumanReview}) keep=${keep.length}`);

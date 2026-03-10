@@ -19,7 +19,7 @@
     "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 19,
+      "planning": 23,
       "build": 1,
       "testing": 4,
       "verification": 0
@@ -33,7 +33,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T19:27:18.491Z",
+      "checkedAt": "2026-03-10T20:29:09.580Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -53,7 +53,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T14:40:14.278Z",
-      "updatedAt": "2026-03-10T19:25:19.697Z"
+      "updatedAt": "2026-03-10T20:25:28.583Z"
     }
   },
   {
@@ -76,7 +76,7 @@
     "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 17,
+      "planning": 22,
       "build": 0,
       "testing": 2,
       "verification": 0
@@ -90,7 +90,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T19:27:18.491Z",
+      "checkedAt": "2026-03-10T20:29:09.580Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -111,7 +111,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.639Z",
-      "updatedAt": "2026-03-10T19:15:28.895Z"
+      "updatedAt": "2026-03-10T20:25:28.583Z"
     }
   },
   {
@@ -134,7 +134,7 @@
     "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 17,
+      "planning": 21,
       "build": 0,
       "testing": 2,
       "verification": 0
@@ -148,7 +148,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T19:27:18.491Z",
+      "checkedAt": "2026-03-10T20:29:09.580Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -169,7 +169,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.647Z",
-      "updatedAt": "2026-03-10T19:20:28.987Z"
+      "updatedAt": "2026-03-10T20:20:28.482Z"
     }
   },
   {
@@ -192,7 +192,7 @@
     "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 17,
+      "planning": 21,
       "build": 0,
       "testing": 2,
       "verification": 0
@@ -206,7 +206,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T19:27:18.491Z",
+      "checkedAt": "2026-03-10T20:29:09.580Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -226,7 +226,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.647Z",
-      "updatedAt": "2026-03-10T19:25:19.697Z"
+      "updatedAt": "2026-03-10T20:25:28.583Z"
     }
   },
   {
@@ -249,7 +249,7 @@
     "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 16,
+      "planning": 20,
       "build": 0,
       "testing": 2,
       "verification": 0
@@ -263,7 +263,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T19:27:18.491Z",
+      "checkedAt": "2026-03-10T20:29:09.580Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -283,7 +283,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.648Z",
-      "updatedAt": "2026-03-10T19:20:28.987Z"
+      "updatedAt": "2026-03-10T20:20:28.482Z"
     }
   },
   {
@@ -306,7 +306,7 @@
     "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 0,
+      "planning": 4,
       "build": 0,
       "testing": 2,
       "verification": 0
@@ -320,7 +320,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T19:27:18.491Z",
+      "checkedAt": "2026-03-10T20:29:09.580Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -340,12 +340,54 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T19:25:40.858Z",
-      "updatedAt": "2026-03-10T19:26:08.062Z"
+      "updatedAt": "2026-03-10T20:25:28.583Z"
     }
   },
   {
     "id": "JOB-20260310-192709346-001",
     "title": "Pilot Final2: add explicit confidence legend to portfolio insight card",
+    "category": "ux",
+    "state": "review_ready",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Add explicit confidence legend and concise subtitle in portfolio insight card component only. (local build applied)",
+    "proposalId": "PRP-PILOT-20260310-FINAL2",
+    "changedFiles": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "testResults": "pass",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 4
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "verifier",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T19:27:18.491Z",
+      "sessionCount": 0
+    },
+    "timestamps": {
+      "createdAt": "2026-03-10T19:27:09.346Z",
+      "updatedAt": "2026-03-10T20:25:28.583Z"
+    }
+  },
+  {
+    "id": "JOB-20260310-202813645-001",
+    "title": "Pilot Loop3: improve portfolio card legend clarity for signal confidence",
     "category": "ux",
     "state": "approved_for_build",
     "risk": "low",
@@ -355,8 +397,8 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Add explicit confidence legend and concise subtitle in portfolio insight card component only.",
-    "proposalId": "PRP-PILOT-20260310-FINAL2",
+    "summary": "Add concise confidence legend and short explanation line in PublicPortfolioView insight area.",
+    "proposalId": "PRP-PILOT-20260310-LOOP3",
     "changedFiles": [],
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
@@ -375,12 +417,12 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T19:27:18.491Z",
+      "checkedAt": "2026-03-10T20:29:09.580Z",
       "sessionCount": 0
     },
     "timestamps": {
-      "createdAt": "2026-03-10T19:27:09.346Z",
-      "updatedAt": "2026-03-10T19:27:18.536Z"
+      "createdAt": "2026-03-10T20:28:13.645Z",
+      "updatedAt": "2026-03-10T20:29:09.627Z"
     }
   }
 ]

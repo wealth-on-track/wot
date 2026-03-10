@@ -19,10 +19,13 @@ if (buildingCount >= WIP_LIMITS.building || testingCount >= WIP_LIMITS.testing) 
 }
 
 const lock = await getActiveJobLock();
-const hasLockedActive = lock?.activeJobId && jobs.some((j) => j.id === lock.activeJobId && ['approved_for_build', 'build', 'test', 'review_ready'].includes(j.state));
+const hasLockedActive = lock?.activeJobId && jobs.some((j) => j.id === lock.activeJobId && ['approved_for_build', 'build', 'test'].includes(j.state));
 if (hasLockedActive) {
   console.log(`[dispatch] active lock in place (${lock.activeJobId})`);
   process.exit(0);
+}
+if (lock?.activeJobId && !hasLockedActive) {
+  await setActiveJobLock(null);
 }
 
 const priorityRank = { P1: 1, P2: 2, P3: 3 };
