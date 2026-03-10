@@ -95,6 +95,7 @@ export default async function AutonomousEnginePage({
   const savedJobId = String(sp.savedJob || '');
 
   const jobs = await readJson<any[]>(path.join(BASE, 'jobs.json'), []);
+  const proposalsAll = await readJson<any[]>(path.join(BASE, 'proposals.json'), []);
   const history = await readJson<any[]>(path.join(BASE, 'history.json'), []);
   const lessons = await readJson<any[]>(path.join(ROOT, 'knowledge', 'lessons.json'), []);
   let eventsRaw = '';
@@ -131,6 +132,8 @@ export default async function AutonomousEnginePage({
 
   let artifactNames: string[] = [];
   const artifactMap: Record<string, string> = {};
+  let initialProposal: any = null;
+  const updatedProposal = selected ? proposalsAll.find((p) => p.id === selected.proposalId || String(selected.proposalId || '').startsWith(String(p.id || ''))) : null;
   if (selected?.id) {
     const dir = path.join(ARTIFACTS, selected.id);
     try {
@@ -143,6 +146,9 @@ export default async function AutonomousEnginePage({
           artifactMap[n] = '(binary or unreadable)';
         }
       }
+      try {
+        initialProposal = JSON.parse(await fs.readFile(path.join(dir, 'proposal.json'), 'utf8'));
+      } catch {}
     } catch {}
   }
 
@@ -325,6 +331,50 @@ export default async function AutonomousEnginePage({
                   </div>
                 </div>
               </details>
+
+              <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#ffffff' }}>
+                <div style={{ fontWeight: 800, marginBottom: 8, fontSize: 12, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#334155' }}>Details</div>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#f8fafc', padding: '8px 10px' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 4 }}>Initial Proposal</div>
+                    <div style={{ fontSize: 12, lineHeight: 1.45 }}>
+                      {initialProposal ? (
+                        <>
+                          <div><strong>Problem:</strong> {initialProposal.problem || '-'}</div>
+                          <div><strong>Proposed change:</strong> {initialProposal.proposed_change || '-'}</div>
+                          <div><strong>Expected benefit:</strong> {initialProposal.expected_benefit || '-'}</div>
+                        </>
+                      ) : 'Initial proposal artifact not found for this job.'}
+                    </div>
+                  </div>
+
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#f8fafc', padding: '8px 10px' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 4 }}>Feedback Received</div>
+                    <div style={{ fontSize: 12, lineHeight: 1.45 }}>
+                      {selected.quality?.feedback ? (
+                        <>
+                          <div><strong>Reason codes:</strong> {(selected.quality.feedback.reject_reason_codes || []).join(', ') || '-'}</div>
+                          <div><strong>Must fix:</strong> {(selected.quality.feedback.must_fix || []).join(', ') || '-'}</div>
+                          <div><strong>Evidence gap:</strong> {selected.quality.feedback.evidence_gap || '-'}</div>
+                        </>
+                      ) : 'No quality feedback recorded.'}
+                    </div>
+                  </div>
+
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#f8fafc', padding: '8px 10px' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 4 }}>Updated Version</div>
+                    <div style={{ fontSize: 12, lineHeight: 1.45 }}>
+                      {updatedProposal ? (
+                        <>
+                          <div><strong>Updated change:</strong> {updatedProposal.proposed_change || '-'}</div>
+                          <div><strong>Impact/Confidence/Effort:</strong> {updatedProposal.impactScore || '-'} / {updatedProposal.confidenceScore || '-'} / {updatedProposal.effortScore || '-'}</div>
+                          <div><strong>User-facing:</strong> {updatedProposal.userFacing ? 'yes' : 'no'}</div>
+                        </>
+                      ) : 'Updated proposal not found in proposal store.'}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc', minHeight: 160 }}>
                 <div style={{ display: 'grid', gap: 6, fontSize: 12 }}>
