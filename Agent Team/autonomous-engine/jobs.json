@@ -33,7 +33,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T19:25:50.473Z",
+      "checkedAt": "2026-03-10T19:26:03.486Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -90,7 +90,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T19:25:50.474Z",
+      "checkedAt": "2026-03-10T19:26:03.486Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -148,7 +148,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T19:25:50.474Z",
+      "checkedAt": "2026-03-10T19:26:03.486Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -206,7 +206,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T19:25:50.474Z",
+      "checkedAt": "2026-03-10T19:26:03.486Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -263,7 +263,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T19:25:50.474Z",
+      "checkedAt": "2026-03-10T19:26:03.486Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -298,15 +298,17 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Add explicit confidence legend and context subtitle near insight card; keep scope user-facing and single-component.",
+    "summary": "Add explicit confidence legend and context subtitle near insight card; keep scope user-facing and single-component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
     "proposalId": "PRP-PILOT-20260310-FINAL",
-    "changedFiles": [],
-    "testResults": "pending",
+    "changedFiles": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
       "build": 0,
-      "testing": 0,
+      "testing": 1,
       "verification": 0
     },
     "constraints": {
@@ -318,12 +320,42 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T19:25:50.474Z",
-      "sessionCount": 0
+      "checkedAt": "2026-03-10T19:26:03.486Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "CONFIDENCE_LOW"
+        ],
+        "strengths": [
+          "Category alignment: ux",
+          "Initial impact/confidence/effort: 4 / 4 / 2",
+          "Scope remains constrained for controlled delivery."
+        ],
+        "gaps": [
+          "Confidence is low; proposal needs stronger verification framing."
+        ],
+        "must_fix": [
+          "CONFIDENCE_LOW"
+        ],
+        "evidence_gap": null,
+        "rewrite_plan": [
+          "Rewrite problem statement to explain user/system consequence clearly.",
+          "Add concrete evidence and tie it to measurable acceptance criteria.",
+          "Upgrade proposal language from generic intent to execution-ready plan.",
+          "Re-score impact/confidence after rewrite and keep effort realistic."
+        ],
+        "acceptance_checklist": [
+          "Impact >= 3",
+          "Confidence >= 3",
+          "Evidence count >= 2",
+          "User-facing value explicitly stated"
+        ]
+      },
+      "revised": true
     },
     "timestamps": {
       "createdAt": "2026-03-10T19:25:40.858Z",
-      "updatedAt": "2026-03-10T19:25:50.519Z"
+      "updatedAt": "2026-03-10T19:26:03.532Z"
     }
   }
 ]

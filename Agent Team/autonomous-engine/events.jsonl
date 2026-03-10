@@ -114,3 +114,8 @@
 {"ts":"2026-03-10T19:25:40.859Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-PILOT-20260310-FINAL","stage":"proposal","message":"Planner created JOB-20260310-192540859-001 from PRP-PILOT-20260310-FINAL","meta":{}}
 {"ts":"2026-03-10T19:25:50.520Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-PILOT-20260310-FINAL","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-10T19:25:50.567Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-PILOT-20260310-FINAL","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-10T19:25:50.724Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-PILOT-20260310-FINAL","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-10T19:25:54.429Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-PILOT-20260310-FINAL","stage":"proposal","message":"Verification failed (unit); sent back to proposal for revision","meta":{}}
+{"ts":"2026-03-10T19:26:03.486Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-PILOT-20260310-FINAL","stage":"proposal","message":"Proposal revised in one feedback session and passed quality gate","meta":{}}
+{"ts":"2026-03-10T19:26:03.532Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-PILOT-20260310-FINAL","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-10T19:26:03.580Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-PILOT-20260310-FINAL","stage":"build","message":"Builder started implementation","meta":{}}

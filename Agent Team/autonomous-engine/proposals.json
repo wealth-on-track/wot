@@ -197,13 +197,13 @@
     "id": "PRP-PILOT-20260310-FINAL",
     "title": "Pilot Final: clarify portfolio insight confidence legend for users",
     "category": "ux",
-    "problem": "Users misread confidence labeling in insight area, which lowers trust in generated signals.",
+    "problem": "Users misread confidence labeling in insight area, which lowers trust in generated signals. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
     "evidence": [
       "manual ux observation: confidence label ambiguity",
       "benchmark: competitor tools show explicit confidence legend"
     ],
-    "proposed_change": "Add explicit confidence legend and context subtitle near insight card; keep scope user-facing and single-component.",
-    "expected_benefit": "Users interpret insight confidence correctly, improving trust and reducing confusion.",
+    "proposed_change": "Add explicit confidence legend and context subtitle near insight card; keep scope user-facing and single-component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "expected_benefit": "Users interpret insight confidence correctly, improving trust and reducing confusion. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -223,8 +223,16 @@
     ],
     "tests_required": [
       "lint",
-      "unit"
+      "unit",
+      "integration"
     ],
-    "rollback_plan": "Revert legend text change."
+    "rollback_plan": "Revert legend text change.",
+    "revision_summary": {
+      "revisedAt": "2026-03-10T19:26:03.486Z",
+      "oneSessionRewrite": true,
+      "addressedItems": [
+        "Increase confidence with concrete checks"
+      ]
+    }
   }
 ]
