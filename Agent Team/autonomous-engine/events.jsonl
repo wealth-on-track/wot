@@ -173,3 +173,10 @@
 {"ts":"2026-03-10T21:01:08.325Z","jobId":"JOB-20260310-210108325-001","proposalId":"PRP-PILOT-20260310-LOOP5","stage":"proposal","message":"Planner created JOB-20260310-210108325-001 from PRP-PILOT-20260310-LOOP5","meta":{}}
 {"ts":"2026-03-10T21:01:18.525Z","jobId":"JOB-20260310-210108325-001","proposalId":"PRP-PILOT-20260310-LOOP5","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-10T21:01:18.574Z","jobId":"JOB-20260310-210108325-001","proposalId":"PRP-PILOT-20260310-LOOP5","stage":"build","message":"Builder started implementation (attempt 1)","meta":{}}
+{"ts":"2026-03-10T21:01:18.715Z","jobId":"JOB-20260310-210108325-001","proposalId":"PRP-PILOT-20260310-LOOP5","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-10T21:01:20.603Z","jobId":"JOB-20260310-210108325-001","proposalId":"PRP-PILOT-20260310-LOOP5","stage":"review_ready","message":"Verifier passed all required checks; ready for review","meta":{}}
+{"ts":"2026-03-10T21:01:29.644Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-20260310-205528705-002","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-10T21:02:51.697Z","jobId":"JOB-20260310-150019648-004","proposalId":"PRP-20260310-210251696-001","stage":"proposal","message":"Orphan repair generated synthetic proposal PRP-20260310-210251696-001","meta":{}}
+{"ts":"2026-03-10T21:02:51.787Z","jobId":"JOB-20260310-150019648-004","proposalId":"PRP-20260310-210251696-001","stage":"proposal","message":"Proposal revised in one feedback session and passed quality gate","meta":{}}
+{"ts":"2026-03-10T21:02:51.833Z","jobId":"JOB-20260310-150019648-004","proposalId":"PRP-20260310-210251696-001","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-10T21:02:51.881Z","jobId":"JOB-20260310-150019648-004","proposalId":"PRP-20260310-210251696-001","stage":"build","message":"Builder started implementation (attempt 1)","meta":{}}

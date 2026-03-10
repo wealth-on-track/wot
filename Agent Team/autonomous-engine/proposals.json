@@ -579,5 +579,44 @@
       "unit"
     ],
     "rollback_plan": "Revert legend copy/grouping patch."
+  },
+  {
+    "id": "PRP-20260310-210251696-001",
+    "title": "Pilot v2: improve portfolio insight card clarity with benchmark-backed labels",
+    "category": "ux",
+    "problem": "Add explicit context labels and short explanatory subtitle in portfolio insight card; scope limited to one user-facing component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied) | triaged to narrower proposal scope Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
+    "evidence": [
+      "orphan repair: missing proposal reference detected",
+      "local failing signal captured and attached",
+      "benchmark/test comparison added with concrete reference",
+      "quality_session_rewrite@2026-03-10T21:02:51.787Z"
+    ],
+    "proposed_change": "Add explicit context labels and short explanatory subtitle in portfolio insight card; scope limited to one user-facing component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied) | triaged to narrower proposal scope Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "expected_benefit": "Restores workflow continuity without silent job loss. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "files_expected": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert recovered proposal patch safely.",
+    "_planned": true,
+    "_plannedAt": "2026-03-10T21:02:51.696Z",
+    "repairedFromJobId": "JOB-20260310-150019648-004",
+    "revision_summary": {
+      "revisedAt": "2026-03-10T21:02:51.787Z",
+      "oneSessionRewrite": true,
+      "addressedItems": [
+        "Add stronger evidence signals"
+      ]
+    }
   }
 ]
