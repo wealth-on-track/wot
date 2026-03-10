@@ -33,7 +33,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T15:05:29.025Z",
+      "checkedAt": "2026-03-10T15:10:29.482Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -90,7 +90,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T15:05:29.025Z",
+      "checkedAt": "2026-03-10T15:10:29.483Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -118,7 +118,7 @@
     "id": "JOB-20260310-150019647-002",
     "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
     "category": "benchmark",
-    "state": "approved_for_build",
+    "state": "proposal",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -126,7 +126,7 @@
     "confidenceScore": 4,
     "effortScore": 3,
     "userFacing": true,
-    "summary": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
+    "summary": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
     "proposalId": "PRP-20260310-090029733-004",
     "changedFiles": [
       "src/services/marketData.ts"
@@ -136,7 +136,7 @@
     "retries": {
       "planning": 0,
       "build": 0,
-      "testing": 1,
+      "testing": 2,
       "verification": 0
     },
     "constraints": {
@@ -147,43 +147,29 @@
     },
     "ownerAgent": "planner",
     "quality": {
-      "status": "pass",
-      "checkedAt": "2026-03-10T15:02:33.173Z",
-      "sessionCount": 1,
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-10T15:10:29.483Z",
+      "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
-          "CONFIDENCE_LOW"
-        ],
-        "strengths": [
-          "Category alignment: benchmark",
-          "Initial impact/confidence/effort: 4 / 4 / 3",
-          "Scope remains constrained for controlled delivery."
-        ],
-        "gaps": [
-          "Confidence is low; proposal needs stronger verification framing."
+          "VERIFY_FAIL"
         ],
         "must_fix": [
-          "CONFIDENCE_LOW"
+          "lint",
+          "unit",
+          "integration"
         ],
-        "evidence_gap": null,
         "rewrite_plan": [
-          "Rewrite problem statement to explain user/system consequence clearly.",
-          "Add concrete evidence and tie it to measurable acceptance criteria.",
-          "Upgrade proposal language from generic intent to execution-ready plan.",
-          "Re-score impact/confidence after rewrite and keep effort realistic."
-        ],
-        "acceptance_checklist": [
-          "Impact >= 3",
-          "Confidence >= 3",
-          "Evidence count >= 2",
-          "User-facing value explicitly stated"
+          "Address failing checks only (keep scope small).",
+          "Update proposal evidence and tests_required to match failure cause.",
+          "Resubmit proposal through quality gate."
         ]
       },
-      "revised": true
+      "reason": "repeated_verify_failures"
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.647Z",
-      "updatedAt": "2026-03-10T15:02:33.218Z"
+      "updatedAt": "2026-03-10T15:05:34.802Z"
     }
   },
   {
@@ -262,7 +248,7 @@
     "id": "JOB-20260310-150019648-004",
     "title": "Pilot v2: improve portfolio insight card clarity with benchmark-backed labels",
     "category": "ux",
-    "state": "proposal",
+    "state": "approved_for_build",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -290,12 +276,12 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T15:05:29.026Z",
+      "checkedAt": "2026-03-10T15:10:29.483Z",
       "sessionCount": 0
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.648Z",
-      "updatedAt": "2026-03-10T15:00:19.648Z"
+      "updatedAt": "2026-03-10T15:10:29.527Z"
     }
   }
 ]
