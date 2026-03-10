@@ -101,3 +101,6 @@
 {"ts":"2026-03-10T15:05:34.802Z","jobId":"JOB-20260310-150019647-002","proposalId":"PRP-20260310-090029733-004","stage":"proposal","message":"Verification failed (lint, unit, integration); sent back to proposal for revision","meta":{}}
 {"ts":"2026-03-10T15:10:29.527Z","jobId":"JOB-20260310-150019648-004","proposalId":"PRP-PILOT-20260310-Q2","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-10T15:10:29.574Z","jobId":"JOB-20260310-150019647-003","proposalId":"PRP-20260310-090029733-005","stage":"build","message":"Builder started implementation","meta":{}}
+{"ts":"2026-03-10T15:10:29.687Z","jobId":"JOB-20260310-150019647-003","proposalId":"PRP-20260310-090029733-005","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-10T15:10:35.112Z","jobId":"JOB-20260310-150019647-003","proposalId":"PRP-20260310-090029733-005","stage":"proposal","message":"Verification failed (unit, integration); sent back to proposal for revision","meta":{}}
+{"ts":"2026-03-10T15:15:29.260Z","jobId":"JOB-20260310-150019648-004","proposalId":"PRP-PILOT-20260310-Q2","stage":"build","message":"Builder started implementation","meta":{}}
