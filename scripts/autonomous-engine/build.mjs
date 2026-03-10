@@ -9,7 +9,15 @@ const proposals = await readJson(files.proposals);
 const jobs = await readJson(files.jobs);
 const history = await readJson(files.history);
 
-const job = jobs.find((j) => j.state === 'approved_for_build' || j.state === 'build');
+const priorityRank = { P1: 1, P2: 2, P3: 3 };
+const approvedQueue = jobs
+  .filter((j) => j.state === 'approved_for_build')
+  .sort((a, b) => (priorityRank[a.priority] || 9) - (priorityRank[b.priority] || 9) || new Date(a.timestamps?.updatedAt || a.timestamps?.createdAt || 0).getTime() - new Date(b.timestamps?.updatedAt || b.timestamps?.createdAt || 0).getTime());
+const buildQueue = jobs
+  .filter((j) => j.state === 'build')
+  .sort((a, b) => new Date(a.timestamps?.updatedAt || a.timestamps?.createdAt || 0).getTime() - new Date(b.timestamps?.updatedAt || b.timestamps?.createdAt || 0).getTime());
+
+const job = approvedQueue[0] || buildQueue[0];
 if (!job) {
   console.log('[build] no approved job');
   process.exit(0);
