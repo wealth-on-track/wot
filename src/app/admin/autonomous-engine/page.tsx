@@ -89,7 +89,7 @@ export default async function AutonomousEnginePage({
   const selectedSection = String(sp.section || 'active');
   const selectedJobId = String(sp.job || '');
   // New behavior: left list is closed by default; legacy ?list=1 is ignored.
-  const showList = String(sp.panel || '0') === '1';
+  const showList = String(sp.panel || '1') === '1';
   const showRight = String(sp.right || '1') === '1';
   const showAdminPanel = String(sp.admin || '1') === '1';
   const showSidebar = String(sp.sidebar || '0') === '1';
