@@ -1,0 +1,264 @@
+diff --git a/Agent Team/autonomous-engine/artifacts/JOB-20260309-204954895-001/proposal-merge-note.txt b/Agent Team/autonomous-engine/artifacts/JOB-20260309-204954895-001/proposal-merge-note.txt
+index 35c5296..ee34910 100644
+--- a/Agent Team/autonomous-engine/artifacts/JOB-20260309-204954895-001/proposal-merge-note.txt	
++++ b/Agent Team/autonomous-engine/artifacts/JOB-20260309-204954895-001/proposal-merge-note.txt	
+@@ -1 +1 @@
+-Merged duplicate proposal PRP-20260309-204954850-003
+\ No newline at end of file
++Merged duplicate proposal PRP-20260310-090029733-003
+\ No newline at end of file
+diff --git a/Agent Team/autonomous-engine/artifacts/JOB-20260309-204954896-002/proposal-merge-note.txt b/Agent Team/autonomous-engine/artifacts/JOB-20260309-204954896-002/proposal-merge-note.txt
+index f6f63ae..6f22930 100644
+--- a/Agent Team/autonomous-engine/artifacts/JOB-20260309-204954896-002/proposal-merge-note.txt	
++++ b/Agent Team/autonomous-engine/artifacts/JOB-20260309-204954896-002/proposal-merge-note.txt	
+@@ -1 +1 @@
+-Merged duplicate proposal PRP-20260309-204954850-005
+\ No newline at end of file
++Merged duplicate proposal PRP-20260310-090029733-005
+\ No newline at end of file
+diff --git a/Agent Team/autonomous-engine/events.jsonl b/Agent Team/autonomous-engine/events.jsonl
+index 64dcc79..cdd8967 100644
+--- a/Agent Team/autonomous-engine/events.jsonl	
++++ b/Agent Team/autonomous-engine/events.jsonl	
+@@ -39,3 +39,7 @@
+ {"ts":"2026-03-10T08:45:29.066Z","jobId":"JOB-20260309-193820617-001","proposalId":"PRP-PILOT-20260309-001","stage":"build","message":"Builder started implementation","meta":{}}
+ {"ts":"2026-03-10T08:50:28.785Z","jobId":"JOB-20260309-193820617-001","proposalId":"PRP-PILOT-20260309-001","stage":"build","message":"Builder started implementation","meta":{}}
+ {"ts":"2026-03-10T08:55:29.343Z","jobId":"JOB-20260309-193820617-001","proposalId":"PRP-PILOT-20260309-001","stage":"build","message":"Builder started implementation","meta":{}}
++{"ts":"2026-03-10T09:00:29.781Z","jobId":"JOB-20260310-090029781-001","proposalId":"PRP-20260310-090029733-004","stage":"proposal","message":"Planner created JOB-20260310-090029781-001 from PRP-20260310-090029733-004","meta":{}}
++{"ts":"2026-03-10T09:00:29.824Z","jobId":"JOB-20260310-090029781-001","proposalId":"PRP-20260310-090029733-004","stage":"proposal","message":"Proposal revised in one feedback session and passed quality gate","meta":{}}
++{"ts":"2026-03-10T09:05:29.015Z","jobId":"JOB-20260310-090029781-001","proposalId":"PRP-20260310-090029733-004","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
++{"ts":"2026-03-10T09:15:28.922Z","jobId":"JOB-20260310-090029781-001","proposalId":"PRP-20260310-090029733-004","stage":"build","message":"Builder started implementation","meta":{}}
+diff --git a/Agent Team/autonomous-engine/jobs.json b/Agent Team/autonomous-engine/jobs.json
+index e3b6f48..e53b69b 100644
+--- a/Agent Team/autonomous-engine/jobs.json	
++++ b/Agent Team/autonomous-engine/jobs.json	
+@@ -3,7 +3,7 @@
+     "id": "JOB-20260309-193820617-001",
+     "title": "Add explicit Active-state explainer text in autonomous dashboard detail panel",
+     "category": "operations",
+-    "state": "approved_for_build",
++    "state": "abandoned_with_reason",
+     "risk": "low",
+     "impact": "high",
+     "priority": "P1",
+@@ -29,13 +29,14 @@
+     "ownerAgent": "planner",
+     "timestamps": {
+       "createdAt": "2026-03-09T19:38:20.617Z",
+-      "updatedAt": "2026-03-10T08:20:29.185Z"
++      "updatedAt": "2026-03-10T09:00:29.914Z"
+     },
+     "quality": {
+       "status": "pass",
+       "checkedAt": "2026-03-10T08:20:29.140Z",
+       "sessionCount": 1
+-    }
++    },
++    "finalReason": "proposal_missing"
+   },
+   {
+     "id": "JOB-20260309-194114456-001",
+@@ -108,7 +109,7 @@
+     "id": "JOB-20260309-204954895-001",
+     "title": "Improve empty portfolio onboarding with clearer next actions",
+     "category": "ux",
+-    "state": "approved_for_build",
++    "state": "abandoned_with_reason",
+     "risk": "low",
+     "impact": "high",
+     "priority": "P1",
+@@ -136,19 +137,20 @@
+     "ownerAgent": "planner",
+     "timestamps": {
+       "createdAt": "2026-03-09T20:49:54.895Z",
+-      "updatedAt": "2026-03-10T08:25:30.242Z"
++      "updatedAt": "2026-03-10T09:05:29.061Z"
+     },
+     "quality": {
+       "status": "pass",
+       "checkedAt": "2026-03-10T08:25:30.197Z",
+       "sessionCount": 1
+-    }
++    },
++    "finalReason": "proposal_missing"
+   },
+   {
+     "id": "JOB-20260309-204954896-002",
+     "title": "Reduce portfolio dashboard load latency via route-level lazy chunking",
+     "category": "performance",
+-    "state": "approved_for_build",
++    "state": "abandoned_with_reason",
+     "risk": "medium",
+     "impact": "high",
+     "priority": "P1",
+@@ -176,12 +178,53 @@
+     "ownerAgent": "planner",
+     "timestamps": {
+       "createdAt": "2026-03-09T20:49:54.896Z",
+-      "updatedAt": "2026-03-10T08:30:29.016Z"
++      "updatedAt": "2026-03-10T09:10:28.574Z"
+     },
+     "quality": {
+       "status": "pass",
+       "checkedAt": "2026-03-10T08:30:28.972Z",
+       "sessionCount": 1
++    },
++    "finalReason": "proposal_missing"
++  },
++  {
++    "id": "JOB-20260310-090029781-001",
++    "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
++    "category": "benchmark",
++    "state": "approved_for_build",
++    "risk": "low",
++    "impact": "high",
++    "priority": "P1",
++    "impactScore": 4,
++    "confidenceScore": 4,
++    "effortScore": 3,
++    "userFacing": true,
++    "summary": "Apply one meaningful local change set and verify with required checks. (quality-revised)",
++    "proposalId": "PRP-20260310-090029733-004",
++    "changedFiles": [],
++    "testResults": "pending",
++    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
++    "retries": {
++      "planning": 0,
++      "build": 0,
++      "testing": 0,
++      "verification": 0
++    },
++    "constraints": {
++      "maxFiles": 5,
++      "maxFunctionalChanges": 1,
++      "noUnrelatedRefactor": true,
++      "functionalScope": "src/services"
++    },
++    "ownerAgent": "planner",
++    "quality": {
++      "status": "pass",
++      "checkedAt": "2026-03-10T09:05:28.969Z",
++      "sessionCount": 1
++    },
++    "timestamps": {
++      "createdAt": "2026-03-10T09:00:29.780Z",
++      "updatedAt": "2026-03-10T09:05:29.014Z"
+     }
+   }
+ ]
+\ No newline at end of file
+diff --git a/Agent Team/autonomous-engine/proposals.json b/Agent Team/autonomous-engine/proposals.json
+index 0637a08..4026c29 100644
+--- a/Agent Team/autonomous-engine/proposals.json	
++++ b/Agent Team/autonomous-engine/proposals.json	
+@@ -1 +1,82 @@
+-[]
+\ No newline at end of file
++[
++  {
++    "id": "PRP-20260310-090029733-003",
++    "title": "Improve empty portfolio onboarding with clearer next actions",
++    "category": "ux",
++    "problem": "Detected actionable ux issue via local scout scan.",
++    "evidence": [
++      "observed UX friction: users with zero assets lack guided next step"
++    ],
++    "proposed_change": "Apply one meaningful local change set and verify with required checks.",
++    "expected_benefit": "Meaningful user/system quality improvement.",
++    "risk": "low",
++    "impact": "high",
++    "priority": "P1",
++    "impactScore": 4,
++    "confidenceScore": 4,
++    "effortScore": 2,
++    "userFacing": true,
++    "files_expected": [
++      "src/app/[username]/portfolio_public/page.tsx"
++    ],
++    "tests_required": [
++      "lint",
++      "unit"
++    ],
++    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
++  },
++  {
++    "id": "PRP-20260310-090029733-004",
++    "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
++    "category": "benchmark",
++    "problem": "Detected actionable benchmark issue via local scout scan.",
++    "evidence": [
++      "benchmark_result: performance:pass",
++      "observed UX/log friction in local run",
++      "quality_session_rewrite@2026-03-10T09:00:29.824Z"
++    ],
++    "proposed_change": "Apply one meaningful local change set and verify with required checks.",
++    "expected_benefit": "Meaningful user/system quality improvement.",
++    "risk": "low",
++    "impact": "high",
++    "priority": "P1",
++    "impactScore": 4,
++    "confidenceScore": 4,
++    "effortScore": 3,
++    "userFacing": true,
++    "files_expected": [
++      "src/services/marketData.ts"
++    ],
++    "tests_required": [
++      "lint",
++      "unit"
++    ],
++    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
++  },
++  {
++    "id": "PRP-20260310-090029733-005",
++    "title": "Reduce portfolio dashboard load latency via route-level lazy chunking",
++    "category": "performance",
++    "problem": "Detected actionable performance issue via local scout scan.",
++    "evidence": [
++      "performance measurement needed: dashboard load path is a frequent user-facing surface"
++    ],
++    "proposed_change": "Apply one meaningful local change set and verify with required checks.",
++    "expected_benefit": "Meaningful user/system quality improvement.",
++    "risk": "medium",
++    "impact": "high",
++    "priority": "P1",
++    "impactScore": 4,
++    "confidenceScore": 4,
++    "effortScore": 2,
++    "userFacing": true,
++    "files_expected": [
++      "src/components/PublicPortfolioView.tsx"
++    ],
++    "tests_required": [
++      "lint",
++      "unit"
++    ],
++    "rollback_plan": "Revert local branch to previous commit and remove generated job artifacts."
++  }
++]
+\ No newline at end of file
+diff --git a/Agent Team/autonomous-engine/runtime/heartbeat.json b/Agent Team/autonomous-engine/runtime/heartbeat.json
+index 51b8247..e3b4119 100644
+--- a/Agent Team/autonomous-engine/runtime/heartbeat.json	
++++ b/Agent Team/autonomous-engine/runtime/heartbeat.json	
+@@ -1,7 +1,7 @@
+ {
+-  "ts": "2026-03-09T21:15:28.465Z",
++  "ts": "2026-03-10T09:10:28.668Z",
+   "status": "ok",
+-  "note": "tick_ms=10080",
++  "note": "tick_ms=9782",
+   "pid": 54551,
+   "intervalSec": 300
+ }
+\ No newline at end of file
+diff --git a/src/services/marketData.ts b/src/services/marketData.ts
+index 1c9bd67..e80aa6f 100644
+--- a/src/services/marketData.ts
++++ b/src/services/marketData.ts
+@@ -893,3 +893,5 @@ import { convertCurrency as sharedConvert } from '@/lib/currency';
+ export async function convertCurrency(amount: number, from: string, to: string, customRates?: Record<string, number>): Promise<number> {
+     return sharedConvert(amount, from, to, customRates);
+ }
++
++/* autonomous-engine:JOB-20260310-090029781-001:single-functional-change */

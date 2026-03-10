@@ -191,7 +191,7 @@
     "id": "JOB-20260310-090029781-001",
     "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
     "category": "benchmark",
-    "state": "approved_for_build",
+    "state": "abandoned_with_reason",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -199,8 +199,49 @@
     "confidenceScore": 4,
     "effortScore": 3,
     "userFacing": true,
-    "summary": "Apply one meaningful local change set and verify with required checks. (quality-revised)",
+    "summary": "Apply one meaningful local change set and verify with required checks. (local build applied) | retry build (no changed files, cooldown active) | retry build (no changed files)",
     "proposalId": "PRP-20260310-090029733-004",
+    "changedFiles": [],
+    "testResults": "fail",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 3,
+      "testing": 1,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/services"
+    },
+    "ownerAgent": "builder",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T09:05:28.969Z",
+      "sessionCount": 1
+    },
+    "timestamps": {
+      "createdAt": "2026-03-10T09:00:29.780Z",
+      "updatedAt": "2026-03-10T09:30:29.243Z"
+    },
+    "finalReason": "build_produced_no_changes_after_3_retries"
+  },
+  {
+    "id": "JOB-20260310-144014279-001",
+    "title": "Pilot: improve portfolio summary clarity with explicit gain/loss legend",
+    "category": "ux",
+    "state": "approved_for_build",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Add a concise legend near summary cards clarifying gain/loss semantics and neutral states; keep scope to one user-facing component.",
+    "proposalId": "PRP-PILOT-20260310-001",
     "changedFiles": [],
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
@@ -214,17 +255,17 @@
       "maxFiles": 5,
       "maxFunctionalChanges": 1,
       "noUnrelatedRefactor": true,
-      "functionalScope": "src/services"
+      "functionalScope": "src/components"
     },
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T09:05:28.969Z",
-      "sessionCount": 1
+      "checkedAt": "2026-03-10T14:40:14.324Z",
+      "sessionCount": 0
     },
     "timestamps": {
-      "createdAt": "2026-03-10T09:00:29.780Z",
-      "updatedAt": "2026-03-10T09:05:29.014Z"
+      "createdAt": "2026-03-10T14:40:14.278Z",
+      "updatedAt": "2026-03-10T14:40:14.370Z"
     }
   }
 ]

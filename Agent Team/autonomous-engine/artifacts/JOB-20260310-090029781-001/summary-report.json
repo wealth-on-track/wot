@@ -1,0 +1,10 @@
+{
+  "jobId": "JOB-20260310-090029781-001",
+  "proposalId": "PRP-20260310-090029733-004",
+  "branch": "local/auto-job-20260310-090029781-001",
+  "changedFiles": [
+    "src/services/marketData.ts"
+  ],
+  "oneFunctionalChange": true,
+  "generatedAt": "2026-03-10T09:15:28.969Z"
+}

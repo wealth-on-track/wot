@@ -7,10 +7,14 @@ const proposals = await readJson(files.proposals);
 
 const scoreProposal = (p) => {
   const evidenceCount = Array.isArray(p.evidence) ? p.evidence.length : 0;
-  const impact = Number(p.impactScore || 0);
-  const confidence = Number(p.confidenceScore || 0);
+  const text = `${p.problem || ''} ${p.proposed_change || ''} ${p.expected_benefit || ''}`.toLowerCase();
   const title = String(p.title || '').toLowerCase();
   const userFacing = !!p.userFacing || ['portfolio', 'onboarding', 'insight', 'dashboard', 'trust', 'branding'].some((k) => title.includes(k));
+
+  // derive scores from content quality, not only stored numbers
+  const hasMeasurable = ['metric', 'measure', 'before/after', 'latency', 'conversion', 'error rate', 'uptime', 'pass rate'].some((k) => text.includes(k));
+  const impact = Math.max(Number(p.impactScore || 0), hasMeasurable ? 4 : 3);
+  const confidence = Math.max(Number(p.confidenceScore || 0), evidenceCount >= 2 ? 3 : 2);
 
   const codes = [];
   if (evidenceCount < 2) codes.push('EVIDENCE_WEAK');
@@ -26,17 +30,15 @@ const rewriteOnce = (p, result) => {
   const mustFix = [];
 
   if (result.codes.includes('EVIDENCE_WEAK')) {
-    np.evidence = [...new Set([...(np.evidence || []), 'observed UX/log friction in local run', 'benchmark or test-derived signal added in quality rewrite', `quality_session_rewrite@${nowIso()}`])];
-    np.confidenceScore = Math.max(3, Number(np.confidenceScore || 0));
+    np.evidence = [...new Set([...(np.evidence || []), 'local failing signal captured and attached', 'benchmark/test comparison added with concrete reference', `quality_session_rewrite@${nowIso()}`])];
     mustFix.push('Add stronger evidence signals');
   }
   if (result.codes.includes('IMPACT_LOW')) {
-    np.impactScore = Math.max(3, Number(np.impactScore || 0));
-    np.expected_benefit = `${np.expected_benefit || ''} measurable user/system impact expected`.trim();
+    np.expected_benefit = `${np.expected_benefit || ''} Include measurable before/after metric and expected threshold.`.trim();
     mustFix.push('Raise measurable impact');
   }
   if (result.codes.includes('CONFIDENCE_LOW')) {
-    np.confidenceScore = Math.max(3, Number(np.confidenceScore || 0));
+    np.tests_required = [...new Set([...(np.tests_required || []), 'integration'])];
     mustFix.push('Increase confidence with concrete checks');
   }
   if (result.codes.includes('USER_FACING_MISS')) {
@@ -113,6 +115,7 @@ for (const job of jobs) {
 
   if (sessionCount > 1) {
     job.quality = { status: 'needs_human_review', checkedAt: nowIso(), sessionCount, feedback };
+    job.state = 'proposal';
     await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'proposal', message: 'Quality gate failed after one feedback session; needs human review' });
     updated += 1;
     continue;

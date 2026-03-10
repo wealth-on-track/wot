@@ -55,15 +55,23 @@ if (allPass) {
   await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'review_ready', message: 'Verifier passed all required checks; ready for review' });
 } else {
   job.retries.testing += 1;
-  if (job.retries.testing >= 3) {
-    job.state = 'abandoned_with_reason';
-    job.finalReason = 'verification_failed_after_3_retries';
-    await writeArtifact(job.id, 'failure-analysis.txt', 'verification failed repeatedly; scope should be reduced/split');
-    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'abandoned_with_reason', message: 'Verification failed after retries; job abandoned with reason' });
-  } else {
-    job.state = 'build';
-    job.ownerAgent = 'builder';
-  }
+  const failedChecks = results.filter((r) => r.status === 'fail').map((r) => r.check);
+  const feedback = {
+    reject_reason_codes: ['VERIFY_FAIL'],
+    must_fix: failedChecks,
+    rewrite_plan: [
+      'Address failing checks only (keep scope small).',
+      'Update proposal evidence and tests_required to match failure cause.',
+      'Resubmit proposal through quality gate.',
+    ],
+  };
+
+  // no ping-pong build loop: send back to proposal for one-pass revision
+  job.state = 'proposal';
+  job.ownerAgent = 'planner';
+  job.quality = { status: 'pending', checkedAt: nowIso(), sessionCount: 0, feedback };
+  await writeArtifact(job.id, 'failure-analysis.txt', `Verification failed checks: ${failedChecks.join(', ')}`);
+  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'proposal', message: `Verification failed (${failedChecks.join(', ')}); sent back to proposal for revision` });
 }
 
 job.timestamps.updatedAt = nowIso();
