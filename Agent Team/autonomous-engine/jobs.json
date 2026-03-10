@@ -33,7 +33,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-10T15:00:46.073Z",
+      "checkedAt": "2026-03-10T15:01:36.301Z",
       "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
@@ -60,7 +60,7 @@
     "id": "JOB-20260310-150019646-001",
     "title": "Improve empty portfolio onboarding with clearer next actions",
     "category": "ux",
-    "state": "approved_for_build",
+    "state": "proposal",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -68,7 +68,7 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
+    "summary": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
     "proposalId": "PRP-20260310-090029733-003",
     "changedFiles": [
       "src/app/[username]/portfolio_public/page.tsx"
@@ -78,7 +78,7 @@
     "retries": {
       "planning": 0,
       "build": 0,
-      "testing": 1,
+      "testing": 2,
       "verification": 0
     },
     "constraints": {
@@ -89,43 +89,29 @@
     },
     "ownerAgent": "planner",
     "quality": {
-      "status": "pass",
-      "checkedAt": "2026-03-10T15:00:46.074Z",
-      "sessionCount": 1,
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-10T15:01:36.302Z",
+      "sessionCount": 0,
       "feedback": {
         "reject_reason_codes": [
-          "CONFIDENCE_LOW"
-        ],
-        "strengths": [
-          "Category alignment: ux",
-          "Initial impact/confidence/effort: 4 / 4 / 2",
-          "Scope remains constrained for controlled delivery."
-        ],
-        "gaps": [
-          "Confidence is low; proposal needs stronger verification framing."
+          "VERIFY_FAIL"
         ],
         "must_fix": [
-          "CONFIDENCE_LOW"
+          "lint",
+          "unit",
+          "integration"
         ],
-        "evidence_gap": null,
         "rewrite_plan": [
-          "Rewrite problem statement to explain user/system consequence clearly.",
-          "Add concrete evidence and tie it to measurable acceptance criteria.",
-          "Upgrade proposal language from generic intent to execution-ready plan.",
-          "Re-score impact/confidence after rewrite and keep effort realistic."
-        ],
-        "acceptance_checklist": [
-          "Impact >= 3",
-          "Confidence >= 3",
-          "Evidence count >= 2",
-          "User-facing value explicitly stated"
+          "Address failing checks only (keep scope small).",
+          "Update proposal evidence and tests_required to match failure cause.",
+          "Resubmit proposal through quality gate."
         ]
       },
-      "revised": true
+      "reason": "repeated_verify_failures"
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.639Z",
-      "updatedAt": "2026-03-10T15:00:46.120Z"
+      "updatedAt": "2026-03-10T15:00:50.843Z"
     }
   },
   {
@@ -172,7 +158,7 @@
     "id": "JOB-20260310-150019647-003",
     "title": "Reduce portfolio dashboard load latency via route-level lazy chunking",
     "category": "performance",
-    "state": "proposal",
+    "state": "approved_for_build",
     "risk": "medium",
     "impact": "high",
     "priority": "P1",
@@ -200,12 +186,12 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T15:00:46.074Z",
+      "checkedAt": "2026-03-10T15:01:36.302Z",
       "sessionCount": 1
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.647Z",
-      "updatedAt": "2026-03-10T15:00:19.647Z"
+      "updatedAt": "2026-03-10T15:01:36.347Z"
     }
   },
   {
@@ -240,7 +226,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T15:00:46.074Z",
+      "checkedAt": "2026-03-10T15:01:36.302Z",
       "sessionCount": 0
     },
     "timestamps": {

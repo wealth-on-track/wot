@@ -19,7 +19,8 @@
   {
     "check": "integration",
     "cmd": "node scripts/autonomous-engine/check-integration.mjs",
-    "status": "skipped"
+    "status": "fail",
+    "error": "Command failed: node scripts/autonomous-engine/check-integration.mjs\nintegration:fail\n"
   },
   {
     "check": "e2e",

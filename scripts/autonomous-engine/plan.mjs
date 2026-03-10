@@ -23,6 +23,7 @@ function splitProposal(p) {
 }
 
 for (const raw of proposals) {
+  if (raw._planned) continue;
   const v = validateProposal(raw);
   if (!v.ok) continue;
   if (Number(raw.impactScore || 0) < 3) continue;
@@ -77,6 +78,8 @@ for (const raw of proposals) {
     };
 
     jobs.push(job);
+    p._planned = true;
+    p._plannedAt = now;
     await writeArtifact(job.id, 'proposal.json', p);
     await writeArtifact(job.id, 'dispatch-decision.txt', 'Planner created job from validated proposal and queued for approved_for_build dispatch.');
     await appendEvent({ jobId: job.id, proposalId: p.id, stage: 'proposal', message: `Planner created ${job.id} from ${p.id}` });

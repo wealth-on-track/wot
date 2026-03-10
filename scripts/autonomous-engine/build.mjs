@@ -40,7 +40,12 @@ try {
   execSync(`git rev-parse --verify ${branch}`, { stdio: 'ignore' });
   execSync(`git checkout ${branch}`, { stdio: 'ignore' });
 } catch {
-  execSync(`git checkout -b ${branch}`, { stdio: 'ignore' });
+  try {
+    execSync(`git checkout -b ${branch}`, { stdio: 'ignore' });
+  } catch {
+    // fallback: stay on current branch (prevents hard stop when worktree is dirty)
+    await writeArtifact(job.id, 'branch-warning.txt', `Could not switch to ${branch}; continued on current branch.`);
+  }
 }
 
 const cooldownCutoff = Date.now() - 24 * 60 * 60 * 1000;
