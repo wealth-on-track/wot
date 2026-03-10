@@ -121,7 +121,7 @@
     "id": "JOB-20260310-150019647-002",
     "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
     "category": "benchmark",
-    "state": "approved_for_build",
+    "state": "review_ready",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -129,10 +129,12 @@
     "confidenceScore": 4,
     "effortScore": 3,
     "userFacing": true,
-    "summary": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
+    "summary": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
     "proposalId": "PRP-20260310-205426200-001",
-    "changedFiles": [],
-    "testResults": "fail",
+    "changedFiles": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "testResults": "pass",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
@@ -146,16 +148,18 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/services"
     },
-    "ownerAgent": "planner",
+    "ownerAgent": "verifier",
     "quality": {
       "status": "pass",
       "checkedAt": "2026-03-10T21:00:29.042Z",
-      "sessionCount": 1
+      "sessionCount": 1,
+      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.647Z",
-      "updatedAt": "2026-03-10T21:00:29.086Z"
-    }
+      "updatedAt": "2026-03-10T21:00:31.784Z"
+    },
+    "buildAttempt": 1
   },
   {
     "id": "JOB-20260310-150019647-003",
@@ -191,7 +195,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T21:00:29.042Z",
+      "checkedAt": "2026-03-10T21:01:18.477Z",
       "sessionCount": 0
     },
     "timestamps": {
@@ -399,12 +403,52 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T21:00:29.042Z",
+      "checkedAt": "2026-03-10T21:01:18.478Z",
       "sessionCount": 0
     },
     "timestamps": {
       "createdAt": "2026-03-10T20:55:27.357Z",
       "updatedAt": "2026-03-10T20:55:27.357Z"
+    }
+  },
+  {
+    "id": "JOB-20260310-210108325-001",
+    "title": "Pilot Loop5: improve insight confidence legend readability in portfolio card",
+    "category": "ux",
+    "state": "approved_for_build",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Refine confidence legend wording and grouping in one user-facing component.",
+    "proposalId": "PRP-PILOT-20260310-LOOP5",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-10T21:01:18.478Z",
+      "sessionCount": 0
+    },
+    "timestamps": {
+      "createdAt": "2026-03-10T21:01:08.324Z",
+      "updatedAt": "2026-03-10T21:01:18.525Z"
     }
   }
 ]

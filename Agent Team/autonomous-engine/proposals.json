@@ -545,5 +545,39 @@
     "triageReasonCodes": [
       "VERIFY_FAIL"
     ]
+  },
+  {
+    "id": "PRP-PILOT-20260310-LOOP5",
+    "title": "Pilot Loop5: improve insight confidence legend readability in portfolio card",
+    "category": "ux",
+    "problem": "Confidence legend is hard to parse quickly, causing interpretation delay for users.",
+    "evidence": [
+      "manual ux observation",
+      "benchmark finance UI comparison"
+    ],
+    "proposed_change": "Refine confidence legend wording and grouping in one user-facing component.",
+    "expected_benefit": "Faster comprehension and more trustworthy insight consumption.",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "success_metrics": [
+      "Legend can be understood at a glance",
+      "No regression in card spacing"
+    ],
+    "non_goals": [
+      "No broad redesign"
+    ],
+    "files_expected": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert legend copy/grouping patch."
   }
 ]
