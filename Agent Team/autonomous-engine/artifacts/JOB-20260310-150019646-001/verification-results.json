@@ -18,7 +18,7 @@
   {
     "check": "integration",
     "cmd": "CHANGED_FILES=src/app/[username]/portfolio_public/page.tsx node scripts/autonomous-engine/check-integration.mjs",
-    "status": "skipped"
+    "status": "pass"
   },
   {
     "check": "e2e",
