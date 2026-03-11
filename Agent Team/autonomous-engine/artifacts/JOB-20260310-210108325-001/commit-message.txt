@@ -1,1 +1,0 @@
-feat(local-auto): Pilot Loop5: improve insight confidence legend readability in portfolio card

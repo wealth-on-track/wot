@@ -1,1 +1,0 @@
-feat(local-auto): Add admin activity page empty-state helper text for observability

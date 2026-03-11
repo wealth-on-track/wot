@@ -1,1 +1,0 @@
-feat(local-auto): Pilot Loop3: improve portfolio card legend clarity for signal confidence

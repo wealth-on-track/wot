@@ -132,7 +132,14 @@ if (changedFiles.length === 0) {
   process.exit(0);
 }
 
-const diff = execSync('git diff -- .', { stdio: 'pipe' }).toString();
+let diff = '# no diff produced';
+try {
+  const targets = (changedFiles || []).map((f) => `"${f}"`).join(' ');
+  const cmd = targets ? `git diff -- ${targets}` : 'git diff -- .';
+  diff = execSync(cmd, { stdio: 'pipe', maxBuffer: 20 * 1024 * 1024 }).toString() || '# no diff produced';
+} catch {
+  diff = '# diff capture failed (fallback)';
+}
 const commitMsg = `feat(local-auto): ${job.title}`;
 const testPlan = (proposal.tests_required || []).join('\n') || 'lint\nunit';
 const summary = {

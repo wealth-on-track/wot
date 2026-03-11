@@ -174,3 +174,15 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }: 
 /* autonomous-engine:JOB-20260311-093453850-001648:a1:r0-t0:single-functional-change */
 
 /* autonomous-engine:JOB-20260311-110002390-001799:a1:r0-t0:single-functional-change */
+
+/* autonomous-engine:JOB-20260311-125530848-001323:a2:r1-t0:single-functional-change */
+
+/* autonomous-engine:JOB-20260311-125530848-001323:a4:r3-t0:single-functional-change */
+
+/* autonomous-engine:JOB-20260311-125530848-001323:a6:r5-t0:single-functional-change */
+
+/* autonomous-engine:JOB-20260311-125530848-001323:a8:r7-t0:single-functional-change */
+
+/* autonomous-engine:JOB-20260311-142120531-001121:a1:r0-t0:single-functional-change */
+
+/* autonomous-engine:JOB-20260311-142120531-001121:a3:r2-t0:single-functional-change */

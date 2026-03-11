@@ -1,1 +1,0 @@
-feat(local-auto): Add short operator hint text to Admin Health page header
