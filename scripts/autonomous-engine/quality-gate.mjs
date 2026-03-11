@@ -11,18 +11,25 @@ const scoreProposal = (p) => {
   const title = String(p.title || '').toLowerCase();
   const userFacing = !!p.userFacing || ['portfolio', 'onboarding', 'insight', 'dashboard', 'trust', 'branding'].some((k) => title.includes(k));
 
-  // derive scores from content quality, not only stored numbers
-  const hasMeasurable = ['metric', 'measure', 'before/after', 'latency', 'conversion', 'error rate', 'uptime', 'pass rate'].some((k) => text.includes(k));
-  const impact = Math.max(Number(p.impactScore || 0), hasMeasurable ? 4 : 3);
-  const confidence = Math.max(Number(p.confidenceScore || 0), evidenceCount >= 2 ? 3 : 2);
+  // fintech-grade rubric signals
+  const hasKpi = Boolean(p.kpi_target && String(p.kpi_target).trim().length > 8);
+  const hasBenchmarkDelta = Boolean(p.benchmark_delta && String(p.benchmark_delta).trim().length > 8);
+  const riskControlCount = Array.isArray(p.risk_controls) ? p.risk_controls.length : 0;
+  const hasMeasurableText = ['metric', 'measure', 'before/after', 'latency', 'conversion', 'error rate', 'uptime', 'pass rate'].some((k) => text.includes(k));
+
+  const impact = Math.max(Number(p.impactScore || 0), (hasKpi || hasMeasurableText) ? 4 : 3);
+  const confidence = Math.max(Number(p.confidenceScore || 0), evidenceCount >= 2 && riskControlCount >= 2 ? 4 : (evidenceCount >= 2 ? 3 : 2));
 
   const codes = [];
   if (evidenceCount < 2) codes.push('EVIDENCE_WEAK');
   if (impact < 3) codes.push('IMPACT_LOW');
   if (confidence < 3) codes.push('CONFIDENCE_LOW');
   if (!userFacing) codes.push('USER_FACING_MISS');
+  if (!hasKpi) codes.push('KPI_TARGET_MISSING');
+  if (!hasBenchmarkDelta) codes.push('BENCHMARK_DELTA_MISSING');
+  if (riskControlCount < 2) codes.push('RISK_CONTROLS_WEAK');
 
-  return { pass: codes.length === 0, codes, evidenceCount, impact, confidence, userFacing };
+  return { pass: codes.length === 0, codes, evidenceCount, impact, confidence, userFacing, hasKpi, hasBenchmarkDelta, riskControlCount };
 };
 
 const rewriteOnce = (p, result, job) => {
@@ -40,6 +47,18 @@ const rewriteOnce = (p, result, job) => {
   if (result.codes.includes('CONFIDENCE_LOW')) {
     np.tests_required = [...new Set([...(np.tests_required || []), 'integration'])];
     mustFix.push('Increase confidence with concrete checks');
+  }
+  if (result.codes.includes('KPI_TARGET_MISSING')) {
+    np.kpi_target = np.kpi_target || 'Target: measurable user-facing clarity/latency/error improvement with before/after comparison.';
+    mustFix.push('Define KPI target');
+  }
+  if (result.codes.includes('BENCHMARK_DELTA_MISSING')) {
+    np.benchmark_delta = np.benchmark_delta || 'Gap-to-benchmark: define current vs best-practice delta and closing action.';
+    mustFix.push('Define benchmark delta');
+  }
+  if (result.codes.includes('RISK_CONTROLS_WEAK')) {
+    np.risk_controls = [...new Set([...(np.risk_controls || []), 'Scoped file-change boundary with rollback note', 'Mandatory verification checklist before review_ready'])];
+    mustFix.push('Strengthen risk controls');
   }
   if (result.codes.includes('USER_FACING_MISS')) {
     np.userFacing = true;
@@ -117,6 +136,9 @@ for (const job of jobs) {
       if (c === 'IMPACT_LOW') return 'Impact statement is below build threshold and needs clearer measurable outcome.';
       if (c === 'CONFIDENCE_LOW') return 'Confidence is low; proposal needs stronger verification framing.';
       if (c === 'USER_FACING_MISS') return 'Proposal must connect directly to user-facing value.';
+      if (c === 'KPI_TARGET_MISSING') return 'KPI target is missing; no measurable success threshold is defined.';
+      if (c === 'BENCHMARK_DELTA_MISSING') return 'Benchmark delta is missing; best-in-class gap is unclear.';
+      if (c === 'RISK_CONTROLS_WEAK') return 'Risk controls are weak; add execution and rollback safeguards.';
       return c;
     }),
     must_fix: first.codes,

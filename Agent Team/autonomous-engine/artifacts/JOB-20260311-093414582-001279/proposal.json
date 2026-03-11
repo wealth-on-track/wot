@@ -1,0 +1,42 @@
+{
+  "id": "PRP-PILOT-20260311-HQ1",
+  "title": "HQ1: improve portfolio insight confidence legend semantics",
+  "category": "ux",
+  "problem": "Users can misinterpret confidence levels in insight cards when label semantics are implicit.",
+  "evidence": [
+    "UX observation: confidence labels are interpreted inconsistently",
+    "Benchmark: leading fintech apps use explicit confidence legends"
+  ],
+  "proposed_change": "Introduce explicit confidence legend semantics and concise explanation text in portfolio insight card.",
+  "expected_benefit": "Higher trust and faster interpretation of insight outputs.",
+  "risk": "low",
+  "impact": "high",
+  "priority": "P1",
+  "impactScore": 4,
+  "confidenceScore": 4,
+  "effortScore": 2,
+  "userFacing": true,
+  "success_metrics": [
+    "Users can explain confidence meaning in one pass",
+    "No visual regression on mobile/desktop"
+  ],
+  "kpi_target": "Decrease insight interpretation confusion rate by >=25% in manual QA checklist.",
+  "benchmark_delta": "Current card lacks explicit semantics; target parity with benchmark confidence legend clarity pattern.",
+  "risk_controls": [
+    "Single-component scope in PublicPortfolioView",
+    "Rollback-ready patch with artifact evidence"
+  ],
+  "non_goals": [
+    "No broad dashboard redesign"
+  ],
+  "files_expected": [
+    "src/components/PublicPortfolioView.tsx"
+  ],
+  "tests_required": [
+    "lint",
+    "unit"
+  ],
+  "rollback_plan": "Revert confidence legend semantics patch only.",
+  "_planned": true,
+  "_plannedAt": "2026-03-11T09:34:14.582Z"
+}

@@ -117,6 +117,12 @@ for (const c of candidates) {
       'All required quality checks pass.',
       'Reviewer can verify impact from summary + evidence without guessing intent.',
     ],
+    kpi_target: 'Target KPI: improve a user-facing quality metric (clarity/latency/error) with explicit before/after threshold in artifacts.',
+    benchmark_delta: 'Benchmark delta: identify best fintech pattern gap and document how this change narrows that gap.',
+    risk_controls: [
+      'Constrain change to scoped files and single functional intent.',
+      'Require verification artifacts before review_ready.',
+    ],
     non_goals: [
       'No unrelated refactor.',
       'No broad redesign outside scoped files.',

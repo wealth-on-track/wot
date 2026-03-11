@@ -1,0 +1,10 @@
+{
+  "jobId": "JOB-20260311-090354314-001721",
+  "proposalId": "PRP-PILOT-20260311-AZ",
+  "branch": "local/auto-job-20260311-090354314-001721",
+  "changedFiles": [
+    "src/components/PublicPortfolioView.tsx"
+  ],
+  "oneFunctionalChange": true,
+  "generatedAt": "2026-03-11T09:04:05.072Z"
+}

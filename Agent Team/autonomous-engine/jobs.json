@@ -22,7 +22,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 49
+      "verification": 51
     },
     "constraints": {
       "maxFiles": 5,
@@ -38,7 +38,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T14:40:14.278Z",
-      "updatedAt": "2026-03-11T09:00:29.944Z"
+      "updatedAt": "2026-03-11T09:30:30.317Z"
     }
   },
   {
@@ -64,7 +64,7 @@
       "planning": 0,
       "build": 2,
       "testing": 0,
-      "verification": 48
+      "verification": 50
     },
     "constraints": {
       "maxFiles": 5,
@@ -113,7 +113,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.639Z",
-      "updatedAt": "2026-03-11T08:55:30.601Z"
+      "updatedAt": "2026-03-11T09:25:29.938Z"
     },
     "buildAttempt": 2
   },
@@ -140,7 +140,7 @@
       "planning": 0,
       "build": 1,
       "testing": 0,
-      "verification": 48
+      "verification": 50
     },
     "constraints": {
       "maxFiles": 5,
@@ -157,7 +157,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.647Z",
-      "updatedAt": "2026-03-11T09:00:29.944Z"
+      "updatedAt": "2026-03-11T09:30:30.317Z"
     },
     "buildAttempt": 1
   },
@@ -184,7 +184,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 48
+      "verification": 50
     },
     "constraints": {
       "maxFiles": 5,
@@ -201,7 +201,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.647Z",
-      "updatedAt": "2026-03-11T09:00:29.944Z"
+      "updatedAt": "2026-03-11T09:30:30.317Z"
     },
     "buildAttempt": 1
   },
@@ -228,7 +228,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 48
+      "verification": 50
     },
     "constraints": {
       "maxFiles": 5,
@@ -275,7 +275,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.648Z",
-      "updatedAt": "2026-03-11T09:00:29.944Z"
+      "updatedAt": "2026-03-11T09:30:30.317Z"
     },
     "buildAttempt": 1
   },
@@ -302,7 +302,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 1
+      "verification": 3
     },
     "constraints": {
       "maxFiles": 5,
@@ -349,7 +349,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T19:25:40.858Z",
-      "updatedAt": "2026-03-11T09:00:29.944Z"
+      "updatedAt": "2026-03-11T09:30:30.317Z"
     },
     "buildAttempt": 1
   },
@@ -376,7 +376,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 55
+      "verification": 57
     },
     "constraints": {
       "maxFiles": 5,
@@ -392,7 +392,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T19:27:09.346Z",
-      "updatedAt": "2026-03-11T09:00:29.944Z"
+      "updatedAt": "2026-03-11T09:30:30.317Z"
     }
   },
   {
@@ -418,7 +418,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 51
+      "verification": 53
     },
     "constraints": {
       "maxFiles": 5,
@@ -434,7 +434,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T20:28:13.645Z",
-      "updatedAt": "2026-03-11T09:00:29.944Z"
+      "updatedAt": "2026-03-11T09:30:30.317Z"
     }
   },
   {
@@ -460,7 +460,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 48
+      "verification": 50
     },
     "constraints": {
       "maxFiles": 5,
@@ -477,7 +477,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T20:55:27.357Z",
-      "updatedAt": "2026-03-11T09:00:29.944Z"
+      "updatedAt": "2026-03-11T09:30:30.317Z"
     },
     "buildAttempt": 1
   },
@@ -504,7 +504,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 48
+      "verification": 50
     },
     "constraints": {
       "maxFiles": 5,
@@ -521,7 +521,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T21:01:08.324Z",
-      "updatedAt": "2026-03-11T09:00:29.944Z"
+      "updatedAt": "2026-03-11T09:30:30.317Z"
     },
     "buildAttempt": 1
   },
@@ -548,7 +548,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 0
+      "verification": 3
     },
     "constraints": {
       "maxFiles": 5,
@@ -565,13 +565,57 @@
     },
     "timestamps": {
       "createdAt": "2026-03-11T08:48:29.409Z",
-      "updatedAt": "2026-03-11T08:50:05.774Z"
+      "updatedAt": "2026-03-11T09:30:30.317Z"
     },
     "buildAttempt": 1
   },
   {
     "id": "JOB-20260311-090354314-001721",
     "title": "AZ Pilot: improve portfolio confidence legend readability",
+    "category": "ux",
+    "state": "review_ready",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Improve confidence legend wording in PublicPortfolioView with concise explanatory copy. (local build applied)",
+    "proposalId": "PRP-PILOT-20260311-AZ",
+    "changedFiles": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "testResults": "pass",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 2
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "verifier",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-11T09:04:04.931Z",
+      "sessionCount": 0,
+      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
+    },
+    "timestamps": {
+      "createdAt": "2026-03-11T09:03:54.313Z",
+      "updatedAt": "2026-03-11T09:30:30.317Z"
+    },
+    "buildAttempt": 1
+  },
+  {
+    "id": "JOB-20260311-093414582-001279",
+    "title": "HQ1: improve portfolio insight confidence legend semantics",
     "category": "ux",
     "state": "approved_for_build",
     "risk": "low",
@@ -581,8 +625,8 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Improve confidence legend wording in PublicPortfolioView with concise explanatory copy.",
-    "proposalId": "PRP-PILOT-20260311-AZ",
+    "summary": "Introduce explicit confidence legend semantics and concise explanation text in portfolio insight card.",
+    "proposalId": "PRP-PILOT-20260311-HQ1",
     "changedFiles": [],
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
@@ -601,12 +645,12 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-11T09:04:04.931Z",
+      "checkedAt": "2026-03-11T09:34:24.541Z",
       "sessionCount": 0
     },
     "timestamps": {
-      "createdAt": "2026-03-11T09:03:54.313Z",
-      "updatedAt": "2026-03-11T09:04:04.976Z"
+      "createdAt": "2026-03-11T09:34:14.582Z",
+      "updatedAt": "2026-03-11T09:34:24.587Z"
     }
   }
 ]
