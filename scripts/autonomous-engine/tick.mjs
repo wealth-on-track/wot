@@ -16,4 +16,5 @@ run('node scripts/autonomous-engine/dispatch.mjs');
 run('node scripts/autonomous-engine/build.mjs');
 run('node scripts/autonomous-engine/verify.mjs');
 run('node scripts/autonomous-engine/guarantee.mjs');
+run('node scripts/autonomous-engine/review-reminder.mjs');
 run('node scripts/autonomous-engine/maintenance.mjs');

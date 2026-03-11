@@ -22,7 +22,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 0
+      "verification": 47
     },
     "constraints": {
       "maxFiles": 5,
@@ -38,7 +38,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T14:40:14.278Z",
-      "updatedAt": "2026-03-10T20:54:17.385Z"
+      "updatedAt": "2026-03-11T08:35:29.948Z"
     }
   },
   {
@@ -64,7 +64,7 @@
       "planning": 0,
       "build": 2,
       "testing": 0,
-      "verification": 0
+      "verification": 47
     },
     "constraints": {
       "maxFiles": 5,
@@ -113,7 +113,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.639Z",
-      "updatedAt": "2026-03-10T20:58:22.487Z"
+      "updatedAt": "2026-03-11T08:40:29.694Z"
     },
     "buildAttempt": 2
   },
@@ -140,7 +140,7 @@
       "planning": 0,
       "build": 1,
       "testing": 0,
-      "verification": 0
+      "verification": 47
     },
     "constraints": {
       "maxFiles": 5,
@@ -157,7 +157,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.647Z",
-      "updatedAt": "2026-03-10T21:00:31.784Z"
+      "updatedAt": "2026-03-11T08:45:30.321Z"
     },
     "buildAttempt": 1
   },
@@ -165,7 +165,7 @@
     "id": "JOB-20260310-150019647-003",
     "title": "Reduce portfolio dashboard load latency via route-level lazy chunking",
     "category": "performance",
-    "state": "approved_for_build",
+    "state": "review_ready",
     "risk": "medium",
     "impact": "high",
     "priority": "P1",
@@ -173,18 +173,18 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied) | triaged to narrower proposal scope",
+    "summary": "Apply one meaningful local change set and verify with required checks. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. (local build applied)",
     "proposalId": "PRP-20260310-205426201-002",
     "changedFiles": [
       "src/components/PublicPortfolioView.tsx"
     ],
-    "testResults": "fail",
+    "testResults": "pass",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 0
+      "verification": 46
     },
     "constraints": {
       "maxFiles": 5,
@@ -192,16 +192,18 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/components"
     },
-    "ownerAgent": "planner",
+    "ownerAgent": "verifier",
     "quality": {
       "status": "pass",
       "checkedAt": "2026-03-10T21:05:28.749Z",
-      "sessionCount": 0
+      "sessionCount": 0,
+      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.647Z",
-      "updatedAt": "2026-03-10T21:05:28.793Z"
-    }
+      "updatedAt": "2026-03-11T08:35:29.948Z"
+    },
+    "buildAttempt": 1
   },
   {
     "id": "JOB-20260310-150019648-004",
@@ -226,7 +228,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 0
+      "verification": 47
     },
     "constraints": {
       "maxFiles": 5,
@@ -273,7 +275,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.648Z",
-      "updatedAt": "2026-03-10T21:02:53.931Z"
+      "updatedAt": "2026-03-11T08:45:30.321Z"
     },
     "buildAttempt": 1
   },
@@ -281,7 +283,7 @@
     "id": "JOB-20260310-192540859-001",
     "title": "Pilot Final: clarify portfolio insight confidence legend for users",
     "category": "ux",
-    "state": "abandoned_with_reason",
+    "state": "approved_for_build",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -289,8 +291,8 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Add explicit confidence legend and context subtitle near insight card; keep scope user-facing and single-component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied) | triaged to narrower proposal scope",
-    "proposalId": "PRP-20260310-205528705-002",
+    "summary": "Add explicit confidence legend and context subtitle near insight card; keep scope user-facing and single-component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied) | triaged to narrower proposal scope Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
+    "proposalId": "PRP-20260311-084839473-001",
     "changedFiles": [
       "src/components/PublicPortfolioView.tsx"
     ],
@@ -311,14 +313,43 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-10T20:55:28.753Z",
-      "sessionCount": 0
+      "checkedAt": "2026-03-11T08:48:39.564Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "EVIDENCE_WEAK"
+        ],
+        "strengths": [
+          "Category alignment: ux",
+          "Initial impact/confidence/effort: 4 / 4 / 2",
+          "Scope remains constrained for controlled delivery."
+        ],
+        "gaps": [
+          "Evidence is not yet strong enough to justify confident execution."
+        ],
+        "must_fix": [
+          "EVIDENCE_WEAK"
+        ],
+        "evidence_gap": "Need at least 2 evidence points from scan/log/benchmark/test signals.",
+        "rewrite_plan": [
+          "Rewrite problem statement to explain user/system consequence clearly.",
+          "Add concrete evidence and tie it to measurable acceptance criteria.",
+          "Upgrade proposal language from generic intent to execution-ready plan.",
+          "Re-score impact/confidence after rewrite and keep effort realistic."
+        ],
+        "acceptance_checklist": [
+          "Impact >= 3",
+          "Confidence >= 3",
+          "Evidence count >= 2",
+          "User-facing value explicitly stated"
+        ]
+      },
+      "revised": true
     },
     "timestamps": {
       "createdAt": "2026-03-10T19:25:40.858Z",
-      "updatedAt": "2026-03-10T21:01:29.692Z"
-    },
-    "finalReason": "proposal_missing"
+      "updatedAt": "2026-03-11T08:48:39.610Z"
+    }
   },
   {
     "id": "JOB-20260310-192709346-001",
@@ -343,7 +374,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 6
+      "verification": 53
     },
     "constraints": {
       "maxFiles": 5,
@@ -359,7 +390,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T19:27:09.346Z",
-      "updatedAt": "2026-03-10T20:54:17.431Z"
+      "updatedAt": "2026-03-11T08:35:29.948Z"
     }
   },
   {
@@ -385,7 +416,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 2
+      "verification": 49
     },
     "constraints": {
       "maxFiles": 5,
@@ -401,7 +432,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T20:28:13.645Z",
-      "updatedAt": "2026-03-10T20:54:17.431Z"
+      "updatedAt": "2026-03-11T08:35:29.948Z"
     }
   },
   {
@@ -427,7 +458,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 0
+      "verification": 47
     },
     "constraints": {
       "maxFiles": 5,
@@ -444,7 +475,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T20:55:27.357Z",
-      "updatedAt": "2026-03-10T21:03:04.294Z"
+      "updatedAt": "2026-03-11T08:45:30.321Z"
     },
     "buildAttempt": 1
   },
@@ -471,7 +502,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 0
+      "verification": 47
     },
     "constraints": {
       "maxFiles": 5,
@@ -488,8 +519,48 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T21:01:08.324Z",
-      "updatedAt": "2026-03-10T21:01:20.603Z"
+      "updatedAt": "2026-03-11T08:45:30.321Z"
     },
     "buildAttempt": 1
+  },
+  {
+    "id": "JOB-20260311-084829410-001",
+    "title": "Cycle1: improve portfolio insight tooltip clarity for confidence signal",
+    "category": "ux",
+    "state": "proposal",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Refine tooltip microcopy and add explicit confidence context in one component.",
+    "proposalId": "PRP-PILOT-20260311-C1",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-11T08:48:39.564Z",
+      "sessionCount": 0
+    },
+    "timestamps": {
+      "createdAt": "2026-03-11T08:48:29.409Z",
+      "updatedAt": "2026-03-11T08:48:29.409Z"
+    }
   }
 ]

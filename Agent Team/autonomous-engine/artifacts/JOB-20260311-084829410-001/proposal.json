@@ -1,0 +1,36 @@
+{
+  "id": "PRP-PILOT-20260311-C1",
+  "title": "Cycle1: improve portfolio insight tooltip clarity for confidence signal",
+  "category": "ux",
+  "problem": "Users hesitate when reading confidence tooltip due unclear wording.",
+  "evidence": [
+    "ux review evidence",
+    "benchmark pattern evidence"
+  ],
+  "proposed_change": "Refine tooltip microcopy and add explicit confidence context in one component.",
+  "expected_benefit": "Improves immediate understanding of insight confidence.",
+  "risk": "low",
+  "impact": "high",
+  "priority": "P1",
+  "impactScore": 4,
+  "confidenceScore": 4,
+  "effortScore": 2,
+  "userFacing": true,
+  "success_metrics": [
+    "Tooltip meaning is explicit",
+    "No style/layout regression"
+  ],
+  "non_goals": [
+    "No redesign"
+  ],
+  "files_expected": [
+    "src/components/PublicPortfolioView.tsx"
+  ],
+  "tests_required": [
+    "lint",
+    "unit"
+  ],
+  "rollback_plan": "Revert tooltip microcopy patch.",
+  "_planned": true,
+  "_plannedAt": "2026-03-11T08:48:29.409Z"
+}

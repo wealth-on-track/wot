@@ -28,6 +28,8 @@
     "auto:quality": "node scripts/autonomous-engine/quality-gate.mjs",
     "auto:triage": "node scripts/autonomous-engine/proposal-triage.mjs",
     "auto:repair": "node scripts/autonomous-engine/repair-orphans.mjs",
+    "auto:review-reminder": "node scripts/autonomous-engine/review-reminder.mjs",
+    "auto:cleanup-debt": "node scripts/autonomous-engine/cleanup-debt.mjs",
     "auto:build": "node scripts/autonomous-engine/build.mjs",
     "auto:verify": "node scripts/autonomous-engine/verify.mjs",
     "auto:guarantee": "node scripts/autonomous-engine/guarantee.mjs",

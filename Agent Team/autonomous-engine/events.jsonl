@@ -188,3 +188,11 @@
 {"ts":"2026-03-10T21:03:04.294Z","jobId":"JOB-20260310-205527358-001","proposalId":"PRP-PILOT-20260310-LOOP4","stage":"review_ready","message":"Verifier passed all required checks; ready for review","meta":{}}
 {"ts":"2026-03-10T21:05:28.793Z","jobId":"JOB-20260310-150019647-003","proposalId":"PRP-20260310-205426201-002","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-10T21:05:28.839Z","jobId":"JOB-20260310-150019647-003","proposalId":"PRP-20260310-205426201-002","stage":"build","message":"Builder started implementation (attempt 1)","meta":{}}
+{"ts":"2026-03-10T21:05:28.998Z","jobId":"JOB-20260310-150019647-003","proposalId":"PRP-20260310-205426201-002","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-10T21:05:30.889Z","jobId":"JOB-20260310-150019647-003","proposalId":"PRP-20260310-205426201-002","stage":"review_ready","message":"Verifier passed all required checks; ready for review","meta":{}}
+{"ts":"2026-03-11T08:48:12.168Z","jobId":null,"proposalId":null,"stage":"maintenance","message":"Debt cleanup pruned 5 abandoned history records","meta":{}}
+{"ts":"2026-03-11T08:48:29.410Z","jobId":"JOB-20260311-084829410-001","proposalId":"PRP-PILOT-20260311-C1","stage":"proposal","message":"Planner created JOB-20260311-084829410-001 from PRP-PILOT-20260311-C1","meta":{}}
+{"ts":"2026-03-11T08:48:39.473Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-20260311-084839473-001","stage":"proposal","message":"Orphan repair generated synthetic proposal PRP-20260311-084839473-001","meta":{}}
+{"ts":"2026-03-11T08:48:39.564Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-20260311-084839473-001","stage":"proposal","message":"Proposal revised in one feedback session and passed quality gate","meta":{}}
+{"ts":"2026-03-11T08:48:39.611Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-20260311-084839473-001","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-11T08:48:39.659Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-20260311-084839473-001","stage":"build","message":"Builder started implementation (attempt 1)","meta":{}}
