@@ -109,7 +109,16 @@ export default async function AutonomousEnginePage({
   const inbox = jobs.filter((j) => j.state === 'discover');
   const active = jobs.filter((j) => ['approved_for_build', 'build', 'test'].includes(j.state));
   const reviewReady = jobs.filter((j) => j.state === 'review_ready');
-  const completed = jobs.filter((j) => ['approved', 'reverted'].includes(j.state));
+  const completedRaw = [
+    ...jobs.filter((j) => ['approved', 'reverted'].includes(j.state)),
+    ...history.filter((j) => ['approved', 'reverted'].includes(j.state)),
+  ];
+  const completedMap = new Map<string, any>();
+  for (const c of completedRaw) {
+    const k = String(c.id || '') + '::' + String(c.timestamps?.updatedAt || c.timestamps?.createdAt || '');
+    completedMap.set(k, c);
+  }
+  const completed = [...completedMap.values()].sort((a, b) => new Date(b.timestamps?.updatedAt || b.timestamps?.createdAt || 0).getTime() - new Date(a.timestamps?.updatedAt || a.timestamps?.createdAt || 0).getTime());
 
   const groups: Record<string, any[]> = { proposal, inbox, active, review: reviewReady, completed };
   const currentList = groups[selectedSection] || active;

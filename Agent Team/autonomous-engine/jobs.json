@@ -1,49 +1,5 @@
 [
   {
-    "id": "JOB-20260311-150530034-001903",
-    "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
-    "category": "benchmark",
-    "state": "review_ready",
-    "risk": "low",
-    "impact": "high",
-    "priority": "P1",
-    "impactScore": 4,
-    "confidenceScore": 4,
-    "effortScore": 3,
-    "userFacing": true,
-    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
-    "proposalId": "PRP-20260311-125530710-003777",
-    "changedFiles": [
-      "src/components/PublicPortfolioView.tsx"
-    ],
-    "testResults": "pass",
-    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
-    "retries": {
-      "planning": 0,
-      "build": 0,
-      "testing": 0,
-      "verification": 3
-    },
-    "constraints": {
-      "maxFiles": 5,
-      "maxFunctionalChanges": 1,
-      "noUnrelatedRefactor": true,
-      "functionalScope": "src/components"
-    },
-    "ownerAgent": "verifier",
-    "quality": {
-      "status": "pass",
-      "checkedAt": "2026-03-11T15:05:30.166Z",
-      "sessionCount": 0,
-      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
-    },
-    "timestamps": {
-      "createdAt": "2026-03-11T15:05:30.034Z",
-      "updatedAt": "2026-03-11T15:50:30.510Z"
-    },
-    "buildAttempt": 1
-  },
-  {
     "id": "JOB-20260311-155530844-001527",
     "title": "Pilot Clean: improve portfolio insight confidence legend semantics on public portfolio page",
     "category": "ux",
@@ -55,8 +11,8 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "In src/components/PublicPortfolioView.tsx, add an explicit confidence legend block directly under insight title and update label text to map each level to plain-language meaning. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
-    "proposalId": "PRP-PILOT-20260311-CLEAN",
+    "summary": "In src/components/PublicPortfolioView.tsx, add an explicit confidence legend block directly under insight title and update label text to map each level to plain-language meaning. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied) | triaged to narrower proposal scope",
+    "proposalId": "PRP-20260311-161031422-001173",
     "changedFiles": [
       "src/components/mobile/MobileDashboard.tsx"
     ],
@@ -65,7 +21,7 @@
     "retries": {
       "planning": 0,
       "build": 0,
-      "testing": 1,
+      "testing": 0,
       "verification": 0
     },
     "constraints": {
@@ -77,43 +33,53 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-11T16:00:31.166Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "CONFIDENCE_LOW"
-        ],
-        "strengths": [
-          "Category alignment: ux",
-          "Initial impact/confidence/effort: 5 / 4 / 2",
-          "Scope remains constrained for controlled delivery."
-        ],
-        "gaps": [
-          "Confidence is low; proposal needs stronger verification framing."
-        ],
-        "must_fix": [
-          "CONFIDENCE_LOW"
-        ],
-        "evidence_gap": null,
-        "rewrite_plan": [
-          "Rewrite problem statement to explain user/system consequence clearly.",
-          "Add concrete evidence and tie it to measurable acceptance criteria.",
-          "Upgrade proposal language from generic intent to execution-ready plan.",
-          "Re-score impact/confidence after rewrite and keep effort realistic."
-        ],
-        "acceptance_checklist": [
-          "Impact >= 3",
-          "Confidence >= 3",
-          "Evidence count >= 2",
-          "User-facing value explicitly stated"
-        ]
-      },
-      "revised": true
+      "checkedAt": "2026-03-11T16:10:31.468Z",
+      "sessionCount": 0
     },
     "timestamps": {
       "createdAt": "2026-03-11T15:55:30.843Z",
-      "updatedAt": "2026-03-11T16:00:31.211Z"
+      "updatedAt": "2026-03-11T16:10:31.513Z"
     },
-    "buildAttempt": 1
+    "buildAttempt": 2
+  },
+  {
+    "id": "JOB-20260311-161031334-001818",
+    "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
+    "category": "benchmark",
+    "state": "proposal",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 3,
+    "userFacing": true,
+    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "proposalId": "PRP-20260311-125530710-003777",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-11T16:10:31.469Z",
+      "sessionCount": 0
+    },
+    "timestamps": {
+      "createdAt": "2026-03-11T16:10:31.333Z",
+      "updatedAt": "2026-03-11T16:10:31.333Z"
+    }
   }
 ]
