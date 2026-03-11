@@ -99,7 +99,7 @@
       }
     ],
     "files_expected": [
-      "src/components/mobile/MobileDashboard.tsx"
+      "src/components/PublicPortfolioView.tsx"
     ],
     "tests_required": [
       "lint",
@@ -108,10 +108,11 @@
     ],
     "rollback_plan": "Revert confidence legend commit in PublicPortfolioView and remove related artifact references.",
     "revision_summary": {
-      "revisedAt": "2026-03-11T16:25:30.794Z",
+      "revisedAt": "2026-03-11T16:35:33.663Z",
       "oneSessionRewrite": true,
       "addressedItems": [
-        "Increase confidence with concrete checks"
+        "Increase confidence with concrete checks",
+        "Switch target file to avoid no-diff path"
       ]
     }
   },

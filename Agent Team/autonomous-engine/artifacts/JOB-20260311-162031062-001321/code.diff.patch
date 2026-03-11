@@ -1,10 +1,10 @@
 diff --git a/src/components/mobile/MobileDashboard.tsx b/src/components/mobile/MobileDashboard.tsx
-index da0f09e..4a31000 100644
+index 4a31000..bebe05e 100644
 --- a/src/components/mobile/MobileDashboard.tsx
 +++ b/src/components/mobile/MobileDashboard.tsx
-@@ -408,3 +408,5 @@ export function MobileDashboard({
- /* autonomous-engine:JOB-20260311-155530844-001527:a1:r0-t0:single-functional-change */
- 
+@@ -410,3 +410,5 @@ export function MobileDashboard({
  /* autonomous-engine:JOB-20260311-155530844-001527:a2:r0-t1:single-functional-change */
+ 
+ /* autonomous-engine:JOB-20260311-162031062-001321:a1:r0-t0:single-functional-change */
 +
-+/* autonomous-engine:JOB-20260311-162031062-001321:a1:r0-t0:single-functional-change */
++/* autonomous-engine:JOB-20260311-162031062-001321:a2:r0-t1:single-functional-change */
