@@ -112,3 +112,10 @@
 {"ts":"2026-03-11T16:15:30.787Z","jobId":null,"proposalId":null,"stage":"maintenance","message":"Proposal dedupe merged 1 duplicate proposal(s)","meta":{}}
 {"ts":"2026-03-11T16:15:31.010Z","jobId":"JOB-20260311-161031334-001818","proposalId":"PRP-20260311-125530710-003777","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-11T16:15:31.057Z","jobId":"JOB-20260311-161031334-001818","proposalId":"PRP-20260311-125530710-003777","stage":"build","message":"Builder started implementation (attempt 1)","meta":{}}
+{"ts":"2026-03-11T16:15:31.176Z","jobId":"JOB-20260311-161031334-001818","proposalId":"PRP-20260311-125530710-003777","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-11T16:15:34.398Z","jobId":"JOB-20260311-161031334-001818","proposalId":"PRP-20260311-125530710-003777","stage":"review_ready","message":"Verifier passed all required checks; ready for review","meta":{}}
+{"ts":"2026-03-11T16:16:16.096Z","jobId":"JOB-20260311-155530844-001527","proposalId":"PRP-20260311-125530710-003777","stage":"approved","message":"Approved: GitHub push successful (commit=b611409)","meta":{}}
+{"ts":"2026-03-11T16:16:16.097Z","jobId":"JOB-20260311-155530844-001527","proposalId":"PRP-20260311-125530710-003777","stage":"live_mismatch","message":"Production mismatch: lifecycle=b611409, production=unknown","meta":{"liveCommit":"b611409","productionCommit":"unknown","productionMatch":false}}
+{"ts":"2026-03-11T16:20:31.063Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-PILOT-20260311-CLEAN","stage":"proposal","message":"Planner created JOB-20260311-162031062-001321 from PRP-PILOT-20260311-CLEAN","meta":{}}
+{"ts":"2026-03-11T16:20:31.241Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-PILOT-20260311-CLEAN","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-11T16:20:31.288Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-PILOT-20260311-CLEAN","stage":"build","message":"Builder started implementation (attempt 1)","meta":{}}
