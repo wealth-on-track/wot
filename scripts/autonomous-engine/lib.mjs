@@ -56,7 +56,8 @@ export function makeId(prefix) {
   const s = String(d.getUTCSeconds()).padStart(2, '0');
   const ms = String(d.getUTCMilliseconds()).padStart(3, '0');
   __seq += 1;
-  return `${prefix}-${y}${m}${day}-${h}${mi}${s}${ms}-${String(__seq).padStart(3, '0')}`;
+  const rnd = Math.floor(Math.random() * 900 + 100);
+  return `${prefix}-${y}${m}${day}-${h}${mi}${s}${ms}-${String(__seq).padStart(3, '0')}${rnd}`;
 }
 
 export function normalize(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }

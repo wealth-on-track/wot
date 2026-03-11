@@ -655,5 +655,39 @@
       "unit"
     ],
     "rollback_plan": "Revert."
+  },
+  {
+    "id": "PRP-PILOT-20260311-AZ",
+    "title": "AZ Pilot: improve portfolio confidence legend readability",
+    "category": "ux",
+    "problem": "Confidence legend readability is low in insight card for first-pass users.",
+    "evidence": [
+      "ux friction observation",
+      "benchmark comparison indicates clearer labeling pattern"
+    ],
+    "proposed_change": "Improve confidence legend wording in PublicPortfolioView with concise explanatory copy.",
+    "expected_benefit": "Faster interpretation and improved trust in insight output.",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "success_metrics": [
+      "Legend comprehension improves in manual check",
+      "No layout regression"
+    ],
+    "non_goals": [
+      "No broad redesign"
+    ],
+    "files_expected": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert wording changes."
   }
 ]
