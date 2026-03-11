@@ -97,6 +97,7 @@ if (action === 'approve') {
 }
 
 history.push({ ...job });
-await writeJson(files.jobs, jobs);
+const remaining = jobs.filter((j) => j.id !== jobId);
+await writeJson(files.jobs, remaining);
 await writeJson(files.history, history);
 await setActiveJobLock(null);

@@ -14,5 +14,8 @@ export async function POST(req: NextRequest) {
     execSync(`node scripts/autonomous-engine/review-action.mjs ${action} ${jobId}`, { cwd: process.cwd(), stdio: 'pipe' });
   } catch {}
 
-  return NextResponse.redirect(new URL(`/admin/autonomous-engine?section=review&job=${encodeURIComponent(jobId)}`, req.url));
+  const u = new URL('/admin/autonomous-engine', req.url);
+  u.searchParams.set('section', 'completed');
+  u.searchParams.set('ts', String(Date.now()));
+  return NextResponse.redirect(u, { status: 303 });
 }
