@@ -34,7 +34,14 @@
       "addressedItems": [
         "Increase confidence with concrete checks"
       ]
-    }
+    },
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-20260310-090029733-004",
@@ -70,7 +77,14 @@
       "addressedItems": [
         "Increase confidence with concrete checks"
       ]
-    }
+    },
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-20260310-090029733-005",
@@ -107,7 +121,14 @@
       "addressedItems": [
         "Increase confidence with concrete checks"
       ]
-    }
+    },
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-PILOT-20260310-001",
@@ -149,7 +170,14 @@
       "addressedItems": [
         "Increase confidence with concrete checks"
       ]
-    }
+    },
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-PILOT-20260310-Q2",
@@ -195,7 +223,14 @@
       "addressedItems": [
         "Increase confidence with concrete checks"
       ]
-    }
+    },
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-PILOT-20260310-FINAL",
@@ -241,7 +276,14 @@
       "addressedItems": [
         "Increase confidence with concrete checks"
       ]
-    }
+    },
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-PILOT-20260310-FINAL2",
@@ -275,7 +317,14 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert legend text commit."
+    "rollback_plan": "Revert legend text commit.",
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-PILOT-20260310-LOOP3",
@@ -309,7 +358,14 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert legend-related commit only."
+    "rollback_plan": "Revert legend-related commit only.",
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-20260310-205415186-001",
@@ -354,7 +410,14 @@
     "triagedFrom": "PRP-PILOT-20260310-001",
     "triageReasonCodes": [
       "VERIFY_FAIL"
-    ]
+    ],
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-20260310-205415187-002",
@@ -395,7 +458,14 @@
     "triagedFrom": "PRP-20260310-090029733-003",
     "triageReasonCodes": [
       "VERIFY_FAIL"
-    ]
+    ],
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-20260310-205426200-001",
@@ -436,7 +506,14 @@
     "triagedFrom": "PRP-20260310-090029733-004",
     "triageReasonCodes": [
       "VERIFY_FAIL"
-    ]
+    ],
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-20260310-205426201-002",
@@ -476,7 +553,14 @@
     "triagedFrom": "PRP-20260310-090029733-005",
     "triageReasonCodes": [
       "VERIFY_FAIL"
-    ]
+    ],
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-PILOT-20260310-LOOP4",
@@ -510,7 +594,14 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert microcopy commit."
+    "rollback_plan": "Revert microcopy commit.",
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-20260310-205652346-001",
@@ -552,7 +643,14 @@
     "triagedFrom": "PRP-20260310-205415187-002",
     "triageReasonCodes": [
       "VERIFY_FAIL"
-    ]
+    ],
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-PILOT-20260310-LOOP5",
@@ -586,7 +684,14 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert legend copy/grouping patch."
+    "rollback_plan": "Revert legend copy/grouping patch.",
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-PILOT-20260311-C1",
@@ -620,7 +725,14 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert tooltip microcopy patch."
+    "rollback_plan": "Revert tooltip microcopy patch.",
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-PILOT-20260311-C2-A",
@@ -654,7 +766,14 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert."
+    "rollback_plan": "Revert.",
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-PILOT-20260311-AZ",
@@ -688,7 +807,14 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert wording changes."
+    "rollback_plan": "Revert wording changes.",
+    "kpi_target": "Target KPI: measurable before/after improvement with explicit threshold.",
+    "benchmark_delta": "Benchmark delta: identify best-practice fintech gap and closing action.",
+    "risk_controls": [
+      "Single-intent scoped implementation",
+      "Verification artifacts required before review_ready"
+    ],
+    "_qualityBackfilledAt": "2026-03-11T11:06:46.065Z"
   },
   {
     "id": "PRP-PILOT-20260311-HQ1",
