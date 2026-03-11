@@ -47,7 +47,7 @@
     "id": "JOB-20260311-155530844-001527",
     "title": "Pilot Clean: improve portfolio insight confidence legend semantics on public portfolio page",
     "category": "ux",
-    "state": "approved_for_build",
+    "state": "proposal",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -55,15 +55,17 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "In src/components/PublicPortfolioView.tsx, add an explicit confidence legend block directly under insight title and update label text to map each level to plain-language meaning. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "summary": "In src/components/PublicPortfolioView.tsx, add an explicit confidence legend block directly under insight title and update label text to map each level to plain-language meaning. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
     "proposalId": "PRP-PILOT-20260311-CLEAN",
-    "changedFiles": [],
-    "testResults": "pending",
+    "changedFiles": [
+      "src/components/mobile/MobileDashboard.tsx"
+    ],
+    "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
       "build": 0,
-      "testing": 0,
+      "testing": 1,
       "verification": 0
     },
     "constraints": {
@@ -74,13 +76,27 @@
     },
     "ownerAgent": "planner",
     "quality": {
-      "status": "pass",
-      "checkedAt": "2026-03-11T15:55:30.975Z",
-      "sessionCount": 0
+      "status": "needs_revision",
+      "checkedAt": "2026-03-11T15:55:35.230Z",
+      "sessionCount": 0,
+      "feedback": {
+        "reject_reason_codes": [
+          "VERIFY_FAIL"
+        ],
+        "must_fix": [
+          "lint"
+        ],
+        "rewrite_plan": [
+          "Address failing checks only (keep scope small).",
+          "Update proposal evidence and tests_required to match failure cause.",
+          "Resubmit proposal through quality gate."
+        ]
+      }
     },
     "timestamps": {
       "createdAt": "2026-03-11T15:55:30.843Z",
-      "updatedAt": "2026-03-11T15:55:31.020Z"
-    }
+      "updatedAt": "2026-03-11T15:55:35.233Z"
+    },
+    "buildAttempt": 1
   }
 ]

@@ -130,5 +130,33 @@
       "updatedAt": "2026-03-11T15:54:04.563Z"
     },
     "buildAttempt": 6
+  },
+  {
+    "id": "JOB-DUMMY-REVIEW-001",
+    "title": "Dummy Review Job",
+    "category": "operations",
+    "state": "approved",
+    "risk": "low",
+    "summary": "dummy",
+    "proposalId": "PRP-DUMMY",
+    "changedFiles": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "testResults": "pass",
+    "previewInstructions": "-",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "ownerAgent": "verifier",
+    "timestamps": {
+      "createdAt": "2026-03-11T15:57:25.984Z",
+      "updatedAt": "2026-03-11T15:57:38.495Z"
+    },
+    "quality": {
+      "status": "pass"
+    }
   }
 ]

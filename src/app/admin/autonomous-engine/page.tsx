@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import Link from 'next/link';
+import ReviewActionButtons from './ReviewActionButtons';
 import { execSync } from 'child_process';
 
 export const dynamic = 'force-dynamic';
@@ -266,20 +267,7 @@ export default async function AutonomousEnginePage({
                     })}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {selected.state === 'review_ready' ? (
-                      <>
-                        <form action="/api/autonomous-engine/review" method="post">
-                          <input type="hidden" name="jobId" value={selected.id} />
-                          <input type="hidden" name="action" value="approve" />
-                          <button type="submit" style={{ border: '1px solid #86efac', background: '#ecfdf5', color: '#166534', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Approve</button>
-                        </form>
-                        <form action="/api/autonomous-engine/review" method="post">
-                          <input type="hidden" name="jobId" value={selected.id} />
-                          <input type="hidden" name="action" value="reject" />
-                          <button type="submit" style={{ border: '1px solid #fca5a5', background: '#fef2f2', color: '#991b1b', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Reject</button>
-                        </form>
-                      </>
-                    ) : null}
+                    {selected.state === 'review_ready' ? <ReviewActionButtons jobId={selected.id} /> : null}
                   </div>
                 </div>
               </div>
