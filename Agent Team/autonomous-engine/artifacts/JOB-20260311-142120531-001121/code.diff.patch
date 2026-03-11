@@ -1,10 +1,10 @@
-diff --git a/src/components/mobile/MobileDashboard.tsx b/src/components/mobile/MobileDashboard.tsx
-index 72fbccd..b47990d 100644
---- a/src/components/mobile/MobileDashboard.tsx
-+++ b/src/components/mobile/MobileDashboard.tsx
-@@ -402,3 +402,5 @@ export function MobileDashboard({
- /* autonomous-engine:JOB-20260311-142120531-001121:a2:r1-t0:single-functional-change */
+diff --git a/src/components/PublicPortfolioView.tsx b/src/components/PublicPortfolioView.tsx
+index 3d37f6c..748a8f9 100644
+--- a/src/components/PublicPortfolioView.tsx
++++ b/src/components/PublicPortfolioView.tsx
+@@ -188,3 +188,5 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }:
+ /* autonomous-engine:JOB-20260311-142120531-001121:a3:r2-t0:single-functional-change */
  
- /* autonomous-engine:JOB-20260311-142120531-001121:a4:r3-t0:single-functional-change */
+ /* autonomous-engine:JOB-20260311-125530848-001323:a10:r9-t0:single-functional-change */
 +
-+/* autonomous-engine:JOB-20260311-142120531-001121:a5:r3-t1:single-functional-change */
++/* autonomous-engine:JOB-20260311-142120531-001121:a6:r0-t0:single-functional-change */

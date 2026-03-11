@@ -119,12 +119,12 @@
     "id": "PRP-20260311-143530131-001882",
     "title": "Pilot Clean: improve portfolio insight confidence legend semantics on public portfolio page (triaged)",
     "category": "ux",
-    "problem": "On the public portfolio page, insight confidence labels are currently interpreted inconsistently by users, causing trust drop in signal interpretation. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary. Root-cause triage: VERIFY_FAIL.",
+    "problem": "On the public portfolio page, insight confidence labels are currently interpreted inconsistently by users, causing trust drop in signal interpretation. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
     "evidence": [
       "UX walkthrough: confidence label semantics misunderstood in first-pass reading",
       "Benchmark: top fintech portfolio UIs include explicit confidence legend and interpretation hint"
     ],
-    "proposed_change": "In src/components/PublicPortfolioView.tsx, add an explicit confidence legend block directly under insight title and update label text to map each level to plain-language meaning. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks.",
+    "proposed_change": "In src/components/PublicPortfolioView.tsx, add an explicit confidence legend block directly under insight title and update label text to map each level to plain-language meaning. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
     "expected_benefit": "Users can interpret confidence correctly in one pass; trust in insight output improves and clarification friction decreases. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
     "risk": "low",
     "impact": "high",
