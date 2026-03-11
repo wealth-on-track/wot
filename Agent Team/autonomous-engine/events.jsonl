@@ -73,3 +73,8 @@
 {"ts":"2026-03-11T14:23:27.828Z","jobId":"JOB-20260311-125530848-001323","proposalId":"PRP-20260311-125530710-003777","stage":"review_ready","message":"Verifier passed all required checks; ready for review","meta":{}}
 {"ts":"2026-03-11T14:25:30.732Z","jobId":"JOB-20260311-142120531-001121","proposalId":"PRP-PILOT-20260311-CLEAN","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-11T14:25:30.780Z","jobId":"JOB-20260311-142120531-001121","proposalId":"PRP-PILOT-20260311-CLEAN","stage":"build","message":"Builder started implementation (attempt 5)","meta":{}}
+{"ts":"2026-03-11T14:25:30.886Z","jobId":"JOB-20260311-142120531-001121","proposalId":"PRP-PILOT-20260311-CLEAN","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-11T14:25:34.064Z","jobId":"JOB-20260311-142120531-001121","proposalId":"PRP-PILOT-20260311-CLEAN","stage":"proposal","message":"Verification failed (lint); sent back to proposal for revision","meta":{}}
+{"ts":"2026-03-11T14:35:30.132Z","jobId":"JOB-20260311-142120531-001121","proposalId":"PRP-20260311-143530131-001882","stage":"proposal","message":"Triage created narrowed proposal PRP-20260311-143530131-001882 from PRP-PILOT-20260311-CLEAN","meta":{}}
+{"ts":"2026-03-11T14:35:30.221Z","jobId":"JOB-20260311-142120531-001121","proposalId":"PRP-20260311-143530131-001882","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-11T14:35:30.269Z","jobId":"JOB-20260311-142120531-001121","proposalId":"PRP-20260311-143530131-001882","stage":"build","message":"Builder started implementation (attempt 6)","meta":{}}
