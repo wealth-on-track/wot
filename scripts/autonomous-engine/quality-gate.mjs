@@ -5,6 +5,14 @@ await ensureEngineFiles();
 const jobs = await readJson(files.jobs);
 const proposals = await readJson(files.proposals);
 
+const countOcc = (txt, needle) => (String(txt || '').toLowerCase().split(String(needle).toLowerCase()).length - 1);
+const hasConcreteFilePlan = (p) => Array.isArray(p.change_spec) && p.change_spec.some((x) => x?.file && x?.change && String(x.change).length > 20);
+const dedupeSentence = (txt, sentence) => {
+  const parts = String(txt || '').split(sentence).map((s) => s.trim()).filter(Boolean);
+  if (parts.length === 0) return sentence;
+  return `${parts[0]} ${sentence}`.trim();
+};
+
 const scoreProposal = (p) => {
   const evidenceCount = Array.isArray(p.evidence) ? p.evidence.length : 0;
   const text = `${p.problem || ''} ${p.proposed_change || ''} ${p.expected_benefit || ''}`.toLowerCase();
@@ -16,6 +24,13 @@ const scoreProposal = (p) => {
   const hasBenchmarkDelta = Boolean(p.benchmark_delta && String(p.benchmark_delta).trim().length > 8);
   const riskControlCount = Array.isArray(p.risk_controls) ? p.risk_controls.length : 0;
   const hasMeasurableText = ['metric', 'measure', 'before/after', 'latency', 'conversion', 'error rate', 'uptime', 'pass rate'].some((k) => text.includes(k));
+  const filePlanOk = hasConcreteFilePlan(p);
+  const genericSignals = [
+    countOcc(p.problem, 'observed') >= 2 && countOcc(p.problem, 'friction') >= 2,
+    countOcc(p.proposed_change, 'scope: deliver one focused functional improvement') > 0,
+    countOcc(p.proposed_change, 'implementation approach: touch only the highest-leverage files') > 0,
+    countOcc(p.expected_benefit, 'primary outcome: concrete improvement') > 0,
+  ].filter(Boolean).length;
 
   const impact = Math.max(Number(p.impactScore || 0), (hasKpi || hasMeasurableText) ? 4 : 3);
   const confidence = Math.max(Number(p.confidenceScore || 0), evidenceCount >= 2 && riskControlCount >= 2 ? 4 : (evidenceCount >= 2 ? 3 : 2));
@@ -28,8 +43,10 @@ const scoreProposal = (p) => {
   if (!hasKpi) codes.push('KPI_TARGET_MISSING');
   if (!hasBenchmarkDelta) codes.push('BENCHMARK_DELTA_MISSING');
   if (riskControlCount < 2) codes.push('RISK_CONTROLS_WEAK');
+  if (!filePlanOk) codes.push('FILE_PLAN_MISSING');
+  if (genericSignals >= 2) codes.push('GENERIC_TEXT');
 
-  return { pass: codes.length === 0, codes, evidenceCount, impact, confidence, userFacing, hasKpi, hasBenchmarkDelta, riskControlCount };
+  return { pass: codes.length === 0, codes, evidenceCount, impact, confidence, userFacing, hasKpi, hasBenchmarkDelta, riskControlCount, filePlanOk, genericSignals };
 };
 
 const rewriteOnce = (p, result, job) => {
@@ -60,6 +77,20 @@ const rewriteOnce = (p, result, job) => {
     np.risk_controls = [...new Set([...(np.risk_controls || []), 'Scoped file-change boundary with rollback note', 'Mandatory verification checklist before review_ready'])];
     mustFix.push('Strengthen risk controls');
   }
+  if (result.codes.includes('FILE_PLAN_MISSING')) {
+    np.change_spec = [{
+      file: (np.files_expected || [])[0] || 'src/components/PublicPortfolioView.tsx',
+      change: 'Implement explicit user-facing text/behavior improvement in this file with minimal scoped diff.',
+      why: 'Maps proposal directly to concrete file-level implementation.',
+    }];
+    mustFix.push('Add concrete file-level implementation plan');
+  }
+  if (result.codes.includes('GENERIC_TEXT')) {
+    np.problem = `User-visible issue in ${(np.files_expected || [])[0] || 'target component'} creates measurable friction in interpretation or trust.`;
+    np.proposed_change = `Edit ${(np.files_expected || [])[0] || 'target file'} to apply a specific behavior/text change and document exact acceptance outcome.`;
+    np.expected_benefit = 'Clear, measurable improvement linked to one component and one acceptance threshold.';
+    mustFix.push('Replace generic narrative with concrete scoped language');
+  }
   if (result.codes.includes('USER_FACING_MISS')) {
     np.userFacing = true;
     np.title = `${np.title} for portfolio user experience`;
@@ -76,18 +107,9 @@ const rewriteOnce = (p, result, job) => {
     mustFix.push('Switch target file to avoid no-diff path');
   }
 
-  np.problem = [
-    np.problem,
-    'Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.',
-  ].filter(Boolean).join(' ');
-  np.proposed_change = [
-    np.proposed_change,
-    'Quality rewrite note: execution plan now includes concrete implementation and validation sequence.',
-  ].filter(Boolean).join(' ');
-  np.expected_benefit = [
-    np.expected_benefit,
-    'Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.',
-  ].filter(Boolean).join(' ');
+  np.problem = dedupeSentence(np.problem, 'Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.');
+  np.proposed_change = dedupeSentence(np.proposed_change, 'Quality rewrite note: execution plan now includes concrete implementation and validation sequence.');
+  np.expected_benefit = dedupeSentence(np.expected_benefit, 'Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.');
   np.revision_summary = {
     revisedAt: nowIso(),
     oneSessionRewrite: true,
@@ -139,6 +161,8 @@ for (const job of jobs) {
       if (c === 'KPI_TARGET_MISSING') return 'KPI target is missing; no measurable success threshold is defined.';
       if (c === 'BENCHMARK_DELTA_MISSING') return 'Benchmark delta is missing; best-in-class gap is unclear.';
       if (c === 'RISK_CONTROLS_WEAK') return 'Risk controls are weak; add execution and rollback safeguards.';
+      if (c === 'FILE_PLAN_MISSING') return 'Proposal does not specify exact file-level implementation plan.';
+      if (c === 'GENERIC_TEXT') return 'Proposal narrative is too generic and not execution-specific.';
       return c;
     }),
     must_fix: first.codes,

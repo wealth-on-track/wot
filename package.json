@@ -31,6 +31,7 @@
     "auto:review-reminder": "node scripts/autonomous-engine/review-reminder.mjs",
     "auto:dedupe": "node scripts/autonomous-engine/dedupe-proposals.mjs",
     "auto:proposal-backfill": "node scripts/autonomous-engine/proposal-quality-backfill.mjs",
+    "auto:proposal-sanitize": "node scripts/autonomous-engine/proposal-sanitize.mjs",
     "auto:audit": "node scripts/autonomous-engine/system-audit.mjs",
     "auto:self-heal": "node scripts/autonomous-engine/self-heal.mjs",
     "auto:cleanup-debt": "node scripts/autonomous-engine/cleanup-debt.mjs",

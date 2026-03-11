@@ -129,6 +129,11 @@ for (const c of candidates) {
       'No production deploy automation without explicit human approval.',
     ],
     files_expected: c.category === 'ux' ? ['src/app/[username]/portfolio_public/page.tsx'] : c.category === 'performance' ? ['src/components/PublicPortfolioView.tsx'] : ['src/services/marketData.ts'],
+    change_spec: [{
+      file: c.category === 'ux' ? 'src/app/[username]/portfolio_public/page.tsx' : c.category === 'performance' ? 'src/components/PublicPortfolioView.tsx' : 'src/services/marketData.ts',
+      change: 'Apply one concrete, user-impacting change with explicit acceptance outcome and reproducible verification.',
+      why: 'Directly closes detected signal-to-benchmark gap with scoped implementation.',
+    }],
     tests_required: ['lint', 'unit'],
     rollback_plan: 'Revert local branch to previous commit, remove generated artifacts for this job, and restore previous state snapshot.',
   };
