@@ -3,7 +3,7 @@
     "id": "JOB-20260311-125530848-001323",
     "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
     "category": "benchmark",
-    "state": "approved_for_build",
+    "state": "review_ready",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -11,10 +11,12 @@
     "confidenceScore": 4,
     "effortScore": 3,
     "userFacing": true,
-    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
+    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
     "proposalId": "PRP-20260311-125530710-003777",
-    "changedFiles": [],
-    "testResults": "pending",
+    "changedFiles": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "testResults": "pass",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
@@ -28,23 +30,24 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/services"
     },
-    "ownerAgent": "planner",
+    "ownerAgent": "verifier",
     "quality": {
       "status": "pass",
       "checkedAt": "2026-03-11T14:23:25.102Z",
-      "sessionCount": 1
+      "sessionCount": 1,
+      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
     },
     "timestamps": {
       "createdAt": "2026-03-11T12:55:30.847Z",
-      "updatedAt": "2026-03-11T14:23:25.150Z"
+      "updatedAt": "2026-03-11T14:23:27.829Z"
     },
-    "buildAttempt": 9
+    "buildAttempt": 10
   },
   {
     "id": "JOB-20260311-142120531-001121",
     "title": "Pilot Clean: improve portfolio insight confidence legend semantics on public portfolio page",
     "category": "ux",
-    "state": "proposal",
+    "state": "approved_for_build",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -74,42 +77,12 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-11T14:23:25.103Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "CONFIDENCE_LOW"
-        ],
-        "strengths": [
-          "Category alignment: ux",
-          "Initial impact/confidence/effort: 5 / 4 / 2",
-          "Scope remains constrained for controlled delivery."
-        ],
-        "gaps": [
-          "Confidence is low; proposal needs stronger verification framing."
-        ],
-        "must_fix": [
-          "CONFIDENCE_LOW"
-        ],
-        "evidence_gap": null,
-        "rewrite_plan": [
-          "Rewrite problem statement to explain user/system consequence clearly.",
-          "Add concrete evidence and tie it to measurable acceptance criteria.",
-          "Upgrade proposal language from generic intent to execution-ready plan.",
-          "Re-score impact/confidence after rewrite and keep effort realistic."
-        ],
-        "acceptance_checklist": [
-          "Impact >= 3",
-          "Confidence >= 3",
-          "Evidence count >= 2",
-          "User-facing value explicitly stated"
-        ]
-      },
-      "revised": true
+      "checkedAt": "2026-03-11T14:25:30.687Z",
+      "sessionCount": 1
     },
     "timestamps": {
       "createdAt": "2026-03-11T14:21:20.530Z",
-      "updatedAt": "2026-03-11T14:23:15.388Z"
+      "updatedAt": "2026-03-11T14:25:30.732Z"
     },
     "buildAttempt": 4
   }
