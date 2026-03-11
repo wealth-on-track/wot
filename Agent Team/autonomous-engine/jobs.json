@@ -1,18 +1,18 @@
 [
   {
-    "id": "JOB-20260311-142120531-001121",
-    "title": "Pilot Clean: improve portfolio insight confidence legend semantics on public portfolio page",
-    "category": "ux",
+    "id": "JOB-20260311-150530034-001903",
+    "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
+    "category": "benchmark",
     "state": "review_ready",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
-    "impactScore": 5,
+    "impactScore": 4,
     "confidenceScore": 4,
-    "effortScore": 2,
+    "effortScore": 3,
     "userFacing": true,
-    "summary": "In src/components/PublicPortfolioView.tsx, add an explicit confidence legend block directly under insight title and update label text to map each level to plain-language meaning. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. (local build applied)",
-    "proposalId": "PRP-20260311-143530131-001882",
+    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
+    "proposalId": "PRP-20260311-125530710-003777",
     "changedFiles": [
       "src/components/PublicPortfolioView.tsx"
     ],
@@ -22,7 +22,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 1
+      "verification": 3
     },
     "constraints": {
       "maxFiles": 5,
@@ -33,30 +33,30 @@
     "ownerAgent": "verifier",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-11T14:35:30.176Z",
+      "checkedAt": "2026-03-11T15:05:30.166Z",
       "sessionCount": 0,
       "lastTriedFile": "src/components/PublicPortfolioView.tsx"
     },
     "timestamps": {
-      "createdAt": "2026-03-11T14:21:20.530Z",
-      "updatedAt": "2026-03-11T14:50:31.525Z"
+      "createdAt": "2026-03-11T15:05:30.034Z",
+      "updatedAt": "2026-03-11T15:50:30.510Z"
     },
-    "buildAttempt": 6
+    "buildAttempt": 1
   },
   {
-    "id": "JOB-20260311-150530034-001903",
-    "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
-    "category": "benchmark",
+    "id": "JOB-20260311-155530844-001527",
+    "title": "Pilot Clean: improve portfolio insight confidence legend semantics on public portfolio page",
+    "category": "ux",
     "state": "approved_for_build",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
-    "impactScore": 4,
+    "impactScore": 5,
     "confidenceScore": 4,
-    "effortScore": 3,
+    "effortScore": 2,
     "userFacing": true,
-    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
-    "proposalId": "PRP-20260311-125530710-003777",
+    "summary": "In src/components/PublicPortfolioView.tsx, add an explicit confidence legend block directly under insight title and update label text to map each level to plain-language meaning. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "proposalId": "PRP-PILOT-20260311-CLEAN",
     "changedFiles": [],
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
@@ -75,12 +75,12 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-11T15:05:30.166Z",
+      "checkedAt": "2026-03-11T15:55:30.975Z",
       "sessionCount": 0
     },
     "timestamps": {
-      "createdAt": "2026-03-11T15:05:30.034Z",
-      "updatedAt": "2026-03-11T15:05:30.212Z"
+      "createdAt": "2026-03-11T15:55:30.843Z",
+      "updatedAt": "2026-03-11T15:55:31.020Z"
     }
   }
 ]

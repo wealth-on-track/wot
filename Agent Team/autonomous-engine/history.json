@@ -86,5 +86,49 @@
       "updatedAt": "2026-03-11T14:48:03.706Z"
     },
     "buildAttempt": 10
+  },
+  {
+    "id": "JOB-20260311-142120531-001121",
+    "title": "Pilot Clean: improve portfolio insight confidence legend semantics on public portfolio page",
+    "category": "ux",
+    "state": "approved",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 5,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "In src/components/PublicPortfolioView.tsx, add an explicit confidence legend block directly under insight title and update label text to map each level to plain-language meaning. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. (local build applied)",
+    "proposalId": "PRP-20260311-143530131-001882",
+    "changedFiles": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "testResults": "pass",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 5
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "verifier",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-11T14:35:30.176Z",
+      "sessionCount": 0,
+      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
+    },
+    "timestamps": {
+      "createdAt": "2026-03-11T14:21:20.530Z",
+      "updatedAt": "2026-03-11T15:54:04.563Z"
+    },
+    "buildAttempt": 6
   }
 ]

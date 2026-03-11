@@ -1,0 +1,15 @@
+{
+  "jobId": "JOB-20260311-142120531-001121",
+  "title": "Pilot Clean: improve portfolio insight confidence legend semantics on public portfolio page",
+  "changedFiles": [
+    "src/components/PublicPortfolioView.tsx"
+  ],
+  "testResults": "pass",
+  "deployStatus": "pass",
+  "pushStatus": "pass",
+  "liveCommit": "ad2e513",
+  "productionCommit": "unknown",
+  "productionMatch": false,
+  "instructions": "Human-approved. Push-to-main attempted with production commit parity check.",
+  "generatedAt": "2026-03-11T15:54:08.503Z"
+}
