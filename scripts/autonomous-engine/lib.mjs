@@ -164,3 +164,49 @@ export async function setActiveJobLock(activeJobId) {
   const payload = { activeJobId: activeJobId || null, updatedAt: nowIso() };
   await fs.writeFile(FILES.activeJob, JSON.stringify(payload, null, 2), 'utf8');
 }
+
+export async function withEngineRunLock(name, fn, { staleMs = 8 * 60 * 1000 } = {}) {
+  const lockPath = path.join(RUNTIME, `${name}.lock`);
+  const payload = { pid: process.pid, acquiredAt: nowIso(), name };
+
+  const tryAcquire = async () => {
+    const handle = await fs.open(lockPath, 'wx');
+    await handle.writeFile(JSON.stringify(payload, null, 2), 'utf8');
+    return handle;
+  };
+
+  let handle = null;
+  try {
+    try {
+      handle = await tryAcquire();
+    } catch (e) {
+      if (e?.code !== 'EEXIST') return { skipped: true, reason: `lock_error:${e?.code || 'unknown'}` };
+      try {
+        const raw = await fs.readFile(lockPath, 'utf8');
+        const lock = JSON.parse(raw);
+        const ageMs = Date.now() - new Date(lock?.acquiredAt || 0).getTime();
+        if (!Number.isFinite(ageMs) || ageMs > staleMs) {
+          await fs.unlink(lockPath);
+          handle = await tryAcquire();
+        } else {
+          return { skipped: true, reason: 'lock_held' };
+        }
+      } catch {
+        try {
+          await fs.unlink(lockPath);
+          handle = await tryAcquire();
+        } catch {
+          return { skipped: true, reason: 'lock_held' };
+        }
+      }
+    }
+
+    const result = await fn();
+    return { skipped: false, result };
+  } finally {
+    if (handle) {
+      try { await handle.close(); } catch {}
+      try { await fs.unlink(lockPath); } catch {}
+    }
+  }
+}

@@ -69,6 +69,7 @@ const scoreProposal = (p) => {
 const rewriteOnce = (p, result, job) => {
   const np = { ...p };
   const mustFix = [];
+  const targetFile = (np.files_expected || [])[0] || (np.change_spec || [])[0]?.file || 'src/components/PublicPortfolioView.tsx';
 
   if (result.codes.includes('EVIDENCE_WEAK')) {
     np.evidence = [...new Set([...(np.evidence || []), 'local failing signal captured and attached', 'benchmark/test comparison added with concrete reference', `quality_session_rewrite@${nowIso()}`])];
@@ -83,29 +84,29 @@ const rewriteOnce = (p, result, job) => {
     mustFix.push('Increase confidence with concrete checks');
   }
   if (result.codes.includes('KPI_TARGET_MISSING')) {
-    np.kpi_target = np.kpi_target || 'Reduce user-facing confusion/error rate by >=20% in a 20-case QA pass before review_ready.';
+    np.kpi_target = np.kpi_target || `In ${targetFile}, reduce reviewer ambiguity from baseline >=3/10 cases to <=1/10 cases in a 20-case QA checklist.`;
     mustFix.push('Define KPI target');
   }
   if (result.codes.includes('KPI_NOT_QUANTIFIED')) {
-    np.kpi_target = 'Reduce user-facing confusion/error rate by >=20% in a 20-case QA pass before review_ready.';
+    np.kpi_target = `In ${targetFile}, reduce reviewer ambiguity from baseline >=3/10 cases to <=1/10 cases in a 20-case QA checklist.`;
     mustFix.push('Quantify KPI target');
   }
   if (result.codes.includes('BENCHMARK_DELTA_MISSING')) {
-    np.benchmark_delta = np.benchmark_delta || 'Current state lacks explicit benchmark behavior; target is parity with top fintech pattern and measurable gap closure.';
+    np.benchmark_delta = np.benchmark_delta || `Baseline: ${targetFile} lacks explicit fintech-style guidance. Target: benchmark parity with explicit labels and acceptance checks; expected closure >=70% of identified gap.`;
     mustFix.push('Define benchmark delta');
   }
   if (result.codes.includes('BENCHMARK_DELTA_VAGUE')) {
-    np.benchmark_delta = 'Current baseline vs benchmark gap is explicitly documented, with target behavior and closure step in scoped file.';
+    np.benchmark_delta = `Baseline vs target for ${targetFile}: add concrete benchmark-aligned behavior and verify gap closure using before/after QA notes.`;
     mustFix.push('Make benchmark delta concrete');
   }
   if (result.codes.includes('RISK_CONTROLS_WEAK')) {
-    np.risk_controls = [...new Set([...(np.risk_controls || []), 'Scoped file-change boundary with rollback note', 'Mandatory verification checklist before review_ready'])];
+    np.risk_controls = [...new Set([...(np.risk_controls || []), `Scope lock: only ${targetFile} (max 1 functional change)`, 'Rollback: revert single-file patch if lint/unit/verify fails', 'Gate: must pass lint + required checks before review_ready'])];
     mustFix.push('Strengthen risk controls');
   }
   if (result.codes.includes('FILE_PLAN_MISSING')) {
     np.change_spec = [{
-      file: (np.files_expected || [])[0] || 'src/components/PublicPortfolioView.tsx',
-      change: 'Implement explicit user-facing text/behavior improvement in this file with minimal scoped diff.',
+      file: targetFile,
+      change: `Apply one concrete user-facing functional update in ${targetFile} with explicit acceptance criteria and minimal diff.`,
       why: 'Maps proposal directly to concrete file-level implementation.',
     }];
     mustFix.push('Add concrete file-level implementation plan');
@@ -121,9 +122,9 @@ const rewriteOnce = (p, result, job) => {
     mustFix.push('Align change_spec with files_expected');
   }
   if (result.codes.includes('GENERIC_TEXT')) {
-    np.problem = `User-visible issue in ${(np.files_expected || [])[0] || 'target component'} creates measurable friction in interpretation or trust.`;
-    np.proposed_change = `Edit ${(np.files_expected || [])[0] || 'target file'} to apply a specific behavior/text change and document exact acceptance outcome.`;
-    np.expected_benefit = 'Clear, measurable improvement linked to one component and one acceptance threshold.';
+    np.problem = `In ${targetFile}, users/reviewers cannot consistently interpret output; this creates avoidable trust friction and slows review decisions.`;
+    np.proposed_change = `Edit ${targetFile} with one explicit behavior/text adjustment, add acceptance checklist references, and keep scope to a single functional change.`;
+    np.expected_benefit = `Expected outcome: deterministic interpretation in QA (>=90% agreement over 20 checks) and faster path to review_ready without rework loops.`;
     mustFix.push('Replace generic narrative with concrete scoped language');
   }
   if (result.codes.includes('USER_FACING_MISS')) {
@@ -142,9 +143,9 @@ const rewriteOnce = (p, result, job) => {
     mustFix.push('Switch target file to avoid no-diff path');
   }
 
-  np.problem = dedupeSentence(np.problem, 'Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.');
-  np.proposed_change = dedupeSentence(np.proposed_change, 'Quality rewrite note: execution plan now includes concrete implementation and validation sequence.');
-  np.expected_benefit = dedupeSentence(np.expected_benefit, 'Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.');
+  np.problem = dedupeSentence(np.problem, `Execution scope anchored to ${targetFile} with explicit user consequence and verification boundary.`);
+  np.proposed_change = dedupeSentence(np.proposed_change, `Implementation is file-level concrete: ${targetFile}, one functional change, measurable acceptance.`);
+  np.expected_benefit = dedupeSentence(np.expected_benefit, 'Expected benefit includes KPI threshold, benchmark-gap closure, and clear rollback guardrails.');
   np.revision_summary = {
     revisedAt: nowIso(),
     oneSessionRewrite: true,
