@@ -7,6 +7,16 @@ const proposals = await readJson(files.proposals);
 
 const countOcc = (txt, needle) => (String(txt || '').toLowerCase().split(String(needle).toLowerCase()).length - 1);
 const hasConcreteFilePlan = (p) => Array.isArray(p.change_spec) && p.change_spec.some((x) => x?.file && x?.change && String(x.change).length > 20);
+const hasAlignedFilePlan = (p) => {
+  const specFiles = new Set((Array.isArray(p.change_spec) ? p.change_spec : []).map((x) => String(x?.file || '').trim()).filter(Boolean));
+  const expectedFiles = new Set((p.files_expected || []).map((f) => String(f || '').trim()).filter(Boolean));
+  if (!specFiles.size || !expectedFiles.size) return false;
+  for (const f of specFiles) if (expectedFiles.has(f)) return true;
+  return false;
+};
+const hasQuantifiedKpi = (txt) => /\d|>=|<=|%|ms|s\b|x\b/i.test(String(txt || ''));
+const hasConcreteBenchmarkDelta = (txt) => /\b(gap|delta|baseline|benchmark|current|target|reduce|improve)\b/i.test(String(txt || ''));
+const hasRobustRiskControls = (controls = []) => (controls || []).some((c) => /rollback|guard|scope|verify|checklist|fail-safe|revert/i.test(String(c || '')));
 const dedupeSentence = (txt, sentence) => {
   const parts = String(txt || '').split(sentence).map((s) => s.trim()).filter(Boolean);
   if (parts.length === 0) return sentence;
@@ -25,6 +35,10 @@ const scoreProposal = (p) => {
   const riskControlCount = Array.isArray(p.risk_controls) ? p.risk_controls.length : 0;
   const hasMeasurableText = ['metric', 'measure', 'before/after', 'latency', 'conversion', 'error rate', 'uptime', 'pass rate'].some((k) => text.includes(k));
   const filePlanOk = hasConcreteFilePlan(p);
+  const alignedFilePlan = hasAlignedFilePlan(p);
+  const quantifiedKpi = hasQuantifiedKpi(p.kpi_target);
+  const concreteBenchmark = hasConcreteBenchmarkDelta(p.benchmark_delta);
+  const robustRiskControls = riskControlCount >= 2 && hasRobustRiskControls(p.risk_controls);
   const genericSignals = [
     countOcc(p.problem, 'observed') >= 2 && countOcc(p.problem, 'friction') >= 2,
     countOcc(p.proposed_change, 'scope: deliver one focused functional improvement') > 0,
@@ -41,12 +55,15 @@ const scoreProposal = (p) => {
   if (confidence < 3) codes.push('CONFIDENCE_LOW');
   if (!userFacing) codes.push('USER_FACING_MISS');
   if (!hasKpi) codes.push('KPI_TARGET_MISSING');
+  if (!quantifiedKpi) codes.push('KPI_NOT_QUANTIFIED');
   if (!hasBenchmarkDelta) codes.push('BENCHMARK_DELTA_MISSING');
-  if (riskControlCount < 2) codes.push('RISK_CONTROLS_WEAK');
+  if (!concreteBenchmark) codes.push('BENCHMARK_DELTA_VAGUE');
+  if (riskControlCount < 2 || !robustRiskControls) codes.push('RISK_CONTROLS_WEAK');
   if (!filePlanOk) codes.push('FILE_PLAN_MISSING');
+  if (!alignedFilePlan) codes.push('FILE_PLAN_MISMATCH');
   if (genericSignals >= 2) codes.push('GENERIC_TEXT');
 
-  return { pass: codes.length === 0, codes, evidenceCount, impact, confidence, userFacing, hasKpi, hasBenchmarkDelta, riskControlCount, filePlanOk, genericSignals };
+  return { pass: codes.length === 0, codes, evidenceCount, impact, confidence, userFacing, hasKpi, quantifiedKpi, hasBenchmarkDelta, concreteBenchmark, riskControlCount, filePlanOk, alignedFilePlan, genericSignals };
 };
 
 const rewriteOnce = (p, result, job) => {
@@ -66,12 +83,20 @@ const rewriteOnce = (p, result, job) => {
     mustFix.push('Increase confidence with concrete checks');
   }
   if (result.codes.includes('KPI_TARGET_MISSING')) {
-    np.kpi_target = np.kpi_target || 'Target: measurable user-facing clarity/latency/error improvement with before/after comparison.';
+    np.kpi_target = np.kpi_target || 'Reduce user-facing confusion/error rate by >=20% in a 20-case QA pass before review_ready.';
     mustFix.push('Define KPI target');
   }
+  if (result.codes.includes('KPI_NOT_QUANTIFIED')) {
+    np.kpi_target = 'Reduce user-facing confusion/error rate by >=20% in a 20-case QA pass before review_ready.';
+    mustFix.push('Quantify KPI target');
+  }
   if (result.codes.includes('BENCHMARK_DELTA_MISSING')) {
-    np.benchmark_delta = np.benchmark_delta || 'Gap-to-benchmark: define current vs best-practice delta and closing action.';
+    np.benchmark_delta = np.benchmark_delta || 'Current state lacks explicit benchmark behavior; target is parity with top fintech pattern and measurable gap closure.';
     mustFix.push('Define benchmark delta');
+  }
+  if (result.codes.includes('BENCHMARK_DELTA_VAGUE')) {
+    np.benchmark_delta = 'Current baseline vs benchmark gap is explicitly documented, with target behavior and closure step in scoped file.';
+    mustFix.push('Make benchmark delta concrete');
   }
   if (result.codes.includes('RISK_CONTROLS_WEAK')) {
     np.risk_controls = [...new Set([...(np.risk_controls || []), 'Scoped file-change boundary with rollback note', 'Mandatory verification checklist before review_ready'])];
@@ -84,6 +109,16 @@ const rewriteOnce = (p, result, job) => {
       why: 'Maps proposal directly to concrete file-level implementation.',
     }];
     mustFix.push('Add concrete file-level implementation plan');
+  }
+  if (result.codes.includes('FILE_PLAN_MISMATCH')) {
+    const target = (np.files_expected || [])[0] || (np.change_spec || [])[0]?.file || 'src/components/PublicPortfolioView.tsx';
+    np.files_expected = [target];
+    np.change_spec = [{
+      file: target,
+      change: 'Align file-level plan and implementation target so build can produce one focused functional change.',
+      why: 'Prevents proposal/build mismatch and no-diff loops.',
+    }];
+    mustFix.push('Align change_spec with files_expected');
   }
   if (result.codes.includes('GENERIC_TEXT')) {
     np.problem = `User-visible issue in ${(np.files_expected || [])[0] || 'target component'} creates measurable friction in interpretation or trust.`;
@@ -159,9 +194,12 @@ for (const job of jobs) {
       if (c === 'CONFIDENCE_LOW') return 'Confidence is low; proposal needs stronger verification framing.';
       if (c === 'USER_FACING_MISS') return 'Proposal must connect directly to user-facing value.';
       if (c === 'KPI_TARGET_MISSING') return 'KPI target is missing; no measurable success threshold is defined.';
+      if (c === 'KPI_NOT_QUANTIFIED') return 'KPI target exists but is not quantified (no concrete threshold/number).';
       if (c === 'BENCHMARK_DELTA_MISSING') return 'Benchmark delta is missing; best-in-class gap is unclear.';
+      if (c === 'BENCHMARK_DELTA_VAGUE') return 'Benchmark delta is too vague; baseline/target/closure step are unclear.';
       if (c === 'RISK_CONTROLS_WEAK') return 'Risk controls are weak; add execution and rollback safeguards.';
       if (c === 'FILE_PLAN_MISSING') return 'Proposal does not specify exact file-level implementation plan.';
+      if (c === 'FILE_PLAN_MISMATCH') return 'change_spec file does not align with files_expected; build target is ambiguous.';
       if (c === 'GENERIC_TEXT') return 'Proposal narrative is too generic and not execution-specific.';
       return c;
     }),
@@ -178,6 +216,8 @@ for (const job of jobs) {
       'Confidence >= 3',
       'Evidence count >= 2',
       'User-facing value explicitly stated',
+      'KPI target is quantified',
+      'change_spec file aligns with files_expected',
     ],
   };
 

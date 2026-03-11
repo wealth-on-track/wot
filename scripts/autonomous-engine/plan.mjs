@@ -62,6 +62,15 @@ for (const raw of proposals) {
       ? p.risk_controls
       : ['Scoped single-intent change boundary', 'Verification artifacts required before review_ready'];
 
+    const expectedFirst = (p.files_expected || [])[0];
+    if (!Array.isArray(p.change_spec) || p.change_spec.length === 0) {
+      p.change_spec = expectedFirst
+        ? [{ file: expectedFirst, change: 'Implement one focused user-facing change in this file.', why: 'Keeps proposal executable with clear file target.' }]
+        : [];
+    } else if (expectedFirst && !p.change_spec.some((x) => x?.file === expectedFirst)) {
+      p.change_spec = [{ ...(p.change_spec[0] || {}), file: expectedFirst }, ...p.change_spec.slice(1)];
+    }
+
     const existingIds = new Set(jobs.map((x) => x.id));
     let nextId = makeId('JOB');
     while (existingIds.has(nextId)) nextId = makeId('JOB');

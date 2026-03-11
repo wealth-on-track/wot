@@ -70,7 +70,10 @@ const recentlyTouched = new Set(
 );
 
 const changedFiles = [];
-const targetFiles = (proposal.files_expected || []).slice(0, 5);
+const changeSpecFiles = Array.isArray(proposal.change_spec)
+  ? proposal.change_spec.map((x) => x?.file).filter(Boolean)
+  : [];
+const targetFiles = [...new Set([...changeSpecFiles, ...(proposal.files_expected || [])])].slice(0, 5);
 job.quality = { ...(job.quality || {}), lastTriedFile: targetFiles[0] || null };
 for (const rel of targetFiles) {
   if (proposal.priority !== 'P1' && recentlyTouched.has(rel)) continue;
