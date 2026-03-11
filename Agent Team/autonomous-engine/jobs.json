@@ -3,7 +3,7 @@
     "id": "JOB-20260311-125530848-001323",
     "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
     "category": "benchmark",
-    "state": "proposal",
+    "state": "approved_for_build",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -31,12 +31,12 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-11T14:23:12.485Z",
+      "checkedAt": "2026-03-11T14:23:25.102Z",
       "sessionCount": 1
     },
     "timestamps": {
       "createdAt": "2026-03-11T12:55:30.847Z",
-      "updatedAt": "2026-03-11T14:20:31.288Z"
+      "updatedAt": "2026-03-11T14:23:25.150Z"
     },
     "buildAttempt": 9
   },
@@ -44,7 +44,7 @@
     "id": "JOB-20260311-142120531-001121",
     "title": "Pilot Clean: improve portfolio insight confidence legend semantics on public portfolio page",
     "category": "ux",
-    "state": "approved_for_build",
+    "state": "proposal",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -54,13 +54,15 @@
     "userFacing": true,
     "summary": "In src/components/PublicPortfolioView.tsx, add an explicit confidence legend block directly under insight title and update label text to map each level to plain-language meaning. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
     "proposalId": "PRP-PILOT-20260311-CLEAN",
-    "changedFiles": [],
-    "testResults": "pending",
+    "changedFiles": [
+      "src/components/mobile/MobileDashboard.tsx"
+    ],
+    "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
       "build": 3,
-      "testing": 0,
+      "testing": 1,
       "verification": 0
     },
     "constraints": {
@@ -72,11 +74,10 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-11T14:23:12.486Z",
+      "checkedAt": "2026-03-11T14:23:25.103Z",
       "sessionCount": 1,
       "feedback": {
         "reject_reason_codes": [
-          "NO_CHANGED_FILES",
           "CONFIDENCE_LOW"
         ],
         "strengths": [
@@ -85,11 +86,9 @@
           "Scope remains constrained for controlled delivery."
         ],
         "gaps": [
-          "NO_CHANGED_FILES",
           "Confidence is low; proposal needs stronger verification framing."
         ],
         "must_fix": [
-          "NO_CHANGED_FILES",
           "CONFIDENCE_LOW"
         ],
         "evidence_gap": null,
@@ -110,8 +109,8 @@
     },
     "timestamps": {
       "createdAt": "2026-03-11T14:21:20.530Z",
-      "updatedAt": "2026-03-11T14:23:12.534Z"
+      "updatedAt": "2026-03-11T14:23:15.388Z"
     },
-    "buildAttempt": 3
+    "buildAttempt": 4
   }
 ]
