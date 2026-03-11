@@ -1,0 +1,15 @@
+{
+  "jobId": "JOB-DUMMY-REVIEW-001",
+  "title": "Dummy Review Job",
+  "changedFiles": [
+    "src/components/PublicPortfolioView.tsx"
+  ],
+  "testResults": "pass",
+  "deployStatus": "pass",
+  "pushStatus": "pass",
+  "liveCommit": "6fea6d5",
+  "productionCommit": "unknown",
+  "productionMatch": false,
+  "instructions": "Human-approved. Push-to-main attempted with production commit parity check.",
+  "generatedAt": "2026-03-11T15:57:40.578Z"
+}
