@@ -22,7 +22,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 51
+      "verification": 56
     },
     "constraints": {
       "maxFiles": 5,
@@ -38,7 +38,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T14:40:14.278Z",
-      "updatedAt": "2026-03-11T09:30:30.317Z"
+      "updatedAt": "2026-03-11T10:45:30.399Z"
     }
   },
   {
@@ -64,7 +64,7 @@
       "planning": 0,
       "build": 2,
       "testing": 0,
-      "verification": 50
+      "verification": 56
     },
     "constraints": {
       "maxFiles": 5,
@@ -113,7 +113,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.639Z",
-      "updatedAt": "2026-03-11T09:25:29.938Z"
+      "updatedAt": "2026-03-11T10:55:30.347Z"
     },
     "buildAttempt": 2
   },
@@ -140,7 +140,7 @@
       "planning": 0,
       "build": 1,
       "testing": 0,
-      "verification": 50
+      "verification": 55
     },
     "constraints": {
       "maxFiles": 5,
@@ -157,7 +157,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.647Z",
-      "updatedAt": "2026-03-11T09:30:30.317Z"
+      "updatedAt": "2026-03-11T10:45:30.399Z"
     },
     "buildAttempt": 1
   },
@@ -184,7 +184,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 50
+      "verification": 55
     },
     "constraints": {
       "maxFiles": 5,
@@ -201,7 +201,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.647Z",
-      "updatedAt": "2026-03-11T09:30:30.317Z"
+      "updatedAt": "2026-03-11T10:45:30.399Z"
     },
     "buildAttempt": 1
   },
@@ -228,7 +228,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 50
+      "verification": 55
     },
     "constraints": {
       "maxFiles": 5,
@@ -275,7 +275,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.648Z",
-      "updatedAt": "2026-03-11T09:30:30.317Z"
+      "updatedAt": "2026-03-11T10:45:30.399Z"
     },
     "buildAttempt": 1
   },
@@ -302,7 +302,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 3
+      "verification": 8
     },
     "constraints": {
       "maxFiles": 5,
@@ -349,7 +349,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T19:25:40.858Z",
-      "updatedAt": "2026-03-11T09:30:30.317Z"
+      "updatedAt": "2026-03-11T10:45:30.399Z"
     },
     "buildAttempt": 1
   },
@@ -376,7 +376,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 57
+      "verification": 62
     },
     "constraints": {
       "maxFiles": 5,
@@ -392,7 +392,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T19:27:09.346Z",
-      "updatedAt": "2026-03-11T09:30:30.317Z"
+      "updatedAt": "2026-03-11T10:45:30.399Z"
     }
   },
   {
@@ -418,7 +418,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 53
+      "verification": 58
     },
     "constraints": {
       "maxFiles": 5,
@@ -434,7 +434,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T20:28:13.645Z",
-      "updatedAt": "2026-03-11T09:30:30.317Z"
+      "updatedAt": "2026-03-11T10:45:30.399Z"
     }
   },
   {
@@ -460,7 +460,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 50
+      "verification": 55
     },
     "constraints": {
       "maxFiles": 5,
@@ -477,7 +477,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T20:55:27.357Z",
-      "updatedAt": "2026-03-11T09:30:30.317Z"
+      "updatedAt": "2026-03-11T10:45:30.399Z"
     },
     "buildAttempt": 1
   },
@@ -504,7 +504,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 50
+      "verification": 55
     },
     "constraints": {
       "maxFiles": 5,
@@ -521,7 +521,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T21:01:08.324Z",
-      "updatedAt": "2026-03-11T09:30:30.317Z"
+      "updatedAt": "2026-03-11T10:45:30.399Z"
     },
     "buildAttempt": 1
   },
@@ -548,7 +548,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 3
+      "verification": 8
     },
     "constraints": {
       "maxFiles": 5,
@@ -565,7 +565,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-11T08:48:29.409Z",
-      "updatedAt": "2026-03-11T09:30:30.317Z"
+      "updatedAt": "2026-03-11T10:45:30.399Z"
     },
     "buildAttempt": 1
   },
@@ -592,7 +592,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 2
+      "verification": 7
     },
     "constraints": {
       "maxFiles": 5,
@@ -609,7 +609,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-11T09:03:54.313Z",
-      "updatedAt": "2026-03-11T09:30:30.317Z"
+      "updatedAt": "2026-03-11T10:45:30.399Z"
     },
     "buildAttempt": 1
   },
@@ -636,7 +636,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 0
+      "verification": 5
     },
     "constraints": {
       "maxFiles": 5,
@@ -653,7 +653,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-11T09:34:14.582Z",
-      "updatedAt": "2026-03-11T09:34:27.290Z"
+      "updatedAt": "2026-03-11T10:45:30.399Z"
     },
     "buildAttempt": 1
   },
@@ -661,7 +661,7 @@
     "id": "JOB-20260311-093453850-001648",
     "title": "HQ2: improve portfolio insight confidence legend semantics",
     "category": "ux",
-    "state": "approved_for_build",
+    "state": "review_ready",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -669,16 +669,18 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Refine confidence legend copy. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
+    "summary": "Refine confidence legend copy. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
     "proposalId": "PRP-PILOT-20260311-HQ2",
-    "changedFiles": [],
-    "testResults": "pending",
+    "changedFiles": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "testResults": "pass",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 0
+      "verification": 5
     },
     "constraints": {
       "maxFiles": 5,
@@ -686,7 +688,7 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/components"
     },
-    "ownerAgent": "planner",
+    "ownerAgent": "verifier",
     "quality": {
       "status": "pass",
       "checkedAt": "2026-03-11T09:35:04.240Z",
@@ -726,11 +728,89 @@
           "User-facing value explicitly stated"
         ]
       },
-      "revised": true
+      "revised": true,
+      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
     },
     "timestamps": {
       "createdAt": "2026-03-11T09:34:53.850Z",
-      "updatedAt": "2026-03-11T09:35:04.287Z"
+      "updatedAt": "2026-03-11T10:50:30.073Z"
+    },
+    "buildAttempt": 1
+  },
+  {
+    "id": "JOB-20260311-110002390-001799",
+    "title": "Final Pilot: improve portfolio insight confidence legend clarity",
+    "category": "ux",
+    "state": "approved_for_build",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Update confidence legend wording and helper line in PublicPortfolioView insight card. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
+    "proposalId": "PRP-PILOT-20260311-FINALREADY",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-11T11:00:12.800Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "KPI_TARGET_MISSING",
+          "BENCHMARK_DELTA_MISSING",
+          "RISK_CONTROLS_WEAK"
+        ],
+        "strengths": [
+          "Category alignment: ux",
+          "Initial impact/confidence/effort: 4 / 4 / 2",
+          "Scope remains constrained for controlled delivery."
+        ],
+        "gaps": [
+          "KPI target is missing; no measurable success threshold is defined.",
+          "Benchmark delta is missing; best-in-class gap is unclear.",
+          "Risk controls are weak; add execution and rollback safeguards."
+        ],
+        "must_fix": [
+          "KPI_TARGET_MISSING",
+          "BENCHMARK_DELTA_MISSING",
+          "RISK_CONTROLS_WEAK"
+        ],
+        "evidence_gap": null,
+        "rewrite_plan": [
+          "Rewrite problem statement to explain user/system consequence clearly.",
+          "Add concrete evidence and tie it to measurable acceptance criteria.",
+          "Upgrade proposal language from generic intent to execution-ready plan.",
+          "Re-score impact/confidence after rewrite and keep effort realistic."
+        ],
+        "acceptance_checklist": [
+          "Impact >= 3",
+          "Confidence >= 3",
+          "Evidence count >= 2",
+          "User-facing value explicitly stated"
+        ]
+      },
+      "revised": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-11T11:00:02.389Z",
+      "updatedAt": "2026-03-11T11:00:12.845Z"
     }
   }
 ]

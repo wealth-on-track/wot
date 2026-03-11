@@ -217,3 +217,9 @@
 {"ts":"2026-03-11T09:35:04.240Z","jobId":"JOB-20260311-093453850-001648","proposalId":"PRP-PILOT-20260311-HQ2","stage":"proposal","message":"Proposal revised in one feedback session and passed quality gate","meta":{}}
 {"ts":"2026-03-11T09:35:04.287Z","jobId":"JOB-20260311-093453850-001648","proposalId":"PRP-PILOT-20260311-HQ2","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-11T09:35:04.336Z","jobId":"JOB-20260311-093453850-001648","proposalId":"PRP-PILOT-20260311-HQ2","stage":"build","message":"Builder started implementation (attempt 1)","meta":{}}
+{"ts":"2026-03-11T09:35:04.472Z","jobId":"JOB-20260311-093453850-001648","proposalId":"PRP-PILOT-20260311-HQ2","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-11T09:35:06.376Z","jobId":"JOB-20260311-093453850-001648","proposalId":"PRP-PILOT-20260311-HQ2","stage":"review_ready","message":"Verifier passed all required checks; ready for review","meta":{}}
+{"ts":"2026-03-11T11:00:02.390Z","jobId":"JOB-20260311-110002390-001799","proposalId":"PRP-PILOT-20260311-FINALREADY","stage":"proposal","message":"Planner created JOB-20260311-110002390-001799 from PRP-PILOT-20260311-FINALREADY","meta":{}}
+{"ts":"2026-03-11T11:00:12.800Z","jobId":"JOB-20260311-110002390-001799","proposalId":"PRP-PILOT-20260311-FINALREADY","stage":"proposal","message":"Proposal revised in one feedback session and passed quality gate","meta":{}}
+{"ts":"2026-03-11T11:00:12.846Z","jobId":"JOB-20260311-110002390-001799","proposalId":"PRP-PILOT-20260311-FINALREADY","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-11T11:00:12.894Z","jobId":"JOB-20260311-110002390-001799","proposalId":"PRP-PILOT-20260311-FINALREADY","stage":"build","message":"Builder started implementation (attempt 1)","meta":{}}

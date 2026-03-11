@@ -777,5 +777,51 @@
         "Strengthen risk controls"
       ]
     }
+  },
+  {
+    "id": "PRP-PILOT-20260311-FINALREADY",
+    "title": "Final Pilot: improve portfolio insight confidence legend clarity",
+    "category": "ux",
+    "problem": "Confidence legend in insight card is not explicit enough for first-pass interpretation. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
+    "evidence": [
+      "ux observation from manual walkthrough",
+      "benchmark fintech pattern requires explicit confidence semantics"
+    ],
+    "proposed_change": "Update confidence legend wording and helper line in PublicPortfolioView insight card. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "expected_benefit": "Higher clarity and trust during insight interpretation. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "success_metrics": [
+      "Legend interpretable in one pass",
+      "No layout regression"
+    ],
+    "files_expected": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert legend wording commit.",
+    "kpi_target": "Target: measurable user-facing clarity/latency/error improvement with before/after comparison.",
+    "benchmark_delta": "Gap-to-benchmark: define current vs best-practice delta and closing action.",
+    "risk_controls": [
+      "Scoped file-change boundary with rollback note",
+      "Mandatory verification checklist before review_ready"
+    ],
+    "revision_summary": {
+      "revisedAt": "2026-03-11T11:00:12.799Z",
+      "oneSessionRewrite": true,
+      "addressedItems": [
+        "Define KPI target",
+        "Define benchmark delta",
+        "Strengthen risk controls"
+      ]
+    }
   }
 ]

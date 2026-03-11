@@ -1,0 +1,39 @@
+{
+  "id": "PRP-PILOT-20260311-FINALREADY",
+  "title": "Final Pilot: improve portfolio insight confidence legend clarity",
+  "category": "ux",
+  "problem": "Confidence legend in insight card is not explicit enough for first-pass interpretation.",
+  "evidence": [
+    "ux observation from manual walkthrough",
+    "benchmark fintech pattern requires explicit confidence semantics"
+  ],
+  "proposed_change": "Update confidence legend wording and helper line in PublicPortfolioView insight card.",
+  "expected_benefit": "Higher clarity and trust during insight interpretation.",
+  "risk": "low",
+  "impact": "high",
+  "priority": "P1",
+  "impactScore": 4,
+  "confidenceScore": 4,
+  "effortScore": 2,
+  "userFacing": true,
+  "success_metrics": [
+    "Legend interpretable in one pass",
+    "No layout regression"
+  ],
+  "files_expected": [
+    "src/components/PublicPortfolioView.tsx"
+  ],
+  "tests_required": [
+    "lint",
+    "unit"
+  ],
+  "rollback_plan": "Revert legend wording commit.",
+  "kpi_target": "Target KPI: measurable improvement with before/after threshold.",
+  "benchmark_delta": "Benchmark delta: explicit gap to best-practice pattern and how this change narrows it.",
+  "risk_controls": [
+    "Scoped single-intent change boundary",
+    "Verification artifacts required before review_ready"
+  ],
+  "_planned": true,
+  "_plannedAt": "2026-03-11T11:00:02.389Z"
+}

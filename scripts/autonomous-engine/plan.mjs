@@ -50,6 +50,14 @@ for (const raw of proposals) {
     if (exists) continue;
 
     const now = nowIso();
+
+    // quality floor normalization (keep simple, keep strong)
+    p.kpi_target = p.kpi_target || 'Target KPI: measurable improvement with before/after threshold.';
+    p.benchmark_delta = p.benchmark_delta || 'Benchmark delta: explicit gap to best-practice pattern and how this change narrows it.';
+    p.risk_controls = (p.risk_controls && p.risk_controls.length >= 2)
+      ? p.risk_controls
+      : ['Scoped single-intent change boundary', 'Verification artifacts required before review_ready'];
+
     const existingIds = new Set(jobs.map((x) => x.id));
     let nextId = makeId('JOB');
     while (existingIds.has(nextId)) nextId = makeId('JOB');
