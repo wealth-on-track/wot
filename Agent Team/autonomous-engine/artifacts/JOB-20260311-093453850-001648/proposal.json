@@ -1,0 +1,35 @@
+{
+  "id": "PRP-PILOT-20260311-HQ2",
+  "title": "HQ2: improve portfolio insight confidence legend semantics",
+  "category": "ux",
+  "problem": "Users need clearer confidence semantics.",
+  "evidence": [
+    "UX review signal",
+    "Benchmark signal"
+  ],
+  "proposed_change": "Refine confidence legend copy.",
+  "expected_benefit": "Better clarity.",
+  "risk": "low",
+  "impact": "high",
+  "priority": "P1",
+  "impactScore": 4,
+  "confidenceScore": 4,
+  "effortScore": 2,
+  "userFacing": true,
+  "success_metrics": [
+    "Clearer legend"
+  ],
+  "non_goals": [
+    "No redesign"
+  ],
+  "files_expected": [
+    "src/components/PublicPortfolioView.tsx"
+  ],
+  "tests_required": [
+    "lint",
+    "unit"
+  ],
+  "rollback_plan": "Revert copy patch.",
+  "_planned": true,
+  "_plannedAt": "2026-03-11T09:34:53.850Z"
+}

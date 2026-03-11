@@ -729,5 +729,53 @@
       "unit"
     ],
     "rollback_plan": "Revert confidence legend semantics patch only."
+  },
+  {
+    "id": "PRP-PILOT-20260311-HQ2",
+    "title": "HQ2: improve portfolio insight confidence legend semantics",
+    "category": "ux",
+    "problem": "Users need clearer confidence semantics. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
+    "evidence": [
+      "UX review signal",
+      "Benchmark signal"
+    ],
+    "proposed_change": "Refine confidence legend copy. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "expected_benefit": "Better clarity. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "success_metrics": [
+      "Clearer legend"
+    ],
+    "non_goals": [
+      "No redesign"
+    ],
+    "files_expected": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "tests_required": [
+      "lint",
+      "unit"
+    ],
+    "rollback_plan": "Revert copy patch.",
+    "kpi_target": "Target: measurable user-facing clarity/latency/error improvement with before/after comparison.",
+    "benchmark_delta": "Gap-to-benchmark: define current vs best-practice delta and closing action.",
+    "risk_controls": [
+      "Scoped file-change boundary with rollback note",
+      "Mandatory verification checklist before review_ready"
+    ],
+    "revision_summary": {
+      "revisedAt": "2026-03-11T09:35:04.239Z",
+      "oneSessionRewrite": true,
+      "addressedItems": [
+        "Define KPI target",
+        "Define benchmark delta",
+        "Strengthen risk controls"
+      ]
+    }
   }
 ]

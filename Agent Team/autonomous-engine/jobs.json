@@ -617,6 +617,50 @@
     "id": "JOB-20260311-093414582-001279",
     "title": "HQ1: improve portfolio insight confidence legend semantics",
     "category": "ux",
+    "state": "review_ready",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Introduce explicit confidence legend semantics and concise explanation text in portfolio insight card. (local build applied)",
+    "proposalId": "PRP-PILOT-20260311-HQ1",
+    "changedFiles": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "testResults": "pass",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "verifier",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-11T09:34:24.541Z",
+      "sessionCount": 0,
+      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
+    },
+    "timestamps": {
+      "createdAt": "2026-03-11T09:34:14.582Z",
+      "updatedAt": "2026-03-11T09:34:27.290Z"
+    },
+    "buildAttempt": 1
+  },
+  {
+    "id": "JOB-20260311-093453850-001648",
+    "title": "HQ2: improve portfolio insight confidence legend semantics",
+    "category": "ux",
     "state": "approved_for_build",
     "risk": "low",
     "impact": "high",
@@ -625,8 +669,8 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Introduce explicit confidence legend semantics and concise explanation text in portfolio insight card.",
-    "proposalId": "PRP-PILOT-20260311-HQ1",
+    "summary": "Refine confidence legend copy. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
+    "proposalId": "PRP-PILOT-20260311-HQ2",
     "changedFiles": [],
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
@@ -645,12 +689,48 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-11T09:34:24.541Z",
-      "sessionCount": 0
+      "checkedAt": "2026-03-11T09:35:04.240Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "KPI_TARGET_MISSING",
+          "BENCHMARK_DELTA_MISSING",
+          "RISK_CONTROLS_WEAK"
+        ],
+        "strengths": [
+          "Category alignment: ux",
+          "Initial impact/confidence/effort: 4 / 4 / 2",
+          "Scope remains constrained for controlled delivery."
+        ],
+        "gaps": [
+          "KPI target is missing; no measurable success threshold is defined.",
+          "Benchmark delta is missing; best-in-class gap is unclear.",
+          "Risk controls are weak; add execution and rollback safeguards."
+        ],
+        "must_fix": [
+          "KPI_TARGET_MISSING",
+          "BENCHMARK_DELTA_MISSING",
+          "RISK_CONTROLS_WEAK"
+        ],
+        "evidence_gap": null,
+        "rewrite_plan": [
+          "Rewrite problem statement to explain user/system consequence clearly.",
+          "Add concrete evidence and tie it to measurable acceptance criteria.",
+          "Upgrade proposal language from generic intent to execution-ready plan.",
+          "Re-score impact/confidence after rewrite and keep effort realistic."
+        ],
+        "acceptance_checklist": [
+          "Impact >= 3",
+          "Confidence >= 3",
+          "Evidence count >= 2",
+          "User-facing value explicitly stated"
+        ]
+      },
+      "revised": true
     },
     "timestamps": {
-      "createdAt": "2026-03-11T09:34:14.582Z",
-      "updatedAt": "2026-03-11T09:34:24.587Z"
+      "createdAt": "2026-03-11T09:34:53.850Z",
+      "updatedAt": "2026-03-11T09:35:04.287Z"
     }
   }
 ]
