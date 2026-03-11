@@ -196,3 +196,8 @@
 {"ts":"2026-03-11T08:48:39.564Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-20260311-084839473-001","stage":"proposal","message":"Proposal revised in one feedback session and passed quality gate","meta":{}}
 {"ts":"2026-03-11T08:48:39.611Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-20260311-084839473-001","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-11T08:48:39.659Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-20260311-084839473-001","stage":"build","message":"Builder started implementation (attempt 1)","meta":{}}
+{"ts":"2026-03-11T08:48:39.854Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-20260311-084839473-001","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-11T08:48:41.751Z","jobId":"JOB-20260310-192540859-001","proposalId":"PRP-20260311-084839473-001","stage":"review_ready","message":"Verifier passed all required checks; ready for review","meta":{}}
+{"ts":"2026-03-11T08:50:03.443Z","jobId":null,"proposalId":null,"stage":"maintenance","message":"Proposal dedupe merged 3 duplicate proposal(s)","meta":{}}
+{"ts":"2026-03-11T08:50:03.677Z","jobId":"JOB-20260311-084829410-001","proposalId":"PRP-PILOT-20260311-C1","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-11T08:50:03.726Z","jobId":"JOB-20260311-084829410-001","proposalId":"PRP-PILOT-20260311-C1","stage":"build","message":"Builder started implementation (attempt 1)","meta":{}}

@@ -1,1 +1,1 @@
-Planner created job from validated proposal and queued for approved_for_build dispatch.
+Orchestrator dispatch: proposal moved to approved_for_build with priority=P1.

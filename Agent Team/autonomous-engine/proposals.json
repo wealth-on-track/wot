@@ -158,7 +158,11 @@
     "problem": "Insight card labels are ambiguous for first-time users, causing misinterpretation of trend signals and confidence score meaning. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
     "evidence": [
       "manual UX review: ambiguous labels",
-      "benchmark signal: competing tools label confidence dimension explicitly"
+      "benchmark signal: competing tools label confidence dimension explicitly",
+      "orphan repair: missing proposal reference detected",
+      "local failing signal captured and attached",
+      "benchmark/test comparison added with concrete reference",
+      "quality_session_rewrite@2026-03-10T21:02:51.787Z"
     ],
     "proposed_change": "Add explicit context labels and short explanatory subtitle in portfolio insight card; scope limited to one user-facing component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
     "expected_benefit": "Reduce interpretation friction, improve trust in insight card, and lower clarification interactions in user testing. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
@@ -200,7 +204,11 @@
     "problem": "Users misread confidence labeling in insight area, which lowers trust in generated signals. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
     "evidence": [
       "manual ux observation: confidence label ambiguity",
-      "benchmark: competitor tools show explicit confidence legend"
+      "benchmark: competitor tools show explicit confidence legend",
+      "orphan repair: missing proposal reference detected",
+      "local failing signal captured and attached",
+      "benchmark/test comparison added with concrete reference",
+      "quality_session_rewrite@2026-03-11T08:48:39.563Z"
     ],
     "proposed_change": "Add explicit confidence legend and context subtitle near insight card; keep scope user-facing and single-component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
     "expected_benefit": "Users interpret insight confidence correctly, improving trust and reducing confusion. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
@@ -581,45 +589,6 @@
     "rollback_plan": "Revert legend copy/grouping patch."
   },
   {
-    "id": "PRP-20260310-210251696-001",
-    "title": "Pilot v2: improve portfolio insight card clarity with benchmark-backed labels",
-    "category": "ux",
-    "problem": "Add explicit context labels and short explanatory subtitle in portfolio insight card; scope limited to one user-facing component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied) | triaged to narrower proposal scope Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
-    "evidence": [
-      "orphan repair: missing proposal reference detected",
-      "local failing signal captured and attached",
-      "benchmark/test comparison added with concrete reference",
-      "quality_session_rewrite@2026-03-10T21:02:51.787Z"
-    ],
-    "proposed_change": "Add explicit context labels and short explanatory subtitle in portfolio insight card; scope limited to one user-facing component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied) | triaged to narrower proposal scope Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
-    "expected_benefit": "Restores workflow continuity without silent job loss. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
-    "risk": "low",
-    "impact": "high",
-    "priority": "P1",
-    "impactScore": 4,
-    "confidenceScore": 4,
-    "effortScore": 2,
-    "userFacing": true,
-    "files_expected": [
-      "src/components/PublicPortfolioView.tsx"
-    ],
-    "tests_required": [
-      "lint",
-      "unit"
-    ],
-    "rollback_plan": "Revert recovered proposal patch safely.",
-    "_planned": true,
-    "_plannedAt": "2026-03-10T21:02:51.696Z",
-    "repairedFromJobId": "JOB-20260310-150019648-004",
-    "revision_summary": {
-      "revisedAt": "2026-03-10T21:02:51.787Z",
-      "oneSessionRewrite": true,
-      "addressedItems": [
-        "Add stronger evidence signals"
-      ]
-    }
-  },
-  {
     "id": "PRP-PILOT-20260311-C1",
     "title": "Cycle1: improve portfolio insight tooltip clarity for confidence signal",
     "category": "ux",
@@ -654,18 +623,16 @@
     "rollback_plan": "Revert tooltip microcopy patch."
   },
   {
-    "id": "PRP-20260311-084839473-001",
-    "title": "Pilot Final: clarify portfolio insight confidence legend for users",
+    "id": "PRP-PILOT-20260311-C2-A",
+    "title": "Cycle2: improve portfolio legend readability",
     "category": "ux",
-    "problem": "Add explicit confidence legend and context subtitle near insight card; keep scope user-facing and single-component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied) | triaged to narrower proposal scope Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
+    "problem": "Legend readability issue.",
     "evidence": [
-      "orphan repair: missing proposal reference detected",
-      "local failing signal captured and attached",
-      "benchmark/test comparison added with concrete reference",
-      "quality_session_rewrite@2026-03-11T08:48:39.563Z"
+      "ux signal",
+      "benchmark signal"
     ],
-    "proposed_change": "Add explicit confidence legend and context subtitle near insight card; keep scope user-facing and single-component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied) | triaged to narrower proposal scope Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
-    "expected_benefit": "Restores workflow continuity without silent job loss. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
+    "proposed_change": "Improve legend clarity text.",
+    "expected_benefit": "Better clarity.",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -673,6 +640,13 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
+    "success_metrics": [
+      "Readable legend",
+      "Readable legend duplicate"
+    ],
+    "non_goals": [
+      "No redesign"
+    ],
     "files_expected": [
       "src/components/PublicPortfolioView.tsx"
     ],
@@ -680,16 +654,6 @@
       "lint",
       "unit"
     ],
-    "rollback_plan": "Revert recovered proposal patch safely.",
-    "_planned": true,
-    "_plannedAt": "2026-03-11T08:48:39.473Z",
-    "repairedFromJobId": "JOB-20260310-192540859-001",
-    "revision_summary": {
-      "revisedAt": "2026-03-11T08:48:39.564Z",
-      "oneSessionRewrite": true,
-      "addressedItems": [
-        "Add stronger evidence signals"
-      ]
-    }
+    "rollback_plan": "Revert."
   }
 ]

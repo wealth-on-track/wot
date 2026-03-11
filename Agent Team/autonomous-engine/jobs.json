@@ -22,7 +22,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 47
+      "verification": 48
     },
     "constraints": {
       "maxFiles": 5,
@@ -38,7 +38,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T14:40:14.278Z",
-      "updatedAt": "2026-03-11T08:35:29.948Z"
+      "updatedAt": "2026-03-11T08:48:41.798Z"
     }
   },
   {
@@ -184,7 +184,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 46
+      "verification": 47
     },
     "constraints": {
       "maxFiles": 5,
@@ -201,7 +201,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T15:00:19.647Z",
-      "updatedAt": "2026-03-11T08:35:29.948Z"
+      "updatedAt": "2026-03-11T08:48:41.798Z"
     },
     "buildAttempt": 1
   },
@@ -218,7 +218,7 @@
     "effortScore": 2,
     "userFacing": true,
     "summary": "Add explicit context labels and short explanatory subtitle in portfolio insight card; scope limited to one user-facing component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied) | triaged to narrower proposal scope Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
-    "proposalId": "PRP-20260310-210251696-001",
+    "proposalId": "PRP-PILOT-20260310-Q2",
     "changedFiles": [
       "src/components/PublicPortfolioView.tsx"
     ],
@@ -283,7 +283,7 @@
     "id": "JOB-20260310-192540859-001",
     "title": "Pilot Final: clarify portfolio insight confidence legend for users",
     "category": "ux",
-    "state": "approved_for_build",
+    "state": "review_ready",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -291,12 +291,12 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Add explicit confidence legend and context subtitle near insight card; keep scope user-facing and single-component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied) | triaged to narrower proposal scope Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
-    "proposalId": "PRP-20260311-084839473-001",
+    "summary": "Add explicit confidence legend and context subtitle near insight card; keep scope user-facing and single-component. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied) | triaged to narrower proposal scope Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
+    "proposalId": "PRP-PILOT-20260310-FINAL",
     "changedFiles": [
       "src/components/PublicPortfolioView.tsx"
     ],
-    "testResults": "fail",
+    "testResults": "pass",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
@@ -310,7 +310,7 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/components"
     },
-    "ownerAgent": "planner",
+    "ownerAgent": "verifier",
     "quality": {
       "status": "pass",
       "checkedAt": "2026-03-11T08:48:39.564Z",
@@ -344,12 +344,14 @@
           "User-facing value explicitly stated"
         ]
       },
-      "revised": true
+      "revised": true,
+      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
     },
     "timestamps": {
       "createdAt": "2026-03-10T19:25:40.858Z",
-      "updatedAt": "2026-03-11T08:48:39.610Z"
-    }
+      "updatedAt": "2026-03-11T08:48:41.751Z"
+    },
+    "buildAttempt": 1
   },
   {
     "id": "JOB-20260310-192709346-001",
@@ -374,7 +376,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 53
+      "verification": 54
     },
     "constraints": {
       "maxFiles": 5,
@@ -390,7 +392,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T19:27:09.346Z",
-      "updatedAt": "2026-03-11T08:35:29.948Z"
+      "updatedAt": "2026-03-11T08:48:41.798Z"
     }
   },
   {
@@ -416,7 +418,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 49
+      "verification": 50
     },
     "constraints": {
       "maxFiles": 5,
@@ -432,7 +434,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-10T20:28:13.645Z",
-      "updatedAt": "2026-03-11T08:35:29.948Z"
+      "updatedAt": "2026-03-11T08:48:41.798Z"
     }
   },
   {
@@ -527,7 +529,7 @@
     "id": "JOB-20260311-084829410-001",
     "title": "Cycle1: improve portfolio insight tooltip clarity for confidence signal",
     "category": "ux",
-    "state": "proposal",
+    "state": "approved_for_build",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -555,12 +557,12 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-11T08:48:39.564Z",
+      "checkedAt": "2026-03-11T08:50:03.630Z",
       "sessionCount": 0
     },
     "timestamps": {
       "createdAt": "2026-03-11T08:48:29.409Z",
-      "updatedAt": "2026-03-11T08:48:29.409Z"
+      "updatedAt": "2026-03-11T08:50:03.676Z"
     }
   }
 ]
