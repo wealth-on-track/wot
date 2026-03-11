@@ -28,7 +28,7 @@ ok('wip_limits',
   jobs.filter((j) => j.state === 'review_ready').length <= WIP_LIMITS.reviewReady,
   `planning<=${WIP_LIMITS.planning}, building<=${WIP_LIMITS.building}, testing<=${WIP_LIMITS.testing}, review<=${WIP_LIMITS.reviewReady}`
 );
-ok('final_states_only_for_completed', history.every((j) => ['reverted','abandoned_with_reason','review_ready'].includes(j.state)), `history=${history.length}`);
+ok('final_states_only_for_completed', history.every((j) => ['approved','reverted','abandoned_with_reason','review_ready'].includes(j.state)), `history=${history.length}`);
 ok('preview_instructions_present', jobs.every((j) => String(j.previewInstructions || '').trim().length > 0), 'all jobs include preview instructions');
 ok('verification_scripts_exist', ['check-integration.mjs','check-e2e.mjs','check-performance.mjs'].every((n)=>existsSync(path.join(process.cwd(),'scripts','autonomous-engine',n))), 'integration/e2e/performance checks exist');
 ok('loop_script_exists', existsSync(path.join(process.cwd(),'scripts','autonomous-engine','loop.mjs')), 'continuous local loop script exists');

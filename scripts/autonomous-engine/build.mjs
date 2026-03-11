@@ -40,11 +40,14 @@ if (!proposal) {
   process.exit(0);
 }
 
+const enteringBuild = job.state === 'approved_for_build';
 job.state = 'build';
 job.ownerAgent = 'builder';
-job.buildAttempt = Number(job.buildAttempt || 0) + 1;
+job.buildAttempt = enteringBuild ? (Number(job.buildAttempt || 0) + 1) : Number(job.buildAttempt || 1);
 job.timestamps.updatedAt = nowIso();
-await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'build', message: `Builder started implementation (attempt ${job.buildAttempt})` });
+if (enteringBuild) {
+  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'build', message: `Builder started implementation (attempt ${job.buildAttempt})` });
+}
 
 const branch = `local/auto-${job.id.toLowerCase()}`;
 try {

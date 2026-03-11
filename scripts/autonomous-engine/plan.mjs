@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, makeId, normalize, validateProposal, writeArtifact, proposalSimilarity, WIP_LIMITS, appendEvent } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, makeId, normalize, validateProposal, writeArtifact, proposalSimilarity, WIP_LIMITS, appendEvent, FINAL_STATES } from './lib.mjs';
 
 await ensureEngineFiles();
 const proposals = await readJson(files.proposals);
 const jobs = await readJson(files.jobs);
+const history = await readJson(files.history);
 let created = 0;
 
 function splitProposal(p) {
@@ -48,6 +49,9 @@ for (const raw of proposals) {
 
     const exists = jobs.some((j) => j.proposalId === p.id || normalize(j.title) === normalize(p.title));
     if (exists) continue;
+
+    const alreadyCompleted = history.some((j) => j.proposalId === p.id && [...FINAL_STATES, 'approved'].includes(String(j.state || '')));
+    if (alreadyCompleted && !p.allowReplay) continue;
 
     const now = nowIso();
 
