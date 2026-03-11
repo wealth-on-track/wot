@@ -21,78 +21,18 @@ if (!job) {
 job.timestamps.updatedAt = nowIso();
 
 if (action === 'approve') {
-  // One-click live trigger: push current approved changes to main
-  const deployStatus = 'pass';
-  let pushStatus = 'fail';
-
-  let liveCommit = 'unknown';
-  let productionCommit = 'unknown';
-  let productionMatch = false;
-  try {
-    execSync('git push origin HEAD:main', { stdio: 'pipe', timeout: 300000 });
-    pushStatus = 'pass';
-    try {
-      liveCommit = execSync('git rev-parse --short HEAD', { stdio: 'pipe' }).toString().trim();
-    } catch {}
-
-    // Control point: production must match lifecycle commit
-    try {
-      const html = execSync('curl -sL --max-time 20 https://wot.money', { stdio: 'pipe' }).toString();
-      const m = html.match(/PRODUCTION\s*•\s*Ver:\s*([0-9a-f]{7,40})/i);
-      productionCommit = m?.[1] || 'unknown';
-      productionMatch = Boolean(liveCommit !== 'unknown' && productionCommit !== 'unknown' && productionCommit.startsWith(liveCommit));
-    } catch (e) {
-      await writeArtifact(job.id, 'production-check-error.txt', String(e.message || e));
-    }
-  } catch (e) {
-    await writeArtifact(job.id, 'push-error.txt', String(e.message || e));
-  }
-
-  const deployPack = {
-    jobId: job.id,
-    title: job.title,
-    changedFiles: job.changedFiles,
-    testResults: job.testResults,
-    deployStatus,
-    pushStatus,
-    liveCommit,
-    productionCommit,
-    productionMatch,
-    instructions: 'Human-approved. Push-to-main attempted with production commit parity check.',
-    generatedAt: nowIso(),
-  };
-  await writeArtifact(job.id, 'deploy-ready.json', deployPack);
-  await writeArtifact(job.id, 'deploy-instructions.txt', 'Human-approved. One-click build + push-to-main flow executed.');
-
+  // Approve now only marks completed (no auto deploy)
   job.state = 'approved';
-  if (pushStatus !== 'pass') job.finalReason = 'push_failed_after_human_approval';
-  await appendEvent({
-    jobId: job.id,
-    proposalId: job.proposalId,
-    stage: pushStatus === 'pass' ? 'approved' : 'approval_failed',
-    message: pushStatus === 'pass'
-      ? `Approved: GitHub push successful (commit=${liveCommit})`
-      : `Approved clicked: github_push=${pushStatus} (live not updated)`,
-  });
-
-  if (pushStatus === 'pass') {
-    await appendEvent({
-      jobId: job.id,
-      proposalId: job.proposalId,
-      stage: productionMatch ? 'live_verified' : 'live_mismatch',
-      message: productionMatch
-        ? `Production verified: commit match (${productionCommit})`
-        : `Production mismatch: lifecycle=${liveCommit}, production=${productionCommit}`,
-      meta: { liveCommit, productionCommit, productionMatch },
-    });
-  }
-  console.log(`[review] approved ${jobId}; deploy=${deployStatus}; push=${pushStatus}`);
+  await writeArtifact(job.id, 'approval-note.txt', 'Approved and moved to completed. Deployment is manual via Deploy button.');
+  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'approved', message: 'Approved: moved to completed (no auto deploy)' });
+  console.log(`[review] approved ${jobId}; no deploy`);
 } else {
   try { execSync('git reset --hard', { stdio: 'ignore' }); } catch {}
+  try { execSync('git clean -fd', { stdio: 'ignore' }); } catch {}
   job.state = 'reverted';
   job.finalReason = 'rejected_by_human';
-  await writeArtifact(job.id, 'revert-note.txt', 'Human rejected. Local revert executed via git reset --hard.');
-  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'reverted', message: 'Reject clicked: local revert applied' });
+  await writeArtifact(job.id, 'revert-note.txt', 'Human rejected. Local workspace reverted via git reset --hard + git clean -fd.');
+  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'reverted', message: 'Reject clicked: local revert applied (hard reset + clean)' });
   console.log(`[review] rejected ${jobId}; local revert applied`);
 }
 

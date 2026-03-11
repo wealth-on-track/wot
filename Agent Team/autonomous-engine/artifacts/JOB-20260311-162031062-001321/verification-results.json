@@ -1,0 +1,33 @@
+[
+  {
+    "check": "lint",
+    "cmd": "npx eslint src/components/mobile/MobileDashboard.tsx",
+    "status": "fail",
+    "error": "Command failed: npx eslint src/components/mobile/MobileDashboard.tsx"
+  },
+  {
+    "check": "unit",
+    "cmd": "CHANGED_FILES=src/components/mobile/MobileDashboard.tsx node scripts/autonomous-engine/check-unit.mjs",
+    "status": "pass"
+  },
+  {
+    "check": "security",
+    "cmd": "npm audit --audit-level=high",
+    "status": "skipped"
+  },
+  {
+    "check": "integration",
+    "cmd": "CHANGED_FILES=src/components/mobile/MobileDashboard.tsx node scripts/autonomous-engine/check-integration.mjs",
+    "status": "pass"
+  },
+  {
+    "check": "e2e",
+    "cmd": "node scripts/autonomous-engine/check-e2e.mjs",
+    "status": "skipped"
+  },
+  {
+    "check": "performance",
+    "cmd": "node scripts/autonomous-engine/check-performance.mjs",
+    "status": "skipped"
+  }
+]

@@ -108,7 +108,7 @@
     ],
     "rollback_plan": "Revert confidence legend commit in PublicPortfolioView and remove related artifact references.",
     "revision_summary": {
-      "revisedAt": "2026-03-11T16:00:31.165Z",
+      "revisedAt": "2026-03-11T16:25:30.794Z",
       "oneSessionRewrite": true,
       "addressedItems": [
         "Increase confidence with concrete checks"
