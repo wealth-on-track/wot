@@ -584,10 +584,17 @@ export default async function AutonomousEnginePage({
         }
 
         @media (max-width: 640px) {
+          .ae-center-panel,
+          .ae-right-panel,
+          .ae-left-panel {
+            border-radius: 10px !important;
+            padding: 8px !important;
+          }
           .ae-review-actions {
             width: 100%;
           }
-          .ae-action-btn {
+          .ae-action-btn,
+          .ae-deploy-btn {
             flex: 1 1 0;
             min-height: 40px;
           }

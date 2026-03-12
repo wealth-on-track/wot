@@ -29,6 +29,7 @@ export default function DeployButton() {
 
   return (
     <button
+      className="ae-deploy-btn"
       type="button"
       onClick={run}
       disabled={busy}
