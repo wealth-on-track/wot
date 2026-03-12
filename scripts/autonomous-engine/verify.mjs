@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent, setActiveJobLock, withEngineRunLock } from './lib.mjs';
 import { execSync } from 'child_process';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 async function main() {
   await ensureEngineFiles();
@@ -55,6 +57,9 @@ async function main() {
   if (allPass) {
     job.state = 'review_ready';
     await setActiveJobLock(null);
+    try {
+      await fs.unlink(path.join(process.cwd(), 'Agent Team', 'autonomous-engine', 'artifacts', job.id, 'failure-analysis.txt'));
+    } catch {}
     await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'review_ready', message: 'Verifier passed all required checks; ready for review' });
   } else {
     job.retries.testing += 1;

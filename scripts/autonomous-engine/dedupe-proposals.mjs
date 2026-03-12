@@ -8,6 +8,7 @@ const jobs = await readJson(files.jobs);
 const keyOf = (p) => `${normalize(p.title)}::${(p.files_expected || []).slice(0,2).join('|')}`;
 const keepMap = new Map();
 const removedIds = new Set();
+const removedToKept = new Map();
 let merged = 0;
 
 for (const p of proposals) {
@@ -20,15 +21,21 @@ for (const p of proposals) {
   kept.evidence = [...new Set([...(kept.evidence || []), ...(p.evidence || [])])];
   kept.success_metrics = [...new Set([...(kept.success_metrics || []), ...(p.success_metrics || [])])];
   removedIds.add(p.id);
+  removedToKept.set(p.id, kept.id);
   merged += 1;
 }
 
 if (merged > 0) {
+  for (const proposal of keepMap.values()) {
+    if (proposal.triagedFrom && removedToKept.has(proposal.triagedFrom)) {
+      proposal.triagedFrom = removedToKept.get(proposal.triagedFrom);
+    }
+  }
   for (const j of jobs) {
     if (!j.proposalId) continue;
     if (!removedIds.has(j.proposalId)) continue;
-    const alt = [...keepMap.values()].find((p) => keyOf(p) === keyOf({ title: j.title || '', files_expected: j.changedFiles || [] })) || [...keepMap.values()][0];
-    if (alt) j.proposalId = alt.id;
+    const keptId = removedToKept.get(j.proposalId);
+    if (keptId) j.proposalId = keptId;
   }
   await appendEvent({ jobId: null, proposalId: null, stage: 'maintenance', message: `Proposal dedupe merged ${merged} duplicate proposal(s)` });
 }

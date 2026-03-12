@@ -3,7 +3,7 @@
     "id": "JOB-20260311-161031334-001818",
     "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
     "category": "benchmark",
-    "state": "review_ready",
+    "state": "abandoned_with_reason",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -22,7 +22,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 3
+      "verification": 4
     },
     "constraints": {
       "maxFiles": 5,
@@ -39,11 +39,12 @@
     },
     "timestamps": {
       "createdAt": "2026-03-11T16:10:31.333Z",
-      "updatedAt": "2026-03-11T16:30:31.989Z"
+      "updatedAt": "2026-03-12T05:08:53.562Z"
     },
     "buildAttempt": 1,
-    "reviewNudgeAt": "2026-03-12T03:10:32.764Z",
-    "reviewReminderAt": "2026-03-12T03:10:32.830Z"
+    "reviewNudgeAt": "2026-03-12T04:15:31.026Z",
+    "reviewReminderAt": "2026-03-12T04:15:31.072Z",
+    "finalReason": "superseded_review_ready_lineage:PRP-20260311-125530710-003777"
   },
   {
     "id": "JOB-20260311-162031062-001321",
@@ -68,7 +69,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 0
+      "verification": 1
     },
     "constraints": {
       "maxFiles": 5,
@@ -119,6 +120,118 @@
       "createdAt": "2026-03-11T16:20:31.062Z",
       "updatedAt": "2026-03-12T04:05:32.501Z"
     },
-    "buildAttempt": 6
+    "buildAttempt": 6,
+    "reviewNudgeAt": "2026-03-12T04:20:30.677Z",
+    "reviewReminderAt": "2026-03-12T04:40:30.469Z"
+  },
+  {
+    "id": "JOB-20260312-050901046-001373",
+    "title": "Improve empty portfolio onboarding with clearer next actions",
+    "category": "ux",
+    "state": "proposal",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Edit src/app/[username]/portfolio_public/page.tsx with one explicit behavior/text adjustment, add acceptance checklist references, and keep scope to a single functional change. Implementation is file-level concrete: src/app/[username]/portfolio_public/page.tsx, one functional change, measurable acceptance. (quality-revised) | halted: no implementation diff | halted: no implementation diff",
+    "proposalId": "PRP-20260312-050900853-003589",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 2,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/app"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-12T05:10:57.161Z",
+      "sessionCount": 1,
+      "reason": "repeated_no_changed_files",
+      "feedback": {
+        "reject_reason_codes": [
+          "NO_CHANGED_FILES"
+        ],
+        "must_fix": [
+          "Apply a real scoped code change before redispatch"
+        ],
+        "rewrite_plan": [
+          "Add the intended implementation diff in the scoped file, then rerun dispatch/build."
+        ]
+      },
+      "triagedAt": "2026-03-12T05:10:38.768Z",
+      "triageSkipped": "missing_implementation_diff"
+    },
+    "timestamps": {
+      "createdAt": "2026-03-12T05:09:01.046Z",
+      "updatedAt": "2026-03-12T05:10:38.769Z"
+    },
+    "buildAttempt": 2
+  },
+  {
+    "id": "JOB-20260312-050901047-002631",
+    "title": "Reduce portfolio dashboard load latency via route-level lazy chunking",
+    "category": "performance",
+    "state": "proposal",
+    "risk": "medium",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Edit src/components/PublicPortfolioView.tsx with one explicit behavior/text adjustment, add acceptance checklist references, and keep scope to a single functional change. Implementation is file-level concrete: src/components/PublicPortfolioView.tsx, one functional change, measurable acceptance. (quality-revised) | sent back to proposal (no changed files, cooldown active) | halted: no implementation diff",
+    "proposalId": "PRP-20260312-050900853-004779",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 2,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-12T05:10:57.161Z",
+      "sessionCount": 2,
+      "reason": "repeated_no_changed_files",
+      "feedback": {
+        "reject_reason_codes": [
+          "NO_CHANGED_FILES"
+        ],
+        "must_fix": [
+          "Apply a real scoped code change before redispatch"
+        ],
+        "rewrite_plan": [
+          "Add the intended implementation diff in the scoped file, then rerun dispatch/build."
+        ]
+      },
+      "triagedAt": "2026-03-12T05:10:38.769Z",
+      "triageSkipped": "missing_implementation_diff"
+    },
+    "timestamps": {
+      "createdAt": "2026-03-12T05:09:01.047Z",
+      "updatedAt": "2026-03-12T05:10:38.769Z"
+    },
+    "buildAttempt": 2
   }
 ]

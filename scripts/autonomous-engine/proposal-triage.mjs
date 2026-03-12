@@ -19,6 +19,11 @@ for (const job of jobs) {
   if (!p) continue;
 
   const feedback = job.quality?.feedback || {};
+  if ((feedback.reject_reason_codes || []).includes('NO_CHANGED_FILES') || job.quality?.reason === 'missing_implementation_diff') {
+    job.quality = { ...(job.quality || {}), triagedAt: nowIso(), triageSkipped: 'missing_implementation_diff' };
+    job.timestamps.updatedAt = nowIso();
+    continue;
+  }
   const candidates = ['src/components/PublicPortfolioView.tsx','src/components/mobile/MobileDashboard.tsx','src/components/mobile/MobileHeader.tsx'];
   const current = (p.files_expected || [])[0];
   const rotated = candidates.find((c) => c !== current) || current;

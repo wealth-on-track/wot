@@ -117,6 +117,29 @@ export function proposalSimilarity(a, b) {
   };
 }
 
+export function buildProposalIndex(proposals = []) {
+  return new Map((proposals || []).map((proposal) => [String(proposal?.id || ''), proposal]));
+}
+
+export function proposalLineageRoot(proposalId, proposalsOrIndex = []) {
+  const proposalIndex = proposalsOrIndex instanceof Map ? proposalsOrIndex : buildProposalIndex(proposalsOrIndex);
+  const startId = String(proposalId || '').trim();
+  if (!startId) return '';
+
+  let currentId = startId;
+  const seen = new Set();
+
+  while (currentId && !seen.has(currentId)) {
+    seen.add(currentId);
+    const proposal = proposalIndex.get(currentId);
+    const parentId = String(proposal?.triagedFrom || '').trim();
+    if (!parentId) break;
+    currentId = parentId;
+  }
+
+  return currentId || startId;
+}
+
 export function parseLessons(lessons = []) {
   const liked = String((lessons || []).map((l) => l?.liked || '').join(' ')).toLowerCase();
   const disliked = String((lessons || []).map((l) => l?.disliked || '').join(' ')).toLowerCase();

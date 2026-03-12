@@ -1,0 +1,53 @@
+{
+  "id": "PRP-20260312-050900853-004779",
+  "title": "Reduce portfolio dashboard load latency via route-level lazy chunking",
+  "category": "performance",
+  "problem": "Observed performance friction from local scout signals. Current behavior leaves measurable value on the table for end-users or operators. Without intervention, this problem repeats and reduces trust, clarity, or delivery speed. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
+  "evidence": [
+    "portfolio-related touch count=602"
+  ],
+  "proposed_change": "Scope: deliver one focused functional improvement with clear acceptance criteria. Implementation approach: touch only the highest-leverage files, keep blast-radius small, and add explicit verification steps. Validation plan: run required checks and provide reproducible artifacts (diff, tests, outcome summary). Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+  "expected_benefit": "Primary outcome: concrete improvement in user-facing quality or system reliability. Secondary outcome: clearer operational visibility and lower chance of repeat regressions. Decision outcome: human reviewer can approve/reject with transparent evidence. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
+  "risk": "medium",
+  "impact": "high",
+  "priority": "P1",
+  "impactScore": 4,
+  "confidenceScore": 4,
+  "effortScore": 2,
+  "userFacing": true,
+  "success_metrics": [
+    "At least one measurable before/after signal is present in artifacts.",
+    "All required quality checks pass.",
+    "Reviewer can verify impact from summary + evidence without guessing intent."
+  ],
+  "kpi_target": "In src/components/PublicPortfolioView.tsx, improve one measurable QA/flow metric from baseline >=3/10 ambiguity/fail cases to <=1/10 across a 20-case checklist.",
+  "benchmark_delta": "Baseline: src/components/PublicPortfolioView.tsx lacks one benchmark-aligned clarity/reliability pattern. Target: implement the missing pattern and document >=70% gap closure with before/after notes.",
+  "risk_controls": [
+    "Scope lock: modify only src/components/PublicPortfolioView.tsx with one functional intent.",
+    "Rollback guard: revert single-file patch if lint/unit/required checks fail.",
+    "Gate: do not move to review_ready without verification artifacts and check pass evidence."
+  ],
+  "non_goals": [
+    "No unrelated refactor.",
+    "No broad redesign outside scoped files.",
+    "No production deploy automation without explicit human approval."
+  ],
+  "files_expected": [
+    "src/components/PublicPortfolioView.tsx"
+  ],
+  "change_spec": [
+    {
+      "file": "src/components/PublicPortfolioView.tsx",
+      "change": "Implement one concrete change in src/components/PublicPortfolioView.tsx with explicit acceptance criteria, reviewer checklist references, and minimal blast radius.",
+      "why": "Directly closes detected signal-to-benchmark gap with scoped implementation."
+    }
+  ],
+  "tests_required": [
+    "lint",
+    "unit",
+    "performance"
+  ],
+  "rollback_plan": "Revert local branch to previous commit, remove generated artifacts for this job, and restore previous state snapshot.",
+  "_planned": true,
+  "_plannedAt": "2026-03-12T05:09:01.047Z"
+}

@@ -1,0 +1,1 @@
+Could not switch to local/auto-job-20260312-050901047-002631; continued on current branch.

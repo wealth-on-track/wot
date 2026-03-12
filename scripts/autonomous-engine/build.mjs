@@ -2,7 +2,6 @@
 import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent, getActiveJobLock, setActiveJobLock, withEngineRunLock } from './lib.mjs';
 import { execSync } from 'child_process';
 import { promises as fs } from 'fs';
-import path from 'path';
 
 async function main() {
   await ensureEngineFiles();
@@ -76,17 +75,29 @@ async function main() {
     : [];
   const targetFiles = [...new Set([...changeSpecFiles, ...(proposal.files_expected || [])])].slice(0, 5);
   job.quality = { ...(job.quality || {}), lastTriedFile: targetFiles[0] || null };
+
+  const hasTrackedDiff = (rel) => {
+    try {
+      const output = execSync(`git diff --name-only -- ${JSON.stringify(rel)}`, { stdio: 'pipe' }).toString().trim();
+      if (output) return true;
+    } catch {}
+    try {
+      const output = execSync(`git diff --cached --name-only -- ${JSON.stringify(rel)}`, { stdio: 'pipe' }).toString().trim();
+      if (output) return true;
+    } catch {}
+    try {
+      const output = execSync(`git ls-files --others --exclude-standard -- ${JSON.stringify(rel)}`, { stdio: 'pipe' }).toString().trim();
+      if (output) return true;
+    } catch {}
+    return false;
+  };
+
   for (const rel of targetFiles) {
     const cooldownApplies = proposal.priority !== 'P1' && recentlyTouched.has(rel) && Number(job.retries?.build || 0) < 1;
     if (cooldownApplies) continue;
-    const full = path.join(process.cwd(), rel);
     try {
-      await fs.access(full);
-      const original = await fs.readFile(full, 'utf8');
-      const runTag = `${job.id}:a${job.buildAttempt || 1}:r${job.retries.build || 0}-t${job.retries.testing || 0}`;
-      const marker = `\n/* autonomous-engine:${runTag}:single-functional-change */\n`;
-      if (!original.includes(marker.trim())) {
-        await fs.writeFile(full, original + marker, 'utf8');
+      await fs.access(rel);
+      if (hasTrackedDiff(rel)) {
         changedFiles.push(rel);
       }
     } catch {}
@@ -117,22 +128,23 @@ async function main() {
     job.state = 'proposal';
     job.ownerAgent = 'planner';
     job.quality = {
-      status: 'needs_revision',
+      status: 'needs_human_review',
       checkedAt: nowIso(),
       sessionCount: Number(job.quality?.sessionCount || 0),
+      reason: 'missing_implementation_diff',
       feedback: {
         reject_reason_codes: ['NO_CHANGED_FILES'],
-        must_fix: ['Adjust target file/scope so build can produce a meaningful diff'],
+        must_fix: ['Apply a real scoped code change before redispatch'],
         rewrite_plan: [
           cooldownBlocked
-            ? 'Select an alternative non-cooldown user-facing file with same intent.'
-            : 'Refine proposed change to produce a concrete patch in scoped files.',
+            ? 'Wait for cooldown or make an explicit implementation change in a different scoped file before retrying.'
+            : 'Add the intended implementation diff in the scoped file, then rerun dispatch/build.',
         ],
       },
     };
-    job.summary = `${job.summary} | sent back to proposal (no changed files${cooldownBlocked ? ', cooldown active' : ''})`;
+    job.summary = `${job.summary} | halted: no implementation diff${cooldownBlocked ? ' (cooldown active)' : ''}`;
     job.timestamps.updatedAt = nowIso();
-    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'proposal', message: `Build produced no changed files${cooldownBlocked ? ' (cooldown active)' : ''}; sent back for proposal revision` });
+    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'proposal', message: `Build produced no changed files${cooldownBlocked ? ' (cooldown active)' : ''}; escalated for human implementation review` });
     await setActiveJobLock(null);
     await writeJson(files.jobs, jobs);
     console.log('[build] no changed files');
@@ -160,7 +172,8 @@ async function main() {
 
   let commitSha = null;
   try {
-    execSync('git add -- .', { stdio: 'pipe' });
+    const gitTargets = changedFiles.map((file) => JSON.stringify(file)).join(' ');
+    execSync(`git add -- ${gitTargets}`, { stdio: 'pipe' });
     execSync(`git commit -m ${JSON.stringify(commitMsg)}`, { stdio: 'pipe' });
     commitSha = execSync('git rev-parse --short HEAD', { stdio: 'pipe' }).toString().trim();
   } catch (e) {
