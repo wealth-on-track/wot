@@ -234,7 +234,8 @@ for (const job of jobs) {
     ],
   };
 
-  if (sessionCount > 1) {
+  const maxAutoSessions = confidenceOnlyEscalation ? 3 : 1;
+  if (sessionCount > maxAutoSessions) {
     job.quality = { status: 'needs_human_review', checkedAt: nowIso(), sessionCount, feedback };
     job.state = 'proposal';
     await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'proposal', message: 'Quality gate failed after one feedback session; needs human review' });

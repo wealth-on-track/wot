@@ -239,15 +239,15 @@
     "id": "PRP-20260312-040530520-001448",
     "title": "Compare critical portfolio flows against benchmark scripts and align best practices (triaged) (triaged)",
     "category": "benchmark",
-    "problem": "User-visible issue in src/components/mobile/MobileDashboard.tsx creates measurable friction in interpretation or trust. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary. Root-cause triage: CONFIDENCE_LOW. Execution scope anchored to src/components/PublicPortfolioView.tsx with explicit user consequence and verification boundary.",
+    "problem": "User-visible issue in src/components/mobile/MobileDashboard.tsx creates measurable friction in interpretation or trust. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
     "evidence": [
       "benchmark_result: performance:pass",
       "local failing signal captured and attached",
       "benchmark/test comparison added with concrete reference",
       "quality_session_rewrite@2026-03-11T12:55:30.981Z"
     ],
-    "proposed_change": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Implementation is file-level concrete: src/components/PublicPortfolioView.tsx, one functional change, measurable acceptance.",
-    "expected_benefit": "Clear, measurable improvement linked to one component and one acceptance threshold. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure. Expected benefit includes KPI threshold, benchmark-gap closure, and clear rollback guardrails.",
+    "proposed_change": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "expected_benefit": "Clear, measurable improvement linked to one component and one acceptance threshold. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
     "risk": "low",
     "impact": "high",
     "priority": "P1",

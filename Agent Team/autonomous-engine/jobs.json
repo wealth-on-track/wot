@@ -49,7 +49,7 @@
     "id": "JOB-20260311-162031062-001321",
     "title": "Pilot Clean: improve portfolio insight confidence legend semantics on public portfolio page",
     "category": "ux",
-    "state": "approved_for_build",
+    "state": "review_ready",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -57,12 +57,12 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Implementation is file-level concrete: src/components/PublicPortfolioView.tsx, one functional change, measurable acceptance. (quality-revised)",
+    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Implementation is file-level concrete: src/components/PublicPortfolioView.tsx, one functional change, measurable acceptance. (local build applied)",
     "proposalId": "PRP-20260312-040530520-001448",
     "changedFiles": [
-      "src/components/mobile/MobileDashboard.tsx"
+      "src/components/PublicPortfolioView.tsx"
     ],
-    "testResults": "fail",
+    "testResults": "pass",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
@@ -76,7 +76,7 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/components"
     },
-    "ownerAgent": "planner",
+    "ownerAgent": "verifier",
     "quality": {
       "status": "pass",
       "checkedAt": "2026-03-12T04:05:30.564Z",
@@ -112,12 +112,13 @@
           "change_spec file aligns with files_expected"
         ]
       },
-      "revised": true
+      "revised": true,
+      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
     },
     "timestamps": {
       "createdAt": "2026-03-11T16:20:31.062Z",
-      "updatedAt": "2026-03-12T04:05:30.609Z"
+      "updatedAt": "2026-03-12T04:05:32.501Z"
     },
-    "buildAttempt": 5
+    "buildAttempt": 6
   }
 ]

@@ -153,3 +153,5 @@
 {"ts":"2026-03-12T04:05:30.564Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260312-040530520-001448","stage":"proposal","message":"Proposal revised in one feedback session and passed quality gate","meta":{}}
 {"ts":"2026-03-12T04:05:30.610Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260312-040530520-001448","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-12T04:05:30.657Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260312-040530520-001448","stage":"build","message":"Builder started implementation (attempt 6)","meta":{}}
+{"ts":"2026-03-12T04:05:30.757Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260312-040530520-001448","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-12T04:05:32.501Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260312-040530520-001448","stage":"review_ready","message":"Verifier passed all required checks; ready for review","meta":{}}
