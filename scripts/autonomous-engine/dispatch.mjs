@@ -29,9 +29,16 @@ async function main() {
     await setActiveJobLock(null);
   }
 
+  const activeProposalIds = new Set(
+    jobs
+      .filter((j) => ['approved_for_build', 'build', 'test', 'review_ready'].includes(j.state))
+      .map((j) => String(j.proposalId || ''))
+      .filter(Boolean),
+  );
+
   const priorityRank = { P1: 1, P2: 2, P3: 3 };
   const next = jobs
-    .filter((j) => j.state === 'proposal' && j.quality?.status === 'pass')
+    .filter((j) => j.state === 'proposal' && j.quality?.status === 'pass' && !activeProposalIds.has(String(j.proposalId || '')))
     .sort((a, b) =>
       (priorityRank[a.priority] || 9) - (priorityRank[b.priority] || 9)
       || (Number(a.retries?.testing || 0) - Number(b.retries?.testing || 0))
@@ -47,7 +54,12 @@ async function main() {
     await setActiveJobLock(next.id);
     console.log(`[dispatch] promoted ${next.id} to approved_for_build`);
   } else {
-    console.log('[dispatch] no proposal to activate');
+    const blockedByActiveProposal = jobs.filter((j) => j.state === 'proposal' && j.quality?.status === 'pass' && activeProposalIds.has(String(j.proposalId || ''))).length;
+    if (blockedByActiveProposal > 0) {
+      console.log(`[dispatch] no proposal to activate (blocked duplicates=${blockedByActiveProposal})`);
+    } else {
+      console.log('[dispatch] no proposal to activate');
+    }
   }
 
   await writeJson(files.jobs, jobs);

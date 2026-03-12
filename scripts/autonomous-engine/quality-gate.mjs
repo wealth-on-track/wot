@@ -8,11 +8,12 @@ const proposals = await readJson(files.proposals);
 const countOcc = (txt, needle) => (String(txt || '').toLowerCase().split(String(needle).toLowerCase()).length - 1);
 const hasConcreteFilePlan = (p) => Array.isArray(p.change_spec) && p.change_spec.some((x) => x?.file && x?.change && String(x.change).length > 20);
 const hasAlignedFilePlan = (p) => {
-  const specFiles = new Set((Array.isArray(p.change_spec) ? p.change_spec : []).map((x) => String(x?.file || '').trim()).filter(Boolean));
-  const expectedFiles = new Set((p.files_expected || []).map((f) => String(f || '').trim()).filter(Boolean));
-  if (!specFiles.size || !expectedFiles.size) return false;
-  for (const f of specFiles) if (expectedFiles.has(f)) return true;
-  return false;
+  const specFiles = (Array.isArray(p.change_spec) ? p.change_spec : []).map((x) => String(x?.file || '').trim()).filter(Boolean);
+  const expectedFiles = (p.files_expected || []).map((f) => String(f || '').trim()).filter(Boolean);
+  if (!specFiles.length || !expectedFiles.length) return false;
+  const primarySpec = specFiles[0];
+  const primaryExpected = expectedFiles[0];
+  return primarySpec === primaryExpected;
 };
 const hasQuantifiedKpi = (txt) => /\d|>=|<=|%|ms|s\b|x\b/i.test(String(txt || ''));
 const hasConcreteBenchmarkDelta = (txt) => /\b(gap|delta|baseline|benchmark|current|target|reduce|improve)\b/i.test(String(txt || ''));
