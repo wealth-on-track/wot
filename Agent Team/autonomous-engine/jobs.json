@@ -58,7 +58,7 @@
     "effortScore": 2,
     "userFacing": true,
     "summary": "In src/components/PublicPortfolioView.tsx, add an explicit confidence legend block directly under insight title and update label text to map each level to plain-language meaning. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised) | sent back to proposal (no changed files, cooldown active) | triaged to narrower proposal scope",
-    "proposalId": "PRP-20260312-002029709-001684",
+    "proposalId": "PRP-20260311-125530710-003777",
     "changedFiles": [],
     "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",

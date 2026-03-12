@@ -136,3 +136,5 @@
 {"ts":"2026-03-12T00:20:29.710Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260312-002029709-001684","stage":"proposal","message":"Triage created narrowed proposal PRP-20260312-002029709-001684 from PRP-PILOT-20260311-CLEAN","meta":{}}
 {"ts":"2026-03-12T00:20:29.799Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260312-002029709-001684","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
 {"ts":"2026-03-12T00:20:29.844Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260312-002029709-001684","stage":"build","message":"Builder started implementation (attempt 4)","meta":{}}
+{"ts":"2026-03-12T03:10:29.674Z","jobId":null,"proposalId":null,"stage":"maintenance","message":"Proposal dedupe merged 1 duplicate proposal(s)","meta":{}}
+{"ts":"2026-03-12T03:10:29.941Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260311-125530710-003777","stage":"build","message":"Builder started implementation (attempt 4)","meta":{}}
