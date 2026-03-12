@@ -76,7 +76,8 @@ async function main() {
   const targetFiles = [...new Set([...changeSpecFiles, ...(proposal.files_expected || [])])].slice(0, 5);
   job.quality = { ...(job.quality || {}), lastTriedFile: targetFiles[0] || null };
   for (const rel of targetFiles) {
-    if (proposal.priority !== 'P1' && recentlyTouched.has(rel)) continue;
+    const cooldownApplies = proposal.priority !== 'P1' && recentlyTouched.has(rel) && Number(job.retries?.build || 0) < 1;
+    if (cooldownApplies) continue;
     const full = path.join(process.cwd(), rel);
     try {
       await fs.access(full);
@@ -110,7 +111,7 @@ async function main() {
 
   if (changedFiles.length === 0) {
     job.retries.build += 1;
-    const cooldownBlocked = (proposal.files_expected || []).slice(0, 5).every((f) => recentlyTouched.has(f));
+    const cooldownBlocked = Number(job.retries?.build || 0) < 1 && (proposal.files_expected || []).slice(0, 5).every((f) => recentlyTouched.has(f));
 
     job.state = 'proposal';
     job.ownerAgent = 'planner';

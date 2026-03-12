@@ -84,6 +84,11 @@ for (const c of candidates) {
   const risk = c.category === 'security' ? 'high' : c.category === 'performance' ? 'medium' : 'low';
   const impact = c.forceImpact || (impactScore >= 4 ? 'high' : 'medium');
   const priority = c.forcePriority || (risk === 'high' || impact === 'high' ? 'P1' : 'P2');
+  const targetFile = c.category === 'ux'
+    ? 'src/app/[username]/portfolio_public/page.tsx'
+    : c.category === 'performance'
+      ? 'src/components/PublicPortfolioView.tsx'
+      : 'src/services/marketData.ts';
 
   const proposal = {
     id: makeId('PRP'),
@@ -117,24 +122,25 @@ for (const c of candidates) {
       'All required quality checks pass.',
       'Reviewer can verify impact from summary + evidence without guessing intent.',
     ],
-    kpi_target: 'Target KPI: improve a user-facing quality metric (clarity/latency/error) with explicit before/after threshold in artifacts.',
-    benchmark_delta: 'Benchmark delta: identify best fintech pattern gap and document how this change narrows that gap.',
+    kpi_target: `In ${targetFile}, improve one measurable QA/flow metric from baseline >=3/10 ambiguity/fail cases to <=1/10 across a 20-case checklist.`,
+    benchmark_delta: `Baseline: ${targetFile} lacks one benchmark-aligned clarity/reliability pattern. Target: implement the missing pattern and document >=70% gap closure with before/after notes.`,
     risk_controls: [
-      'Constrain change to scoped files and single functional intent.',
-      'Require verification artifacts before review_ready.',
+      `Scope lock: modify only ${targetFile} with one functional intent.`,
+      'Rollback guard: revert single-file patch if lint/unit/required checks fail.',
+      'Gate: do not move to review_ready without verification artifacts and check pass evidence.',
     ],
     non_goals: [
       'No unrelated refactor.',
       'No broad redesign outside scoped files.',
       'No production deploy automation without explicit human approval.',
     ],
-    files_expected: c.category === 'ux' ? ['src/app/[username]/portfolio_public/page.tsx'] : c.category === 'performance' ? ['src/components/PublicPortfolioView.tsx'] : ['src/services/marketData.ts'],
+    files_expected: [targetFile],
     change_spec: [{
-      file: c.category === 'ux' ? 'src/app/[username]/portfolio_public/page.tsx' : c.category === 'performance' ? 'src/components/PublicPortfolioView.tsx' : 'src/services/marketData.ts',
-      change: 'Apply one concrete, user-impacting change with explicit acceptance outcome and reproducible verification.',
+      file: targetFile,
+      change: `Implement one concrete change in ${targetFile} with explicit acceptance criteria, reviewer checklist references, and minimal blast radius.`,
       why: 'Directly closes detected signal-to-benchmark gap with scoped implementation.',
     }],
-    tests_required: ['lint', 'unit'],
+    tests_required: ['lint', 'unit', ...(c.category === 'benchmark' || c.category === 'performance' ? ['performance'] : [])],
     rollback_plan: 'Revert local branch to previous commit, remove generated artifacts for this job, and restore previous state snapshot.',
   };
 
