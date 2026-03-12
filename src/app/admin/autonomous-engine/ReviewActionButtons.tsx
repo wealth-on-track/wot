@@ -30,8 +30,9 @@ export default function ReviewActionButtons({ jobId }: { jobId: string }) {
   const busy = isPending || !!pendingAction;
 
   return (
-    <div style={{ display: 'flex', gap: 8 }}>
+    <div className="ae-review-actions" style={{ display: 'flex', gap: 8 }}>
       <button
+        className="ae-action-btn"
         type="button"
         onClick={() => run('approve')}
         disabled={busy}
@@ -40,6 +41,7 @@ export default function ReviewActionButtons({ jobId }: { jobId: string }) {
         {pendingAction === 'approve' ? 'Saving…' : 'Approve'}
       </button>
       <button
+        className="ae-action-btn"
         type="button"
         onClick={() => run('reject')}
         disabled={busy}

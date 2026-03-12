@@ -263,7 +263,7 @@ export default async function AutonomousEnginePage({
             <>
               <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#f8fafc' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <div className="ae-flow-row" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                     {flowForSelected.map((s, idx) => {
                       const current = flowForSelected.indexOf(
                         selected.state === 'reverted' ? 'rejected' : selected.state,
@@ -283,7 +283,7 @@ export default async function AutonomousEnginePage({
               </div>
 
               <div style={{ border: '1px solid #d7e0ee', borderRadius: 10, padding: 10, background: '#f8fafc', display: 'grid', gap: 8 }}>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div className="ae-meta-chips" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <div style={{ border: '1px solid #dbe3ef', background: '#ffffff', color: '#0f172a', borderRadius: 8, padding: '7px 10px', fontSize: 12, fontWeight: 700 }}>
                     {selected.title}
                   </div>
@@ -320,7 +320,7 @@ export default async function AutonomousEnginePage({
                   <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#f8fafc', padding: '8px 10px', fontSize: 13, color: '#0f172a' }}>
                     {selected.summary || '-'}
                   </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div className="ae-summary-row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <div style={{ border: '1px solid #dbe3ef', borderRadius: 8, background: '#ffffff', padding: '6px 10px', fontSize: 12, color: '#0f172a' }}>
                       Test results: <strong style={{ textTransform: 'uppercase' }}>{selected.testResults || '-'}</strong>
                     </div>
@@ -522,11 +522,30 @@ export default async function AutonomousEnginePage({
       <style>{`
         @media (max-width: 960px) {
           .ae-top-nav {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #f8fafc;
+            padding-bottom: 4px;
             flex-wrap: wrap !important;
             overflow-x: visible !important;
             gap: 6px !important;
           }
           .ae-top-nav > * {
+            flex: 0 0 auto;
+            min-height: 36px;
+          }
+          .ae-flow-row,
+          .ae-meta-chips,
+          .ae-summary-row {
+            overflow-x: auto;
+            flex-wrap: nowrap !important;
+            padding-bottom: 2px;
+          }
+          .ae-flow-row > *,
+          .ae-meta-chips > *,
+          .ae-summary-row > * {
+            white-space: nowrap;
             flex: 0 0 auto;
           }
           .ae-layout-grid {
@@ -561,6 +580,23 @@ export default async function AutonomousEnginePage({
           .ae-timeline-head > :last-child,
           .ae-timeline-row > :last-child {
             display: none;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .ae-review-actions {
+            width: 100%;
+          }
+          .ae-action-btn {
+            flex: 1 1 0;
+            min-height: 40px;
+          }
+          .ae-timeline-head {
+            display: none !important;
+          }
+          .ae-timeline-row {
+            grid-template-columns: 1fr !important;
+            gap: 4px !important;
           }
         }
       `}</style>
