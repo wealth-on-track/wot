@@ -123,9 +123,17 @@ const rewriteOnce = (p, result, job) => {
     mustFix.push('Align change_spec with files_expected');
   }
   if (result.codes.includes('GENERIC_TEXT')) {
-    np.problem = `In ${targetFile}, users/reviewers cannot consistently interpret output; this creates avoidable trust friction and slows review decisions.`;
-    np.proposed_change = `Edit ${targetFile} with one explicit behavior/text adjustment, add acceptance checklist references, and keep scope to a single functional change.`;
-    np.expected_benefit = `Expected outcome: deterministic interpretation in QA (>=90% agreement over 20 checks) and faster path to review_ready without rework loops.`;
+    const category = String(np.category || '').toLowerCase();
+    const categoryGoal = category === 'performance'
+      ? 'reduce measured latency and improve responsiveness'
+      : category === 'security'
+        ? 'reduce exposure and tighten guardrails'
+        : 'improve interpretation clarity and trust';
+    np.problem = `In ${targetFile}, the current behavior does not reliably ${categoryGoal}, causing measurable friction in review and user outcomes.`;
+    np.proposed_change = `Edit ${targetFile} with one explicit functional adjustment aligned to ${category} goals, include acceptance checklist references, and keep scope to a single functional change.`;
+    np.expected_benefit = category === 'performance'
+      ? `Expected outcome: measurable latency improvement (target >=20% on scoped path) and faster path to review_ready without rework loops.`
+      : `Expected outcome: deterministic QA interpretation (>=90% agreement over 20 checks) and faster path to review_ready without rework loops.`;
     mustFix.push('Replace generic narrative with concrete scoped language');
   }
   if (result.codes.includes('USER_FACING_MISS')) {
@@ -156,6 +164,14 @@ const rewriteOnce = (p, result, job) => {
   return { proposal: np, mustFix };
 };
 
+const HARD_HUMAN_REVIEW_REASONS = new Set([
+  'repeated_no_changed_files',
+  'missing_implementation_diff',
+  'planning_timeout',
+  'exhausted_retries_rework',
+  'repeated_verify_failures',
+]);
+
 let updated = 0;
 for (const job of jobs) {
   if (job.state !== 'proposal') continue;
@@ -165,11 +181,20 @@ for (const job of jobs) {
   const confidenceOnlyEscalation = job.quality?.status === 'needs_human_review'
     && (job.quality?.feedback?.reject_reason_codes || []).every((c) => c === 'CONFIDENCE_LOW')
     && Number(job.retries?.testing || 0) < 2;
+  const hardHumanReview = job.quality?.status === 'needs_human_review'
+    && HARD_HUMAN_REVIEW_REASONS.has(String(job.quality?.reason || ''))
+    && !confidenceOnlyEscalation;
   const needsRevision = job.quality?.status === 'needs_revision' || confidenceOnlyEscalation;
   const first = scoreProposal(p);
 
   const priorCodes = job.quality?.feedback?.reject_reason_codes || [];
   if (priorCodes.includes('NO_CHANGED_FILES') && !first.codes.includes('NO_CHANGED_FILES')) first.codes.push('NO_CHANGED_FILES');
+
+  if (hardHumanReview) {
+    job.quality = { ...(job.quality || {}), checkedAt: nowIso(), sticky: true };
+    updated += 1;
+    continue;
+  }
 
   // stop endless auto-loop: after repeated verify failures, escalate to human review
   if (Number(job.retries?.testing || 0) >= 2) {

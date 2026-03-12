@@ -24,9 +24,14 @@ for (const job of jobs) {
     job.timestamps.updatedAt = nowIso();
     continue;
   }
-  const candidates = ['src/components/PublicPortfolioView.tsx','src/components/mobile/MobileDashboard.tsx','src/components/mobile/MobileHeader.tsx'];
+  const defaultCandidates = ['src/components/PublicPortfolioView.tsx','src/components/mobile/MobileDashboard.tsx','src/components/mobile/MobileHeader.tsx'];
+  const proposalCandidates = [
+    ...((p.change_spec || []).map((x) => x?.file).filter(Boolean)),
+    ...((p.files_expected || []).filter(Boolean)),
+  ];
+  const uniqueCandidates = [...new Set([...proposalCandidates, ...defaultCandidates])];
   const current = (p.files_expected || [])[0];
-  const rotated = candidates.find((c) => c !== current) || current;
+  const rotated = uniqueCandidates.find((c) => c !== current) || current;
 
   const narrowed = {
     ...p,
