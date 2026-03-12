@@ -541,6 +541,8 @@ export default async function AutonomousEnginePage({
             overflow-x: auto;
             flex-wrap: nowrap !important;
             padding-bottom: 2px;
+            -webkit-overflow-scrolling: touch;
+            scroll-snap-type: x proximity;
           }
           .ae-flow-row > *,
           .ae-meta-chips > *,
@@ -593,6 +595,12 @@ export default async function AutonomousEnginePage({
           .ae-top-nav .card {
             font-size: 11px !important;
             padding: 6px 8px !important;
+          }
+          .ae-top-nav {
+            scrollbar-width: thin;
+          }
+          .ae-top-nav::-webkit-scrollbar {
+            height: 4px;
           }
           .ae-review-actions {
             width: 100%;
