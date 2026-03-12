@@ -18,7 +18,7 @@
   {
     "check": "integration",
     "cmd": "CHANGED_FILES=src/components/mobile/MobileDashboard.tsx node scripts/autonomous-engine/check-integration.mjs",
-    "status": "pass"
+    "status": "skipped"
   },
   {
     "check": "e2e",

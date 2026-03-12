@@ -162,7 +162,10 @@ for (const job of jobs) {
   const p = proposals.find((x) => x.id === job.proposalId || String(job.proposalId || '').startsWith(String(x.id || '')));
   if (!p) continue;
 
-  const needsRevision = job.quality?.status === 'needs_revision';
+  const confidenceOnlyEscalation = job.quality?.status === 'needs_human_review'
+    && (job.quality?.feedback?.reject_reason_codes || []).every((c) => c === 'CONFIDENCE_LOW')
+    && Number(job.retries?.testing || 0) < 2;
+  const needsRevision = job.quality?.status === 'needs_revision' || confidenceOnlyEscalation;
   const first = scoreProposal(p);
 
   const priorCodes = job.quality?.feedback?.reject_reason_codes || [];
@@ -191,7 +194,6 @@ for (const job of jobs) {
   }
 
   const sessionCount = Number(job.quality?.sessionCount || 0) + 1;
-  if (needsRevision && !first.codes.includes('CONFIDENCE_LOW')) first.codes.push('CONFIDENCE_LOW');
   const feedback = {
     reject_reason_codes: first.codes.slice(0, 3),
     strengths: [

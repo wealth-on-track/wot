@@ -57,8 +57,8 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Implementation is file-level concrete: src/components/mobile/MobileDashboard.tsx, one functional change, measurable acceptance. (quality-revised)",
-    "proposalId": "PRP-20260312-040030116-001212",
+    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Implementation is file-level concrete: src/components/PublicPortfolioView.tsx, one functional change, measurable acceptance. (quality-revised)",
+    "proposalId": "PRP-20260312-040530520-001448",
     "changedFiles": [
       "src/components/mobile/MobileDashboard.tsx"
     ],
@@ -79,7 +79,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-12T04:00:30.162Z",
+      "checkedAt": "2026-03-12T04:05:30.564Z",
       "sessionCount": 1,
       "feedback": {
         "reject_reason_codes": [
@@ -116,8 +116,8 @@
     },
     "timestamps": {
       "createdAt": "2026-03-11T16:20:31.062Z",
-      "updatedAt": "2026-03-12T04:00:30.208Z"
+      "updatedAt": "2026-03-12T04:05:30.609Z"
     },
-    "buildAttempt": 4
+    "buildAttempt": 5
   }
 ]
