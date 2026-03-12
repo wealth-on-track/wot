@@ -138,3 +138,11 @@
 {"ts":"2026-03-12T00:20:29.844Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260312-002029709-001684","stage":"build","message":"Builder started implementation (attempt 4)","meta":{}}
 {"ts":"2026-03-12T03:10:29.674Z","jobId":null,"proposalId":null,"stage":"maintenance","message":"Proposal dedupe merged 1 duplicate proposal(s)","meta":{}}
 {"ts":"2026-03-12T03:10:29.941Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260311-125530710-003777","stage":"build","message":"Builder started implementation (attempt 4)","meta":{}}
+{"ts":"2026-03-12T03:10:30.051Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260311-125530710-003777","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
+{"ts":"2026-03-12T03:10:32.701Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260311-125530710-003777","stage":"proposal","message":"Verification failed (lint); sent back to proposal for revision","meta":{}}
+{"ts":"2026-03-12T03:10:32.830Z","jobId":"JOB-20260311-161031334-001818","proposalId":"PRP-20260311-125530710-003777","stage":"review_ready","message":"Review reminder: waiting 640m for human decision (approve/reject).","meta":{}}
+{"ts":"2026-03-12T03:15:30.554Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260311-125530710-003777","stage":"proposal","message":"Proposal revised in one feedback session and passed quality gate","meta":{}}
+{"ts":"2026-03-12T04:00:30.117Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260312-040030116-001212","stage":"proposal","message":"Triage created narrowed proposal PRP-20260312-040030116-001212 from PRP-20260311-125530710-003777","meta":{}}
+{"ts":"2026-03-12T04:00:30.162Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260312-040030116-001212","stage":"proposal","message":"Proposal revised in one feedback session and passed quality gate","meta":{}}
+{"ts":"2026-03-12T04:00:30.208Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260312-040030116-001212","stage":"approved_for_build","message":"Dispatched to approved_for_build (priority=P1)","meta":{}}
+{"ts":"2026-03-12T04:00:30.255Z","jobId":"JOB-20260311-162031062-001321","proposalId":"PRP-20260312-040030116-001212","stage":"build","message":"Builder started implementation (attempt 5)","meta":{}}
