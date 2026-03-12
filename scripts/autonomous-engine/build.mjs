@@ -36,6 +36,7 @@ async function main() {
     job.state = 'abandoned_with_reason';
     job.finalReason = 'proposal_missing';
     job.timestamps.updatedAt = nowIso();
+    await setActiveJobLock(null);
     await writeJson(files.jobs, jobs);
     console.log('[build] proposal missing');
     return;
@@ -111,14 +112,14 @@ async function main() {
 
   if (changedFiles.length === 0) {
     job.retries.build += 1;
-    const cooldownBlocked = Number(job.retries?.build || 0) < 1 && (proposal.files_expected || []).slice(0, 5).every((f) => recentlyTouched.has(f));
+    const cooldownBlocked = Number(job.retries?.build || 0) <= 1 && (proposal.files_expected || []).slice(0, 5).every((f) => recentlyTouched.has(f));
 
     job.state = 'proposal';
     job.ownerAgent = 'planner';
     job.quality = {
       status: 'needs_revision',
       checkedAt: nowIso(),
-      sessionCount: 0,
+      sessionCount: Number(job.quality?.sessionCount || 0),
       feedback: {
         reject_reason_codes: ['NO_CHANGED_FILES'],
         must_fix: ['Adjust target file/scope so build can produce a meaningful diff'],

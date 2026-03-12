@@ -175,6 +175,15 @@ for (const job of jobs) {
     continue;
   }
 
+  // stop proposal<->build ping-pong: repeated no-diff attempts need human intervention
+  const noDiffLoop = Number(job.retries?.build || 0) >= 2
+    && (job.quality?.feedback?.reject_reason_codes || []).includes('NO_CHANGED_FILES');
+  if (noDiffLoop) {
+    job.quality = { ...(job.quality || {}), status: 'needs_human_review', checkedAt: nowIso(), reason: 'repeated_no_changed_files' };
+    updated += 1;
+    continue;
+  }
+
   if (first.pass && !needsRevision) {
     job.quality = { status: 'pass', checkedAt: nowIso(), sessionCount: job.quality?.sessionCount || 0 };
     updated += 1;

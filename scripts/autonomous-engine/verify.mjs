@@ -54,6 +54,7 @@ async function main() {
 
   if (allPass) {
     job.state = 'review_ready';
+    await setActiveJobLock(null);
     await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'review_ready', message: 'Verifier passed all required checks; ready for review' });
   } else {
     job.retries.testing += 1;
@@ -70,7 +71,12 @@ async function main() {
 
     job.state = 'proposal';
     job.ownerAgent = 'planner';
-    job.quality = { status: 'needs_revision', checkedAt: nowIso(), sessionCount: 0, feedback };
+    job.quality = {
+      status: 'needs_revision',
+      checkedAt: nowIso(),
+      sessionCount: Number(job.quality?.sessionCount || 0),
+      feedback,
+    };
     await setActiveJobLock(null);
     await writeArtifact(job.id, 'failure-analysis.txt', `Verification failed checks: ${failedChecks.join(', ')}`);
     await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'proposal', message: `Verification failed (${failedChecks.join(', ')}); sent back to proposal for revision` });
