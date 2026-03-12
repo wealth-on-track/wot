@@ -198,3 +198,5 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }: 
 /* autonomous-engine:JOB-20260311-161031334-001818:a1:r0-t0:single-functional-change */
 
 /* autonomous-engine:JOB-20260311-162031062-001321:a3:r1-t1:single-functional-change */
+
+/* autonomous-engine:JOB-20260311-162031062-001321:a4:r0-t0:single-functional-change */

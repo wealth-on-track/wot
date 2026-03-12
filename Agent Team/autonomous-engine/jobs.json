@@ -22,7 +22,7 @@
       "planning": 0,
       "build": 0,
       "testing": 0,
-      "verification": 1
+      "verification": 2
     },
     "constraints": {
       "maxFiles": 5,
@@ -41,7 +41,9 @@
       "createdAt": "2026-03-11T16:10:31.333Z",
       "updatedAt": "2026-03-11T16:30:31.989Z"
     },
-    "buildAttempt": 1
+    "buildAttempt": 1,
+    "reviewNudgeAt": "2026-03-12T00:10:29.891Z",
+    "reviewReminderAt": "2026-03-12T00:10:29.936Z"
   },
   {
     "id": "JOB-20260311-162031062-001321",
@@ -55,15 +57,15 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "In src/components/PublicPortfolioView.tsx, add an explicit confidence legend block directly under insight title and update label text to map each level to plain-language meaning. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised)",
-    "proposalId": "PRP-PILOT-20260311-CLEAN",
+    "summary": "In src/components/PublicPortfolioView.tsx, add an explicit confidence legend block directly under insight title and update label text to map each level to plain-language meaning. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (quality-revised) | sent back to proposal (no changed files, cooldown active) | triaged to narrower proposal scope",
+    "proposalId": "PRP-20260312-002029709-001684",
     "changedFiles": [],
     "testResults": "fail",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
       "planning": 0,
-      "build": 1,
-      "testing": 1,
+      "build": 0,
+      "testing": 0,
       "verification": 0
     },
     "constraints": {
@@ -75,46 +77,13 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-11T16:35:33.663Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "NO_CHANGED_FILES",
-          "CONFIDENCE_LOW"
-        ],
-        "strengths": [
-          "Category alignment: ux",
-          "Initial impact/confidence/effort: 5 / 4 / 2",
-          "Scope remains constrained for controlled delivery."
-        ],
-        "gaps": [
-          "NO_CHANGED_FILES",
-          "Confidence is low; proposal needs stronger verification framing."
-        ],
-        "must_fix": [
-          "NO_CHANGED_FILES",
-          "CONFIDENCE_LOW"
-        ],
-        "evidence_gap": null,
-        "rewrite_plan": [
-          "Rewrite problem statement to explain user/system consequence clearly.",
-          "Add concrete evidence and tie it to measurable acceptance criteria.",
-          "Upgrade proposal language from generic intent to execution-ready plan.",
-          "Re-score impact/confidence after rewrite and keep effort realistic."
-        ],
-        "acceptance_checklist": [
-          "Impact >= 3",
-          "Confidence >= 3",
-          "Evidence count >= 2",
-          "User-facing value explicitly stated"
-        ]
-      },
-      "revised": true
+      "checkedAt": "2026-03-12T00:20:29.754Z",
+      "sessionCount": 0
     },
     "timestamps": {
       "createdAt": "2026-03-11T16:20:31.062Z",
-      "updatedAt": "2026-03-11T16:35:33.710Z"
+      "updatedAt": "2026-03-12T00:20:29.799Z"
     },
-    "buildAttempt": 2
+    "buildAttempt": 3
   }
 ]
