@@ -608,7 +608,8 @@ export default async function AutonomousEnginePage({
           .ae-action-btn,
           .ae-deploy-btn {
             flex: 1 1 0;
-            min-height: 40px;
+            min-height: 42px;
+            font-size: 12px !important;
           }
           .ae-timeline-head {
             display: none !important;
@@ -617,10 +618,12 @@ export default async function AutonomousEnginePage({
             grid-template-columns: 1fr !important;
             gap: 4px !important;
             font-size: 11px !important;
+            line-height: 1.35;
           }
           .ae-timeline-row > * {
             border-left: 2px solid #e2e8f0;
             padding-left: 6px;
+            margin-bottom: 2px;
           }
         }
       `}</style>
