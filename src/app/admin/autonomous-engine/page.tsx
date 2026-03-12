@@ -626,6 +626,21 @@ export default async function AutonomousEnginePage({
             margin-bottom: 2px;
           }
         }
+
+        @media (max-width: 390px) {
+          .ae-top-nav .card {
+            font-size: 10px !important;
+            padding: 5px 7px !important;
+          }
+          .ae-timeline-row {
+            font-size: 10px !important;
+          }
+          .ae-action-btn,
+          .ae-deploy-btn {
+            min-height: 40px;
+            font-size: 11px !important;
+          }
+        }
       `}</style>
     </main>
   );
