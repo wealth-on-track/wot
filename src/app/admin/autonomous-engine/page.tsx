@@ -590,6 +590,10 @@ export default async function AutonomousEnginePage({
             border-radius: 10px !important;
             padding: 8px !important;
           }
+          .ae-top-nav .card {
+            font-size: 11px !important;
+            padding: 6px 8px !important;
+          }
           .ae-review-actions {
             width: 100%;
           }
@@ -604,6 +608,11 @@ export default async function AutonomousEnginePage({
           .ae-timeline-row {
             grid-template-columns: 1fr !important;
             gap: 4px !important;
+            font-size: 11px !important;
+          }
+          .ae-timeline-row > * {
+            border-left: 2px solid #e2e8f0;
+            padding-left: 6px;
           }
         }
       `}</style>
