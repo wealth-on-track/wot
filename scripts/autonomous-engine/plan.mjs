@@ -109,4 +109,5 @@ for (const raw of proposals) {
 }
 
 await writeJson(files.jobs, jobs);
+await writeJson(files.proposals, proposals);
 console.log(`[plan] created ${created} job(s)`);

@@ -56,10 +56,15 @@ for (const j of jobs) {
   }
 
   if (j.state === 'review_ready' && age > limitsMin.verification) {
-    // keep review items visible; no auto-abandon
-    j.retries.verification += 1;
-    j.timestamps.updatedAt = nowIso();
-    touched += 1;
+    // keep review items visible; no auto-abandon or timestamp churn
+    // nudge at most once per hour to avoid retry inflation / ping-pong metrics
+    const lastNudgeAt = new Date(j.reviewNudgeAt || 0).getTime();
+    const oneHourMs = 60 * 60 * 1000;
+    if (!Number.isFinite(lastNudgeAt) || (Date.now() - lastNudgeAt) >= oneHourMs) {
+      j.retries.verification += 1;
+      j.reviewNudgeAt = nowIso();
+      touched += 1;
+    }
   }
 
   if (!FINAL_STATES.includes(j.state) && j.retries.build >= 3 && j.retries.testing >= 3) {
