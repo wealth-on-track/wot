@@ -192,7 +192,7 @@ export default async function AutonomousEnginePage({
         background: 'linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)',
         boxShadow: '0 3px 10px rgba(15,23,42,0.06)',
       }}>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', alignItems: 'center' }}>
+        <div className="ae-top-nav" style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', alignItems: 'center' }}>
           <Link href={`/admin/autonomous-engine?section=${selectedSection}&sidebar=${showSidebar ? '0' : '1'}&admin=${showAdminPanel ? '1' : '1'}&panel=${showList ? '1' : '0'}&right=${showRight ? '1' : '0'}${selected ? `&job=${encodeURIComponent(selected.id)}` : ''}`} title={showSidebar ? 'Sol admin menüyü gizle' : 'Sol admin menüyü aç'} className="card" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', width: 34, height: 34, border: '1px solid #60a5fa', borderRadius: 10, background: '#eff6ff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', fontWeight: 900, color: '#1d4ed8' }}>
             🧭
           </Link>
@@ -521,6 +521,14 @@ export default async function AutonomousEnginePage({
 
       <style>{`
         @media (max-width: 960px) {
+          .ae-top-nav {
+            flex-wrap: wrap !important;
+            overflow-x: visible !important;
+            gap: 6px !important;
+          }
+          .ae-top-nav > * {
+            flex: 0 0 auto;
+          }
           .ae-layout-grid {
             grid-template-columns: 1fr !important;
             gap: 6px !important;
@@ -546,7 +554,7 @@ export default async function AutonomousEnginePage({
           }
           .ae-timeline-head,
           .ae-timeline-row {
-            grid-template-columns: 112px 116px 1fr !important;
+            grid-template-columns: 90px 98px 1fr !important;
             gap: 6px !important;
             font-size: 11px !important;
           }
