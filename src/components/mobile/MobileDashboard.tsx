@@ -23,10 +23,23 @@ interface MobileDashboardProps {
     totalValueEUR: number;
     assets: AssetDisplay[];
     exchangeRates: Record<string, number>;
-    preferences?: any;
+    preferences?: { defaultRange?: string };
     isLiveUpdating?: boolean;
     liveProgress?: number;
     buildTag?: string;
+}
+
+interface MobileSearchResult {
+    symbol: string;
+    type?: string;
+    source?: string;
+    exchange?: string;
+    sector?: string;
+    country?: string;
+    currency?: string;
+    platform?: string;
+    fullName?: string;
+    name?: string;
 }
 
 
@@ -65,7 +78,7 @@ export function MobileDashboard({
         return () => clearTimeout(timer);
     }, [highlightAssetId]);
 
-    const handleAddFromSearch = async (searchResult: any) => {
+    const handleAddFromSearch = async (searchResult: MobileSearchResult) => {
         let fetchedPrice = 0;
         let sector = searchResult.sector || 'UNKNOWN';
         let country = searchResult.country || 'UNKNOWN';
@@ -80,10 +93,10 @@ export function MobileDashboard({
                 const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 3000));
 
                 // Race the API call against the timeout
-                const data: any = await Promise.race([
+                const data = await Promise.race([
                     getMarketPriceAction(searchResult.symbol, searchResult.type === 'ETF' ? 'FUND' : searchResult.type, source),
                     timeoutPromise
-                ]);
+                ]) as { price?: number; previousClose?: number; sector?: string; country?: string } | null;
 
                 if (data) {
                     fetchedPrice = (data.price && data.price > 0) ? data.price : (data.previousClose || 0);
