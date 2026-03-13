@@ -241,3 +241,5 @@
 {"ts":"2026-03-13T08:04:36.384Z","jobId":"JOB-20260313-080320979-001980","proposalId":"PRP-20260313080312-PUBEMPTY-UX","stage":"test","message":"Build completed; moved to test with 1 file(s)","meta":{}}
 {"ts":"2026-03-13T08:04:36.906Z","jobId":"JOB-20260313-080320979-001980","proposalId":"PRP-20260313080312-PUBEMPTY-UX","stage":"review_ready","message":"Verifier passed all required checks; ready for review","meta":{}}
 {"ts":"2026-03-13T08:05:31.305Z","jobId":"JOB-20260312-050901046-001373","proposalId":"PRP-20260312-050900853-003589","stage":"review_ready","message":"Review reminder: waiting 32m for human decision (approve/reject).","meta":{}}
+{"ts":"2026-03-13T08:35:31.306Z","jobId":"JOB-20260313-080320979-001980","proposalId":"PRP-20260313080312-PUBEMPTY-UX","stage":"review_ready","message":"Review reminder: waiting 30m for human decision (approve/reject).","meta":{}}
+{"ts":"2026-03-13T09:02:18.476Z","jobId":"JOB-20260312-050901046-001373","proposalId":"PRP-20260312-050900853-003589","stage":"approved","message":"Approved: moved to completed (no auto deploy)","meta":{}}

@@ -1,52 +1,5 @@
 [
   {
-    "id": "JOB-20260312-050901046-001373",
-    "title": "Improve empty portfolio onboarding with clearer next actions",
-    "category": "ux",
-    "state": "review_ready",
-    "risk": "low",
-    "impact": "high",
-    "priority": "P1",
-    "impactScore": 4,
-    "confidenceScore": 4,
-    "effortScore": 2,
-    "userFacing": true,
-    "summary": "Edit src/app/[username]/portfolio_public/page.tsx with one explicit behavior/text adjustment, add acceptance checklist references, and keep scope to a single functional change. Implementation is file-level concrete: src/app/[username]/portfolio_public/page.tsx, one functional change, measurable acceptance. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
-    "proposalId": "PRP-20260312-050900853-003589",
-    "changedFiles": [
-      "src/app/[username]/portfolio_public/page.tsx"
-    ],
-    "testResults": "pass",
-    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
-    "retries": {
-      "planning": 102,
-      "build": 2,
-      "testing": 1,
-      "verification": 1
-    },
-    "constraints": {
-      "maxFiles": 5,
-      "maxFunctionalChanges": 1,
-      "noUnrelatedRefactor": true,
-      "functionalScope": "src/app"
-    },
-    "ownerAgent": "verifier",
-    "quality": {
-      "status": "pass",
-      "checkedAt": "2026-03-13T07:32:42.173Z",
-      "sessionCount": 3,
-      "reason": "rescoped_verification_unit_only",
-      "lastTriedFile": "src/app/[username]/portfolio_public/page.tsx"
-    },
-    "timestamps": {
-      "createdAt": "2026-03-12T05:09:01.046Z",
-      "updatedAt": "2026-03-13T07:32:53.565Z"
-    },
-    "buildAttempt": 4,
-    "reviewNudgeAt": "2026-03-13T07:45:31.338Z",
-    "reviewReminderAt": "2026-03-13T08:05:31.305Z"
-  },
-  {
     "id": "JOB-20260312-050901047-002631",
     "title": "Reduce portfolio dashboard load latency via route-level lazy chunking",
     "category": "performance",
@@ -64,7 +17,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 106,
+      "planning": 108,
       "build": 2,
       "testing": 0,
       "verification": 0
@@ -78,7 +31,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T08:31:42.478Z",
+      "checkedAt": "2026-03-13T09:02:10.504Z",
       "sessionCount": 2,
       "reason": "planning_timeout",
       "feedback": {
@@ -98,7 +51,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-12T05:09:01.047Z",
-      "updatedAt": "2026-03-13T08:25:31.282Z"
+      "updatedAt": "2026-03-13T08:55:31.278Z"
     },
     "buildAttempt": 2
   },
@@ -120,7 +73,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 39,
+      "planning": 41,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -134,7 +87,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T08:31:42.478Z",
+      "checkedAt": "2026-03-13T09:02:10.505Z",
       "sessionCount": 1,
       "reason": "planning_timeout",
       "feedback": {
@@ -154,7 +107,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-12T15:10:30.672Z",
-      "updatedAt": "2026-03-13T08:31:33.190Z"
+      "updatedAt": "2026-03-13T09:00:31.615Z"
     },
     "buildAttempt": 1
   },
@@ -176,7 +129,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 38,
+      "planning": 40,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -190,7 +143,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T08:31:42.478Z",
+      "checkedAt": "2026-03-13T09:02:10.505Z",
       "sessionCount": 0,
       "reason": "planning_timeout",
       "feedback": {
@@ -210,7 +163,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-12T22:55:32.799Z",
-      "updatedAt": "2026-03-13T08:30:31.696Z"
+      "updatedAt": "2026-03-13T09:00:31.615Z"
     },
     "buildAttempt": 1
   },
@@ -283,6 +236,7 @@
       "updatedAt": "2026-03-13T08:04:36.906Z"
     },
     "buildAttempt": 2,
-    "reviewNudgeAt": "2026-03-13T08:20:31.703Z"
+    "reviewNudgeAt": "2026-03-13T08:20:31.703Z",
+    "reviewReminderAt": "2026-03-13T08:35:31.306Z"
   }
 ]
