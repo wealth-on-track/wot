@@ -166,13 +166,20 @@ export function MobileDashboard({
             {/* Main Content */}
             {isOwner && isLiveUpdating && (
                 <div style={{ padding: '4px 12px 0 12px' }}>
-                    <div style={{
-                        width: '100%',
-                        height: 4,
-                        borderRadius: 999,
-                        background: 'rgba(255,255,255,0.08)',
-                        overflow: 'hidden'
-                    }}>
+                    <div
+                        role="progressbar"
+                        aria-label="Portfolio market sync progress"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={Math.max(0, Math.min(100, liveProgress))}
+                        style={{
+                            width: '100%',
+                            height: 4,
+                            borderRadius: 999,
+                            background: 'rgba(255,255,255,0.08)',
+                            overflow: 'hidden'
+                        }}
+                    >
                         <div style={{
                             width: `${Math.max(0, Math.min(100, liveProgress))}%`,
                             height: '100%',
@@ -181,6 +188,9 @@ export function MobileDashboard({
                             transition: 'width 220ms ease'
                         }} />
                     </div>
+                    <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text-secondary)' }}>
+                        Secure market sync in progress — your dashboard refreshes automatically.
+                    </p>
                 </div>
             )}
             <PullToRefresh>
