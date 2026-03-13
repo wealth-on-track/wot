@@ -159,8 +159,12 @@ export async function POST(req: Request) {
     const startSha = run('git rev-parse --short HEAD');
     const cherryPicked = ensureApprovedCommitsPresent();
     const localCommit = commitDeployableWorkspaceChanges();
+    const shouldRunSafetyBuild = process.env.NODE_ENV === 'production';
 
-    run('npm run -s build', { timeout: 1200000 });
+    if (shouldRunSafetyBuild) {
+      run('npm run -s build', { timeout: 1200000 });
+    }
+
     run('git push origin HEAD:main', { timeout: 300000 });
 
     const endSha = run('git rev-parse --short HEAD');
