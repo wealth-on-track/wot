@@ -1916,9 +1916,25 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                 fontSize: '13px',
                                 border: 'none',
                                 cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px'
                             }}
                         >
-                            Open Positions
+                            <span>Open Positions</span>
+                            <span style={{
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                fontVariantNumeric: 'tabular-nums',
+                                minWidth: '22px',
+                                padding: '1px 6px',
+                                borderRadius: '999px',
+                                background: activePositionTab === 'open' ? 'rgba(99,102,241,0.12)' : 'var(--bg-secondary)',
+                                color: activePositionTab === 'open' ? 'var(--accent)' : 'var(--text-muted)',
+                                textAlign: 'center'
+                            }}>
+                                {assets.length}
+                            </span>
                         </button>
 
                         {activePositionTab === 'open' && (
@@ -1961,10 +1977,26 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                             fontSize: '13px',
                             border: 'none',
                             cursor: 'pointer',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.2s',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px'
                         }}
                     >
-                        Closed Positions
+                        <span>Closed Positions</span>
+                        <span style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            fontVariantNumeric: 'tabular-nums',
+                            minWidth: '22px',
+                            padding: '1px 6px',
+                            borderRadius: '999px',
+                            background: activePositionTab === 'closed' ? 'rgba(99,102,241,0.12)' : 'var(--bg-secondary)',
+                            color: activePositionTab === 'closed' ? 'var(--accent)' : 'var(--text-muted)',
+                            textAlign: 'center'
+                        }}>
+                            {closedPositionsCount}
+                        </span>
                     </button>
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: '8px',
@@ -2836,10 +2868,10 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: plPercentage >= 0 ? '#34d399' : '#f87171', fontVariantNumeric: 'tabular-nums' }}>
+                                                                        <div style={{ fontSize: sizing.numberSize, fontWeight: 700, color: plPercentage >= 0 ? 'var(--success)' : 'var(--danger)', fontVariantNumeric: 'tabular-nums' }}>
                                                                             {plPercentage >= 0 ? '+' : ''}{Math.round(plPercentage)}%
                                                                         </div>
-                                                                        <div style={{ fontSize: sizing.smallNumberSize, color: plAmount >= 0 ? '#34d399' : '#f87171', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                                                        <div style={{ fontSize: sizing.smallNumberSize, color: plAmount >= 0 ? 'var(--success)' : 'var(--danger)', marginTop: '2px', fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                                                                             {plAmount >= 0 ? '+' : ''}{getCurrencySymbol(globalCurrency)}{formatNumber(plAmount, 0)}
                                                                         </div>
                                                                     </>
