@@ -526,6 +526,8 @@ export default async function AutonomousEnginePage({
         .ae-root .card {
           background: #ffffff;
           border-color: #d7e0ee;
+          word-break: break-word;
+          overflow-wrap: anywhere;
         }
         .ae-root summary {
           color: #334155;
@@ -650,6 +652,7 @@ export default async function AutonomousEnginePage({
             border-left: 2px solid #e2e8f0;
             padding-left: 6px;
             margin-bottom: 2px;
+            word-break: break-word;
           }
         }
 
