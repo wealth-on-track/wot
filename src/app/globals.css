@@ -2766,6 +2766,106 @@ body.light .wot-navbar {
   }
 }
 
+.public-access-gate-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: radial-gradient(85% 55% at 50% 0%, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 70%), var(--bg-primary);
+}
+
+.public-access-gate-card {
+  width: min(100%, 24rem);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.2rem;
+  background: linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 88%, black) 100%);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.2);
+  display: grid;
+  gap: 0.58rem;
+}
+
+body.light .public-access-gate-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
+}
+
+.public-access-gate-kicker {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 800;
+}
+
+.public-access-gate-title {
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.public-access-gate-copy {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.2rem;
+}
+
+.public-access-gate-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.72rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 0.68rem 0.78rem;
+  font-size: 0.88rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.public-access-gate-input:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 56%, var(--border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.public-access-gate-error {
+  color: var(--danger);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.public-access-gate-button {
+  width: 100%;
+  border: none;
+  border-radius: 0.72rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 84%, white) 0%, var(--accent) 100%);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.86rem;
+  padding: 0.68rem 0.8rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.public-access-gate-button:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.05);
+}
+
+.public-access-gate-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, white);
+  outline-offset: 2px;
+}
+
+.public-access-empty {
+  min-height: 32vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
 /* Public portfolio allocation (premium polish) */
 .public-allocation-shell {
   max-width: 61.25rem;

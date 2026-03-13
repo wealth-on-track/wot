@@ -57,13 +57,21 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
 
   if (!isOwner && !unlocked) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg-primary)' }}>
-        <form action={unlock} style={{ width: 320, padding: 20, border: '1px solid var(--border)', borderRadius: 12, background: 'var(--surface)' }}>
+      <div className="public-access-gate-shell">
+        <form action={unlock} className="public-access-gate-card">
           <input type="hidden" name="username" value={username} />
-          <div style={{ fontWeight: 700, marginBottom: 12 }}>Protected Portfolio</div>
-          <input name="password" type="password" placeholder="Password" style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid var(--border)', marginBottom: 10 }} />
-          {sp.e ? <div style={{ color: '#dc2626', fontSize: 12, marginBottom: 8 }}>Wrong password</div> : null}
-          <button type="submit" style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 700 }}>Enter</button>
+          <div className="public-access-gate-kicker">Private link</div>
+          <div className="public-access-gate-title">Protected portfolio</div>
+          <div className="public-access-gate-copy">Enter the access password to view this public snapshot.</div>
+          <input
+            name="password"
+            type="password"
+            placeholder="Password"
+            className="public-access-gate-input"
+            aria-label="Portfolio password"
+          />
+          {sp.e ? <div className="public-access-gate-error">Wrong password. Please try again.</div> : null}
+          <button type="submit" className="public-access-gate-button">Unlock portfolio</button>
         </form>
       </div>
     );
@@ -74,7 +82,7 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
     include: { Portfolio: { include: { Asset: true } } }
   });
 
-  if (!user?.Portfolio) return <div style={{ padding: 24 }}>Portfolio not found</div>;
+  if (!user?.Portfolio) return <div className="public-access-empty">Portfolio not found.</div>;
 
   const effectiveAssets = user.Portfolio.Asset.map((a: any) => ({
     ...a,
