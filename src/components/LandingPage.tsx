@@ -79,31 +79,18 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                         </Link>
 
                         {isLoggedIn ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                            <div className="hero-auth-cluster">
                                 <Link
                                     href={`/${username}`}
-                                    className="btn-primary"
-                                    style={{ padding: "0.7rem 1rem", borderRadius: "999px", fontSize: "0.85rem" }}
+                                    className="btn-primary hero-pill hero-pill-primary"
                                 >
                                     My Portfolio
                                     <ArrowRight size={16} />
                                 </Link>
-                                <form action={handleSignOut} style={{ margin: 0 }}>
+                                <form action={handleSignOut} className="hero-auth-form">
                                     <button
                                         type="submit"
-                                        style={{
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            gap: "0.4rem",
-                                            padding: "0.62rem 0.9rem",
-                                            borderRadius: "999px",
-                                            border: "1px solid var(--border)",
-                                            background: "color-mix(in oklab, var(--surface) 82%, transparent)",
-                                            color: "var(--text-secondary)",
-                                            fontSize: "0.84rem",
-                                            fontWeight: 600,
-                                            cursor: "pointer",
-                                        }}
+                                        className="hero-pill hero-pill-subtle hero-pill-danger"
                                     >
                                         <LogOut size={15} />
                                         Log Out
@@ -113,16 +100,7 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                         ) : (
                             <Link
                                 href="/login"
-                                style={{
-                                    textDecoration: "none",
-                                    color: "var(--text-primary)",
-                                    fontWeight: 650,
-                                    fontSize: "0.85rem",
-                                    border: "1px solid var(--border)",
-                                    padding: "0.5rem 0.8rem",
-                                    borderRadius: "999px",
-                                    background: "color-mix(in oklab, var(--surface) 86%, transparent)",
-                                }}
+                                className="hero-pill hero-pill-subtle"
                             >
                                 Sign In
                             </Link>

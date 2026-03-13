@@ -1633,8 +1633,66 @@ body.light .logo-letter-wt {
   transform: translateY(-1px);
 }
 
+.hero-auth-cluster {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.hero-auth-form {
+  margin: 0;
+}
+
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.62rem 0.95rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1;
+  border: 1px solid transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.hero-pill-primary {
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+}
+
+.hero-pill-subtle {
+  color: var(--text-primary);
+  border-color: var(--border);
+  background: color-mix(in oklab, var(--surface) 86%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.hero-pill-subtle:hover {
+  transform: translateY(-1px);
+  color: var(--text-primary);
+  border-color: color-mix(in oklab, var(--accent) 38%, var(--border));
+  background: color-mix(in oklab, var(--surface) 92%, var(--accent) 8%);
+}
+
+.hero-pill-danger {
+  color: var(--text-secondary);
+}
+
+.hero-pill-danger:hover {
+  color: #ef4444;
+  border-color: color-mix(in oklab, #ef4444 50%, var(--border));
+  background: color-mix(in oklab, #ef4444 14%, var(--surface));
+  box-shadow: 0 10px 20px color-mix(in oklab, #ef4444 18%, transparent);
+}
+
 .btn-primary:focus-visible,
 .btn-secondary:focus-visible,
+.hero-pill:focus-visible,
 .navbar-btn:focus-visible,
 .premium-icon-btn:focus-visible,
 .premium-input:focus-visible,
