@@ -82,7 +82,7 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
     include: { Portfolio: { include: { Asset: true } } }
   });
 
-  if (!user?.Portfolio) return <div className="public-access-empty">Portfolio not found.</div>;
+  if (!user?.Portfolio) return <div className="public-access-empty">Portfolio not found. Ask the owner to enable a shareable portfolio first.</div>;
 
   const effectiveAssets = user.Portfolio.Asset.map((a: any) => ({
     ...a,
