@@ -27,7 +27,10 @@ const toneClass = (value?: number) => {
 };
 
 export function PublicPortfolioView({ categories: initialCategories, canEdit }: { categories: Category[]; canEdit?: boolean }) {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(() => {
+    const strongest = [...initialCategories].sort((a, b) => b.pct - a.pct)[0]?.name;
+    return strongest ? new Set([strongest]) : new Set();
+  });
   const [categories, setCategories] = useState<Category[]>(initialCategories);
 
   const allExpanded = useMemo(() => categories.length > 0 && expanded.size >= categories.length, [expanded, categories.length]);
