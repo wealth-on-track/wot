@@ -122,7 +122,19 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                                 </form>
                             </div>
                         ) : (
-                            <Link href="/login" style={{ textDecoration: "none", color: "var(--text-secondary)", fontWeight: 600, fontSize: "0.9rem" }}>
+                            <Link
+                                href="/login"
+                                style={{
+                                    textDecoration: "none",
+                                    color: "var(--text-primary)",
+                                    fontWeight: 650,
+                                    fontSize: "0.85rem",
+                                    border: "1px solid var(--border)",
+                                    padding: "0.5rem 0.8rem",
+                                    borderRadius: "999px",
+                                    background: "color-mix(in oklab, var(--surface) 90%, transparent)",
+                                }}
+                            >
                                 Sign In
                             </Link>
                         )}
@@ -215,13 +227,19 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                             <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>No credit card · 2-minute setup · Free forever</div>
                         </div>
 
-                        {!isMobile && (
+                        {!isMobile ? (
                             <div style={{ position: "relative" }}>
                                 <div style={{ borderRadius: "22px", overflow: "hidden", border: "1px solid var(--border)", boxShadow: "0 20px 55px rgba(0,0,0,0.35)" }}>
                                     <Image src="/landing/Dashboard-overview-1.png" alt="WOT dashboard" width={860} height={620} style={{ width: "100%", height: "auto", display: "block" }} priority />
                                 </div>
                                 <div style={{ position: "absolute", right: -14, bottom: -26, width: 188, borderRadius: 18, overflow: "hidden", border: "2px solid var(--bg-primary)", boxShadow: "0 16px 35px rgba(0,0,0,0.4)" }}>
                                     <Image src="/landing/Mobile-view-1.png" alt="WOT mobile view" width={188} height={390} style={{ width: "100%", height: "auto", display: "block" }} />
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ marginTop: "0.2rem" }}>
+                                <div style={{ borderRadius: "16px", overflow: "hidden", border: "1px solid var(--border)", boxShadow: "0 14px 34px rgba(0,0,0,0.22)" }}>
+                                    <Image src="/landing/Dashboard-overview-1.png" alt="WOT dashboard preview" width={860} height={620} style={{ width: "100%", height: "auto", display: "block" }} priority />
                                 </div>
                             </div>
                         )}
@@ -255,7 +273,7 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                         {featureItems.map((feature) => {
                             const Icon = feature.icon;
                             return (
-                                <article key={feature.title} style={{ position: "relative", overflow: "hidden", borderRadius: 16, border: "1px solid var(--border)", background: "var(--bg-primary)", padding: isMobile ? "1.15rem" : "1.4rem", minHeight: 300 }}>
+                                <article key={feature.title} style={{ position: "relative", overflow: "hidden", borderRadius: 16, border: "1px solid var(--border)", background: "var(--bg-primary)", padding: isMobile ? "1.15rem" : "1.4rem", minHeight: isMobile ? "auto" : 300 }}>
                                     <div style={{ width: 44, height: 44, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, var(--accent), var(--accent-hover))", marginBottom: "0.9rem" }}>
                                         <Icon color="white" size={22} />
                                     </div>
@@ -270,9 +288,13 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                                         ))}
                                     </ul>
 
-                                    {!isMobile && (
+                                    {!isMobile ? (
                                         <div style={{ position: "absolute", right: -4, bottom: -10, width: 150, height: 105, borderRadius: 10, overflow: "hidden", border: "2px solid var(--bg-primary)", boxShadow: "0 8px 20px rgba(0,0,0,0.3)", transform: "rotate(3deg)" }}>
                                             <Image src={feature.preview} alt={feature.alt} width={150} height={105} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                        </div>
+                                    ) : (
+                                        <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid var(--border)", boxShadow: "0 6px 16px rgba(0,0,0,0.16)" }}>
+                                            <Image src={feature.preview} alt={feature.alt} width={500} height={290} style={{ width: "100%", height: "auto", display: "block" }} />
                                         </div>
                                     )}
                                 </article>
@@ -328,9 +350,9 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                     color: "var(--text-muted)",
                     opacity: 0.72,
                     zIndex: 20,
-                    pointerEvents: "auto",
-                    userSelect: "text",
-                    cursor: "text",
+                    pointerEvents: "none",
+                    userSelect: "none",
+                    display: isMobile ? "none" : "block",
                 }}
             >
                 build {buildTag || "dev"}
