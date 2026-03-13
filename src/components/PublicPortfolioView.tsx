@@ -89,9 +89,10 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }: 
             <div className="public-allocation-title">Portfolio Allocation</div>
             <div className="public-allocation-summary-kicker">First-read breakdown with quick return context</div>
             <div className="public-allocation-summary-kicker">Secure read-only snapshot with live allocation ordering</div>
+            <div className="public-allocation-summary-kicker">Secure read-only snapshot with live allocation ordering</div>
           </div>
           <button onClick={toggleAll} className="public-allocation-toggle-all">
-            {allExpanded ? "Collapse all" : "Expand all"}
+            {allExpanded ? "Collapse categories" : "Expand categories"}
           </button>
         </div>
         <div className="public-allocation-summary-meta">
@@ -100,7 +101,7 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }: 
           <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
           <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
           <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
-          {canEdit ? <span>Drag holdings between categories to reorganize</span> : <span>Public read-only view</span>}
+          {canEdit ? <span>Drag holdings between categories to reorganize</span> : <span>Public read-only snapshot · owner controls stay private</span>}
         </div>
       </div>
 
