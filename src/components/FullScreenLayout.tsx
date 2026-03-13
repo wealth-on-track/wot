@@ -47,7 +47,7 @@ import { deleteAccount, saveBESData, getBESData } from "@/lib/actions";
 import { lookupTefasFund } from "@/app/actions/search";
 import { signOut } from "next-auth/react";
 // BESPortfolioItem no longer needed - BES shown inline in table
-import { BESMetadata, calculateBESAllocationBreakdown, calculateBESTotals } from "@/lib/besTypes";
+import { BESMetadata, calculateBESAllocationBreakdown, calculateBESTotals, formatBESFundDisplayName } from "@/lib/besTypes";
 import { AnimatedValue } from "./AnimatedValue";
 
 // Sortable Row Component for Open Positions Table
@@ -191,6 +191,7 @@ export function FullScreenLayout({
     const [activePositionTab, setActivePositionTab] = useState<'open' | 'closed'>('open');
     const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(true);
     const [isToggleHovered, setIsToggleHovered] = useState(false);
+    const [themeMounted, setThemeMounted] = useState(false);
     const { showAmounts, toggleAmounts } = usePrivacy();
     const { theme, toggleTheme } = useTheme();
     const isAdminUser = isOwner || userEmail?.toLowerCase() === 'user1@wot.money';
@@ -203,6 +204,10 @@ export function FullScreenLayout({
                 setSidebarExpanded(savedState === 'true');
             }
         }
+    }, []);
+
+    React.useEffect(() => {
+        setThemeMounted(true);
     }, []);
 
     // Sync open positions count with assets prop updates (e.g. after import)
@@ -573,7 +578,7 @@ export function FullScreenLayout({
 
                     <button
                         onClick={toggleTheme}
-                        title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                        title={themeMounted ? (theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode') : 'Theme'}
                         style={{
                             display: 'flex',
                             flexDirection: sidebarExpanded ? 'row' : 'column',
@@ -589,7 +594,7 @@ export function FullScreenLayout({
                             background: 'transparent'
                         }}
                     >
-                        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                        {themeMounted ? (theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />) : <div style={{ width: 16, height: 16 }} />}
                         {sidebarExpanded && <span style={{ fontSize: '11px', fontWeight: 600 }}>Theme</span>}
                     </button>
 
@@ -1350,7 +1355,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                         result.push({
                             id: `bes-kp-${fund.code}`,
                             symbol: fund.code,
-                            name: ov.name || fund.name,  // user override first
+                            name: ov.name || formatBESFundDisplayName(fund.name),
                             type: ov.type || 'BES_FUND',
                             subType: 'KATKI_PAYI',
                             currency: ov.currency || 'TRY',
@@ -1384,7 +1389,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                     result.push({
                         id: `bes-dk-AET`,
                         symbol: 'AET',
-                        name: ov.name || 'Anadolu Hayat Emeklilik A.Ş. Katkı Emeklilik Yatırım Fonu',
+                        name: ov.name || formatBESFundDisplayName('Anadolu Hayat Emeklilik A.Ş. Katkı Emeklilik Yatırım Fonu'),
                         type: ov.type || 'BES_FUND',
                         subType: 'DEVLET_KATKISI',
                         currency: ov.currency || 'TRY',
@@ -1878,9 +1883,14 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                     const row: any = flattenedAssets.find((a: any) => a.id === id) || assets.find((a: any) => a.id === id);
                     if (!row) return false;
 
+                    const name = (data.name || '').trim();
+
+                    if (id.startsWith('bes-kp-') || id.startsWith('bes-dk-')) {
+                        return name !== (row.name || '').trim();
+                    }
+
                     const q = Number(data.quantity);
                     const bp = Number(data.averageBuyPrice);
-                    const name = (data.name || '').trim();
                     const platform = data.platform || '';
                     const portfolio = data.portfolio || '';
                     const type = normalizeAssetType(data.type);
@@ -1920,11 +1930,6 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                         if (!parent) return null;
 
                         return updateBESFundMetadata(parent, fundCode, {
-                            type: normalizedType,
-                            exchange: data.exchange,
-                            currency: normalizedCurrency,
-                            country: data.country,
-                            sector: data.sector,
                             name: data.name,
                         });
                     }
@@ -2798,7 +2803,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                         </div>
                                                                     )}
                                                                     <div style={{ flex: 1 }}>
-                                                                        {isBatchEditMode && !isBESFund ? (
+                                                                        {isBatchEditMode ? (
                                                                             <>
                                                                                 <input
                                                                                     type="text"
