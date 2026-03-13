@@ -2356,3 +2356,168 @@ body.light .logo-letter-wt {
   }
 }
 
+.wot-state-body {
+  min-height: 100vh;
+  margin: 0;
+  background: var(--bg-main);
+  color: var(--text-primary);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+.wot-state-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(circle at top left, color-mix(in oklab, var(--accent) 12%, transparent), transparent 45%),
+    var(--bg-main);
+}
+
+.wot-state-card {
+  width: min(480px, 100%);
+  padding: 1.7rem;
+  border-radius: 1.2rem;
+  display: grid;
+  gap: 0.9rem;
+  text-align: center;
+}
+
+.wot-state-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.wot-state-icon-error {
+  background: color-mix(in oklab, var(--danger) 18%, transparent);
+  color: var(--danger);
+}
+
+.wot-state-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.wot-state-copy {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.wot-state-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.wot-state-btn {
+  min-width: 128px;
+  border: none;
+  cursor: pointer;
+}
+
+.wot-state-digest {
+  margin: 0.25rem 0 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.wot-loader-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background:
+    radial-gradient(circle at 20% 20%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 45%),
+    var(--bg-main);
+}
+
+.wot-loader-orb {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 1.1rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 14px 36px var(--accent-glow);
+}
+
+.wot-loader-card {
+  width: min(360px, calc(100% - 2rem));
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.wot-loader-progress-track {
+  height: 0.38rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--bg-secondary) 92%, transparent);
+  overflow: hidden;
+}
+
+.wot-loader-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  transition: width 120ms ease-out;
+}
+
+.wot-loader-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.wot-loader-message {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+}
+
+.wot-loader-percent {
+  font-size: 0.84rem;
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+}
+
+.wot-loader-brand {
+  position: fixed;
+  bottom: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.wot-spin {
+  animation: wot-spin 1s linear infinite;
+}
+
+@keyframes wot-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+

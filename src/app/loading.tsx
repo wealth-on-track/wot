@@ -47,110 +47,26 @@ export default function Loading() {
 
     const CurrentIcon = LOADING_PHASES[currentPhase]?.icon || Loader2;
     const message = LOADING_PHASES[currentPhase]?.message || "Loading...";
+    const spinning = currentPhase === 0 || currentPhase >= 4;
 
     return (
-        <div style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'var(--bg-primary)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999
-        }}>
-            {/* Logo/Icon */}
-            <div style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '20px',
-                background: 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '32px',
-                boxShadow: '0 10px 40px var(--accent-glow)'
-            }}>
-                <CurrentIcon
-                    size={36}
-                    color="white"
-                    style={{
-                        animation: currentPhase === 0 || currentPhase >= 4 ? 'spin 1s linear infinite' : 'none'
-                    }}
-                />
+        <div className="wot-loader-shell">
+            <div className="wot-loader-orb" aria-hidden="true">
+                <CurrentIcon size={34} color="white" className={spinning ? "wot-spin" : undefined} />
             </div>
 
-            {/* Progress Container */}
-            <div style={{
-                width: '320px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '16px'
-            }}>
-                {/* Progress Bar */}
-                <div style={{
-                    width: '100%',
-                    height: '6px',
-                    background: 'var(--bg-secondary)',
-                    borderRadius: '3px',
-                    overflow: 'hidden'
-                }}>
-                    <div style={{
-                        height: '100%',
-                        width: `${progress}%`,
-                        background: 'linear-gradient(90deg, var(--accent), var(--accent-hover))',
-                        borderRadius: '3px',
-                        transition: 'width 0.1s ease-out'
-                    }} />
+            <div className="wot-loader-card premium-panel">
+                <div className="wot-loader-progress-track" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+                    <div className="wot-loader-progress-fill" style={{ width: `${progress}%` }} />
                 </div>
 
-                {/* Progress Text */}
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                    alignItems: 'center'
-                }}>
-                    <span style={{
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        color: 'var(--text-secondary)',
-                        transition: 'opacity 0.3s'
-                    }}>
-                        {message}
-                    </span>
-                    <span style={{
-                        fontSize: '14px',
-                        fontWeight: 700,
-                        color: 'var(--accent)',
-                        fontFamily: 'monospace'
-                    }}>
-                        {progress}%
-                    </span>
+                <div className="wot-loader-meta">
+                    <span className="wot-loader-message">{message}</span>
+                    <span className="wot-loader-percent">{progress}%</span>
                 </div>
             </div>
 
-            {/* Subtle branding */}
-            <div style={{
-                position: 'absolute',
-                bottom: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                color: 'var(--text-muted)',
-                fontSize: '13px',
-                fontWeight: 500
-            }}>
-                <span style={{ opacity: 0.6 }}>Wealth on Track</span>
-            </div>
-
-            <style jsx global>{`
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-            `}</style>
+            <div className="wot-loader-brand">Wealth on Track</div>
         </div>
     );
 }
