@@ -240,7 +240,7 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
         </h1>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: '#334155', marginTop: 12, marginBottom: 20 }}>
           You are in the right place. This secure link is live and read-only. After the first active holding is added,
-          this page refreshes into a full allocation and performance view for the latest snapshot.
+          this page refreshes into a full allocation and performance view for the latest snapshot. Nothing is broken — the portfolio is simply waiting for its first visible position.
         </p>
         <ol style={{ margin: 0, paddingLeft: 18, color: '#1e293b', lineHeight: 1.7 }}>
           {isOwner ? (
