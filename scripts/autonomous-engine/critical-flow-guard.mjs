@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { promises as fs } from 'fs';
 import path from 'path';
-import { ensureEngineFiles, files, paths, nowIso, readJson, writeJson, appendEvent } from './lib.mjs';
+import { ensureEngineFiles, files, paths, nowIso, readJson, writeJson, appendEvent, WIP_LIMITS } from './lib.mjs';
 
 await ensureEngineFiles();
 const jobs = await readJson(files.jobs);
+const history = await readJson(files.history);
 const proposals = await readJson(files.proposals);
 const proposalIds = new Set((proposals || []).map((p) => String(p.id || '')));
 
@@ -76,5 +77,35 @@ if (active.length > 1) {
   }
 }
 
-await writeJson(files.jobs, jobs);
+// planning deadlock: if proposal queue is saturated with non-runnable human-review items,
+// archive oldest sticky jobs so scout/planner can admit at least one fresh proposal each cycle.
+const proposalJobs = jobs.filter((j) => j.state === 'proposal');
+const passCount = proposalJobs.filter((j) => j.quality?.status === 'pass').length;
+if (proposalJobs.length > WIP_LIMITS.planning && passCount === 0) {
+  const overflow = proposalJobs.length - (WIP_LIMITS.planning - 1);
+  const candidates = proposalJobs
+    .filter((j) => j.quality?.status === 'needs_human_review')
+    .sort((a, b) => {
+      const aScore = Number(a.retries?.planning || 0) + Number(a.retries?.build || 0) + Number(a.retries?.testing || 0);
+      const bScore = Number(b.retries?.planning || 0) + Number(b.retries?.build || 0) + Number(b.retries?.testing || 0);
+      if (bScore !== aScore) return bScore - aScore;
+      return new Date(a.timestamps?.updatedAt || a.timestamps?.createdAt || 0).getTime() - new Date(b.timestamps?.updatedAt || b.timestamps?.createdAt || 0).getTime();
+    })
+    .slice(0, Math.max(0, overflow));
+
+  for (const job of candidates) {
+    job.state = 'abandoned_with_reason';
+    job.finalReason = 'planning_queue_deadlock_auto_archived';
+    job.ownerAgent = 'planner';
+    job.timestamps ||= { createdAt: ts, updatedAt: ts };
+    job.timestamps.updatedAt = ts;
+    history.push({ ...job });
+    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'abandoned_with_reason', message: 'critical-flow-guard: planning queue deadlock auto-archived stale human-review job' });
+    fixed += 1;
+  }
+}
+
+const liveJobs = jobs.filter((j) => !['approved', 'reverted', 'abandoned_with_reason'].includes(j.state));
+await writeJson(files.jobs, liveJobs);
+await writeJson(files.history, history.slice(-1500));
 console.log(`[critical-flow-guard] fixed ${fixed} issue(s)`);
