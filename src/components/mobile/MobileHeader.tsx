@@ -1,14 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useCurrency } from "@/context/CurrencyContext";
 import { useTheme } from "@/context/ThemeContext";
-import { LanguageToggle } from "@/components/LanguageToggle";
 import { handleSignOut } from "@/lib/authActions";
-import { LogOut, User, Eye, EyeOff, Link as LinkIcon, Shield } from "lucide-react";
-
-import type { AssetDisplay } from "@/lib/types";
+import { LogOut, User, Eye, EyeOff, Link as LinkIcon, Shield, Moon, Sun } from "lucide-react";
 
 interface MobileHeaderProps {
     username: string;
@@ -16,10 +11,9 @@ interface MobileHeaderProps {
     isPrivacyMode: boolean;
     onTogglePrivacy: () => void;
     onLogoClick?: () => void;
-    // Stories Props
-    assets?: AssetDisplay[];
+    assets?: unknown[];
     totalValueEUR?: number;
-    onNavigate?: (type: string, payload?: any) => void;
+    onNavigate?: (type: "settings" | "asset" | "overview", payload?: string) => void;
 }
 
 export function MobileHeader({
@@ -28,18 +22,13 @@ export function MobileHeader({
     isPrivacyMode,
     onTogglePrivacy,
     onLogoClick,
-    assets = [],
-    totalValueEUR = 0,
+    assets: _assets,
+    totalValueEUR: _totalValueEUR,
     onNavigate = () => { }
 }: MobileHeaderProps) {
-    const { currency, setCurrency } = useCurrency();
+    void _assets;
+    void _totalValueEUR;
     const { theme, toggleTheme } = useTheme();
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
 
     return (
         <header style={{
@@ -47,7 +36,7 @@ export function MobileHeader({
             top: 0,
             left: 0,
             right: 0,
-            background: 'var(--bg-primary)',
+            background: 'color-mix(in oklab, var(--bg-main) 72%, transparent)',
             borderBottom: '1px solid var(--border)',
             padding: '0.75rem 1rem',
             display: 'flex',
@@ -68,98 +57,17 @@ export function MobileHeader({
                     cursor: onLogoClick ? 'pointer' : 'default'
                 }}
             >
-                <div style={{
-                    display: 'flex',
-                    gap: '1px',
-                    userSelect: 'none'
-                }}>
-                    {/* W -> WEALTH */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ height: '1.2rem', display: 'flex', alignItems: 'center' }}>
-                            <span style={{
-                                fontFamily: 'var(--font-sans)',
-                                fontSize: '1.4rem',
-                                fontWeight: 900,
-                                lineHeight: 1,
-                                letterSpacing: '-0.03em',
-                                color: 'var(--text-primary)'
-                            }}>W</span>
-                        </div>
-                        <span style={{
-                            fontSize: '7px',
-                            fontWeight: 700,
-                            color: 'var(--text-secondary)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.02em',
-                            opacity: 0.9
-                        }}>WEALTH</span>
+                <div className="brand-lockup">
+                    <div className="brand-mark" aria-hidden="true">
+                        <span className="brand-glyph">W</span>
+                        <span className="brand-glyph brand-glyph-accent">O</span>
+                        <span className="brand-glyph">T</span>
                     </div>
-
-                    {/* O -> ON (Accent) */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ height: '1.2rem', display: 'flex', alignItems: 'center' }}>
-                            <span style={{
-                                fontFamily: 'var(--font-sans)',
-                                fontSize: '1.4rem',
-                                fontWeight: 900,
-                                color: 'var(--accent)',
-                                lineHeight: 1,
-                                letterSpacing: '-0.03em',
-                                filter: 'drop-shadow(0 0 6px var(--accent-glow))'
-                            }}>O</span>
-                        </div>
-                        <span style={{
-                            fontSize: '7px',
-                            fontWeight: 700,
-                            color: 'var(--text-secondary)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.02em',
-                            opacity: 0.9
-                        }}>ON</span>
+                    <div className="brand-copy">
+                        <span className="brand-title">WOT</span>
+                        <span className="brand-subtitle">Mobile dashboard</span>
                     </div>
-
-                    {/* T -> TRACK */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ height: '1.2rem', display: 'flex', alignItems: 'center' }}>
-                            <span style={{
-                                fontFamily: 'var(--font-sans)',
-                                fontSize: '1.4rem',
-                                fontWeight: 900,
-                                lineHeight: 1,
-                                letterSpacing: '-0.03em',
-                                color: 'var(--text-primary)'
-                            }}>T</span>
-                        </div>
-                        <span style={{
-                            fontSize: '7px',
-                            fontWeight: 700,
-                            color: 'var(--text-secondary)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.02em',
-                            opacity: 0.9
-                        }}>TRACK</span>
-                    </div>
-
-                    {/* Beta Badge - Mobile */}
-                    <div style={{
-                        fontSize: '6px', // Slightly smaller for mobile
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                        padding: '2px 5px',
-                        borderRadius: '6px',
-                        background: 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
-                        color: '#fff',
-                        boxShadow: '0 2px 8px var(--accent-glow)',
-                        animation: 'pulse-glow 3s ease-in-out infinite',
-                        userSelect: 'none',
-                        whiteSpace: 'nowrap',
-                        marginLeft: '0rem', // Zero margin
-                        alignSelf: 'flex-start',
-                        marginTop: '0px'
-                    }}>
-                        BETA
-                    </div>
+                    <span className="brand-badge">Beta</span>
                 </div>
             </div>
 
@@ -169,64 +77,27 @@ export function MobileHeader({
                 {/* Public Share Page (left of privacy eye) */}
                 <Link
                     href={`/${username}/portfolio_public`}
-                    style={{ textDecoration: 'none' }}
+                    className="premium-icon-btn"
                     title="Public share page"
                 >
-                    <div style={{
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px',
-                        width: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'var(--text-muted)',
-                        cursor: 'pointer'
-                    }}>
-                        <LinkIcon size={17} />
-                    </div>
+                    <LinkIcon size={17} />
                 </Link>
 
                 {/* Admin (dev1/user1 owner only) */}
                 {isOwner && (username === 'dev1' || username === 'user1') && (
                     <Link
                         href="/admin/autonomous-engine"
-                        style={{ textDecoration: 'none' }}
+                        className="premium-icon-btn"
                         title="Admin"
                     >
-                        <div style={{
-                            background: 'var(--bg-secondary)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '8px',
-                            width: '36px',
-                            height: '36px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'var(--text-muted)',
-                            cursor: 'pointer'
-                        }}>
-                            <Shield size={17} />
-                        </div>
+                        <Shield size={17} />
                     </Link>
                 )}
 
                 {/* Privacy Toggle */}
                 <button
                     onClick={onTogglePrivacy}
-                    style={{
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px',
-                        width: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        color: 'var(--text-muted)'
-                    }}
+                    className="premium-icon-btn"
                 >
                     {isPrivacyMode ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -234,21 +105,9 @@ export function MobileHeader({
                 {/* Theme Toggle */}
                 <button
                     onClick={toggleTheme}
-                    style={{
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px',
-                        width: '36px',
-                        height: '36px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        color: 'var(--text-primary)',
-                        fontSize: '1rem'
-                    }}
+                    className="premium-icon-btn"
                 >
-                    {mounted ? (theme === 'dark' ? '🌙' : '☀️') : null}
+                    {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
                 </button>
 
                 {/* Sign Out (if owner) OR Login/Get Started (if guest) */}
@@ -264,16 +123,8 @@ export function MobileHeader({
                                 cursor: 'pointer'
                             }}>
                             <div
+                                className="premium-icon-btn"
                                 style={{
-                                    background: 'transparent',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: '8px',
-                                    width: '36px',
-                                    height: '36px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: 'var(--text-muted)',
                                     cursor: 'pointer'
                                 }}
                             >
@@ -284,18 +135,7 @@ export function MobileHeader({
                         {/* Logout */}
                         <button
                             onClick={() => handleSignOut()}
-                            style={{
-                                background: 'transparent',
-                                border: '1px solid var(--border)',
-                                borderRadius: '8px',
-                                width: '36px',
-                                height: '36px', // Matching dimension
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'var(--text-muted)',
-                                cursor: 'pointer'
-                            }}
+                            className="premium-icon-btn"
                         >
                             <LogOut size={18} />
                         </button>
