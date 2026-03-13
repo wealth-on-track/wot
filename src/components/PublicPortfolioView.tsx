@@ -22,8 +22,8 @@ const formatSignedPercent = (value?: number) => {
 };
 
 const toneClass = (value?: number) => {
-  if (typeof value !== "number") return "public-allocation-pill is-neutral";
-  return value >= 0 ? "public-allocation-pill is-positive" : "public-allocation-pill is-negative";
+  if (typeof value !== "number" || value === 0) return "public-allocation-pill is-neutral";
+  return value > 0 ? "public-allocation-pill is-positive" : "public-allocation-pill is-negative";
 };
 
 export function PublicPortfolioView({ categories: initialCategories, canEdit }: { categories: Category[]; canEdit?: boolean }) {
@@ -82,7 +82,10 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }: 
     <div className="public-allocation-shell">
       <div className="public-allocation-summary">
         <div className="public-allocation-summary-head">
-          <div className="public-allocation-title">Portfolio Allocation</div>
+          <div>
+            <div className="public-allocation-title">Portfolio Allocation</div>
+            <div className="public-allocation-summary-kicker">First-read breakdown with quick return context</div>
+          </div>
           <button onClick={toggleAll} className="public-allocation-toggle-all">
             {allExpanded ? "Collapse all" : "Expand all"}
           </button>
