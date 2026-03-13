@@ -110,3 +110,42 @@
 - [x] Hero headline now uses reusable responsive typography classes for cleaner visual consistency.
 - [x] Signed-in hero state now presents account context in a premium status chip with improved hierarchy.
 - [x] Trust reassurance microcopy now has structured, scannable presentation instead of raw inline text.
+
+---
+
+## Cycle Date
+- March 13, 2026 (07:00 Europe/Amsterdam cycle)
+
+## Findings
+- `src/components/PublicPortfolioView.tsx` relied on dense inline styling across the entire public allocation surface, making consistency and maintainability weak versus newer premium class-based pages.
+- Category rows had minimal hierarchy (no holdings count/expand affordance), reducing scan speed for users reviewing public portfolios.
+- Mobile readability for return pills and weight values was cramped due a fixed 4-column row layout.
+
+## Proposals considered (quality gate)
+- ✅ **Accepted**: Replace inline styling in `src/components/PublicPortfolioView.tsx` with semantic class names and centralized token-driven styles in `src/app/globals.css` for premium consistency.
+- ✅ **Accepted**: Add category-level micro-hierarchy (holdings count + expand chevron state) to improve UX discoverability without changing behavior.
+- ✅ **Accepted**: Add responsive grid adaptation for allocation rows on small screens to improve readability and tap-target clarity.
+- ❌ **Rejected**: Introducing drag handles/icons per row this cycle because it adds visual noise and interaction complexity relative to current scope.
+
+## Implemented changes
+- `src/components/PublicPortfolioView.tsx`
+  - Refactored component from inline-style-heavy layout to semantic classes (`public-allocation-*`).
+  - Added category microcopy (`N holdings`) and chevron open/closed indicator for clearer interaction cues.
+  - Kept drag/drop and move-category API behavior unchanged; improved structural readability.
+- `src/app/globals.css`
+  - Added complete public allocation style system (`public-allocation-*`) with premium surface treatment, hover/focus transitions, and theme-aware light-mode refinements.
+  - Added reusable positive/negative/neutral performance pill styles.
+  - Added mobile breakpoint rules for two-row compact item layout.
+
+## Verification results
+- `npm run lint -- 'src/components/PublicPortfolioView.tsx'` → **Pass**
+- `npm run type-check` → **Pass**
+
+## review_ready
+- [x] Public portfolio allocation view now uses centralized premium styling primitives instead of ad-hoc inline styles.
+- [x] Category headers provide clearer hierarchy (name, holdings count, percentage, expand state).
+- [x] Mobile row layout is more readable with better spacing and preserved information density.
+
+## Git
+- Commit hash: `68a7590`
+- Commit message: `Polish public allocation view with premium styling system`
