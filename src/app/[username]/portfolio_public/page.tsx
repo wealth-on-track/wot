@@ -62,7 +62,7 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
           <input type="hidden" name="username" value={username} />
           <div className="public-access-gate-kicker">Secure share link</div>
           <div className="public-access-gate-title">Protected portfolio snapshot</div>
-          <div className="public-access-gate-copy">Enter the access password to view this read-only portfolio snapshot.</div>
+          <div className="public-access-gate-copy">Enter the access password to view this read-only portfolio snapshot with the latest visible allocation layout.</div>
           <input
             name="password"
             type="password"
