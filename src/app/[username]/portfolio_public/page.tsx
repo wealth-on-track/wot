@@ -229,6 +229,36 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
     .filter((c: any) => Math.round(c.pct) > 0 && c.items.length > 0)
     .sort((a, b) => b.pct - a.pct);
 
+  if (categories.length === 0) {
+    return (
+      <div className="public-access-empty" style={{ maxWidth: 760, margin: '48px auto', padding: 24, borderRadius: 16, border: '1px solid #e2e8f0', background: '#fff', boxShadow: '0 10px 30px rgba(15,23,42,0.06)' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase', color: '#64748b', marginBottom: 8 }}>
+          Portfolio snapshot
+        </div>
+        <h1 style={{ fontSize: 28, lineHeight: 1.2, margin: 0, color: '#0f172a' }}>
+          This portfolio is currently empty
+        </h1>
+        <p style={{ fontSize: 16, lineHeight: 1.6, color: '#334155', marginTop: 12, marginBottom: 20 }}>
+          There are no active holdings yet, so allocation insights cannot be generated. Add your first asset to unlock category allocation and performance breakdown.
+        </p>
+        <ol style={{ margin: 0, paddingLeft: 18, color: '#1e293b', lineHeight: 1.7 }}>
+          {isOwner ? (
+            <>
+              <li>Add at least one holding in your portfolio dashboard.</li>
+              <li>Refresh this page to generate the first allocation snapshot.</li>
+              <li>Share this link again once holdings are visible.</li>
+            </>
+          ) : (
+            <>
+              <li>Ask the portfolio owner to add holdings and publish a new snapshot.</li>
+              <li>Open this page again after the snapshot is refreshed.</li>
+            </>
+          )}
+        </ol>
+      </div>
+    );
+  }
+
   return <PublicPortfolioView categories={categories} canEdit={isOwner} />;
 }
 
