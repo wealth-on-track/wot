@@ -1,0 +1,41 @@
+diff --git a/src/app/[username]/portfolio_public/page.tsx b/src/app/[username]/portfolio_public/page.tsx
+index 18e849f..5399444 100644
+--- a/src/app/[username]/portfolio_public/page.tsx
++++ b/src/app/[username]/portfolio_public/page.tsx
+@@ -231,27 +231,27 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
+ 
+   if (categories.length === 0) {
+     return (
+-      <div className="public-access-empty" style={{ maxWidth: 760, margin: '48px auto', padding: 24, borderRadius: 16, border: '1px solid #e2e8f0', background: '#fff', boxShadow: '0 10px 30px rgba(15,23,42,0.06)' }}>
++      <div className="public-access-empty" role="status" aria-live="polite" style={{ maxWidth: 760, margin: '48px auto', padding: 24, borderRadius: 16, border: '1px solid #e2e8f0', background: '#fff', boxShadow: '0 10px 30px rgba(15,23,42,0.06)' }}>
+         <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase', color: '#64748b', marginBottom: 8 }}>
+-          Portfolio snapshot
++          Portfolio snapshot • Secure share is active
+         </div>
+         <h1 style={{ fontSize: 28, lineHeight: 1.2, margin: 0, color: '#0f172a' }}>
+-          This shared portfolio is ready, but waiting for first holdings
++          Snapshot link is working — first holdings are not added yet
+         </h1>
+         <p style={{ fontSize: 16, lineHeight: 1.6, color: '#334155', marginTop: 12, marginBottom: 20 }}>
+-          The link is working correctly. As soon as at least one active holding is added, this page will automatically show allocation and performance insights for the latest snapshot.
++          You are in the right place. After the first active holding is added, this page refreshes into a full allocation and performance view for the latest snapshot.
+         </p>
+         <ol style={{ margin: 0, paddingLeft: 18, color: '#1e293b', lineHeight: 1.7 }}>
+           {isOwner ? (
+             <>
+-              <li>Add your first holding in the main portfolio dashboard.</li>
+-              <li>Refresh this page once to generate and verify the first public snapshot.</li>
+-              <li>Re-share this link after the snapshot shows at least one category and a visible allocation percentage.</li>
++              <li>Add the first holding in your main portfolio dashboard.</li>
++              <li>Refresh this page to generate the first public snapshot.</li>
++              <li>Re-share only after at least one allocation category and percentage is visible.</li>
+             </>
+           ) : (
+             <>
+-              <li>Ask the portfolio owner to add at least one holding and refresh the snapshot.</li>
+-              <li>Reopen this link in a moment to view the first allocation breakdown.</li>
++              <li>Ask the portfolio owner to add at least one active holding.</li>
++              <li>Reopen this link shortly after they confirm; the first allocation breakdown will appear automatically.</li>
+             </>
+           )}
+         </ol>

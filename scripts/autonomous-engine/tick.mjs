@@ -8,6 +8,7 @@ const run = (cmd) => {
 };
 
 run('node scripts/autonomous-engine/system-audit.mjs');
+run('node scripts/autonomous-engine/critical-flow-guard.mjs');
 run('node scripts/autonomous-engine/self-heal.mjs');
 run('node scripts/autonomous-engine/discover.mjs');
 run('node scripts/autonomous-engine/proposal-quality-backfill.mjs');
@@ -23,4 +24,5 @@ run('node scripts/autonomous-engine/verify.mjs');
 run('node scripts/autonomous-engine/guarantee.mjs');
 run('node scripts/autonomous-engine/review-reminder.mjs');
 run('node scripts/autonomous-engine/maintenance.mjs');
+run('node scripts/autonomous-engine/critical-flow-guard.mjs');
 run('node scripts/autonomous-engine/dispatch.mjs'); // tail dispatch: clear stale lock + pre-stage next build candidate

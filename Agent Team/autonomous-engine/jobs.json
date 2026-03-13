@@ -17,7 +17,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 108,
+      "planning": 110,
       "build": 2,
       "testing": 0,
       "verification": 0
@@ -31,7 +31,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T09:02:10.504Z",
+      "checkedAt": "2026-03-13T09:33:41.938Z",
       "sessionCount": 2,
       "reason": "planning_timeout",
       "feedback": {
@@ -51,7 +51,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-12T05:09:01.047Z",
-      "updatedAt": "2026-03-13T08:55:31.278Z"
+      "updatedAt": "2026-03-13T09:25:31.335Z"
     },
     "buildAttempt": 2
   },
@@ -73,7 +73,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 41,
+      "planning": 43,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -87,7 +87,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T09:02:10.505Z",
+      "checkedAt": "2026-03-13T09:33:41.939Z",
       "sessionCount": 1,
       "reason": "planning_timeout",
       "feedback": {
@@ -107,7 +107,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-12T15:10:30.672Z",
-      "updatedAt": "2026-03-13T09:00:31.615Z"
+      "updatedAt": "2026-03-13T09:30:31.792Z"
     },
     "buildAttempt": 1
   },
@@ -129,7 +129,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 40,
+      "planning": 42,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -143,7 +143,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T09:02:10.505Z",
+      "checkedAt": "2026-03-13T09:33:41.939Z",
       "sessionCount": 0,
       "reason": "planning_timeout",
       "feedback": {
@@ -163,13 +163,53 @@
     },
     "timestamps": {
       "createdAt": "2026-03-12T22:55:32.799Z",
-      "updatedAt": "2026-03-13T09:00:31.615Z"
+      "updatedAt": "2026-03-13T09:30:31.792Z"
     },
     "buildAttempt": 1
   },
   {
-    "id": "JOB-20260313-080320979-001980",
-    "title": "[JOB-20260313-080320979-001980|PRP-20260313080312-PUBEMPTY-UX] Premium empty-state onboarding for public portfolio snapshot",
+    "id": "JOB-20260313-093341801-001671",
+    "title": "Resolve lint failures blocking autonomous verification",
+    "category": "operations",
+    "state": "proposal",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Implement one concrete, file-level improvement in eslint.config.mjs with explicit acceptance criteria and reviewer-verifiable artifacts. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "proposalId": "PRP-20260313-093341618-001970",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "eslint.config.mjs"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-13T09:33:41.939Z",
+      "sessionCount": 0
+    },
+    "timestamps": {
+      "createdAt": "2026-03-13T09:33:41.801Z",
+      "updatedAt": "2026-03-13T09:33:41.801Z"
+    }
+  },
+  {
+    "id": "JOB-20260313-093341802-002992",
+    "title": "Raise first-read UX clarity in public portfolio empty/onboarding state",
     "category": "ux",
     "state": "review_ready",
     "risk": "low",
@@ -177,10 +217,10 @@
     "priority": "P1",
     "impactScore": 4,
     "confidenceScore": 4,
-    "effortScore": 1,
+    "effortScore": 2,
     "userFacing": true,
-    "summary": "Refine the public empty-state copy to include role-specific microcopy (owner vs visitor), explicit next-step outcomes, and a trust signal that the shared page is functioning and awaiting first holdings snapshot. Implementation is file-level concrete: src/app/[username]/portfolio_public/page.tsx, one functional change, measurable acceptance. (local build applied)",
-    "proposalId": "PRP-20260313080312-PUBEMPTY-UX",
+    "summary": "Implement one concrete, file-level improvement in src/app/[username]/portfolio_public/page.tsx with explicit acceptance criteria and reviewer-verifiable artifacts. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
+    "proposalId": "PRP-20260313-093341618-002995",
     "changedFiles": [
       "src/app/[username]/portfolio_public/page.tsx"
     ],
@@ -189,8 +229,8 @@
     "retries": {
       "planning": 0,
       "build": 0,
-      "testing": 1,
-      "verification": 1
+      "testing": 0,
+      "verification": 0
     },
     "constraints": {
       "maxFiles": 5,
@@ -201,42 +241,54 @@
     "ownerAgent": "verifier",
     "quality": {
       "status": "pass",
-      "checkedAt": "2026-03-13T08:04:25.573Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [],
-        "strengths": [
-          "Category alignment: ux",
-          "Initial impact/confidence/effort: 4 / 4 / 1",
-          "Scope remains constrained for controlled delivery."
-        ],
-        "gaps": [],
-        "must_fix": [],
-        "evidence_gap": null,
-        "rewrite_plan": [
-          "Rewrite problem statement to explain user/system consequence clearly.",
-          "Add concrete evidence and tie it to measurable acceptance criteria.",
-          "Upgrade proposal language from generic intent to execution-ready plan.",
-          "Re-score impact/confidence after rewrite and keep effort realistic."
-        ],
-        "acceptance_checklist": [
-          "Impact >= 3",
-          "Confidence >= 3",
-          "Evidence count >= 2",
-          "User-facing value explicitly stated",
-          "KPI target is quantified",
-          "change_spec file aligns with files_expected"
-        ]
-      },
-      "revised": true,
+      "checkedAt": "2026-03-13T09:33:41.939Z",
+      "sessionCount": 0,
       "lastTriedFile": "src/app/[username]/portfolio_public/page.tsx"
     },
     "timestamps": {
-      "createdAt": "2026-03-13T08:03:20.979Z",
-      "updatedAt": "2026-03-13T08:04:36.906Z"
+      "createdAt": "2026-03-13T09:33:41.802Z",
+      "updatedAt": "2026-03-13T09:33:42.652Z"
     },
-    "buildAttempt": 2,
-    "reviewNudgeAt": "2026-03-13T08:20:31.703Z",
-    "reviewReminderAt": "2026-03-13T08:35:31.306Z"
+    "buildAttempt": 1
+  },
+  {
+    "id": "JOB-20260313-093341802-003519",
+    "title": "Strengthen premium trust framing and brand tone in public-share surfaces",
+    "category": "branding",
+    "state": "approved_for_build",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Implement one concrete, file-level improvement in src/components/PublicPortfolioView.tsx with explicit acceptance criteria and reviewer-verifiable artifacts. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "proposalId": "PRP-20260313-093341618-003303",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-13T09:33:41.939Z",
+      "sessionCount": 0
+    },
+    "timestamps": {
+      "createdAt": "2026-03-13T09:33:41.802Z",
+      "updatedAt": "2026-03-13T09:33:42.884Z"
+    }
   }
 ]

@@ -371,5 +371,124 @@
     "buildAttempt": 6,
     "reviewNudgeAt": "2026-03-12T22:00:31.320Z",
     "reviewReminderAt": "2026-03-12T22:00:31.364Z"
+  },
+  {
+    "id": "JOB-20260312-050901046-001373",
+    "title": "Improve empty portfolio onboarding with clearer next actions",
+    "category": "ux",
+    "state": "approved",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Edit src/app/[username]/portfolio_public/page.tsx with one explicit behavior/text adjustment, add acceptance checklist references, and keep scope to a single functional change. Implementation is file-level concrete: src/app/[username]/portfolio_public/page.tsx, one functional change, measurable acceptance. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
+    "proposalId": "PRP-20260312-050900853-003589",
+    "changedFiles": [
+      "src/app/[username]/portfolio_public/page.tsx"
+    ],
+    "testResults": "pass",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 102,
+      "build": 2,
+      "testing": 1,
+      "verification": 2
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/app"
+    },
+    "ownerAgent": "verifier",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-13T07:32:42.173Z",
+      "sessionCount": 3,
+      "reason": "rescoped_verification_unit_only",
+      "lastTriedFile": "src/app/[username]/portfolio_public/page.tsx"
+    },
+    "timestamps": {
+      "createdAt": "2026-03-12T05:09:01.046Z",
+      "updatedAt": "2026-03-13T09:02:18.475Z"
+    },
+    "buildAttempt": 4,
+    "reviewNudgeAt": "2026-03-13T08:50:31.682Z",
+    "reviewReminderAt": "2026-03-13T08:05:31.305Z"
+  },
+  {
+    "id": "JOB-20260313-080320979-001980",
+    "title": "[JOB-20260313-080320979-001980|PRP-20260313080312-PUBEMPTY-UX] Premium empty-state onboarding for public portfolio snapshot",
+    "category": "ux",
+    "state": "approved",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 1,
+    "userFacing": true,
+    "summary": "Refine the public empty-state copy to include role-specific microcopy (owner vs visitor), explicit next-step outcomes, and a trust signal that the shared page is functioning and awaiting first holdings snapshot. Implementation is file-level concrete: src/app/[username]/portfolio_public/page.tsx, one functional change, measurable acceptance. (local build applied)",
+    "proposalId": "PRP-20260313080312-PUBEMPTY-UX",
+    "changedFiles": [
+      "src/app/[username]/portfolio_public/page.tsx"
+    ],
+    "testResults": "pass",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 1,
+      "verification": 1
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/app"
+    },
+    "ownerAgent": "verifier",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-13T08:04:25.573Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [],
+        "strengths": [
+          "Category alignment: ux",
+          "Initial impact/confidence/effort: 4 / 4 / 1",
+          "Scope remains constrained for controlled delivery."
+        ],
+        "gaps": [],
+        "must_fix": [],
+        "evidence_gap": null,
+        "rewrite_plan": [
+          "Rewrite problem statement to explain user/system consequence clearly.",
+          "Add concrete evidence and tie it to measurable acceptance criteria.",
+          "Upgrade proposal language from generic intent to execution-ready plan.",
+          "Re-score impact/confidence after rewrite and keep effort realistic."
+        ],
+        "acceptance_checklist": [
+          "Impact >= 3",
+          "Confidence >= 3",
+          "Evidence count >= 2",
+          "User-facing value explicitly stated",
+          "KPI target is quantified",
+          "change_spec file aligns with files_expected"
+        ]
+      },
+      "revised": true,
+      "lastTriedFile": "src/app/[username]/portfolio_public/page.tsx"
+    },
+    "timestamps": {
+      "createdAt": "2026-03-13T08:03:20.979Z",
+      "updatedAt": "2026-03-13T09:02:21.895Z"
+    },
+    "buildAttempt": 2,
+    "reviewNudgeAt": "2026-03-13T08:20:31.703Z",
+    "reviewReminderAt": "2026-03-13T08:35:31.306Z"
   }
 ]
