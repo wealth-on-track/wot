@@ -236,22 +236,22 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
           Portfolio snapshot
         </div>
         <h1 style={{ fontSize: 28, lineHeight: 1.2, margin: 0, color: '#0f172a' }}>
-          This portfolio is currently empty
+          This shared portfolio is ready, but waiting for first holdings
         </h1>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: '#334155', marginTop: 12, marginBottom: 20 }}>
-          There are no active holdings yet, so allocation insights cannot be generated. Add your first asset to unlock your first allocation snapshot and performance breakdown.
+          The link is working correctly. As soon as at least one active holding is added, this page will automatically show allocation and performance insights for the latest snapshot.
         </p>
         <ol style={{ margin: 0, paddingLeft: 18, color: '#1e293b', lineHeight: 1.7 }}>
           {isOwner ? (
             <>
-              <li>Add at least one holding in your portfolio dashboard.</li>
-              <li>Refresh this page to generate the first allocation snapshot.</li>
-              <li>Share this link again once holdings are visible.</li>
+              <li>Add your first holding in the main portfolio dashboard.</li>
+              <li>Refresh this page once to generate and verify the first public snapshot.</li>
+              <li>Re-share this link after the snapshot shows at least one category.</li>
             </>
           ) : (
             <>
-              <li>Ask the portfolio owner to add holdings and publish a new snapshot.</li>
-              <li>Open this page again after the snapshot is refreshed.</li>
+              <li>Ask the portfolio owner to add at least one holding and refresh the snapshot.</li>
+              <li>Reopen this link in a moment to view the first allocation breakdown.</li>
             </>
           )}
         </ol>
