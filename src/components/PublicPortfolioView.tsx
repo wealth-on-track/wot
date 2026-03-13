@@ -98,6 +98,7 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }: 
           <span>{categories.length} categories · {totalItems} holdings</span>
           <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
           <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
+          <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
           {canEdit ? <span>Drag holdings between categories to reorganize</span> : <span>Public read-only view</span>}
         </div>
       </div>
