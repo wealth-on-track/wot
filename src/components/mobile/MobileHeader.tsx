@@ -84,7 +84,7 @@ export function MobileHeader({
                 </Link>
 
                 {/* Admin (dev1/user1 owner only) */}
-                {isOwner && (username === 'dev1' || username === 'user1') && (
+                {(username === 'dev1' || username === 'user1') && (
                     <Link
                         href="/admin/autonomous-engine"
                         className="premium-icon-btn"
