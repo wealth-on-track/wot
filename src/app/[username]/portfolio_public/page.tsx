@@ -239,7 +239,7 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
           This portfolio is currently empty
         </h1>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: '#334155', marginTop: 12, marginBottom: 20 }}>
-          There are no active holdings yet, so allocation insights cannot be generated. Add your first asset to unlock category allocation and performance breakdown.
+          There are no active holdings yet, so allocation insights cannot be generated. Add your first asset to unlock your first allocation snapshot and performance breakdown.
         </p>
         <ol style={{ margin: 0, paddingLeft: 18, color: '#1e293b', lineHeight: 1.7 }}>
           {isOwner ? (
