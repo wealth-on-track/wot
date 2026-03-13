@@ -607,6 +607,10 @@ export default async function AutonomousEnginePage({
         }
 
         @media (max-width: 640px) {
+          .ae-root {
+            padding: 8px !important;
+            gap: 6px !important;
+          }
           .ae-center-panel,
           .ae-right-panel,
           .ae-left-panel {
@@ -616,6 +620,7 @@ export default async function AutonomousEnginePage({
           .ae-top-nav .card {
             font-size: 11px !important;
             padding: 6px 8px !important;
+            border-radius: 8px !important;
           }
           .ae-top-nav {
             scrollbar-width: thin;
