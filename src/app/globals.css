@@ -2765,3 +2765,220 @@ body.light .wot-navbar {
     transform: rotate(360deg);
   }
 }
+
+/* Public portfolio allocation (premium polish) */
+.public-allocation-shell {
+  max-width: 61.25rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.public-allocation-summary {
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 86%, black) 100%);
+  padding: 0.75rem 0.9rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+}
+
+body.light .public-allocation-summary {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.public-allocation-summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.4rem;
+}
+
+.public-allocation-title {
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
+}
+
+.public-allocation-toggle-all {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 0.35rem 0.62rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.public-allocation-toggle-all:hover {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.public-allocation-summary-meta {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.public-allocation-category {
+  border: 1px solid var(--border);
+  border-radius: 0.72rem;
+  margin-bottom: 0.55rem;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.public-allocation-category-head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.7rem 0.8rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.public-allocation-category-title-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+}
+
+.public-allocation-category-title {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+
+.public-allocation-category-count {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.public-allocation-category-right {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.public-allocation-category-pct {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
+.public-allocation-chevron {
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.public-allocation-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.public-allocation-empty {
+  padding: 0.56rem 0.8rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.public-allocation-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 0.45rem;
+  align-items: center;
+  padding: 0.56rem 0.8rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+}
+
+.public-allocation-row.is-draggable {
+  cursor: grab;
+}
+
+.public-allocation-row-name {
+  color: var(--text-primary);
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-allocation-row-pct {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.public-allocation-pill {
+  padding: 0.22rem 0.45rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.68rem;
+  border: 1px solid transparent;
+}
+
+.public-allocation-pill.is-neutral {
+  color: var(--text-muted);
+  background: transparent;
+}
+
+.public-allocation-pill.is-positive {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.public-allocation-pill.is-negative {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+@media (max-width: 760px) {
+  .public-allocation-shell {
+    padding: 0.8rem;
+  }
+
+  .public-allocation-summary-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .public-allocation-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name pct"
+      "day all";
+    row-gap: 0.38rem;
+  }
+
+  .public-allocation-row-name {
+    grid-area: name;
+  }
+
+  .public-allocation-row-pct {
+    grid-area: pct;
+    justify-self: end;
+  }
+
+  .public-allocation-row .public-allocation-pill:first-of-type {
+    grid-area: day;
+    justify-self: start;
+  }
+
+  .public-allocation-row .public-allocation-pill:last-of-type {
+    grid-area: all;
+    justify-self: end;
+  }
+}
