@@ -81,8 +81,8 @@ if (active.length > 1) {
 // archive oldest sticky jobs so scout/planner can admit at least one fresh proposal each cycle.
 const proposalJobs = jobs.filter((j) => j.state === 'proposal');
 const passCount = proposalJobs.filter((j) => j.quality?.status === 'pass').length;
-if (proposalJobs.length > WIP_LIMITS.planning && passCount === 0) {
-  const overflow = proposalJobs.length - (WIP_LIMITS.planning - 1);
+if (proposalJobs.length >= WIP_LIMITS.planning && passCount === 0) {
+  const overflow = Math.max(1, proposalJobs.length - (WIP_LIMITS.planning - 1));
   const candidates = proposalJobs
     .filter((j) => j.quality?.status === 'needs_human_review')
     .sort((a, b) => {
