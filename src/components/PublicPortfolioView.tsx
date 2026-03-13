@@ -88,6 +88,7 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }: 
           <div>
             <div className="public-allocation-title">Portfolio Allocation</div>
             <div className="public-allocation-summary-kicker">First-read breakdown with quick return context</div>
+            <div className="public-allocation-summary-kicker">Secure read-only snapshot with live allocation ordering</div>
           </div>
           <button onClick={toggleAll} className="public-allocation-toggle-all">
             {allExpanded ? "Collapse all" : "Expand all"}
