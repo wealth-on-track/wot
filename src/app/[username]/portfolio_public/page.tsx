@@ -248,6 +248,7 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
               <li>Add the first holding in your main portfolio dashboard.</li>
               <li>Refresh this page to generate the first public snapshot.</li>
               <li>Re-share only after at least one allocation category and percentage is visible.</li>
+              <li>Before sharing again, confirm the snapshot reads clearly on mobile and desktop.</li>
             </>
           ) : (
             <>
