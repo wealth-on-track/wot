@@ -226,6 +226,9 @@ export default async function AutonomousEnginePage({
           <span className="card" style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 10px', border: '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap', fontWeight: 800 }}>
             📚 Lessons ({lessons.length})
           </span>
+          <span className="card" style={{ display: 'inline-flex', alignItems: 'center', padding: '4px', border: '1px solid #dbe3ef', borderRadius: 10, background: '#ffffff', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', whiteSpace: 'nowrap' }}>
+            <DeployButton />
+          </span>
         </div>
       </header>
 
@@ -446,9 +449,6 @@ export default async function AutonomousEnginePage({
 
         {showRight ? (
         <aside className="card ae-right-panel" style={{ padding: 10, overflow: 'auto', display: 'grid', gap: 8, border: '1px solid #cfd8e6', borderRadius: 12, background: '#f8fafc', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
-          <div className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#ffffff', display: 'flex', justifyContent: 'flex-end' }}>
-            <DeployButton />
-          </div>
           <details className="card" style={{ padding: 10, border: '1px solid #d7e0ee', borderRadius: 10, background: '#ffffff' }} open>
             <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.9, fontWeight: 800 }}>📝 Lessons Learned</summary>
             {!selected ? <div style={{ marginTop: 8, opacity: 0.7 }}>Select a job first.</div> : (
