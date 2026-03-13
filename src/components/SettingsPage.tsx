@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateUserPreferences } from "@/lib/actions";
 import { useTheme } from "@/context/ThemeContext";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { User, Mail, Lock, Globe, DollarSign, Moon, Sun, ArrowLeft, Eye, EyeOff, TrendingUp, BarChart3, Clock, Save, Pencil } from "lucide-react";
+import { Mail, Lock, Globe, DollarSign, Moon, Sun, ArrowLeft, Eye, EyeOff, TrendingUp, BarChart3, Clock, Save } from "lucide-react";
+
+type LanguageOption = 'ENG' | 'TR';
+type CurrencyOption = 'ORG' | 'EUR' | 'USD' | 'TRY' | 'GBP';
 
 interface SettingsPageProps {
     userEmail: string;
@@ -22,7 +25,7 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
     const router = useRouter();
     const { currency, setCurrency } = useCurrency();
     const { language, setLanguage } = useLanguage();
-    const { theme, toggleTheme, setTheme } = useTheme();
+    const { theme, setTheme } = useTheme();
 
     // Settings state
     const [benchmarks, setBenchmarks] = useState<string[]>(preferences?.benchmarks || []);
@@ -121,7 +124,7 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
             } else {
                 setPasswordMessage({ type: 'error', text: data.error || 'Failed to change password' });
             }
-        } catch (error) {
+        } catch {
             setPasswordMessage({ type: 'error', text: 'An error occurred. Please try again.' });
         } finally {
             setIsChangingPassword(false);
@@ -138,12 +141,8 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
 
     const inputStyle = {
         width: '100%',
-        padding: isMobile ? '0.5rem' : '0.6rem',
-        fontSize: isMobile ? '0.8rem' : '0.85rem',
-        background: 'var(--bg-secondary)',
-        border: '1px solid var(--border)',
-        borderRadius: '6px',
-        color: 'var(--text-primary)'
+        padding: isMobile ? '0.72rem 0.85rem' : '0.8rem 0.95rem',
+        fontSize: isMobile ? '0.85rem' : '0.9rem'
     };
 
     const labelStyle = {
@@ -164,6 +163,14 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
         gap: '0.4rem',
         textTransform: 'uppercase' as const,
         letterSpacing: '0.05em'
+    };
+
+    const preferenceRowStyle = {
+        display: 'flex',
+        justifyContent: 'space-between',
+        flexDirection: isMobile ? 'column' as const : 'row' as const,
+        gap: isMobile ? '0.5rem' : '0',
+        alignItems: isMobile ? 'flex-start' as const : 'center' as const
     };
 
     return (
@@ -221,7 +228,7 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                 <div style={{
                     width: '100%',
                     marginBottom: isMobile ? '1rem' : '1.5rem',
-                    background: 'rgba(var(--bg-secondary-rgb), 0.5)',
+                    background: 'color-mix(in oklab, var(--surface) 88%, transparent)',
                     backdropFilter: 'blur(10px)',
                     border: '1px solid var(--border)',
                     borderRadius: '16px',
@@ -251,7 +258,7 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                             color: 'white',
                             fontWeight: 800,
                             fontSize: isMobile ? '1.2rem' : '1.6rem',
-                            boxShadow: '0 8px 24px rgba(var(--accent-rgb), 0.25)',
+                            boxShadow: '0 8px 24px var(--accent-glow)',
                             textTransform: 'uppercase',
                             flexShrink: 0
                         }}>
@@ -276,13 +283,13 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                                 <span style={{
                                     padding: '3px 10px',
                                     borderRadius: '8px',
-                                    background: 'rgba(var(--accent-rgb), 0.1)',
+                                    background: 'color-mix(in oklab, var(--accent) 12%, transparent)',
                                     color: 'var(--accent)',
                                     fontSize: '0.75rem',
                                     fontWeight: 700,
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.05em',
-                                    border: '1px solid rgba(var(--accent-rgb), 0.2)'
+                                    border: '1px solid color-mix(in oklab, var(--accent) 30%, transparent)'
                                 }}>
                                     Active Account
                                 </span>
@@ -304,28 +311,6 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                             </div>
                         </div>
                     </div>
-
-                    <button
-                        className="glass-button"
-                        style={{
-                            padding: isMobile ? '0.6rem 1rem' : '0.75rem 1.75rem',
-                            borderRadius: '12px',
-                            background: 'var(--bg-primary)',
-                            border: '1px solid var(--border)',
-                            color: 'var(--text-primary)',
-                            fontSize: '0.9rem',
-                            fontWeight: 700,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.75rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-                        }}
-                    >
-                        <Pencil size={16} style={{ color: 'var(--accent)' }} />
-                        <span>Edit Details</span>
-                    </button>
 
                     {/* Decorative glow */}
                     <div style={{
@@ -383,7 +368,7 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                                         value={currentPassword}
                                         onChange={(e) => setCurrentPassword(e.target.value)}
                                         required
-                                        className="glass-button"
+                                        className="premium-input"
                                         style={inputStyle}
                                     />
                                 </div>
@@ -396,7 +381,7 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                                         onChange={(e) => setNewPassword(e.target.value)}
                                         required
                                         minLength={6}
-                                        className="glass-button"
+                                        className="premium-input"
                                         style={inputStyle}
                                     />
                                 </div>
@@ -409,7 +394,7 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                         required
                                         minLength={6}
-                                        className="glass-button"
+                                        className="premium-input"
                                         style={inputStyle}
                                     />
                                 </div>
@@ -475,7 +460,7 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                     {/* Right Column: Preferences */}
                     <section className="neo-card" style={{
                         padding: isMobile ? '0.75rem' : '1rem',
-                        width: isMobile ? '100%' : '65%', // Maintained verified width adjustment
+                        width: '100%',
                         height: '100%',
                         display: 'flex',
                         flexDirection: 'column'
@@ -487,53 +472,29 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '0.5rem' : '0.75rem', flex: 1 }}>
                             {/* 1. Theme */}
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                padding: isMobile ? '0.5rem' : '0.75rem',
-                                background: 'var(--bg-secondary)',
-                                borderRadius: '6px',
-                                border: '1px solid var(--border)',
-                                flexDirection: isMobile ? 'column' : 'row',
-                                gap: isMobile ? '0.5rem' : '0',
-                                alignItems: isMobile ? 'flex-start' : 'center'
-                            }}>
+                            <div className="settings-surface" style={preferenceRowStyle}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     {theme === 'dark' ? (
                                         <Moon size={14} style={{ color: 'var(--text-secondary)' }} />
                                     ) : (
                                         <Sun size={14} style={{ color: 'var(--text-secondary)' }} />
                                     )}
-                                    <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
+                                    <span className="settings-label">
                                         Theme
                                     </span>
                                 </div>
-                                <div style={{ display: 'flex', gap: '0.2rem', background: 'var(--bg-primary)', padding: '2px', borderRadius: '6px', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'center' : 'flex-start' }}>
+                                <div className="segmented-toggle" style={{ width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'center' : 'flex-start' }}>
                                     <button
                                         onClick={() => handleThemeChange('light')}
-                                        style={{
-                                            padding: '0.3rem 0.6rem',
-                                            border: 'none',
-                                            borderRadius: '4px',
-                                            background: theme === 'light' ? 'var(--accent)' : 'transparent',
-                                            color: theme === 'light' ? 'white' : 'var(--text-muted)',
-                                            cursor: 'pointer',
-                                            flex: isMobile ? 1 : 'none'
-                                        }}
+                                        className={`segmented-toggle-btn ${theme === 'light' ? 'active' : ''}`}
+                                        style={{ flex: isMobile ? 1 : undefined }}
                                     >
                                         <Sun size={12} />
                                     </button>
                                     <button
                                         onClick={() => handleThemeChange('dark')}
-                                        style={{
-                                            padding: '0.3rem 0.6rem',
-                                            border: 'none',
-                                            borderRadius: '4px',
-                                            background: theme === 'dark' ? 'var(--accent)' : 'transparent',
-                                            color: theme === 'dark' ? 'white' : 'var(--text-muted)',
-                                            cursor: 'pointer',
-                                            flex: isMobile ? 1 : 'none'
-                                        }}
+                                        className={`segmented-toggle-btn ${theme === 'dark' ? 'active' : ''}`}
+                                        style={{ flex: isMobile ? 1 : undefined }}
                                     >
                                         <Moon size={12} />
                                     </button>
@@ -541,38 +502,19 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                             </div>
 
                             {/* 2. Language */}
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                padding: isMobile ? '0.5rem' : '0.75rem',
-                                background: 'var(--bg-secondary)',
-                                borderRadius: '6px',
-                                border: '1px solid var(--border)',
-                                flexDirection: isMobile ? 'column' : 'row',
-                                gap: isMobile ? '0.5rem' : '0',
-                                alignItems: isMobile ? 'flex-start' : 'center'
-                            }}>
+                            <div className="settings-surface" style={preferenceRowStyle}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <Globe size={14} style={{ color: 'var(--text-secondary)' }} />
-                                    <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
+                                    <span className="settings-label">
                                         Language
                                     </span>
                                 </div>
                                 <select
                                     value={language}
-                                    onChange={(e) => setLanguage(e.target.value as any)}
+                                    onChange={(e) => setLanguage(e.target.value as LanguageOption)}
                                     // Removed glass-button class to fix text color in light mode
-                                    style={{
-                                        padding: '0.3rem 0.6rem',
-                                        fontSize: '0.75rem',
-                                        cursor: 'pointer',
-                                        minWidth: '90px',
-                                        background: 'var(--bg-primary)',
-                                        color: 'var(--text-primary)', // Explicitly set text color
-                                        border: '1px solid var(--border)', // Added border for better definition
-                                        borderRadius: '6px', // Added radius
-                                        width: isMobile ? '100%' : 'auto'
-                                    }}
+                                    className="premium-select"
+                                    style={{ width: isMobile ? '100%' : 'auto' }}
                                 >
                                     <option value="ENG">English</option>
                                     <option value="TR">Türkçe</option>
@@ -580,26 +522,16 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                             </div>
 
                             {/* 3. Currency */}
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                padding: isMobile ? '0.5rem' : '0.75rem',
-                                background: 'var(--bg-secondary)',
-                                borderRadius: '6px',
-                                border: '1px solid var(--border)',
-                                flexDirection: isMobile ? 'column' : 'row',
-                                gap: isMobile ? '0.5rem' : '0',
-                                alignItems: isMobile ? 'flex-start' : 'center'
-                            }}>
+                            <div className="settings-surface" style={preferenceRowStyle}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <DollarSign size={14} style={{ color: 'var(--text-secondary)' }} />
-                                    <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
+                                    <span className="settings-label">
                                         Currency
                                     </span>
                                 </div>
                                 <select
                                     value={currency}
-                                    onChange={(e) => setCurrency(e.target.value as any)}
+                                    onChange={(e) => setCurrency(e.target.value as CurrencyOption)}
                                     // Removed glass-button class to fix text color in light mode
                                     style={{
                                         padding: '0.3rem 0.6rem',
@@ -621,20 +553,10 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                             </div>
 
                             {/* 4. Timezone */}
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                padding: isMobile ? '0.5rem' : '0.75rem',
-                                background: 'var(--bg-secondary)',
-                                borderRadius: '6px',
-                                border: '1px solid var(--border)',
-                                flexDirection: isMobile ? 'column' : 'row',
-                                gap: isMobile ? '0.5rem' : '0',
-                                alignItems: isMobile ? 'flex-start' : 'center'
-                            }}>
+                            <div className="settings-surface" style={preferenceRowStyle}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <Clock size={14} style={{ color: 'var(--text-secondary)' }} />
-                                    <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
+                                    <span className="settings-label">
                                         Timezone
                                     </span>
                                 </div>
@@ -642,19 +564,8 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                                     value={timezone}
                                     onChange={(e) => handleTimezoneChange(e.target.value)}
                                     // Removed glass-button class to fix text color in light mode
-                                    style={{
-                                        padding: '0.3rem 0.6rem',
-                                        fontSize: '0.75rem',
-                                        cursor: 'pointer',
-                                        minWidth: '120px',
-                                        background: 'var(--bg-primary)',
-                                        color: 'var(--text-primary)', // Explicitly set text color
-                                        border: '1px solid var(--border)', // Added border
-                                        borderRadius: '6px', // Added radius
-                                        maxWidth: isMobile ? '100%' : '150px',
-                                        width: isMobile ? '100%' : 'auto',
-                                        textOverflow: 'ellipsis'
-                                    }}
+                                    className="premium-select"
+                                    style={{ maxWidth: isMobile ? '100%' : '150px', width: isMobile ? '100%' : 'auto', textOverflow: 'ellipsis' }}
                                 >
                                     <option value="Europe/Istanbul">Istanbul (GMT+3)</option>
                                     <option value="Europe/London">London (GMT+0)</option>
@@ -670,19 +581,11 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                             </div>
 
                             {/* 5. Default Benchmarks */}
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.5rem',
-                                padding: isMobile ? '0.5rem' : '0.75rem',
-                                background: 'var(--bg-secondary)',
-                                borderRadius: '6px',
-                                border: '1px solid var(--border)'
-                            }}>
+                            <div className="settings-surface" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <TrendingUp size={14} style={{ color: 'var(--text-secondary)' }} />
-                                        <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
+                                        <span className="settings-label">
                                             Comparison Benchmarks
                                         </span>
                                     </div>
@@ -716,20 +619,10 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                             </div>
 
                             {/* 6. Chart Default Range */}
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                padding: isMobile ? '0.5rem' : '0.75rem',
-                                background: 'var(--bg-secondary)',
-                                borderRadius: '6px',
-                                border: '1px solid var(--border)',
-                                flexDirection: isMobile ? 'column' : 'row',
-                                gap: isMobile ? '0.5rem' : '0',
-                                alignItems: isMobile ? 'flex-start' : 'center'
-                            }}>
+                            <div className="settings-surface" style={preferenceRowStyle}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <BarChart3 size={14} style={{ color: 'var(--text-secondary)' }} />
-                                    <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: isMobile ? '0.8rem' : '0.85rem' }}>
+                                    <span className="settings-label">
                                         Default Chart Range
                                     </span>
                                 </div>
@@ -737,17 +630,8 @@ export function SettingsPage({ userEmail, username, preferences, onBack }: Setti
                                     value={chartRange}
                                     onChange={(e) => handleChartRangeChange(e.target.value)}
                                     // Removed glass-button class to fix text color in light mode
-                                    style={{
-                                        padding: '0.3rem 0.6rem',
-                                        fontSize: '0.75rem',
-                                        cursor: 'pointer',
-                                        minWidth: '80px',
-                                        background: 'var(--bg-primary)',
-                                        color: 'var(--text-primary)', // Explicitly set text color
-                                        border: '1px solid var(--border)', // Added border
-                                        borderRadius: '6px', // Added radius
-                                        width: isMobile ? '100%' : 'auto'
-                                    }}
+                                    className="premium-select"
+                                    style={{ width: isMobile ? '100%' : 'auto' }}
                                 >
                                     <option value="1D">1 Day</option>
                                     <option value="1W">1 Week</option>

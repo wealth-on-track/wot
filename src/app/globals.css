@@ -1768,6 +1768,63 @@ body.light .logo-letter-wt {
   color: var(--text-secondary);
 }
 
+.settings-surface {
+  background: color-mix(in oklab, var(--surface) 82%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  padding: 0.75rem;
+}
+
+.settings-label {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.premium-select {
+  padding: 0.38rem 0.68rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  min-width: 92px;
+  background: color-mix(in oklab, var(--surface) 92%, transparent);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+}
+
+.premium-select:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--accent) 75%, white 25%);
+  outline-offset: 2px;
+}
+
+.segmented-toggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  background: color-mix(in oklab, var(--surface) 94%, transparent);
+  border: 1px solid var(--border);
+  padding: 0.2rem;
+  border-radius: 0.65rem;
+}
+
+.segmented-toggle-btn {
+  border: 0;
+  border-radius: 0.45rem;
+  min-width: 2rem;
+  height: 1.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.segmented-toggle-btn.active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  box-shadow: 0 8px 18px color-mix(in oklab, var(--accent-glow) 70%, transparent);
+}
+
 @media (max-width: 767px) {
   .brand-mark {
     padding: 0.3rem 0.42rem;
