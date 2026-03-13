@@ -1,0 +1,63 @@
+{
+  "id": "PRP-20260312-040030116-001212",
+  "title": "Compare critical portfolio flows against benchmark scripts and align best practices (triaged)",
+  "category": "benchmark",
+  "problem": "User-visible issue in src/components/mobile/MobileDashboard.tsx creates measurable friction in interpretation or trust. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
+  "evidence": [
+    "benchmark_result: performance:pass",
+    "local failing signal captured and attached",
+    "benchmark/test comparison added with concrete reference",
+    "quality_session_rewrite@2026-03-11T12:55:30.981Z"
+  ],
+  "proposed_change": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+  "expected_benefit": "Clear, measurable improvement linked to one component and one acceptance threshold. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
+  "risk": "low",
+  "impact": "high",
+  "priority": "P1",
+  "impactScore": 4,
+  "confidenceScore": 4,
+  "effortScore": 3,
+  "userFacing": true,
+  "success_metrics": [
+    "At least one measurable before/after signal is present in artifacts.",
+    "All required quality checks pass.",
+    "Reviewer can verify impact from summary + evidence without guessing intent."
+  ],
+  "kpi_target": "Target KPI: improve a user-facing quality metric (clarity/latency/error) with explicit before/after threshold in artifacts.",
+  "benchmark_delta": "Benchmark delta: identify best fintech pattern gap and document how this change narrows that gap.",
+  "risk_controls": [
+    "Constrain change to scoped files and single functional intent.",
+    "Require verification artifacts before review_ready."
+  ],
+  "non_goals": [
+    "No unrelated refactor.",
+    "No broad redesign outside scoped files.",
+    "No production deploy automation without explicit human approval."
+  ],
+  "files_expected": [
+    "src/components/mobile/MobileDashboard.tsx"
+  ],
+  "tests_required": [
+    "lint",
+    "unit"
+  ],
+  "rollback_plan": "Revert local branch to previous commit, remove generated artifacts for this job, and restore previous state snapshot.",
+  "revision_summary": {
+    "revisedAt": "2026-03-12T04:00:30.161Z",
+    "oneSessionRewrite": true,
+    "addressedItems": [
+      "Align change_spec with files_expected"
+    ]
+  },
+  "change_spec": [
+    {
+      "file": "src/components/mobile/MobileDashboard.tsx",
+      "change": "Align file-level plan and implementation target so build can produce one focused functional change.",
+      "why": "Prevents proposal/build mismatch and no-diff loops."
+    }
+  ],
+  "triagedFrom": "PRP-20260311-125530710-003777",
+  "triageReasonCodes": [],
+  "_planned": true,
+  "_plannedAt": "2026-03-12T15:10:30.672Z"
+}

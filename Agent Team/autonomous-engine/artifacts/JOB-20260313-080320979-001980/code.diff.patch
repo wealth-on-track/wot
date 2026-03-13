@@ -1,0 +1,13 @@
+diff --git a/src/app/[username]/portfolio_public/page.tsx b/src/app/[username]/portfolio_public/page.tsx
+index 0181bfa..18e849f 100644
+--- a/src/app/[username]/portfolio_public/page.tsx
++++ b/src/app/[username]/portfolio_public/page.tsx
+@@ -246,7 +246,7 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
+             <>
+               <li>Add your first holding in the main portfolio dashboard.</li>
+               <li>Refresh this page once to generate and verify the first public snapshot.</li>
+-              <li>Re-share this link after the snapshot shows at least one category.</li>
++              <li>Re-share this link after the snapshot shows at least one category and a visible allocation percentage.</li>
+             </>
+           ) : (
+             <>

@@ -1,0 +1,11 @@
+{
+  "jobId": "JOB-20260313-013911-UXPOLISH",
+  "changedFiles": [
+    "src/app/(auth)/login/page.tsx",
+    "src/app/globals.css",
+    "src/components/LandingPage.tsx",
+    "src/components/LoginForm.tsx",
+    "src/components/Navbar.tsx",
+    "src/components/mobile/MobileHeader.tsx"
+  ]
+}

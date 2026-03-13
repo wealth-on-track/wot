@@ -246,5 +246,130 @@
       "updatedAt": "2026-03-11T16:16:12.092Z"
     },
     "buildAttempt": 3
+  },
+  {
+    "id": "JOB-20260311-161031334-001818",
+    "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
+    "category": "benchmark",
+    "state": "abandoned_with_reason",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 3,
+    "userFacing": true,
+    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
+    "proposalId": "PRP-20260311-125530710-003777",
+    "changedFiles": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "testResults": "pass",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 4
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "verifier",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-11T16:15:30.965Z",
+      "sessionCount": 0,
+      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
+    },
+    "timestamps": {
+      "createdAt": "2026-03-11T16:10:31.333Z",
+      "updatedAt": "2026-03-12T05:08:53.562Z"
+    },
+    "buildAttempt": 1,
+    "reviewNudgeAt": "2026-03-12T04:15:31.026Z",
+    "reviewReminderAt": "2026-03-12T04:15:31.072Z",
+    "finalReason": "superseded_review_ready_lineage:PRP-20260311-125530710-003777"
+  },
+  {
+    "id": "JOB-20260311-162031062-001321",
+    "title": "Pilot Clean: improve portfolio insight confidence legend semantics on public portfolio page",
+    "category": "ux",
+    "state": "approved",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 5,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Implementation is file-level concrete: src/components/PublicPortfolioView.tsx, one functional change, measurable acceptance. (local build applied)",
+    "proposalId": "PRP-20260312-040530520-001448",
+    "changedFiles": [
+      "src/components/PublicPortfolioView.tsx"
+    ],
+    "testResults": "pass",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 17
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "verifier",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-12T04:05:30.564Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [
+          "FILE_PLAN_MISMATCH"
+        ],
+        "strengths": [
+          "Category alignment: benchmark",
+          "Initial impact/confidence/effort: 4 / 4 / 3",
+          "Scope remains constrained for controlled delivery."
+        ],
+        "gaps": [
+          "change_spec file does not align with files_expected; build target is ambiguous."
+        ],
+        "must_fix": [
+          "FILE_PLAN_MISMATCH"
+        ],
+        "evidence_gap": null,
+        "rewrite_plan": [
+          "Rewrite problem statement to explain user/system consequence clearly.",
+          "Add concrete evidence and tie it to measurable acceptance criteria.",
+          "Upgrade proposal language from generic intent to execution-ready plan.",
+          "Re-score impact/confidence after rewrite and keep effort realistic."
+        ],
+        "acceptance_checklist": [
+          "Impact >= 3",
+          "Confidence >= 3",
+          "Evidence count >= 2",
+          "User-facing value explicitly stated",
+          "KPI target is quantified",
+          "change_spec file aligns with files_expected"
+        ]
+      },
+      "revised": true,
+      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
+    },
+    "timestamps": {
+      "createdAt": "2026-03-11T16:20:31.062Z",
+      "updatedAt": "2026-03-12T22:55:32.752Z"
+    },
+    "buildAttempt": 6,
+    "reviewNudgeAt": "2026-03-12T22:00:31.320Z",
+    "reviewReminderAt": "2026-03-12T22:00:31.364Z"
   }
 ]

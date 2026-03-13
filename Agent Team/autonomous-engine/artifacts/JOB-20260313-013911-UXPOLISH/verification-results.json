@@ -1,0 +1,23 @@
+{
+  "jobId": "JOB-20260313-013911-UXPOLISH",
+  "checks": [
+    {
+      "command": "npm run lint",
+      "status": "failed_baseline",
+      "details": "Repository-wide lint reports 406 errors and 308 warnings outside this polish scope. No new blocking issue was attributed to the edited files after revision."
+    },
+    {
+      "command": "./node_modules/.bin/eslint 'src/app/(auth)/login/page.tsx' src/components/LandingPage.tsx src/components/Navbar.tsx src/components/mobile/MobileHeader.tsx src/components/LoginForm.tsx",
+      "status": "passed"
+    },
+    {
+      "command": "npm run type-check",
+      "status": "passed"
+    },
+    {
+      "command": "./node_modules/.bin/next build",
+      "status": "blocked_environment",
+      "details": "Process exited immediately with macOS/runtime error 'SecItemCopyMatching failed -50' before project build output began."
+    }
+  ]
+}

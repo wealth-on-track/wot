@@ -1,0 +1,53 @@
+{
+  "id": "PRP-20260313080312-PUBEMPTY-UX",
+  "title": "Premium empty-state onboarding for public portfolio snapshot (owner + visitor clarity)",
+  "category": "ux",
+  "problem": "When a shared portfolio has zero active holdings, the empty state explains the issue but does not set an explicit outcome-oriented checklist for either owner or visitor. This creates avoidable confusion in first-time share flows and lowers trust in whether the link is broken or simply awaiting data.",
+  "evidence": [
+    "Current empty state at src/app/[username]/portfolio_public/page.tsx uses generic guidance and no explicit “what happens next” trust signal.",
+    "Benchmark delta observed against premium fintech onboarding patterns: top products clarify actor-specific next step + expected refresh behavior in one scan."
+  ],
+  "proposed_change": "Refine the public empty-state copy to include role-specific microcopy (owner vs visitor), explicit next-step outcomes, and a trust signal that the shared page is functioning and awaiting first holdings snapshot.",
+  "expected_benefit": "Faster comprehension in first-share scenarios, fewer ambiguous “is this page broken?” moments, and clearer conversion path from empty portfolio to first visible snapshot.",
+  "risk": "low",
+  "impact": "high",
+  "priority": "P1",
+  "impactScore": 4,
+  "confidenceScore": 4,
+  "effortScore": 1,
+  "userFacing": true,
+  "success_metrics": [
+    "QA checklist: owner path can identify next action in <=5 seconds in 9/10 trials (baseline 6/10).",
+    "QA checklist: visitor path can identify expected follow-up action in <=5 seconds in 9/10 trials (baseline 5/10).",
+    "No lint/unit regressions in scoped file change."
+  ],
+  "kpi_target": "Increase empty-state action clarity from baseline <=60% to >=90% first-read comprehension across 20 QA checklist runs (owner+visitor prompts).",
+  "benchmark_delta": "Baseline: generic empty-state explanation. Target: benchmark-aligned role-specific guidance + trust framing; expected closure >=70% of clarity gap vs premium onboarding empty states.",
+  "risk_controls": [
+    "Scope lock to one file: src/app/[username]/portfolio_public/page.tsx",
+    "Single-intent change: empty-state microcopy only, no data/logic changes",
+    "Rollback: revert commit if lint/unit checks fail"
+  ],
+  "non_goals": [
+    "No layout redesign",
+    "No auth/share flow logic changes",
+    "No production deploy"
+  ],
+  "files_expected": [
+    "src/app/[username]/portfolio_public/page.tsx"
+  ],
+  "change_spec": [
+    {
+      "file": "src/app/[username]/portfolio_public/page.tsx",
+      "change": "Rewrite empty portfolio copy block with clearer owner/visitor instructions and trust signal text while preserving existing render conditions.",
+      "why": "Highest-impact low-risk UX clarity fix in public onboarding path."
+    }
+  ],
+  "tests_required": [
+    "lint",
+    "unit"
+  ],
+  "rollback_plan": "git revert last local-auto commit for this job and restore prior empty-state copy.",
+  "_planned": true,
+  "_plannedAt": "2026-03-13T08:03:20.979Z"
+}

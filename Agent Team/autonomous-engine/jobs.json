@@ -1,151 +1,28 @@
 [
   {
-    "id": "JOB-20260311-161031334-001818",
-    "title": "Compare critical portfolio flows against benchmark scripts and align best practices",
-    "category": "benchmark",
-    "state": "abandoned_with_reason",
-    "risk": "low",
-    "impact": "high",
-    "priority": "P1",
-    "impactScore": 4,
-    "confidenceScore": 4,
-    "effortScore": 3,
-    "userFacing": true,
-    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
-    "proposalId": "PRP-20260311-125530710-003777",
-    "changedFiles": [
-      "src/components/PublicPortfolioView.tsx"
-    ],
-    "testResults": "pass",
-    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
-    "retries": {
-      "planning": 0,
-      "build": 0,
-      "testing": 0,
-      "verification": 4
-    },
-    "constraints": {
-      "maxFiles": 5,
-      "maxFunctionalChanges": 1,
-      "noUnrelatedRefactor": true,
-      "functionalScope": "src/components"
-    },
-    "ownerAgent": "verifier",
-    "quality": {
-      "status": "pass",
-      "checkedAt": "2026-03-11T16:15:30.965Z",
-      "sessionCount": 0,
-      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
-    },
-    "timestamps": {
-      "createdAt": "2026-03-11T16:10:31.333Z",
-      "updatedAt": "2026-03-12T05:08:53.562Z"
-    },
-    "buildAttempt": 1,
-    "reviewNudgeAt": "2026-03-12T04:15:31.026Z",
-    "reviewReminderAt": "2026-03-12T04:15:31.072Z",
-    "finalReason": "superseded_review_ready_lineage:PRP-20260311-125530710-003777"
-  },
-  {
-    "id": "JOB-20260311-162031062-001321",
-    "title": "Pilot Clean: improve portfolio insight confidence legend semantics on public portfolio page",
+    "id": "JOB-20260312-050901046-001373",
+    "title": "Improve empty portfolio onboarding with clearer next actions",
     "category": "ux",
     "state": "review_ready",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
-    "impactScore": 5,
-    "confidenceScore": 4,
-    "effortScore": 2,
-    "userFacing": true,
-    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Implementation is file-level concrete: src/components/PublicPortfolioView.tsx, one functional change, measurable acceptance. (local build applied)",
-    "proposalId": "PRP-20260312-040530520-001448",
-    "changedFiles": [
-      "src/components/PublicPortfolioView.tsx"
-    ],
-    "testResults": "pass",
-    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
-    "retries": {
-      "planning": 0,
-      "build": 0,
-      "testing": 0,
-      "verification": 1
-    },
-    "constraints": {
-      "maxFiles": 5,
-      "maxFunctionalChanges": 1,
-      "noUnrelatedRefactor": true,
-      "functionalScope": "src/components"
-    },
-    "ownerAgent": "verifier",
-    "quality": {
-      "status": "pass",
-      "checkedAt": "2026-03-12T04:05:30.564Z",
-      "sessionCount": 1,
-      "feedback": {
-        "reject_reason_codes": [
-          "FILE_PLAN_MISMATCH"
-        ],
-        "strengths": [
-          "Category alignment: benchmark",
-          "Initial impact/confidence/effort: 4 / 4 / 3",
-          "Scope remains constrained for controlled delivery."
-        ],
-        "gaps": [
-          "change_spec file does not align with files_expected; build target is ambiguous."
-        ],
-        "must_fix": [
-          "FILE_PLAN_MISMATCH"
-        ],
-        "evidence_gap": null,
-        "rewrite_plan": [
-          "Rewrite problem statement to explain user/system consequence clearly.",
-          "Add concrete evidence and tie it to measurable acceptance criteria.",
-          "Upgrade proposal language from generic intent to execution-ready plan.",
-          "Re-score impact/confidence after rewrite and keep effort realistic."
-        ],
-        "acceptance_checklist": [
-          "Impact >= 3",
-          "Confidence >= 3",
-          "Evidence count >= 2",
-          "User-facing value explicitly stated",
-          "KPI target is quantified",
-          "change_spec file aligns with files_expected"
-        ]
-      },
-      "revised": true,
-      "lastTriedFile": "src/components/PublicPortfolioView.tsx"
-    },
-    "timestamps": {
-      "createdAt": "2026-03-11T16:20:31.062Z",
-      "updatedAt": "2026-03-12T04:05:32.501Z"
-    },
-    "buildAttempt": 6,
-    "reviewNudgeAt": "2026-03-12T04:20:30.677Z",
-    "reviewReminderAt": "2026-03-12T04:40:30.469Z"
-  },
-  {
-    "id": "JOB-20260312-050901046-001373",
-    "title": "Improve empty portfolio onboarding with clearer next actions",
-    "category": "ux",
-    "state": "proposal",
-    "risk": "low",
-    "impact": "high",
-    "priority": "P1",
     "impactScore": 4,
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Edit src/app/[username]/portfolio_public/page.tsx with one explicit behavior/text adjustment, add acceptance checklist references, and keep scope to a single functional change. Implementation is file-level concrete: src/app/[username]/portfolio_public/page.tsx, one functional change, measurable acceptance. (quality-revised) | halted: no implementation diff | halted: no implementation diff",
+    "summary": "Edit src/app/[username]/portfolio_public/page.tsx with one explicit behavior/text adjustment, add acceptance checklist references, and keep scope to a single functional change. Implementation is file-level concrete: src/app/[username]/portfolio_public/page.tsx, one functional change, measurable acceptance. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
     "proposalId": "PRP-20260312-050900853-003589",
-    "changedFiles": [],
-    "testResults": "pending",
+    "changedFiles": [
+      "src/app/[username]/portfolio_public/page.tsx"
+    ],
+    "testResults": "pass",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 0,
+      "planning": 102,
       "build": 2,
-      "testing": 0,
-      "verification": 0
+      "testing": 1,
+      "verification": 1
     },
     "constraints": {
       "maxFiles": 5,
@@ -153,31 +30,21 @@
       "noUnrelatedRefactor": true,
       "functionalScope": "src/app"
     },
-    "ownerAgent": "planner",
+    "ownerAgent": "verifier",
     "quality": {
-      "status": "needs_human_review",
-      "checkedAt": "2026-03-12T05:10:57.161Z",
-      "sessionCount": 1,
-      "reason": "repeated_no_changed_files",
-      "feedback": {
-        "reject_reason_codes": [
-          "NO_CHANGED_FILES"
-        ],
-        "must_fix": [
-          "Apply a real scoped code change before redispatch"
-        ],
-        "rewrite_plan": [
-          "Add the intended implementation diff in the scoped file, then rerun dispatch/build."
-        ]
-      },
-      "triagedAt": "2026-03-12T05:10:38.768Z",
-      "triageSkipped": "missing_implementation_diff"
+      "status": "pass",
+      "checkedAt": "2026-03-13T07:32:42.173Z",
+      "sessionCount": 3,
+      "reason": "rescoped_verification_unit_only",
+      "lastTriedFile": "src/app/[username]/portfolio_public/page.tsx"
     },
     "timestamps": {
       "createdAt": "2026-03-12T05:09:01.046Z",
-      "updatedAt": "2026-03-12T05:10:38.769Z"
+      "updatedAt": "2026-03-13T07:32:53.565Z"
     },
-    "buildAttempt": 2
+    "buildAttempt": 4,
+    "reviewNudgeAt": "2026-03-13T07:45:31.338Z",
+    "reviewReminderAt": "2026-03-13T08:05:31.305Z"
   },
   {
     "id": "JOB-20260312-050901047-002631",
@@ -197,7 +64,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 0,
+      "planning": 106,
       "build": 2,
       "testing": 0,
       "verification": 0
@@ -211,9 +78,9 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-12T05:10:57.161Z",
+      "checkedAt": "2026-03-13T08:31:42.478Z",
       "sessionCount": 2,
-      "reason": "repeated_no_changed_files",
+      "reason": "planning_timeout",
       "feedback": {
         "reject_reason_codes": [
           "NO_CHANGED_FILES"
@@ -226,12 +93,196 @@
         ]
       },
       "triagedAt": "2026-03-12T05:10:38.769Z",
-      "triageSkipped": "missing_implementation_diff"
+      "triageSkipped": "missing_implementation_diff",
+      "sticky": true
     },
     "timestamps": {
       "createdAt": "2026-03-12T05:09:01.047Z",
-      "updatedAt": "2026-03-12T05:10:38.769Z"
+      "updatedAt": "2026-03-13T08:25:31.282Z"
     },
     "buildAttempt": 2
+  },
+  {
+    "id": "JOB-20260312-151030673-001995",
+    "title": "Compare critical portfolio flows against benchmark scripts and align best practices (triaged)",
+    "category": "benchmark",
+    "state": "proposal",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 3,
+    "userFacing": true,
+    "summary": "Edit src/components/mobile/MobileDashboard.tsx to apply a specific behavior/text change and document exact acceptance outcome. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Implementation is file-level concrete: src/components/PublicPortfolioView.tsx, one functional change, measurable acceptance. (quality-revised) | halted: no implementation diff (cooldown active)",
+    "proposalId": "PRP-20260312-224030966-001333",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 39,
+      "build": 1,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-13T08:31:42.478Z",
+      "sessionCount": 1,
+      "reason": "planning_timeout",
+      "feedback": {
+        "reject_reason_codes": [
+          "NO_CHANGED_FILES"
+        ],
+        "must_fix": [
+          "Apply a real scoped code change before redispatch"
+        ],
+        "rewrite_plan": [
+          "Wait for cooldown or make an explicit implementation change in a different scoped file before retrying."
+        ]
+      },
+      "triagedAt": "2026-03-12T23:05:32.082Z",
+      "triageSkipped": "missing_implementation_diff",
+      "sticky": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-12T15:10:30.672Z",
+      "updatedAt": "2026-03-13T08:31:33.190Z"
+    },
+    "buildAttempt": 1
+  },
+  {
+    "id": "JOB-20260312-225532800-001529",
+    "title": "Pilot Clean: improve portfolio insight confidence legend semantics on public portfolio page",
+    "category": "ux",
+    "state": "proposal",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 5,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "In src/components/PublicPortfolioView.tsx, add an explicit confidence legend block directly under insight title and update label text to map each level to plain-language meaning. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. | halted: no implementation diff",
+    "proposalId": "PRP-PILOT-20260311-CLEAN",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 38,
+      "build": 1,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/components"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-13T08:31:42.478Z",
+      "sessionCount": 0,
+      "reason": "planning_timeout",
+      "feedback": {
+        "reject_reason_codes": [
+          "NO_CHANGED_FILES"
+        ],
+        "must_fix": [
+          "Apply a real scoped code change before redispatch"
+        ],
+        "rewrite_plan": [
+          "Add the intended implementation diff in the scoped file, then rerun dispatch/build."
+        ]
+      },
+      "triagedAt": "2026-03-12T23:00:32.371Z",
+      "triageSkipped": "missing_implementation_diff",
+      "sticky": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-12T22:55:32.799Z",
+      "updatedAt": "2026-03-13T08:30:31.696Z"
+    },
+    "buildAttempt": 1
+  },
+  {
+    "id": "JOB-20260313-080320979-001980",
+    "title": "[JOB-20260313-080320979-001980|PRP-20260313080312-PUBEMPTY-UX] Premium empty-state onboarding for public portfolio snapshot",
+    "category": "ux",
+    "state": "review_ready",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 1,
+    "userFacing": true,
+    "summary": "Refine the public empty-state copy to include role-specific microcopy (owner vs visitor), explicit next-step outcomes, and a trust signal that the shared page is functioning and awaiting first holdings snapshot. Implementation is file-level concrete: src/app/[username]/portfolio_public/page.tsx, one functional change, measurable acceptance. (local build applied)",
+    "proposalId": "PRP-20260313080312-PUBEMPTY-UX",
+    "changedFiles": [
+      "src/app/[username]/portfolio_public/page.tsx"
+    ],
+    "testResults": "pass",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 1,
+      "verification": 1
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/app"
+    },
+    "ownerAgent": "verifier",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-13T08:04:25.573Z",
+      "sessionCount": 1,
+      "feedback": {
+        "reject_reason_codes": [],
+        "strengths": [
+          "Category alignment: ux",
+          "Initial impact/confidence/effort: 4 / 4 / 1",
+          "Scope remains constrained for controlled delivery."
+        ],
+        "gaps": [],
+        "must_fix": [],
+        "evidence_gap": null,
+        "rewrite_plan": [
+          "Rewrite problem statement to explain user/system consequence clearly.",
+          "Add concrete evidence and tie it to measurable acceptance criteria.",
+          "Upgrade proposal language from generic intent to execution-ready plan.",
+          "Re-score impact/confidence after rewrite and keep effort realistic."
+        ],
+        "acceptance_checklist": [
+          "Impact >= 3",
+          "Confidence >= 3",
+          "Evidence count >= 2",
+          "User-facing value explicitly stated",
+          "KPI target is quantified",
+          "change_spec file aligns with files_expected"
+        ]
+      },
+      "revised": true,
+      "lastTriedFile": "src/app/[username]/portfolio_public/page.tsx"
+    },
+    "timestamps": {
+      "createdAt": "2026-03-13T08:03:20.979Z",
+      "updatedAt": "2026-03-13T08:04:36.906Z"
+    },
+    "buildAttempt": 2,
+    "reviewNudgeAt": "2026-03-13T08:20:31.703Z"
   }
 ]

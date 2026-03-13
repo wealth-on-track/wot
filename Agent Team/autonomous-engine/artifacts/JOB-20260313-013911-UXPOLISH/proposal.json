@@ -1,0 +1,37 @@
+{
+  "id": "PRP-20260313-013911-UXPOLISH",
+  "title": "Unify WOT premium branding across landing, auth, and app headers",
+  "category": "ux_branding",
+  "problem": "WOT currently presents inconsistent brand treatments and surface quality between the landing page, login flow, desktop navbar, and mobile header. That inconsistency reduces perceived polish on first touch and weakens the premium product narrative.",
+  "proposed_change": "Introduce a shared premium brand/surface language in globals, then apply it to the landing hero and proof sections, the login experience, the desktop navbar, and the mobile header.",
+  "expected_benefit": "Stronger first impression, more coherent premium identity, and a tighter transition between marketing and authenticated product surfaces without changing core product behavior.",
+  "risk": "low",
+  "impact": "high",
+  "priority": "P1",
+  "userFacing": true,
+  "files_expected": [
+    "src/app/globals.css",
+    "src/app/(auth)/login/page.tsx",
+    "src/components/LandingPage.tsx",
+    "src/components/LoginForm.tsx",
+    "src/components/Navbar.tsx",
+    "src/components/mobile/MobileHeader.tsx"
+  ],
+  "quality_gate": {
+    "discarded_ideas": [
+      "Generic color-only refresh with no shared system",
+      "Broad dashboard redesign touching complex data surfaces",
+      "Animation-heavy polish with regression risk"
+    ],
+    "approved_items": [
+      "Shared brand primitives and premium surface tokens",
+      "Landing page hierarchy and proof-strip upgrade",
+      "Desktop and mobile header alignment",
+      "Login experience polish matched to marketing tone"
+    ]
+  },
+  "revision_summary": {
+    "oneSessionRewrite": true,
+    "reason": "Initial scoped lint run flagged effect-based state updates and a legacy prop typing mismatch; implementation was revised once and re-verified."
+  }
+}
