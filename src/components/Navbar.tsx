@@ -2,11 +2,6 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { InlineAssetSearch } from "./InlineAssetSearch";
 
-import { ThemeToggle } from "./ThemeToggle";
-import { PrivacyToggle } from "./PrivacyToggle";
-
-import { NavbarActions } from "./NavbarActions";
-import { ShieldCheck, Link as LinkIcon } from "lucide-react";
 
 interface NavbarProps {
     totalBalance?: number;
@@ -50,35 +45,7 @@ export async function Navbar({ username, isOwner }: NavbarProps) {
                     </div>
 
                     <div className="wot-navbar-actions">
-                        {session?.user?.email?.toLowerCase() === "user1@wot.money" && (
-                            <Link
-                                href="/admin/autonomous-engine"
-                                className="navbar-btn wot-navbar-admin-link"
-                                title="Admin Panel"
-                            >
-                                <ShieldCheck size={20} />
-                            </Link>
-                        )}
-
-                        {session?.user && currentUsername && (
-                            <Link
-                                href={`/${currentUsername}/portfolio_public`}
-                                className="navbar-btn"
-                                title="Public share page"
-                            >
-                                <LinkIcon size={18} />
-                            </Link>
-                        )}
-
-                        <PrivacyToggle />
-                        <ThemeToggle />
-
-                        {session?.user ? (
-                            <>
-                                <div id="navbar-extra-actions" className="wot-navbar-extra-actions" />
-                                <NavbarActions />
-                            </>
-                        ) : (
+                        {!session?.user && (
                             <div className="wot-navbar-guest">
                                 <Link href="/login" className="wot-navbar-login-link">
                                     Login

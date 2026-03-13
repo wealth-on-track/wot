@@ -14,11 +14,17 @@ export default function DeployButton() {
       try {
         const res = await fetch('/api/autonomous-engine/deploy', { method: 'POST' });
         const data = await res.json().catch(() => ({}));
+
+        if (!res.ok || data?.ok === false) {
+          const message = data?.error || 'Deploy failed';
+          window.alert(message);
+          return;
+        }
+
         router.replace(data?.redirect || '/admin/autonomous-engine?section=completed');
         router.refresh();
-      } catch {
-        router.replace('/admin/autonomous-engine?section=completed');
-        router.refresh();
+      } catch (error) {
+        window.alert(error instanceof Error ? error.message : 'Deploy failed');
       } finally {
         setRunning(false);
       }

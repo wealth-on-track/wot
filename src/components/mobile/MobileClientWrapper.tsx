@@ -13,7 +13,7 @@ interface MobileClientWrapperProps {
     assets: AssetDisplay[];
     goals?: unknown[];
     exchangeRates: Record<string, number>;
-    preferences?: unknown;
+    preferences?: { defaultRange?: string };
     portfolioId?: string;
     enableLiveUpdates?: boolean;
     buildTag?: string;

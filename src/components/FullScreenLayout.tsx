@@ -2,11 +2,13 @@
 
 import React, { useState } from "react";
 import {
-    Briefcase, PieChart, TrendingUp, Lightbulb, Eye,
+    Briefcase, PieChart, TrendingUp, Lightbulb, Eye, EyeOff,
     Target, Trophy, XCircle, Share2, Settings, Hash, Monitor, Pencil, Wallet, Save, X,
     ChevronUp, ChevronDown, ChevronLeft, ChevronRight, FileSpreadsheet, Trash2, GripVertical, Upload, ListChecks, SlidersHorizontal, Search,
-    LayoutGrid, List, PanelLeftClose, PanelLeft, ChevronsLeft, ChevronsRight, Menu, ArrowUpDown, Clock
+    LayoutGrid, List, PanelLeftClose, PanelLeft, ChevronsLeft, ChevronsRight, Menu, ArrowUpDown, Clock,
+    ShieldCheck, Link as LinkIcon, LogOut, Sun, Moon
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
     DndContext,
@@ -189,6 +191,9 @@ export function FullScreenLayout({
     const [activePositionTab, setActivePositionTab] = useState<'open' | 'closed'>('open');
     const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(true);
     const [isToggleHovered, setIsToggleHovered] = useState(false);
+    const { showAmounts, toggleAmounts } = usePrivacy();
+    const { theme, toggleTheme } = useTheme();
+    const isAdminUser = isOwner || userEmail?.toLowerCase() === 'user1@wot.money';
 
     // Restore sidebar state preference
     React.useEffect(() => {
@@ -436,7 +441,6 @@ export function FullScreenLayout({
                                     )}
                                 </button>
 
-                                {/* Tooltip - only when collapsed */}
                                 {!sidebarExpanded && isHovered && (
                                     <div style={{
                                         position: 'absolute',
@@ -459,7 +463,6 @@ export function FullScreenLayout({
                                         }}>
                                             {item.label}
                                         </div>
-                                        {/* Arrow */}
                                         <div style={{
                                             position: 'absolute',
                                             left: '-6px',
@@ -475,7 +478,6 @@ export function FullScreenLayout({
                                     </div>
                                 )}
                             </div>
-                            {/* Divider line between items */}
                             {!isLast && (
                                 <div style={{
                                     height: '1px',
@@ -487,6 +489,132 @@ export function FullScreenLayout({
                         </React.Fragment>
                     );
                 })}
+
+                <div style={{
+                    height: '1px',
+                    background: 'var(--border)',
+                    margin: sidebarExpanded ? '10px 12px 8px 12px' : '10px 8px 8px 8px',
+                    opacity: 0.7
+                }} />
+
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                    padding: sidebarExpanded ? '0 6px 8px 6px' : '0 4px 8px 4px'
+                }}>
+                    {username && (
+                        <Link
+                            href={`/${username}/portfolio_public`}
+                            title="Public share page"
+                            style={{
+                                display: 'flex',
+                                flexDirection: sidebarExpanded ? 'row' : 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: sidebarExpanded ? '8px' : '4px',
+                                minHeight: sidebarExpanded ? '38px' : '44px',
+                                padding: sidebarExpanded ? '0 10px' : '8px 4px',
+                                borderRadius: '10px',
+                                textDecoration: 'none',
+                                color: 'var(--text-muted)',
+                                background: 'transparent'
+                            }}
+                        >
+                            <LinkIcon size={16} />
+                            {sidebarExpanded && <span style={{ fontSize: '11px', fontWeight: 600 }}>Public</span>}
+                        </Link>
+                    )}
+
+                    {isAdminUser && (
+                        <Link
+                            href="/admin/autonomous-engine"
+                            title="Admin panel"
+                            style={{
+                                display: 'flex',
+                                flexDirection: sidebarExpanded ? 'row' : 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: sidebarExpanded ? '8px' : '4px',
+                                minHeight: sidebarExpanded ? '38px' : '44px',
+                                padding: sidebarExpanded ? '0 10px' : '8px 4px',
+                                borderRadius: '10px',
+                                textDecoration: 'none',
+                                color: 'var(--text-muted)',
+                                background: 'transparent'
+                            }}
+                        >
+                            <ShieldCheck size={16} />
+                            {sidebarExpanded && <span style={{ fontSize: '11px', fontWeight: 600 }}>Admin</span>}
+                        </Link>
+                    )}
+
+                    <button
+                        onClick={toggleAmounts}
+                        title={showAmounts ? 'Hide amounts' : 'Show amounts'}
+                        style={{
+                            display: 'flex',
+                            flexDirection: sidebarExpanded ? 'row' : 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: sidebarExpanded ? '8px' : '4px',
+                            minHeight: sidebarExpanded ? '38px' : '44px',
+                            padding: sidebarExpanded ? '0 10px' : '8px 4px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--text-muted)',
+                            background: 'transparent'
+                        }}
+                    >
+                        {showAmounts ? <Eye size={16} /> : <EyeOff size={16} />}
+                        {sidebarExpanded && <span style={{ fontSize: '11px', fontWeight: 600 }}>Privacy</span>}
+                    </button>
+
+                    <button
+                        onClick={toggleTheme}
+                        title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                        style={{
+                            display: 'flex',
+                            flexDirection: sidebarExpanded ? 'row' : 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: sidebarExpanded ? '8px' : '4px',
+                            minHeight: sidebarExpanded ? '38px' : '44px',
+                            padding: sidebarExpanded ? '0 10px' : '8px 4px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--text-muted)',
+                            background: 'transparent'
+                        }}
+                    >
+                        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                        {sidebarExpanded && <span style={{ fontSize: '11px', fontWeight: 600 }}>Theme</span>}
+                    </button>
+
+                    <button
+                        onClick={() => signOut({ callbackUrl: '/login' })}
+                        title="Sign out"
+                        style={{
+                            display: 'flex',
+                            flexDirection: sidebarExpanded ? 'row' : 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: sidebarExpanded ? '8px' : '4px',
+                            minHeight: sidebarExpanded ? '38px' : '44px',
+                            padding: sidebarExpanded ? '0 10px' : '8px 4px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#ef4444',
+                            background: 'transparent'
+                        }}
+                    >
+                        <LogOut size={16} />
+                        {sidebarExpanded && <span style={{ fontSize: '11px', fontWeight: 700 }}>Logout</span>}
+                    </button>
+                </div>
             </div>
 
             {/* Main Content Area */}

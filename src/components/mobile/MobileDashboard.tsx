@@ -87,14 +87,16 @@ export function MobileDashboard({
             if (searchResult.type === 'CASH') {
                 fetchedPrice = 1;
             } else {
-                const source = (searchResult.source === 'TEFAS' || searchResult.exchange === 'TEFAS') ? 'TEFAS' : searchResult.exchange;
+                const source = (searchResult.source === 'TEFAS' || searchResult.exchange === 'TEFAS')
+                    ? 'TEFAS'
+                    : (searchResult.exchange ?? '');
 
                 // Create a timeout promise that resolves to null after 3 seconds
                 const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 3000));
 
                 // Race the API call against the timeout
                 const data = await Promise.race([
-                    getMarketPriceAction(searchResult.symbol, searchResult.type === 'ETF' ? 'FUND' : searchResult.type, source),
+                    getMarketPriceAction(searchResult.symbol, searchResult.type === 'ETF' ? 'FUND' : (searchResult.type ?? 'STOCK'), source),
                     timeoutPromise
                 ]) as { price?: number; previousClose?: number; sector?: string; country?: string } | null;
 

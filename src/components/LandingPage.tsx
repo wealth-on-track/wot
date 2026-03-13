@@ -42,6 +42,7 @@ const featureItems = [
 
 export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: LandingPageProps) {
     const [isMobile, setIsMobile] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -296,9 +297,30 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                 </section>
             )}
 
-            <div className="landing-build-tag" style={{ display: isMobile ? "none" : "block" }}>
-                build {buildTag || "dev"}
-            </div>
+            <button
+                type="button"
+                className="landing-build-tag"
+                style={{
+                    display: isMobile ? "none" : "block",
+                    border: "none",
+                    background: "transparent",
+                    cursor: "pointer"
+                }}
+                onClick={async () => {
+                    const value = `build ${buildTag || "dev"}`;
+                    try {
+                        await navigator.clipboard.writeText(value);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1200);
+                    } catch {
+                        setCopied(false);
+                    }
+                }}
+                aria-label="Copy build tag"
+                title="Copy build tag"
+            >
+                {copied ? "Copied" : `build ${buildTag || "dev"}`}
+            </button>
         </div>
     );
 }
