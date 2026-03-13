@@ -184,7 +184,7 @@ export default async function AutonomousEnginePage({
   try { liveCommit = execSync('git rev-parse --short HEAD', { cwd: ROOT, stdio: 'pipe' }).toString().trim(); } catch {}
 
   return (
-    <main style={{ padding: 10, display: 'grid', gap: 8, background: '#f1f5f9' }}>
+    <main className="ae-root" style={{ padding: 10, display: 'grid', gap: 8, background: '#f1f5f9', color: '#0f172a' }}>
       <header style={{
         border: '1px solid #d8e1ee',
         borderRadius: 12,
@@ -520,6 +520,23 @@ export default async function AutonomousEnginePage({
       )}
 
       <style>{`
+        .ae-root, .ae-root * {
+          color: #0f172a;
+        }
+        .ae-root .card {
+          background: #ffffff;
+          border-color: #d7e0ee;
+        }
+        .ae-root summary {
+          color: #334155;
+        }
+        .ae-root a {
+          color: #0f172a;
+        }
+        .ae-root button {
+          color: inherit;
+        }
+
         @media (max-width: 960px) {
           .ae-top-nav {
             position: sticky;
@@ -538,26 +555,29 @@ export default async function AutonomousEnginePage({
           .ae-flow-row,
           .ae-meta-chips,
           .ae-summary-row {
-            overflow-x: auto;
-            flex-wrap: nowrap !important;
+            overflow-x: visible;
+            flex-wrap: wrap !important;
             padding-bottom: 2px;
-            -webkit-overflow-scrolling: touch;
-            scroll-snap-type: x proximity;
+            gap: 6px !important;
           }
           .ae-flow-row > *,
           .ae-meta-chips > *,
           .ae-summary-row > * {
-            white-space: nowrap;
-            flex: 0 0 auto;
+            white-space: normal;
+            flex: 0 1 auto;
+            max-width: 100%;
           }
           .ae-layout-grid {
             grid-template-columns: 1fr !important;
             gap: 6px !important;
+            min-width: 0;
           }
           .ae-left-panel,
           .ae-right-panel,
           .ae-center-panel {
             max-height: none !important;
+            min-width: 0;
+            overflow-x: hidden;
             padding: 8px !important;
           }
           .ae-left-panel { order: 1; }
@@ -573,13 +593,14 @@ export default async function AutonomousEnginePage({
           .ae-right-panel details summary {
             font-size: 11px !important;
           }
-          .ae-timeline-head,
+          .ae-timeline-head {
+            display: none !important;
+          }
           .ae-timeline-row {
-            grid-template-columns: 90px 98px 1fr !important;
-            gap: 6px !important;
+            grid-template-columns: 1fr !important;
+            gap: 4px !important;
             font-size: 11px !important;
           }
-          .ae-timeline-head > :last-child,
           .ae-timeline-row > :last-child {
             display: none;
           }
