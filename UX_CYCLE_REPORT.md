@@ -190,3 +190,43 @@
 ## Git
 - Commit hash: `b9a7827`
 - Commit message: `Polish public portfolio access gate styling`
+
+---
+
+## Cycle Date
+- March 13, 2026 (08:00 Europe/Amsterdam cycle)
+
+## Findings
+- `src/app/[username]/loading.tsx` used isolated inline styles and an ad-hoc keyframe block, creating inconsistent loading UX compared to the premium loader system in `src/app/loading.tsx`.
+- `src/components/SignOutButton.tsx` relied on JS-driven hover mutation, which caused brittle styling behavior and made icon-button branding inconsistent with class-based navbar controls.
+- `src/app/version/page.tsx` was a plain monospace dump, readable but visually utilitarian and not aligned with the product’s premium/structured diagnostics tone.
+
+## Proposals considered (quality gate)
+- ✅ **Accepted**: Migrate profile loading state (`src/app/[username]/loading.tsx`) to semantic class-driven minimal loader primitives (`wot-loader-shell-minimal`, `wot-loader-minimal-*`) for consistency and readability.
+- ✅ **Accepted**: Replace JS inline hover logic in `src/components/SignOutButton.tsx` with semantic variant class (`navbar-btn-signout`) and token-aware hover/focus styling in `src/app/globals.css`.
+- ✅ **Accepted**: Redesign `src/app/version/page.tsx` into a compact premium diagnostics card with clearer hierarchy and semantic data rows via new `version-page-*` classes in `src/app/globals.css`.
+- ❌ **Rejected**: Expanding version page into deep runtime telemetry (service checks/health probes) this cycle due scope and data-source risk.
+
+## Implemented changes
+- `src/app/[username]/loading.tsx`
+  - Replaced inline full-screen spinner markup/styles with class-based minimal loader shell and status text.
+  - Removed local `style jsx global` keyframe definition and reused global animation primitives.
+- `src/components/SignOutButton.tsx`
+  - Removed inline style object and JS mouse enter/leave mutation logic.
+  - Applied class-based structure (`navbar-btn navbar-btn-signout`) and explicit accessibility label.
+- `src/app/version/page.tsx`
+  - Rebuilt as a structured premium diagnostics surface using semantic heading + definition list rows.
+  - Added styled status pill and mono build timestamp treatment for improved scanability.
+- `src/app/globals.css`
+  - Added `navbar-btn-signout` variant styling for premium destructive-action affordance.
+  - Added minimal loader classes for profile route transition states.
+  - Added complete `version-page-*` style system (shell/card/kicker/title/rows/status).
+
+## Verification results
+- `npm run lint -- 'src/components/SignOutButton.tsx' 'src/app/[username]/loading.tsx' 'src/app/version/page.tsx'` → **Pass**
+- `npm run type-check` → **Pass**
+
+## review_ready
+- [x] Profile-route loading state now visually aligns with the shared premium loading language.
+- [x] Sign-out control now uses maintainable class-based hover/focus behavior instead of JS style mutation.
+- [x] Version diagnostics page now has premium hierarchy/readability while preserving the same core information.

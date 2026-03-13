@@ -1942,6 +1942,17 @@ body.light .wot-navbar {
   box-shadow: 0 12px 24px var(--accent-glow);
 }
 
+.navbar-btn-signout {
+  color: var(--text-secondary);
+}
+
+.navbar-btn-signout:hover {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 12px 24px color-mix(in oklab, #ef4444 42%, transparent);
+}
+
 .premium-icon-btn {
   width: 2.25rem;
   height: 2.25rem;
@@ -2752,6 +2763,27 @@ body.light .wot-navbar {
   text-transform: uppercase;
 }
 
+.wot-loader-shell-minimal {
+  gap: 0.75rem;
+  background: var(--bg-main);
+}
+
+.wot-loader-minimal-spinner {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 2.5px solid color-mix(in oklab, var(--border) 90%, transparent);
+  border-top-color: var(--accent);
+  animation: wot-spin 0.8s linear infinite;
+}
+
+.wot-loader-minimal-message {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
 .wot-spin {
   animation: wot-spin 1s linear infinite;
 }
@@ -2764,6 +2796,91 @@ body.light .wot-navbar {
   to {
     transform: rotate(360deg);
   }
+}
+
+.version-page-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 3vw, 1.8rem);
+  background:
+    radial-gradient(80% 60% at 50% 0%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 72%),
+    var(--bg-main);
+}
+
+.version-page-card {
+  width: min(100%, 34rem);
+  border-radius: 1.05rem;
+  padding: 1.15rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.version-page-kicker {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.version-page-title {
+  margin: 0;
+  font-size: clamp(1.15rem, 2vw, 1.4rem);
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.version-page-grid {
+  margin: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.version-page-row {
+  border: 1px solid var(--border);
+  border-radius: 0.82rem;
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  padding: 0.66rem 0.76rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.version-page-row dt {
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.version-page-row dd {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.version-page-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
+.version-page-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.58rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--success) 52%, var(--border));
+  background: color-mix(in oklab, var(--success) 16%, transparent);
+  color: color-mix(in oklab, var(--success) 76%, #052e16);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
 .public-access-gate-shell {
