@@ -1598,6 +1598,12 @@ body.light .logo-letter-wt {
   -webkit-backdrop-filter: blur(18px);
 }
 
+body.light .wot-navbar {
+  background: color-mix(in oklab, var(--bg-primary) 86%, white 14%);
+  border-bottom-color: color-mix(in oklab, var(--border) 88%, transparent);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+}
+
 .wot-navbar-frame {
   width: 100%;
   max-width: 1200px;
@@ -1681,6 +1687,16 @@ body.light .logo-letter-wt {
   -webkit-backdrop-filter: blur(20px);
 }
 
+.premium-panel-hover {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.premium-panel-hover:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--accent) 30%, var(--border));
+  box-shadow: var(--shadow-lg);
+}
+
 .premium-panel-soft {
   background: color-mix(in oklab, var(--surface) 82%, transparent);
   border: 1px solid var(--border);
@@ -1710,6 +1726,18 @@ body.light .logo-letter-wt {
   gap: 0.8rem;
   text-decoration: none;
   color: inherit;
+  border-radius: 1rem;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.brand-lockup:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.03);
+}
+
+.brand-lockup:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--accent) 75%, white 25%);
+  outline-offset: 3px;
 }
 
 .brand-mark {
@@ -2002,6 +2030,180 @@ body.light .logo-letter-wt {
   font-size: 0.83rem;
   line-height: 1.55;
   color: var(--text-secondary);
+}
+
+.landing-hero-title {
+  font-size: clamp(2.1rem, 5.2vw, 3.6rem);
+  line-height: 1.03;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+  text-wrap: balance;
+}
+
+.landing-hero-title-accent {
+  display: block;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.landing-signed-in {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.85rem;
+  border: 1px solid color-mix(in oklab, var(--accent) 20%, var(--border));
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  width: fit-content;
+}
+
+.landing-signed-in-label {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.landing-signed-in-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.93rem;
+}
+
+.landing-signed-in-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.landing-signed-in-link:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--accent) 75%, white 25%);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.landing-trust-row {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+.landing-cta-shell {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+}
+
+.landing-cta-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.13;
+  background-image: radial-gradient(circle, white 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+.landing-cta-content {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.landing-cta-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.landing-cta-title {
+  color: #fff;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.9rem;
+  line-height: 1.1;
+}
+
+.landing-cta-copy {
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+  max-width: 640px;
+  margin-inline: auto;
+}
+
+.landing-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border-radius: 14px;
+  padding: 0.92rem 1.5rem;
+  text-decoration: none;
+  color: var(--accent);
+  background: #fff;
+  font-weight: 800;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-cta-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 36px rgba(0, 0, 0, 0.2);
+}
+
+.landing-cta-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.96);
+  outline-offset: 2px;
+}
+
+.landing-build-tag {
+  position: fixed;
+  left: 10px;
+  bottom: 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.72;
+  z-index: 20;
+  pointer-events: none;
+  user-select: none;
+}
+
+.rise-in {
+  animation: rise-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.rise-in-delay-1 {
+  animation-delay: 40ms;
+}
+
+.rise-in-delay-2 {
+  animation-delay: 100ms;
+}
+
+.rise-in-delay-3 {
+  animation-delay: 160ms;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .auth-card {
@@ -2354,6 +2556,49 @@ body.light .logo-letter-wt {
   .wot-navbar-guest {
     gap: 0.5rem;
   }
+
+  .landing-cta-title {
+    line-height: 1.2;
+  }
+
+  .landing-hero-title {
+    text-align: center;
+  }
+
+  .landing-signed-in {
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .landing-trust-row {
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .premium-panel-hover,
+  .landing-cta-btn,
+  .brand-lockup,
+  .hero-pill,
+  .btn-primary,
+  .btn-secondary,
+  .navbar-btn {
+    transition: none !important;
+  }
+
+  .premium-panel-hover:hover,
+  .landing-cta-btn:hover,
+  .brand-lockup:hover,
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .hero-pill:hover,
+  .navbar-btn:hover {
+    transform: none !important;
+  }
+
+  .rise-in {
+    animation: none !important;
+  }
 }
 
 .wot-state-body {
@@ -2520,4 +2765,3 @@ body.light .logo-letter-wt {
     transform: rotate(360deg);
   }
 }
-

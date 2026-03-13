@@ -1,35 +1,112 @@
 # UX Cycle Report
 
 ## Findings
-- `src/components/LoginForm.tsx`: heavy inline styling and ad-hoc hover handlers created inconsistent interaction behavior and made auth UI harder to maintain.
-- `src/components/LoginForm.tsx`: repeated label/error/button style blocks reduced readability consistency and premium-brand continuity versus shared design tokens.
-- `src/app/globals.css`: auth surface lacked dedicated reusable primitives, causing style drift risk across login/register states.
+- `src/components/Navbar.tsx` still relied on heavy inline layout styling, which made top-nav polish inconsistent and harder to tune across breakpoints.
+- `src/app/(auth)/login/page.tsx` used large inline style blocks for hero messaging/proof cards, reducing readability and visual consistency with shared premium primitives.
+- `src/app/globals.css` had reusable auth primitives, but lacked dedicated layout tokens for the login hero and structured navbar shell.
 
 ## Proposals considered (quality gate)
-- ✅ **Accepted**: Introduce a cohesive auth design primitive set in `src/app/globals.css` (`.auth-card`, `.auth-btn-*`, `.auth-field-*`, `.auth-benefit-*`, `.auth-register-*`) with token-safe premium styling.
-- ✅ **Accepted**: Refactor `LoginForm` to consume shared auth classes instead of repeated inline styles, preserving behavior while improving consistency and readability.
-- ✅ **Accepted**: Replace JS-driven mouse enter/leave style mutation with CSS hover/focus states for more stable UX polish.
-- ❌ **Rejected**: Full auth-page restructuring (splitting form into multiple child components) this cycle due to scope/impact mismatch.
+- ✅ **Accepted**: Introduce dedicated premium layout classes in `src/app/globals.css` for auth hero (`auth-hero-*`) and navbar shell (`wot-navbar-*`) to enforce spacing rhythm, responsive behavior, and token consistency.
+- ✅ **Accepted**: Refactor `src/app/(auth)/login/page.tsx` to remove ad-hoc inline styling and use semantic auth hero classes with clearer copy/proof composition.
+- ✅ **Accepted**: Refactor `src/components/Navbar.tsx` to class-based structure, preserving behavior while improving maintainability and consistent premium branding.
+- ❌ **Rejected**: Navigation information architecture change (reordering controls and adding new menu groups) due to out-of-scope UX risk for this cycle.
 
 ## Implemented changes
 - `src/app/globals.css`
-  - Added reusable auth primitives for card layout, benefits grid, field labels/hints, error states, spinner variants, and button hierarchy.
-  - Added mobile-specific auth refinements (card padding/radius and responsive benefit grid).
-- `src/components/LoginForm.tsx`
-  - Replaced most inline presentation styles with semantic class names bound to shared auth primitives.
-  - Standardized primary/secondary/outline action hierarchy and loading indicators.
-  - Kept sign-in/register behavior unchanged while improving readability and visual coherence.
+  - Added `auth-hero-*` classes for shell, layout, headings, proof cards, and form positioning.
+  - Added `wot-navbar-*` classes for frame/layout/search/actions/guest state.
+  - Added responsive refinements for auth hero spacing/typography and navbar compact behavior on mobile.
+- `src/app/(auth)/login/page.tsx`
+  - Replaced inline style-heavy structure with semantic class-driven hero layout.
+  - Consolidated proof items into a typed local array for cleaner render readability.
+- `src/components/Navbar.tsx`
+  - Replaced inline nav container/action/search styling with class-driven structure.
+  - Preserved all existing logic (admin access, share link, privacy/theme toggles, auth state actions).
 
 ## Verification results
-- `./node_modules/.bin/eslint src/components/LoginForm.tsx` → **Pass**
+- `./node_modules/.bin/eslint src/components/Navbar.tsx 'src/app/(auth)/login/page.tsx'` → **Pass**
 - `npm run type-check` → **Pass**
 
 ## review_ready
-- [x] Login/register UI now uses consistent premium design primitives instead of fragmented inline styling.
-- [x] Button hierarchy and loading states are visually coherent and token-driven.
-- [x] Auth form readability improved with standardized labels, hints, and error treatment.
-- [x] Mobile auth card now keeps premium spacing rhythm without cramped layout.
+- [x] Navbar now follows a consistent premium shell and spacing system via reusable classes.
+- [x] Login hero content is more readable and maintainable with semantic auth-hero primitives.
+- [x] Auth and nav surfaces now share stronger token-driven visual consistency and responsive polish.
 
 ## Git
-- Commit hash: latest local commit (`git log -1 --oneline`)
-- Commit message: `Polish auth UX with reusable premium styling system`
+- Commit hash: `39b7296`
+- Commit message: `Refine navbar and login hero with premium UX styling`
+
+---
+
+## Cycle Date
+- March 13, 2026
+
+## Findings
+- `src/components/LandingPage.tsx` still had ad-hoc inline styling for the closing CTA and build tag, reducing consistency with shared premium primitives.
+- Shared branded surfaces (landing cards and brand lockup) lacked consistent interactive polish and motion/accessibility behavior.
+- `src/app/globals.css` navbar treatment stayed visually heavy in light mode compared to the rest of the premium surface system.
+
+## Proposals considered (quality gate)
+- ✅ **Accepted**: Add reusable landing CTA/build-tag classes in `src/app/globals.css` and apply them in `src/components/LandingPage.tsx` to reduce one-off styling and strengthen branding consistency.
+- ✅ **Accepted**: Introduce `premium-panel-hover` + lightweight entrance motion classes, then apply them to landing proof/feature/metric cards for clearer affordance and premium feel.
+- ✅ **Accepted**: Add brand lockup hover/focus states and reduced-motion handling to improve usability and accessibility.
+- ✅ **Accepted**: Add a light-theme override for `.wot-navbar` so visual elevation is balanced across themes.
+- ❌ **Rejected**: Full landing-page class extraction (all inline styles) because it is large-scope refactor risk for this focused cycle.
+
+## Implemented changes
+- `src/components/LandingPage.tsx`
+  - Applied `premium-panel-hover` and staggered `rise-in` classes to proof cards, feature cards, and metric cards.
+  - Replaced inline CTA section styling with semantic class-based structure (`landing-cta-*`).
+  - Replaced inline build-tag styling with shared `landing-build-tag`.
+- `src/app/globals.css`
+  - Added `landing-cta-*`, `landing-build-tag`, `premium-panel-hover`, and `rise-in` utility classes.
+  - Added brand lockup interaction states (`hover` + `focus-visible`).
+  - Added light-mode navbar refinement (`body.light .wot-navbar`) for cleaner premium balance.
+  - Added `prefers-reduced-motion` safeguards for the new motion/hover transitions.
+
+## Verification results
+- `npm run type-check` → **Pass**
+- `npm run lint -- 'src/components/LandingPage.tsx' 'src/app/page.tsx' 'src/components/Navbar.tsx' 'src/app/(auth)/login/page.tsx'` → **Pass**
+- Note: Initial lint command failed once due unquoted shell path with parentheses; retried once with quoted paths and passed.
+
+## review_ready
+- [x] Landing CTA and build-tag styling now use reusable premium classes.
+- [x] Landing cards now have consistent interaction affordance and restrained entrance motion.
+- [x] Brand lockup and motion behavior now include explicit accessibility-conscious interaction handling.
+- [x] Light-theme navbar elevation now better matches surrounding premium surfaces.
+
+---
+
+## Cycle Date
+- March 13, 2026 (06:30 Europe/Amsterdam cycle)
+
+## Findings
+- `src/components/LandingPage.tsx` hero headline and signed-in state still relied on one-off inline styling, making typography rhythm and premium state messaging less consistent.
+- Hero reassurance copy (“No credit card · 2-minute setup · Free forever”) rendered as plain text, underplaying trust/value cues.
+- `src/app/globals.css` lacked dedicated classes for signed-in hero status and trust microcopy, reducing reuse and cross-breakpoint consistency.
+
+## Proposals considered (quality gate)
+- ✅ **Accepted**: Create dedicated landing hero classes (`landing-hero-title`, `landing-hero-title-accent`) in `src/app/globals.css` and replace inline hero heading styles in `src/components/LandingPage.tsx`.
+- ✅ **Accepted**: Add signed-in status chip classes (`landing-signed-in-*`) and apply to the authenticated hero CTA area for clearer hierarchy and premium polish.
+- ✅ **Accepted**: Convert reassurance line into semantic trust-row markup (`landing-trust-row`) for improved readability and visual structure.
+- ❌ **Rejected**: Full landing inline-style migration for all sections in this run due scope risk and potential regression surface.
+
+## Implemented changes
+- `src/components/LandingPage.tsx`
+  - Replaced inline hero title styling with reusable class-based headline/accent structure.
+  - Reworked authenticated user state into a styled status chip with clearer label/link hierarchy.
+  - Converted trust copy into semantic segmented row with separators.
+- `src/app/globals.css`
+  - Added `landing-hero-title` and `landing-hero-title-accent` for responsive premium heading behavior.
+  - Added `landing-signed-in`, `landing-signed-in-label`, `landing-signed-in-link` (+ hover/focus-visible) for authenticated hero polish and accessibility.
+  - Added `landing-trust-row` and mobile refinements to preserve readability/alignment on small screens.
+
+## Verification results
+- `npm run lint -- 'src/components/LandingPage.tsx'` → **Pass**
+- `npm run type-check` → **Pass**
+- `npm run lint -- 'src/components/LandingPage.tsx' 'src/app/globals.css'` → TSX pass; CSS path ignored by ESLint config (non-blocking warning).
+
+## review_ready
+- [x] Hero headline now uses reusable responsive typography classes for cleaner visual consistency.
+- [x] Signed-in hero state now presents account context in a premium status chip with improved hierarchy.
+- [x] Trust reassurance microcopy now has structured, scannable presentation instead of raw inline text.

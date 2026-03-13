@@ -114,9 +114,9 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                                 Designed for long-term investors
                             </div>
 
-                            <h1 style={{ fontSize: isMobile ? "2.1rem" : "3.6rem", lineHeight: 1.03, letterSpacing: "-0.03em", marginBottom: "1rem" }}>
+                            <h1 className="landing-hero-title">
                                 Track your wealth with
-                                <span style={{ display: "block", background: "linear-gradient(135deg, var(--accent), var(--accent-hover))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                                <span className="landing-hero-title-accent">
                                     confidence and clarity.
                                 </span>
                             </h1>
@@ -130,8 +130,8 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                                     { icon: Activity, label: "Decision-first UI", text: "Readable states and strong hierarchy, even when portfolios get busy." },
                                     { icon: Globe2, label: "Multi-asset coverage", text: "Stocks, funds, crypto, cash, and gold in one view." },
                                     { icon: Layers3, label: "Cross-device continuity", text: "Desktop depth with a mobile layout that still feels premium." },
-                                ].map(({ icon: Icon, label, text }) => (
-                                    <div key={label} className="proof-card premium-panel" style={{ textAlign: isMobile ? "left" : "left" }}>
+                                ].map(({ icon: Icon, label, text }, idx) => (
+                                    <div key={label} className={`proof-card premium-panel premium-panel-hover rise-in rise-in-delay-${idx + 1}`} style={{ textAlign: "left" }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", marginBottom: "0.55rem" }}>
                                             <div style={{ width: 34, height: 34, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: "color-mix(in oklab, var(--accent) 20%, transparent)", color: "var(--accent)" }}>
                                                 <Icon size={16} />
@@ -155,16 +155,22 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                                         </Link>
                                     </>
                                 ) : (
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: isMobile ? "center" : "flex-start" }}>
-                                        <span style={{ color: "var(--text-secondary)", fontSize: "0.86rem" }}>Signed in as {userEmail || username}</span>
-                                        <Link href={`/${username}`} style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 700, fontSize: "0.95rem" }}>
+                                    <div className="landing-signed-in" style={{ alignItems: isMobile ? "center" : "flex-start" }}>
+                                        <span className="landing-signed-in-label">Signed in as {userEmail || username}</span>
+                                        <Link href={`/${username}`} className="landing-signed-in-link">
                                             Open dashboard →
                                         </Link>
                                     </div>
                                 )}
                             </div>
 
-                            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>No credit card · 2-minute setup · Free forever</div>
+                            <div className="landing-trust-row" aria-label="Signup reassurance">
+                                <span>No credit card</span>
+                                <span aria-hidden="true">•</span>
+                                <span>2-minute setup</span>
+                                <span aria-hidden="true">•</span>
+                                <span>Free forever</span>
+                            </div>
                         </div>
 
                         {!isMobile ? (
@@ -190,8 +196,8 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                             ["Readability", "Dense portfolios stay scannable", "A tighter visual hierarchy keeps the dashboard useful instead of overwhelming."],
                             ["Privacy", "Hide sensitive values on demand", "One-tap masking makes reviews safer in shared or public spaces."],
                             ["Continuity", "Desktop depth with mobile discipline", "The same design language carries across the surfaces investors use most."],
-                        ].map(([eyebrow, title, copy]) => (
-                            <div key={eyebrow} className="premium-panel metric-card">
+                        ].map(([eyebrow, title, copy], idx) => (
+                            <div key={eyebrow} className={`premium-panel premium-panel-hover metric-card rise-in rise-in-delay-${idx + 1}`}>
                                 <div className="metric-eyebrow">{eyebrow}</div>
                                 <div className="metric-title">{title}</div>
                                 <div className="metric-copy">{copy}</div>
@@ -215,10 +221,10 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                     </div>
 
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: "1.2rem" }}>
-                        {featureItems.map((feature) => {
+                        {featureItems.map((feature, idx) => {
                             const Icon = feature.icon;
                             return (
-                                <article key={feature.title} className="premium-panel" style={{ position: "relative", overflow: "hidden", borderRadius: 18, padding: isMobile ? "1.15rem" : "1.4rem", minHeight: isMobile ? "auto" : 300 }}>
+                                <article key={feature.title} className={`premium-panel premium-panel-hover rise-in rise-in-delay-${idx + 1}`} style={{ position: "relative", overflow: "hidden", borderRadius: 18, padding: isMobile ? "1.15rem" : "1.4rem", minHeight: isMobile ? "auto" : 300 }}>
                                     <div style={{ width: 44, height: 44, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, var(--accent), var(--accent-hover))", marginBottom: "0.9rem" }}>
                                         <Icon color="white" size={22} />
                                     </div>
@@ -271,18 +277,18 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
             </section>
 
             {!isLoggedIn && (
-                <section style={{ padding: isMobile ? "2.8rem 1rem" : "4.5rem 2rem", background: "linear-gradient(135deg, var(--accent), var(--accent-hover))", position: "relative", overflow: "hidden" }}>
-                    <div style={{ position: "absolute", inset: 0, opacity: 0.13, backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "26px 26px" }} />
-                    <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", marginBottom: "0.8rem", fontSize: "0.75rem", fontWeight: 700, color: "rgba(255,255,255,0.85)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <section className="landing-cta-shell" style={{ padding: isMobile ? "2.8rem 1rem" : "4.5rem 2rem" }}>
+                    <div className="landing-cta-grid" />
+                    <div className="landing-cta-content">
+                        <div className="landing-cta-kicker">
                             <ShieldCheck size={14} />
                             Built for investor confidence
                         </div>
-                        <h2 style={{ color: "white", fontSize: isMobile ? "1.8rem" : "2.6rem", letterSpacing: "-0.02em", marginBottom: "0.9rem" }}>Ready to upgrade your portfolio workflow?</h2>
-                        <p style={{ color: "rgba(255,255,255,0.9)", fontSize: isMobile ? "0.98rem" : "1.12rem", lineHeight: 1.6, marginBottom: "1.5rem" }}>
+                        <h2 className="landing-cta-title" style={{ fontSize: isMobile ? "1.8rem" : "2.6rem" }}>Ready to upgrade your portfolio workflow?</h2>
+                        <p className="landing-cta-copy" style={{ fontSize: isMobile ? "0.98rem" : "1.12rem" }}>
                             Join investors who want premium UX and practical insights in one place.
                         </p>
-                        <Link href="/login" style={{ display: "inline-flex", alignItems: "center", gap: "0.55rem", borderRadius: 14, padding: "0.92rem 1.5rem", textDecoration: "none", color: "var(--accent)", background: "white", fontWeight: 800, boxShadow: "0 16px 32px rgba(0,0,0,0.18)" }}>
+                        <Link href="/login" className="landing-cta-btn">
                             Create Free Account
                             <ArrowRight size={18} />
                         </Link>
@@ -290,20 +296,7 @@ export function LandingPage({ isLoggedIn, username, userEmail, buildTag }: Landi
                 </section>
             )}
 
-            <div
-                style={{
-                    position: "fixed",
-                    left: 10,
-                    bottom: 8,
-                    fontSize: 10,
-                    color: "var(--text-muted)",
-                    opacity: 0.72,
-                    zIndex: 20,
-                    pointerEvents: "none",
-                    userSelect: "none",
-                    display: isMobile ? "none" : "block",
-                }}
-            >
+            <div className="landing-build-tag" style={{ display: isMobile ? "none" : "block" }}>
                 build {buildTag || "dev"}
             </div>
         </div>
