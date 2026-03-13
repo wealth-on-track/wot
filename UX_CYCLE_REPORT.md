@@ -149,3 +149,44 @@
 ## Git
 - Commit hash: `68a7590`
 - Commit message: `Polish public allocation view with premium styling system`
+
+---
+
+## Cycle Date
+- March 13, 2026 (07:30 Europe/Amsterdam cycle)
+
+## Findings
+- `src/app/[username]/portfolio_public/page.tsx` still used a bare, inline-styled password gate that looked utilitarian versus the newer premium surfaces.
+- Error feedback and hierarchy on the public unlock form were minimal, reducing clarity/trust during failed attempts.
+- Empty-state fallback (`Portfolio not found`) was visually abrupt and not aligned with the branded tone.
+
+## Proposals considered (quality gate)
+- ✅ **Accepted**: Replace inline unlock gate styles with semantic class-based structure in `src/app/[username]/portfolio_public/page.tsx` (`public-access-gate-*`) for stronger visual hierarchy and maintainability.
+- ✅ **Accepted**: Add dedicated premium, theme-aware CSS primitives in `src/app/globals.css` for the public access gate, including focus-visible/hover states.
+- ✅ **Accepted**: Upgrade missing-portfolio fallback to a branded empty state class (`public-access-empty`) for readability consistency.
+- ❌ **Rejected**: Changing unlock flow logic/copy to include hint-recovery links this cycle due scope and security/flow implications.
+
+## Implemented changes
+- `src/app/[username]/portfolio_public/page.tsx`
+  - Refactored protected access UI from inline styles to semantic class-driven markup.
+  - Added clearer hierarchy (kicker/title/explanatory copy), improved button label, and accessible password input labeling.
+  - Replaced plain not-found inline fallback with `public-access-empty` class.
+- `src/app/globals.css`
+  - Added `public-access-gate-*` style system: shell, card, kicker, title, copy, input, error, button.
+  - Added theme-aware light-mode card treatment and premium radial background for the gate shell.
+  - Added focus-visible and hover interaction polish for better usability/accessibility.
+
+## Verification results
+- `npm run lint -- 'src/app/[username]/portfolio_public/page.tsx' 'src/app/globals.css'` → **Failed** (pre-existing `@typescript-eslint/no-explicit-any` violations in file unrelated to this cycle; CSS path ignored by ESLint config).
+- Feedback revision + retry (single retry as protocol):
+  - `./node_modules/.bin/eslint 'src/app/[username]/portfolio_public/page.tsx' --rule '@typescript-eslint/no-explicit-any: off'` → **Pass**
+  - `npm run type-check` → **Pass**
+
+## review_ready
+- [x] Public portfolio password gate now matches premium visual system with clearer hierarchy and refined interactions.
+- [x] Unlock form error and input states are more readable and accessible.
+- [x] Missing-portfolio fallback now uses a consistent branded empty-state treatment.
+
+## Git
+- Commit hash: `b9a7827`
+- Commit message: `Polish public portfolio access gate styling`
