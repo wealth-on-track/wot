@@ -17,7 +17,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 112,
+      "planning": 114,
       "build": 2,
       "testing": 0,
       "verification": 0
@@ -31,7 +31,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T10:05:31.277Z",
+      "checkedAt": "2026-03-13T10:25:33.096Z",
       "sessionCount": 2,
       "reason": "planning_timeout",
       "feedback": {
@@ -51,7 +51,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-12T05:09:01.047Z",
-      "updatedAt": "2026-03-13T09:55:32.022Z"
+      "updatedAt": "2026-03-13T10:25:33.096Z"
     },
     "buildAttempt": 2
   },
@@ -73,7 +73,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 45,
+      "planning": 46,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -87,7 +87,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "checkedAt": "2026-03-13T10:25:32.911Z",
       "sessionCount": 1,
       "reason": "planning_timeout",
       "feedback": {
@@ -107,7 +107,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-12T15:10:30.672Z",
-      "updatedAt": "2026-03-13T10:00:31.437Z"
+      "updatedAt": "2026-03-13T10:15:31.607Z"
     },
     "buildAttempt": 1
   },
@@ -129,7 +129,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 44,
+      "planning": 45,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -143,7 +143,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "checkedAt": "2026-03-13T10:25:32.911Z",
       "sessionCount": 0,
       "reason": "planning_timeout",
       "feedback": {
@@ -163,7 +163,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-12T22:55:32.799Z",
-      "updatedAt": "2026-03-13T10:00:31.437Z"
+      "updatedAt": "2026-03-13T10:15:31.608Z"
     },
     "buildAttempt": 1
   },
@@ -185,7 +185,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 1,
+      "planning": 2,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -199,7 +199,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T10:05:31.420Z",
+      "checkedAt": "2026-03-13T10:25:32.911Z",
       "sessionCount": 0,
       "reason": "missing_implementation_diff",
       "feedback": {
@@ -212,11 +212,14 @@
         "rewrite_plan": [
           "Add the intended implementation diff in the scoped file, then rerun dispatch/build."
         ]
-      }
+      },
+      "triagedAt": "2026-03-13T10:10:31.742Z",
+      "triageSkipped": "missing_implementation_diff",
+      "sticky": true
     },
     "timestamps": {
       "createdAt": "2026-03-13T09:33:41.801Z",
-      "updatedAt": "2026-03-13T10:05:31.420Z"
+      "updatedAt": "2026-03-13T10:25:33.096Z"
     },
     "buildAttempt": 1
   },
@@ -238,7 +241,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 1,
+      "planning": 3,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -252,9 +255,9 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "checkedAt": "2026-03-13T10:25:33.096Z",
       "sessionCount": 0,
-      "reason": "missing_implementation_diff",
+      "reason": "planning_timeout",
       "feedback": {
         "reject_reason_codes": [
           "NO_CHANGED_FILES"
@@ -272,7 +275,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-13T09:33:41.802Z",
-      "updatedAt": "2026-03-13T09:55:32.022Z"
+      "updatedAt": "2026-03-13T10:25:33.096Z"
     },
     "buildAttempt": 1
   },
@@ -294,7 +297,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 1,
+      "planning": 2,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -308,7 +311,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "checkedAt": "2026-03-13T10:25:32.911Z",
       "sessionCount": 0,
       "reason": "missing_implementation_diff",
       "feedback": {
@@ -328,7 +331,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-13T09:35:30.980Z",
-      "updatedAt": "2026-03-13T10:00:31.437Z"
+      "updatedAt": "2026-03-13T10:15:31.608Z"
     },
     "buildAttempt": 1
   },
@@ -350,7 +353,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 1,
+      "planning": 2,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -364,7 +367,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "checkedAt": "2026-03-13T10:25:32.911Z",
       "sessionCount": 0,
       "reason": "missing_implementation_diff",
       "feedback": {
@@ -384,7 +387,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-13T09:40:31.624Z",
-      "updatedAt": "2026-03-13T10:05:31.511Z"
+      "updatedAt": "2026-03-13T10:20:31.846Z"
     },
     "buildAttempt": 1
   },
@@ -406,7 +409,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 0,
+      "planning": 1,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -420,7 +423,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "checkedAt": "2026-03-13T10:25:32.911Z",
       "sessionCount": 1,
       "reason": "missing_implementation_diff",
       "feedback": {
@@ -440,7 +443,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-13T09:45:31.336Z",
-      "updatedAt": "2026-03-13T10:00:31.158Z"
+      "updatedAt": "2026-03-13T10:15:31.608Z"
     },
     "buildAttempt": 1
   },
@@ -462,7 +465,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 0,
+      "planning": 2,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -476,7 +479,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "checkedAt": "2026-03-13T10:25:32.911Z",
       "sessionCount": 0,
       "reason": "missing_implementation_diff",
       "feedback": {
@@ -496,7 +499,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-13T09:50:31.394Z",
-      "updatedAt": "2026-03-13T09:55:31.744Z"
+      "updatedAt": "2026-03-13T10:25:33.096Z"
     },
     "buildAttempt": 1
   },
@@ -518,7 +521,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 0,
+      "planning": 1,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -532,7 +535,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "checkedAt": "2026-03-13T10:25:32.911Z",
       "sessionCount": 1,
       "reason": "missing_implementation_diff",
       "feedback": {
@@ -552,7 +555,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-13T09:55:31.654Z",
-      "updatedAt": "2026-03-13T10:01:01.980Z"
+      "updatedAt": "2026-03-13T10:15:31.608Z"
     },
     "buildAttempt": 1
   },
@@ -574,7 +577,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 0,
+      "planning": 1,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -588,7 +591,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "checkedAt": "2026-03-13T10:25:32.912Z",
       "sessionCount": 1,
       "reason": "missing_implementation_diff",
       "feedback": {
@@ -608,7 +611,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-13T10:00:31.069Z",
-      "updatedAt": "2026-03-13T10:05:31.233Z"
+      "updatedAt": "2026-03-13T10:20:31.846Z"
     },
     "buildAttempt": 1
   }
