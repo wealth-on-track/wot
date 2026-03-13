@@ -1,0 +1,58 @@
+{
+  "id": "PRP-20260313-093530803-008448",
+  "title": "Run-guarantee premium UX microcopy refinement (2026-03-13T09:35)",
+  "category": "ux",
+  "scout_scope_coverage": [
+    "UX/usability/readability",
+    "visual premium polish",
+    "branding/trust signals",
+    "navigation/info architecture",
+    "microcopy clarity",
+    "accessibility basics",
+    "performance-perception",
+    "mobile-first quality",
+    "error/empty states",
+    "onboarding/conversion clarity"
+  ],
+  "problem": "No unique proposal was created in this run; force-generate one scoped premium UX improvement to preserve loop continuity. Quality rewrite note: problem statement expanded to clarify consequence, urgency, and verification boundary.",
+  "evidence": [
+    "run_guarantee: no_unique_candidate_created",
+    "scout_scope_coverage_count=10"
+  ],
+  "proposed_change": "Refine empty/onboarding state microcopy for first-read clarity and trust signal on public portfolio page. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+  "expected_benefit": "Maintains autonomous loop output while improving conversion clarity in a user-facing flow. Quality rewrite note: expected outcomes are framed for reviewer decision and measurable closure.",
+  "risk": "low",
+  "impact": "high",
+  "priority": "P1",
+  "impactScore": 4,
+  "confidenceScore": 4,
+  "effortScore": 1,
+  "userFacing": true,
+  "success_metrics": [
+    "Before/after clarity checklist captured",
+    "Required checks pass"
+  ],
+  "kpi_target": "Increase first-read comprehension from <=60% to >=90% over 20 checklist runs.",
+  "benchmark_delta": "Close >=70% of premium empty-state clarity gap vs benchmark references.",
+  "risk_controls": [
+    "Scope lock: one file",
+    "Rollback if checks fail",
+    "No deploy"
+  ],
+  "files_expected": [
+    "src/app/[username]/portfolio_public/page.tsx"
+  ],
+  "change_spec": [
+    {
+      "file": "src/app/[username]/portfolio_public/page.tsx",
+      "change": "Apply one scoped copy/clarity adjustment for owner/visitor empty state.",
+      "why": "Highest leverage onboarding clarity path."
+    }
+  ],
+  "tests_required": [
+    "unit"
+  ],
+  "rollback_plan": "git revert scoped commit",
+  "_planned": true,
+  "_plannedAt": "2026-03-13T09:35:30.980Z"
+}

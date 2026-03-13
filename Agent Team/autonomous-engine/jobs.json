@@ -17,7 +17,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 110,
+      "planning": 112,
       "build": 2,
       "testing": 0,
       "verification": 0
@@ -31,7 +31,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T09:33:41.938Z",
+      "checkedAt": "2026-03-13T10:05:31.277Z",
       "sessionCount": 2,
       "reason": "planning_timeout",
       "feedback": {
@@ -51,7 +51,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-12T05:09:01.047Z",
-      "updatedAt": "2026-03-13T09:25:31.335Z"
+      "updatedAt": "2026-03-13T09:55:32.022Z"
     },
     "buildAttempt": 2
   },
@@ -73,7 +73,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 43,
+      "planning": 45,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -87,7 +87,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T09:33:41.939Z",
+      "checkedAt": "2026-03-13T10:05:31.278Z",
       "sessionCount": 1,
       "reason": "planning_timeout",
       "feedback": {
@@ -107,7 +107,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-12T15:10:30.672Z",
-      "updatedAt": "2026-03-13T09:30:31.792Z"
+      "updatedAt": "2026-03-13T10:00:31.437Z"
     },
     "buildAttempt": 1
   },
@@ -129,7 +129,7 @@
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 42,
+      "planning": 44,
       "build": 1,
       "testing": 0,
       "verification": 0
@@ -143,7 +143,7 @@
     "ownerAgent": "planner",
     "quality": {
       "status": "needs_human_review",
-      "checkedAt": "2026-03-13T09:33:41.939Z",
+      "checkedAt": "2026-03-13T10:05:31.278Z",
       "sessionCount": 0,
       "reason": "planning_timeout",
       "feedback": {
@@ -163,7 +163,7 @@
     },
     "timestamps": {
       "createdAt": "2026-03-12T22:55:32.799Z",
-      "updatedAt": "2026-03-13T09:30:31.792Z"
+      "updatedAt": "2026-03-13T10:00:31.437Z"
     },
     "buildAttempt": 1
   },
@@ -179,14 +179,14 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Implement one concrete, file-level improvement in eslint.config.mjs with explicit acceptance criteria and reviewer-verifiable artifacts. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "summary": "Implement one concrete, file-level improvement in eslint.config.mjs with explicit acceptance criteria and reviewer-verifiable artifacts. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. | halted: no implementation diff",
     "proposalId": "PRP-20260313-093341618-001970",
     "changedFiles": [],
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 0,
-      "build": 0,
+      "planning": 1,
+      "build": 1,
       "testing": 0,
       "verification": 0
     },
@@ -198,56 +198,25 @@
     },
     "ownerAgent": "planner",
     "quality": {
-      "status": "pass",
-      "checkedAt": "2026-03-13T09:33:41.939Z",
-      "sessionCount": 0
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-13T10:05:31.420Z",
+      "sessionCount": 0,
+      "reason": "missing_implementation_diff",
+      "feedback": {
+        "reject_reason_codes": [
+          "NO_CHANGED_FILES"
+        ],
+        "must_fix": [
+          "Apply a real scoped code change before redispatch"
+        ],
+        "rewrite_plan": [
+          "Add the intended implementation diff in the scoped file, then rerun dispatch/build."
+        ]
+      }
     },
     "timestamps": {
       "createdAt": "2026-03-13T09:33:41.801Z",
-      "updatedAt": "2026-03-13T09:33:41.801Z"
-    }
-  },
-  {
-    "id": "JOB-20260313-093341802-002992",
-    "title": "Raise first-read UX clarity in public portfolio empty/onboarding state",
-    "category": "ux",
-    "state": "review_ready",
-    "risk": "low",
-    "impact": "high",
-    "priority": "P1",
-    "impactScore": 4,
-    "confidenceScore": 4,
-    "effortScore": 2,
-    "userFacing": true,
-    "summary": "Implement one concrete, file-level improvement in src/app/[username]/portfolio_public/page.tsx with explicit acceptance criteria and reviewer-verifiable artifacts. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
-    "proposalId": "PRP-20260313-093341618-002995",
-    "changedFiles": [
-      "src/app/[username]/portfolio_public/page.tsx"
-    ],
-    "testResults": "pass",
-    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
-    "retries": {
-      "planning": 0,
-      "build": 0,
-      "testing": 0,
-      "verification": 0
-    },
-    "constraints": {
-      "maxFiles": 5,
-      "maxFunctionalChanges": 1,
-      "noUnrelatedRefactor": true,
-      "functionalScope": "src/app"
-    },
-    "ownerAgent": "verifier",
-    "quality": {
-      "status": "pass",
-      "checkedAt": "2026-03-13T09:33:41.939Z",
-      "sessionCount": 0,
-      "lastTriedFile": "src/app/[username]/portfolio_public/page.tsx"
-    },
-    "timestamps": {
-      "createdAt": "2026-03-13T09:33:41.802Z",
-      "updatedAt": "2026-03-13T09:33:42.652Z"
+      "updatedAt": "2026-03-13T10:05:31.420Z"
     },
     "buildAttempt": 1
   },
@@ -255,7 +224,7 @@
     "id": "JOB-20260313-093341802-003519",
     "title": "Strengthen premium trust framing and brand tone in public-share surfaces",
     "category": "branding",
-    "state": "approved_for_build",
+    "state": "proposal",
     "risk": "low",
     "impact": "high",
     "priority": "P1",
@@ -263,14 +232,14 @@
     "confidenceScore": 4,
     "effortScore": 2,
     "userFacing": true,
-    "summary": "Implement one concrete, file-level improvement in src/components/PublicPortfolioView.tsx with explicit acceptance criteria and reviewer-verifiable artifacts. Quality rewrite note: execution plan now includes concrete implementation and validation sequence.",
+    "summary": "Implement one concrete, file-level improvement in src/components/PublicPortfolioView.tsx with explicit acceptance criteria and reviewer-verifiable artifacts. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. | halted: no implementation diff (cooldown active)",
     "proposalId": "PRP-20260313-093341618-003303",
     "changedFiles": [],
     "testResults": "pending",
     "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
     "retries": {
-      "planning": 0,
-      "build": 0,
+      "planning": 1,
+      "build": 1,
       "testing": 0,
       "verification": 0
     },
@@ -282,13 +251,365 @@
     },
     "ownerAgent": "planner",
     "quality": {
-      "status": "pass",
-      "checkedAt": "2026-03-13T09:33:41.939Z",
-      "sessionCount": 0
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "sessionCount": 0,
+      "reason": "missing_implementation_diff",
+      "feedback": {
+        "reject_reason_codes": [
+          "NO_CHANGED_FILES"
+        ],
+        "must_fix": [
+          "Apply a real scoped code change before redispatch"
+        ],
+        "rewrite_plan": [
+          "Wait for cooldown or make an explicit implementation change in a different scoped file before retrying."
+        ]
+      },
+      "triagedAt": "2026-03-13T09:40:31.713Z",
+      "triageSkipped": "missing_implementation_diff",
+      "sticky": true
     },
     "timestamps": {
       "createdAt": "2026-03-13T09:33:41.802Z",
-      "updatedAt": "2026-03-13T09:33:42.884Z"
-    }
+      "updatedAt": "2026-03-13T09:55:32.022Z"
+    },
+    "buildAttempt": 1
+  },
+  {
+    "id": "JOB-20260313-093530981-001212",
+    "title": "Run-guarantee premium UX microcopy refinement (2026-03-13T09:35)",
+    "category": "ux",
+    "state": "proposal",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 1,
+    "userFacing": true,
+    "summary": "Refine empty/onboarding state microcopy for first-read clarity and trust signal on public portfolio page. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. | halted: no implementation diff (cooldown active)",
+    "proposalId": "PRP-20260313-093530803-008448",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 1,
+      "build": 1,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/app"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "sessionCount": 0,
+      "reason": "missing_implementation_diff",
+      "feedback": {
+        "reject_reason_codes": [
+          "NO_CHANGED_FILES"
+        ],
+        "must_fix": [
+          "Apply a real scoped code change before redispatch"
+        ],
+        "rewrite_plan": [
+          "Wait for cooldown or make an explicit implementation change in a different scoped file before retrying."
+        ]
+      },
+      "triagedAt": "2026-03-13T09:45:31.427Z",
+      "triageSkipped": "missing_implementation_diff",
+      "sticky": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-13T09:35:30.980Z",
+      "updatedAt": "2026-03-13T10:00:31.437Z"
+    },
+    "buildAttempt": 1
+  },
+  {
+    "id": "JOB-20260313-094031625-001929",
+    "title": "Run-guarantee premium UX microcopy refinement (2026-03-13T09:40)",
+    "category": "ux",
+    "state": "proposal",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 1,
+    "userFacing": true,
+    "summary": "Refine empty/onboarding state microcopy for first-read clarity and trust signal on public portfolio page. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. | halted: no implementation diff (cooldown active)",
+    "proposalId": "PRP-20260313-094031445-008659",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 1,
+      "build": 1,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/app"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "sessionCount": 0,
+      "reason": "missing_implementation_diff",
+      "feedback": {
+        "reject_reason_codes": [
+          "NO_CHANGED_FILES"
+        ],
+        "must_fix": [
+          "Apply a real scoped code change before redispatch"
+        ],
+        "rewrite_plan": [
+          "Wait for cooldown or make an explicit implementation change in a different scoped file before retrying."
+        ]
+      },
+      "triagedAt": "2026-03-13T09:50:31.484Z",
+      "triageSkipped": "missing_implementation_diff",
+      "sticky": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-13T09:40:31.624Z",
+      "updatedAt": "2026-03-13T10:05:31.511Z"
+    },
+    "buildAttempt": 1
+  },
+  {
+    "id": "JOB-20260313-094531337-001488",
+    "title": "Run-guarantee premium UX microcopy refinement (2026-03-13T09:45)",
+    "category": "ux",
+    "state": "proposal",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 1,
+    "userFacing": true,
+    "summary": "Refine empty/onboarding state microcopy for first-read clarity and trust signal on public portfolio page. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Implementation is file-level concrete: src/components/PublicPortfolioView.tsx, one functional change, measurable acceptance. (quality-revised) | halted: no implementation diff (cooldown active)",
+    "proposalId": "PRP-20260313-095531744-001901",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 1,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/app"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "sessionCount": 1,
+      "reason": "missing_implementation_diff",
+      "feedback": {
+        "reject_reason_codes": [
+          "NO_CHANGED_FILES"
+        ],
+        "must_fix": [
+          "Apply a real scoped code change before redispatch"
+        ],
+        "rewrite_plan": [
+          "Wait for cooldown or make an explicit implementation change in a different scoped file before retrying."
+        ]
+      },
+      "triagedAt": "2026-03-13T10:00:31.157Z",
+      "triageSkipped": "missing_implementation_diff",
+      "sticky": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-13T09:45:31.336Z",
+      "updatedAt": "2026-03-13T10:00:31.158Z"
+    },
+    "buildAttempt": 1
+  },
+  {
+    "id": "JOB-20260313-095031395-001978",
+    "title": "Run-guarantee premium UX microcopy refinement (2026-03-13T09:50)",
+    "category": "ux",
+    "state": "proposal",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 1,
+    "userFacing": true,
+    "summary": "Refine empty/onboarding state microcopy for first-read clarity and trust signal on public portfolio page. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. | halted: no implementation diff (cooldown active)",
+    "proposalId": "PRP-20260313-095031215-008891",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 1,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/app"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "sessionCount": 0,
+      "reason": "missing_implementation_diff",
+      "feedback": {
+        "reject_reason_codes": [
+          "NO_CHANGED_FILES"
+        ],
+        "must_fix": [
+          "Apply a real scoped code change before redispatch"
+        ],
+        "rewrite_plan": [
+          "Wait for cooldown or make an explicit implementation change in a different scoped file before retrying."
+        ]
+      },
+      "triagedAt": "2026-03-13T09:55:31.744Z",
+      "triageSkipped": "missing_implementation_diff",
+      "sticky": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-13T09:50:31.394Z",
+      "updatedAt": "2026-03-13T09:55:31.744Z"
+    },
+    "buildAttempt": 1
+  },
+  {
+    "id": "JOB-20260313-095531655-001342",
+    "title": "Run-guarantee premium UX microcopy refinement (2026-03-13T09:55)",
+    "category": "ux",
+    "state": "proposal",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 1,
+    "userFacing": true,
+    "summary": "Refine empty/onboarding state microcopy for first-read clarity and trust signal on public portfolio page. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Implementation is file-level concrete: src/components/PublicPortfolioView.tsx, one functional change, measurable acceptance. (quality-revised) | halted: no implementation diff (cooldown active)",
+    "proposalId": "PRP-20260313-100031158-001655",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 1,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/app"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "sessionCount": 1,
+      "reason": "missing_implementation_diff",
+      "feedback": {
+        "reject_reason_codes": [
+          "NO_CHANGED_FILES"
+        ],
+        "must_fix": [
+          "Apply a real scoped code change before redispatch"
+        ],
+        "rewrite_plan": [
+          "Wait for cooldown or make an explicit implementation change in a different scoped file before retrying."
+        ]
+      },
+      "triagedAt": "2026-03-13T10:01:01.980Z",
+      "triageSkipped": "missing_implementation_diff",
+      "sticky": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-13T09:55:31.654Z",
+      "updatedAt": "2026-03-13T10:01:01.980Z"
+    },
+    "buildAttempt": 1
+  },
+  {
+    "id": "JOB-20260313-100031069-001787",
+    "title": "Run-guarantee premium UX microcopy refinement (2026-03-13T10:00)",
+    "category": "ux",
+    "state": "proposal",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 1,
+    "userFacing": true,
+    "summary": "Refine empty/onboarding state microcopy for first-read clarity and trust signal on public portfolio page. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. Triage action: narrow scope to highest-leverage single file and strict acceptance checks. Implementation is file-level concrete: src/components/PublicPortfolioView.tsx, one functional change, measurable acceptance. (quality-revised) | halted: no implementation diff (cooldown active)",
+    "proposalId": "PRP-20260313-100101980-001792",
+    "changedFiles": [],
+    "testResults": "pending",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 1,
+      "testing": 0,
+      "verification": 0
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/app"
+    },
+    "ownerAgent": "planner",
+    "quality": {
+      "status": "needs_human_review",
+      "checkedAt": "2026-03-13T10:05:31.278Z",
+      "sessionCount": 1,
+      "reason": "missing_implementation_diff",
+      "feedback": {
+        "reject_reason_codes": [
+          "NO_CHANGED_FILES"
+        ],
+        "must_fix": [
+          "Apply a real scoped code change before redispatch"
+        ],
+        "rewrite_plan": [
+          "Wait for cooldown or make an explicit implementation change in a different scoped file before retrying."
+        ]
+      },
+      "triagedAt": "2026-03-13T10:05:31.232Z",
+      "triageSkipped": "missing_implementation_diff",
+      "sticky": true
+    },
+    "timestamps": {
+      "createdAt": "2026-03-13T10:00:31.069Z",
+      "updatedAt": "2026-03-13T10:05:31.233Z"
+    },
+    "buildAttempt": 1
   }
 ]

@@ -490,5 +490,50 @@
     "buildAttempt": 2,
     "reviewNudgeAt": "2026-03-13T08:20:31.703Z",
     "reviewReminderAt": "2026-03-13T08:35:31.306Z"
+  },
+  {
+    "id": "JOB-20260313-093341802-002992",
+    "title": "Raise first-read UX clarity in public portfolio empty/onboarding state",
+    "category": "ux",
+    "state": "approved",
+    "risk": "low",
+    "impact": "high",
+    "priority": "P1",
+    "impactScore": 4,
+    "confidenceScore": 4,
+    "effortScore": 2,
+    "userFacing": true,
+    "summary": "Implement one concrete, file-level improvement in src/app/[username]/portfolio_public/page.tsx with explicit acceptance criteria and reviewer-verifiable artifacts. Quality rewrite note: execution plan now includes concrete implementation and validation sequence. (local build applied)",
+    "proposalId": "PRP-20260313-093341618-002995",
+    "changedFiles": [
+      "src/app/[username]/portfolio_public/page.tsx"
+    ],
+    "testResults": "pass",
+    "previewInstructions": "Run locally, verify changed files, and capture screenshots/logs for review.",
+    "retries": {
+      "planning": 0,
+      "build": 0,
+      "testing": 0,
+      "verification": 1
+    },
+    "constraints": {
+      "maxFiles": 5,
+      "maxFunctionalChanges": 1,
+      "noUnrelatedRefactor": true,
+      "functionalScope": "src/app"
+    },
+    "ownerAgent": "verifier",
+    "quality": {
+      "status": "pass",
+      "checkedAt": "2026-03-13T09:33:41.939Z",
+      "sessionCount": 0,
+      "lastTriedFile": "src/app/[username]/portfolio_public/page.tsx"
+    },
+    "timestamps": {
+      "createdAt": "2026-03-13T09:33:41.802Z",
+      "updatedAt": "2026-03-13T09:48:39.517Z"
+    },
+    "buildAttempt": 1,
+    "reviewNudgeAt": "2026-03-13T09:45:31.707Z"
   }
 ]
