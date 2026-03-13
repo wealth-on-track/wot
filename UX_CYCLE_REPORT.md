@@ -1,37 +1,35 @@
 # UX Cycle Report
 
 ## Findings
-- `src/components/LandingPage.tsx`: premium styling direction existed, but hero proof/stat cards mixed marketing-style claims with uneven credibility and inconsistent card semantics.
-- `src/components/LoginForm.tsx`: login shell looked strong, but input affordances and helper copy were weaker than the surrounding premium treatment.
-- `src/components/mobile/MobileHeader.tsx`: mobile action controls repeated one-off inline button styles and drifted from desktop navigation polish.
-- `src/app/globals.css`: shared premium primitives existed for panels and branding, but not for focus states, icon actions, inputs, or proof/metric card patterns.
+- `src/components/LoginForm.tsx`: heavy inline styling and ad-hoc hover handlers created inconsistent interaction behavior and made auth UI harder to maintain.
+- `src/components/LoginForm.tsx`: repeated label/error/button style blocks reduced readability consistency and premium-brand continuity versus shared design tokens.
+- `src/app/globals.css`: auth surface lacked dedicated reusable primitives, causing style drift risk across login/register states.
 
-## Proposals considered
-- Accepted: Replace landing hero metric cards with product-truth proof cards in `src/components/LandingPage.tsx` to improve credibility and premium readability.
-- Accepted: Introduce shared premium control primitives in `src/app/globals.css` for inputs, icon buttons, focus states, links, and metric cards to reduce visual drift.
-- Accepted: Upgrade login form ergonomics in `src/components/LoginForm.tsx` with stronger input treatment, clearer password guidance, and a cleaner supporting CTA.
-- Accepted: Normalize mobile header controls in `src/components/mobile/MobileHeader.tsx` onto shared premium icon buttons for consistency with desktop navigation.
-- Rejected: Broad dashboard-wide card refactor across portfolio surfaces. Reason: too large for one safe cycle and higher regression risk than the public/auth/navigation scope.
-- Rejected: Replace or regenerate marketing imagery in `public/landing/`. Reason: high effort with low confidence without visual review/render workflow in this cycle.
+## Proposals considered (quality gate)
+- ✅ **Accepted**: Introduce a cohesive auth design primitive set in `src/app/globals.css` (`.auth-card`, `.auth-btn-*`, `.auth-field-*`, `.auth-benefit-*`, `.auth-register-*`) with token-safe premium styling.
+- ✅ **Accepted**: Refactor `LoginForm` to consume shared auth classes instead of repeated inline styles, preserving behavior while improving consistency and readability.
+- ✅ **Accepted**: Replace JS-driven mouse enter/leave style mutation with CSS hover/focus states for more stable UX polish.
+- ❌ **Rejected**: Full auth-page restructuring (splitting form into multiple child components) this cycle due to scope/impact mismatch.
 
 ## Implemented changes
-- `src/app/globals.css`: added shared premium UI primitives for `premium-input`, `premium-icon-btn`, focus-visible states, reusable links, and metric card styling.
-- `src/components/LandingPage.tsx`: replaced the hero’s pseudo-stat row with clearer product-proof cards emphasizing readability, privacy, and cross-device continuity.
-- `src/components/LoginForm.tsx`: moved fields onto reusable premium inputs, added password expectation copy, and aligned the demo CTA with shared link styling.
-- `src/components/mobile/MobileHeader.tsx`: replaced duplicated inline control styling with reusable premium icon buttons.
+- `src/app/globals.css`
+  - Added reusable auth primitives for card layout, benefits grid, field labels/hints, error states, spinner variants, and button hierarchy.
+  - Added mobile-specific auth refinements (card padding/radius and responsive benefit grid).
+- `src/components/LoginForm.tsx`
+  - Replaced most inline presentation styles with semantic class names bound to shared auth primitives.
+  - Standardized primary/secondary/outline action hierarchy and loading indicators.
+  - Kept sign-in/register behavior unchanged while improving readability and visual coherence.
 
 ## Verification results
-- `npm run lint`: Fail. Repo-wide pre-existing ESLint debt unrelated to this UX cycle (`701 problems`, many outside changed files).
-- Structured verification revision: switched from repo-wide lint to changed-file lint to isolate cycle safety.
-- `./node_modules/.bin/eslint src/components/LandingPage.tsx src/components/LoginForm.tsx src/components/mobile/MobileHeader.tsx 'src/app/(auth)/login/page.tsx'`: Pass.
-- `npm run type-check`: Pass.
+- `./node_modules/.bin/eslint src/components/LoginForm.tsx` → **Pass**
+- `npm run type-check` → **Pass**
 
-## review_ready checklist
-- [x] Shared premium controls unify focus, inputs, and icon-button treatment across entry surfaces.
-- [x] Landing hero proof cards use credible product messaging instead of unverified marketing metrics.
-- [x] Login form readability and affordance quality improved without changing auth flow logic.
-- [x] Mobile header actions now match the premium navigation language more closely.
+## review_ready
+- [x] Login/register UI now uses consistent premium design primitives instead of fragmented inline styling.
+- [x] Button hierarchy and loading states are visually coherent and token-driven.
+- [x] Auth form readability improved with standardized labels, hints, and error treatment.
+- [x] Mobile auth card now keeps premium spacing rhythm without cramped layout.
 
 ## Git
-- Commit hash: `25e2b85`
-- Commit message: `Refine premium UX across landing and auth surfaces`
+- Commit hash: latest local commit (`git log -1 --oneline`)
+- Commit message: `Polish auth UX with reusable premium styling system`
