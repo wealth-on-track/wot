@@ -70,7 +70,7 @@ export default async function PublicPortfolioPage({ params, searchParams }: { pa
             className="public-access-gate-input"
             aria-label="Portfolio password"
           />
-          {sp.e ? <div className="public-access-gate-error">Wrong password. Please try again.</div> : null}
+          {sp.e ? <div className="public-access-gate-error">Wrong password. Please try again or confirm the latest share code with the owner.</div> : null}
           <button type="submit" className="public-access-gate-button">Unlock portfolio</button>
         </form>
       </div>
