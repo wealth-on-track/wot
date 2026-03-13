@@ -6,7 +6,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { PrivacyToggle } from "./PrivacyToggle";
 
 import { NavbarActions } from "./NavbarActions";
-import { User, ShieldCheck, Link as LinkIcon } from "lucide-react";
+import { ShieldCheck, Link as LinkIcon } from "lucide-react";
 
 interface NavbarProps {
     totalBalance?: number;
@@ -15,230 +15,83 @@ interface NavbarProps {
     showPortfolioButton?: boolean;
 }
 
-export async function Navbar({ totalBalance, username, isOwner, showPortfolioButton }: NavbarProps) {
+export async function Navbar({ username, isOwner }: NavbarProps) {
     const session = await auth();
-    const currentUsername = (((session?.user as any)?.username || session?.user?.name || username) as string | undefined)?.toLowerCase();
+    const sessionUser = session?.user as ({ username?: string; name?: string | null; email?: string | null } | undefined);
+    const currentUsername = (sessionUser?.username || sessionUser?.name || username)?.toLowerCase();
 
     return (
-        <nav
-            className="fixed top-0 w-full z-50"
-            style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                margin: 0,
-                width: '100%',
-                zIndex: 9998,
-                borderBottom: '1px solid var(--border)',
-                background: 'var(--surface)',
-                height: '5rem', // Compact navbar height
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-            }}>
-            {/* Dark Mode Override Handled by parent or context? User said bg-white. I'll stick to white as requested for "High Contrast". If dark mode needed, I'd need conditional. Assuming Light Mode focus or explicit override request. "Arka Plan: Tam beyaz". */}
-
-            <div className="navbar-inner-container" style={{
-                width: '100%',
-                maxWidth: '1200px',
-                padding: '0 40px',
-                margin: '0 auto',
-                position: 'relative',
-                display: 'flex',
-                justifyContent: 'center'
-            }}>
-                {/* Layout Wrapper */}
-                <div style={{
-                    display: 'flex',
-                    width: '100%',
-                    gap: '1.5rem',
-                    alignItems: 'center'
-                }}>
-
-                    {/* LEFT: Tightly Anchored Branding Component */}
-                    <div style={{ padding: '0.4rem 0.6rem', position: 'relative' }}>
-                        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-                            <div style={{
-                                display: 'flex',
-                                gap: '2px', /* Equal spacing between letters */
-                                userSelect: 'none',
-                                transition: 'opacity 0.2s ease',
-                            }}>
-                                {/* Column 1: W -> WEALTH */}
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                    <div style={{ height: '1.8rem', display: 'flex', alignItems: 'center', marginBottom: '0px' }}>
-                                        <span className="logo-letter-wt" style={{
-                                            fontFamily: 'var(--font-sans)',
-                                            fontSize: '2.2rem',
-                                            fontWeight: 900,
-                                            lineHeight: 1,
-                                            letterSpacing: '-0.03em'
-                                        }}>W</span>
-                                    </div>
-                                    <span style={{
-                                        fontSize: '8.5px',
-                                        fontWeight: 400,
-                                        color: 'var(--text-secondary)',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.02em',
-                                        opacity: 0.8
-                                    }}>WEALTH</span>
-                                </div>
-
-                                {/* Column 2: O -> ON (The Accent Anchor) */}
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                    <div style={{ height: '1.8rem', display: 'flex', alignItems: 'center', marginBottom: '0px' }}>
-                                        <span style={{
-                                            fontFamily: 'var(--font-sans)',
-                                            fontSize: '2.2rem',
-                                            fontWeight: 900,
-                                            color: 'var(--accent)', /* Indigo Accent Dokunuşu */
-                                            lineHeight: 1,
-                                            letterSpacing: '-0.03em',
-                                            filter: 'drop-shadow(0 0 8px var(--accent-glow))'
-                                        }}>O</span>
-                                    </div>
-                                    <span style={{
-                                        fontSize: '8.5px',
-                                        fontWeight: 400,
-                                        color: 'var(--text-secondary)',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.02em',
-                                        opacity: 0.8
-                                    }}>ON</span>
-                                </div>
-
-                                {/* Column 3: T -> TRACK */}
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                    <div style={{ height: '1.8rem', display: 'flex', alignItems: 'center', marginBottom: '0px' }}>
-                                        <span className="logo-letter-wt" style={{
-                                            fontFamily: 'var(--font-sans)',
-                                            fontSize: '2.2rem',
-                                            fontWeight: 900,
-                                            lineHeight: 1,
-                                            letterSpacing: '-0.03em'
-                                        }}>T</span>
-                                    </div>
-                                    <span style={{
-                                        fontSize: '8.5px',
-                                        fontWeight: 400,
-                                        color: 'var(--text-secondary)',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.02em',
-                                        opacity: 0.8
-                                    }}>TRACK</span>
-                                </div>
+        <nav className="wot-navbar">
+            <div className="navbar-inner-container wot-navbar-frame">
+                <div className="wot-navbar-layout">
+                    <div className="wot-navbar-brand-wrap">
+                        <Link href="/" className="brand-lockup">
+                            <div className="brand-mark" aria-hidden="true">
+                                <span className="brand-glyph">W</span>
+                                <span className="brand-glyph brand-glyph-accent">O</span>
+                                <span className="brand-glyph">T</span>
                             </div>
-
-                            {/* Beta Badge */}
-                            <div style={{
-                                fontSize: '7px',
-                                fontWeight: 700,
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px',
-                                padding: '2px 6px',
-                                borderRadius: '8px',
-                                background: 'linear-gradient(135deg, var(--accent), var(--accent-hover))',
-                                color: '#fff',
-                                boxShadow: '0 2px 8px var(--accent-glow)',
-                                animation: 'pulse-glow 3s ease-in-out infinite',
-                                userSelect: 'none',
-                                whiteSpace: 'nowrap',
-                                marginLeft: '0rem', // Reduced margin
-                                alignSelf: 'flex-start',
-                                marginTop: '0px'
-                            }}>
-                                BETA
+                            <div className="brand-copy">
+                                <span className="brand-title">Wealth on Track</span>
+                                <span className="brand-subtitle">Investor workspace</span>
                             </div>
+                            <span className="brand-badge">Beta</span>
                         </Link>
                     </div>
 
-                    {/* SPACER: Takes up remaining width of Main Content area to push Search right */}
-                    <div style={{ flex: 1 }} />
+                    <div className="wot-navbar-spacer" />
 
-                    {/* SEARCH: Aligned to right of Main Content (Performance Card) */}
-                    <div style={{
-                        width: '680px', // Wider for source column
-                        display: 'flex',
-                        alignItems: 'center',
-                        flexShrink: 0
-                    }}>
+                    <div className="wot-navbar-search">
                         {isOwner && (
-                            <div style={{ width: '100%' }}>
+                            <div className="wot-navbar-search-inner">
                                 <InlineAssetSearch />
                             </div>
                         )}
                     </div>
 
-                    {/* RIGHT COLUMN: Action Buttons - Close to search bar */}
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'flex-end',
-                        height: '100%',
-                        gap: '0.75rem',
-                        marginLeft: '1rem'
-                    }}>
-                        {/* Admin Button: user1@wot.money */}
-                        {session?.user?.email?.toLowerCase() === 'user1@wot.money' && (
+                    <div className="wot-navbar-actions">
+                        {session?.user?.email?.toLowerCase() === "user1@wot.money" && (
                             <Link
                                 href="/admin/autonomous-engine"
-                                className="navbar-btn"
-                                style={{
-                                    textDecoration: 'none',
-                                    marginRight: '1rem'
-                                }}
+                                className="navbar-btn wot-navbar-admin-link"
                                 title="Admin Panel"
                             >
                                 <ShieldCheck size={20} />
                             </Link>
                         )}
 
-                        {/* Global Toggles (Always Visible) */}
-
-                        {/* View Mode Toggle (Portal Target) */}
-
-
                         {session?.user && currentUsername && (
                             <Link
                                 href={`/${currentUsername}/portfolio_public`}
                                 className="navbar-btn"
                                 title="Public share page"
-                                style={{ textDecoration: 'none' }}
                             >
                                 <LinkIcon size={18} />
                             </Link>
                         )}
 
                         <PrivacyToggle />
-
                         <ThemeToggle />
 
                         {session?.user ? (
                             <>
-                                {/* Filter (Portal Target) */}
-                                <div id="navbar-extra-actions" style={{ display: 'flex', alignItems: 'center' }}></div>
-
-                                {/* Logout with Separator */}
+                                <div id="navbar-extra-actions" className="wot-navbar-extra-actions" />
                                 <NavbarActions />
                             </>
                         ) : (
-                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                <Link href="/login" style={{ opacity: 0.8, fontSize: '0.8rem', color: 'var(--text-primary)' }}>
+                            <div className="wot-navbar-guest">
+                                <Link href="/login" className="wot-navbar-login-link">
                                     Login
                                 </Link>
-                                <Link href="/login" className="glass-button" style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem' }}>
+                                <Link href="/login" className="glass-button wot-navbar-cta-link">
                                     Get Started
                                 </Link>
                             </div>
                         )}
                     </div>
                 </div>
-            </div >
-        </nav >
-
+            </div>
+        </nav>
     );
 }
 
