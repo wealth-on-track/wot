@@ -1,36 +1,82 @@
-# System Architecture & Data Isolation
+# System Architecture
 
-## Environments
+## Environment Isolation
 
-We have established a strict separation of concerns between **Development** and **Production**.
+Development and production remain fully isolated for live data.
 
-| Feature | 💻 Local / Development | 🌍 Production / Live |
+| Feature | Local / Development | Production / Live |
 | :--- | :--- | :--- |
-| **URL** | `http://localhost:3000` | `https://wot.money` |
-| **Branch** | `dev` | `main` |
-| **Database** | `wot-db-dev` | `wot-db` |
-| **Data Scope** | Fake / Test Data | Real User Data |
+| URL | `http://localhost:3000` | `https://wot.money` |
+| Branch | `dev` | `main` |
+| Database | `wot-db-dev` | `wot-db` |
+| Data Scope | Fake / test data | Real user data |
 
-## 1. Is there a connection?
+Code and schema move through Git and deployment. User data does not.
 
-### ❌ NO: Data is 100% Isolated
-The **Data** (Users, Portfolios, Prices) is completely separate.
-- If you delete a user in Local, nothing happens in Production.
-- If you add a fake asset in Local, it does not appear in Production.
-- They are like two different Excel files on two different computers.
+## Agent Team Architecture
 
-### ✅ YES: Schema is Connected (via Git)
-The **Structure** (Tables, Columns) is connected through your code deployment.
-1.  You add a new column `nickname` to `schema.prisma` in Local.
-2.  You run `prisma migrate dev`. Local DB gets the column.
-3.  You push code to GitHub (`dev` -> `main`).
-4.  Vercel deploys `main`.
-5.  Vercel sees the migration and adds the `nickname` column to Production DB.
+The admin architecture now uses a 3-agent model:
 
-**Summary**: Code and Structure flow from Local to Prod. Data never does.
+1. `Scout`
+   Finds opportunities, writes the proposal, attaches evidence, defines expected benefit, rollback plan, and scoped file targets.
+2. `Executer`
+   Syncs with Scout on the proposal, applies the scoped implementation, and records artifacts.
+3. `QA`
+   Runs checks, reviews artifacts, and makes the final approve/reject decision.
 
-## 2. Testing Workflow
+## Workflow States
 
-1.  **Develop Locally**: Break things, verify logic, check UI.
-2.  **Push**: When code is pushed to `main`, it applies the *structure* changes to Production.
-3.  **Data Safety**: Since data is isolated, your valid users in Production are safe from your "Delete All" experiments in Local.
+Live work stays inside `Proposal`.
+
+1. `proposal`
+   Scout-owned discovery and framing.
+2. `executer_sync`
+   Scout and Executer handoff/resync state before implementation.
+3. `execution`
+   Executer is applying the scoped code change.
+4. `qa_review`
+   QA has the work, runs validation, and waits for final approve/reject.
+
+Final work moves to `Completed`.
+
+1. `approved`
+2. `reverted`
+3. `abandoned_with_reason`
+
+Legacy records that still contain `discover`, `approved_for_build`, `build`, `test`, or `review_ready` are normalized into the new states when read.
+
+## Admin UI Contract
+
+The Agent Team admin screen now exposes only two main menus:
+
+1. `Proposal`
+   Contains every non-final item across Scout, Scout/Executer sync, Executer, and QA.
+2. `Completed`
+   Contains finished items only.
+
+Proposal ordering rules:
+
+1. Processing items appear before untouched Scout-only proposals.
+2. Within each group, items are ordered oldest-first.
+3. New Scout findings land at the bottom of the Proposal list.
+
+Clicking a proposal opens one screen that shows:
+
+1. The full phase rail from Scout to QA.
+2. Timeline updates.
+3. Proposal/problem/change documentation.
+4. Artifacts.
+5. Lessons learned.
+
+## Stall Recovery Rule
+
+Nothing is allowed to remain silently stuck.
+
+If a live item has no progress for `10 minutes`:
+
+1. The system flags it as stalled in the UI.
+2. Scout and Executer must re-sync.
+3. The discussion is documented in artifacts and timeline events.
+4. Work continues from the refreshed handoff instead of remaining idle.
+
+This rule applies even if the item was already in execution. The recovery step is explicit and visible in the Proposal detail screen.

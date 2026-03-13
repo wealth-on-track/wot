@@ -98,6 +98,17 @@ export interface BESFundWithPrice extends BESFund {
   changePercent?: number;
 }
 
+export function formatBESFundDisplayName(name?: string): string {
+  if (!name) return '';
+
+  return name
+    .replace(/Anadolu\s+Hayat\s+Emeklilik\s*A\.?Ş\.?/gi, 'AHE')
+    .replace(/Anadolu\s+Hayat\s+Emeklilik\s*A\.S\./gi, 'AHE')
+    .replace(/Emeklilik\s+Yat[ıi]r[ıi]m\s+Fonu/gi, 'EYF')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // Asset class types for allocation breakdown
 export type AllocationClass = 'STOCK' | 'BOND' | 'GOLD' | 'CASH' | 'MIXED';
 

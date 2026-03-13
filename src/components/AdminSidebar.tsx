@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
+    ChevronRight,
     LayoutDashboard,
     Users,
     Wallet,
@@ -95,12 +97,100 @@ const navItems: NavItem[] = [
 
 export function AdminSidebar({ username }: { username: string }) {
     const pathname = usePathname();
-    const searchParams = useSearchParams();
+    const isAgentTeamPage = pathname === '/admin/autonomous-engine';
+    const [isOpen, setIsOpen] = useState(!isAgentTeamPage);
 
-    // Hide left admin menu on Agent Team dashboard page unless explicitly opened
-    const sidebarOpen = searchParams.get('sidebar') === '1';
-    if (pathname === '/admin/autonomous-engine' && !sidebarOpen) {
-        return null;
+    useEffect(() => {
+        setIsOpen(!isAgentTeamPage);
+    }, [isAgentTeamPage]);
+
+    if (isAgentTeamPage) {
+        return (
+            <>
+                <button
+                    type="button"
+                    onClick={() => setIsOpen((open) => !open)}
+                    aria-label={isOpen ? "Close Agent Team menu" : "Open Agent Team menu"}
+                    aria-expanded={isOpen}
+                    style={{
+                        position: 'fixed',
+                        top: 12,
+                        left: 12,
+                        zIndex: 50,
+                        width: 32,
+                        height: 32,
+                        borderRadius: 10,
+                        border: '1px solid #d7e3ef',
+                        background: '#fff',
+                        color: '#0f172a',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 8px 24px rgba(15,23,42,0.08)',
+                        cursor: 'pointer'
+                    }}
+                >
+                    <ChevronRight
+                        size={16}
+                        style={{
+                            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.18s ease'
+                        }}
+                    />
+                </button>
+
+                {isOpen ? (
+                    <div
+                        style={{
+                            width: '220px',
+                            height: '100vh',
+                            position: 'sticky',
+                            top: 0,
+                            background: 'var(--bg-secondary)',
+                            borderRight: '1px solid var(--border)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            padding: '3rem 0.75rem 1rem'
+                        }}
+                    >
+                        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            {[
+                                {
+                                    label: "Back to User",
+                                    href: `/${username}`,
+                                    icon: <LogOut size={18} />,
+                                },
+                                ...navItems,
+                            ].map((item) => {
+                                const isActive = pathname === item.href;
+                                return (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.75rem',
+                                            padding: '0.75rem 0.85rem',
+                                            borderRadius: '10px',
+                                            textDecoration: 'none',
+                                            color: isActive ? '#0f172a' : 'var(--text-primary)',
+                                            background: isActive ? '#eff6ff' : '#fff',
+                                            border: '1px solid #d7e3ef',
+                                            fontWeight: 700,
+                                            fontSize: '0.85rem'
+                                        }}
+                                    >
+                                        {item.icon}
+                                        <span>{item.label}</span>
+                                    </Link>
+                                );
+                            })}
+                        </nav>
+                    </div>
+                ) : null}
+            </>
+        );
     }
 
     return (

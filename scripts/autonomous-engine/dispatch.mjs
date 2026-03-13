@@ -1,28 +1,33 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, WIP_LIMITS, appendEvent, getActiveJobLock, setActiveJobLock, withEngineRunLock, buildProposalIndex, proposalLineageRoot } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, WIP_LIMITS, appendEvent, getActiveJobLock, setActiveJobLock, withEngineRunLock, buildProposalIndex, proposalLineageRoot, normalizeJobs } from './lib.mjs';
 
 async function main() {
   await ensureEngineFiles();
   const proposals = await readJson(files.proposals);
-  const jobs = await readJson(files.jobs);
+  const jobs = normalizeJobs(await readJson(files.jobs));
   const proposalIndex = buildProposalIndex(proposals);
 
-  const buildingCount = jobs.filter((j) => ['approved_for_build', 'build'].includes(j.state)).length;
-  const testingCount = jobs.filter((j) => j.state === 'test').length;
-  const reviewReadyCount = jobs.filter((j) => j.state === 'review_ready').length;
+  const executerCount = jobs.filter((j) => ['executer_sync', 'execution'].includes(j.state)).length;
+  const qaCount = jobs.filter((j) => j.state === 'qa_review').length;
+  const activeCount = executerCount + qaCount;
 
-  if (reviewReadyCount >= WIP_LIMITS.reviewReady) {
-    console.log('[dispatch] review_ready WIP limit reached');
+  if (activeCount >= 1) {
+    console.log(`[dispatch] single-active guard in place (${activeCount} active)`);
     return;
   }
 
-  if (buildingCount >= WIP_LIMITS.building || testingCount >= WIP_LIMITS.testing) {
-    console.log('[dispatch] build/test WIP limits reached');
+  if (qaCount >= WIP_LIMITS.qa) {
+    console.log('[dispatch] qa_review WIP limit reached');
+    return;
+  }
+
+  if (executerCount >= WIP_LIMITS.executer) {
+    console.log('[dispatch] executer WIP limit reached');
     return;
   }
 
   const lock = await getActiveJobLock();
-  const hasLockedActive = lock?.activeJobId && jobs.some((j) => j.id === lock.activeJobId && ['approved_for_build', 'build', 'test'].includes(j.state));
+  const hasLockedActive = lock?.activeJobId && jobs.some((j) => j.id === lock.activeJobId && ['executer_sync', 'execution', 'qa_review'].includes(j.state));
   if (hasLockedActive) {
     console.log(`[dispatch] active lock in place (${lock.activeJobId})`);
     return;
@@ -33,30 +38,30 @@ async function main() {
 
   const activeProposalRoots = new Set(
     jobs
-      .filter((j) => ['approved_for_build', 'build', 'test', 'review_ready'].includes(j.state))
+      .filter((j) => ['executer_sync', 'execution', 'qa_review'].includes(j.state))
       .map((j) => proposalLineageRoot(j.proposalId, proposalIndex))
       .filter(Boolean),
   );
 
   const priorityRank = { P1: 1, P2: 2, P3: 3 };
   const next = jobs
-    .filter((j) => j.state === 'proposal' && j.quality?.status === 'pass' && !activeProposalRoots.has(proposalLineageRoot(j.proposalId, proposalIndex)))
+    .filter((j) => ['proposal', 'scout_update'].includes(j.state) && ['pass', 'proposal_ready'].includes(j.quality?.status) && !activeProposalRoots.has(proposalLineageRoot(j.proposalId, proposalIndex)))
     .sort((a, b) =>
       (priorityRank[a.priority] || 9) - (priorityRank[b.priority] || 9)
-      || (Number(a.retries?.testing || 0) - Number(b.retries?.testing || 0))
-      || (new Date(b.timestamps.updatedAt || b.timestamps.createdAt).getTime() - new Date(a.timestamps.updatedAt || a.timestamps.createdAt).getTime())
+      || (Number(a.retries?.qa || 0) - Number(b.retries?.qa || 0))
+      || (new Date(a.timestamps.createdAt || a.timestamps.updatedAt || 0).getTime() - new Date(b.timestamps.createdAt || b.timestamps.updatedAt || 0).getTime())
     )[0];
 
   if (next) {
-    next.state = 'approved_for_build';
-    next.ownerAgent = 'planner';
+    next.state = 'executer_sync';
+    next.ownerAgent = 'executer';
     next.timestamps.updatedAt = nowIso();
-    await writeArtifact(next.id, 'dispatch-decision.txt', `Orchestrator dispatch: proposal moved to approved_for_build with priority=${next.priority || 'P2'}.`);
-    await appendEvent({ jobId: next.id, proposalId: next.proposalId, stage: 'approved_for_build', message: `Dispatched to approved_for_build (priority=${next.priority || 'P2'})` });
+    await writeArtifact(next.id, 'dispatch-decision.txt', `Scout synced proposal with Executer and queued execution (priority=${next.priority || 'P2'}).`);
+    await appendEvent({ jobId: next.id, proposalId: next.proposalId, stage: 'executer_sync', message: `Scout synced with Executer and queued execution (priority=${next.priority || 'P2'})` });
     await setActiveJobLock(next.id);
-    console.log(`[dispatch] promoted ${next.id} to approved_for_build`);
+    console.log(`[dispatch] promoted ${next.id} to executer_sync`);
   } else {
-    const blockedByActiveProposal = jobs.filter((j) => j.state === 'proposal' && j.quality?.status === 'pass' && activeProposalRoots.has(proposalLineageRoot(j.proposalId, proposalIndex))).length;
+    const blockedByActiveProposal = jobs.filter((j) => j.state === 'proposal' && ['pass', 'proposal_ready'].includes(j.quality?.status) && activeProposalRoots.has(proposalLineageRoot(j.proposalId, proposalIndex))).length;
     if (blockedByActiveProposal > 0) {
       console.log(`[dispatch] no proposal to activate (blocked duplicates=${blockedByActiveProposal})`);
     } else {

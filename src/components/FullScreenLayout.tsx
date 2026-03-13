@@ -871,7 +871,7 @@ function BESExpandedDetails({ besMeta, besKP, besDK }: { besMeta: BESMetadata; b
                         return (
                             <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
                                 <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--accent)' }}>{f.code}</td>
-                                <td style={{ padding: '8px 12px', color: 'var(--text-primary)' }}>{f.name}</td>
+                                <td style={{ padding: '8px 12px', color: 'var(--text-primary)' }}>{formatBESFundDisplayName(f.name)}</td>
                                 <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>{f.percentage}%</td>
                                 <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{f.avgPrice ? f.avgPrice.toFixed(6) : '-'}</td>
                                 <td style={{ padding: '8px 12px', textAlign: 'right', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{loadingPrices ? '...' : (currentPrice ? currentPrice.toFixed(6) : '-')}</td>
@@ -961,7 +961,7 @@ function BESInlineEditor({ initialData, onSave, onCancel, availablePortfolios = 
 
     // Get display value for fund (CODE - NAME or just what user typed)
     const getFundDisplay = (fund: { code: string; name: string }) => {
-        if (fund.code && fund.name) return `${fund.code} - ${fund.name}`;
+        if (fund.code && fund.name) return `${fund.code} - ${formatBESFundDisplayName(fund.name)}`;
         return fund.code;
     };
 
@@ -2547,7 +2547,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                         >
                                             {displayAssets.map((asset, i) => {
                                                 const isLast = i === displayAssets.length - 1;
-                                                const isBESFund = asset.type === 'BES_FUND';
+                                                const isBESFund = asset.type === 'BES_FUND' || Boolean((asset as any)._isBESFund);
                                                 const isBESPortfolioAsset = (asset.customGroup || '').toUpperCase() === 'BES';
                                                 const isCash = asset.type === 'CASH';
 
@@ -2831,7 +2831,7 @@ function OpenPositionsFullScreen({ assets: initialAssets, exchangeRates, globalC
                                                                         ) : (
                                                                             <div>
                                                                                 <div style={{ fontSize: sizing.assetNameSize, fontWeight: 700, color: isBES ? 'var(--accent)' : 'var(--text-primary)' }}>
-                                                                                    {isBES ? 'BES' : (asset.name || asset.symbol)}
+                                                                                    {isBES ? 'BES' : (isBESFund ? formatBESFundDisplayName(asset.name || asset.symbol) : (asset.name || asset.symbol))}
                                                                                 </div>
                                                                                 {!isBES && (
                                                                                     <div style={{ fontSize: sizing.symbolSize, color: 'var(--text-muted)', fontWeight: 500 }}>
@@ -4402,7 +4402,7 @@ function TopPerformersFullScreen({ assets }: { assets: any[] }) {
                                 <td style={{ padding: '6px 12px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)' }}>
-                                            {asset.name || asset.symbol}
+                                            {(asset.type === 'BES_FUND' || (asset as any)._isBESFund) ? formatBESFundDisplayName(asset.name || asset.symbol) : (asset.name || asset.symbol)}
                                         </div>
                                         <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{asset.symbol}</div>
                                     </div>

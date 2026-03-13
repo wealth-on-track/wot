@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, appendEvent } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, appendEvent, normalizeJobs } from './lib.mjs';
 
 await ensureEngineFiles();
-const jobs = await readJson(files.jobs);
+const jobs = normalizeJobs(await readJson(files.jobs));
 const proposals = await readJson(files.proposals);
 
 const countOcc = (txt, needle) => (String(txt || '').toLowerCase().split(String(needle).toLowerCase()).length - 1);
@@ -101,7 +101,7 @@ const rewriteOnce = (p, result, job) => {
     mustFix.push('Make benchmark delta concrete');
   }
   if (result.codes.includes('RISK_CONTROLS_WEAK')) {
-    np.risk_controls = [...new Set([...(np.risk_controls || []), `Scope lock: only ${targetFile} (max 1 functional change)`, 'Rollback: revert single-file patch if lint/unit/verify fails', 'Gate: must pass lint + required checks before review_ready'])];
+    np.risk_controls = [...new Set([...(np.risk_controls || []), `Scope lock: only ${targetFile} (max 1 functional change)`, 'Rollback: revert single-file patch if lint/unit/verify fails', 'Gate: must pass lint + required checks before QA completion'])];
     mustFix.push('Strengthen risk controls');
   }
   if (result.codes.includes('FILE_PLAN_MISSING')) {
@@ -132,8 +132,8 @@ const rewriteOnce = (p, result, job) => {
     np.problem = `In ${targetFile}, the current behavior does not reliably ${categoryGoal}, causing measurable friction in review and user outcomes.`;
     np.proposed_change = `Edit ${targetFile} with one explicit functional adjustment aligned to ${category} goals, include acceptance checklist references, and keep scope to a single functional change.`;
     np.expected_benefit = category === 'performance'
-      ? `Expected outcome: measurable latency improvement (target >=20% on scoped path) and faster path to review_ready without rework loops.`
-      : `Expected outcome: deterministic QA interpretation (>=90% agreement over 20 checks) and faster path to review_ready without rework loops.`;
+      ? `Expected outcome: measurable latency improvement (target >=20% on scoped path) and faster path to QA completion without rework loops.`
+      : `Expected outcome: deterministic QA interpretation (>=90% agreement over 20 checks) and faster path to QA completion without rework loops.`;
     mustFix.push('Replace generic narrative with concrete scoped language');
   }
   if (result.codes.includes('USER_FACING_MISS')) {
@@ -167,20 +167,20 @@ const rewriteOnce = (p, result, job) => {
 const HARD_HUMAN_REVIEW_REASONS = new Set([
   'repeated_no_changed_files',
   'missing_implementation_diff',
-  'planning_timeout',
+  'scout_timeout',
   'exhausted_retries_rework',
   'repeated_verify_failures',
 ]);
 
 let updated = 0;
 for (const job of jobs) {
-  if (job.state !== 'proposal') continue;
+  if (!['proposal', 'scout_update'].includes(job.state)) continue;
   const p = proposals.find((x) => x.id === job.proposalId || String(job.proposalId || '').startsWith(String(x.id || '')));
   if (!p) continue;
 
   const confidenceOnlyEscalation = job.quality?.status === 'needs_human_review'
     && (job.quality?.feedback?.reject_reason_codes || []).every((c) => c === 'CONFIDENCE_LOW')
-    && Number(job.retries?.testing || 0) < 2;
+    && Number(job.retries?.qa || 0) < 2;
   const hardHumanReview = job.quality?.status === 'needs_human_review'
     && HARD_HUMAN_REVIEW_REASONS.has(String(job.quality?.reason || ''))
     && !confidenceOnlyEscalation;
@@ -197,14 +197,14 @@ for (const job of jobs) {
   }
 
   // stop endless auto-loop: after repeated verify failures, escalate to human review
-  if (Number(job.retries?.testing || 0) >= 2) {
+  if (Number(job.retries?.qa || 0) >= 2) {
     job.quality = { ...(job.quality || {}), status: 'needs_human_review', checkedAt: nowIso(), reason: 'repeated_verify_failures' };
     updated += 1;
     continue;
   }
 
-  // stop proposal<->build ping-pong: repeated no-diff attempts need human intervention
-  const noDiffLoop = Number(job.retries?.build || 0) >= 2
+  // stop proposal<->execution ping-pong: repeated no-diff attempts need human intervention
+  const noDiffLoop = Number(job.retries?.executer || 0) >= 2
     && (job.quality?.feedback?.reject_reason_codes || []).includes('NO_CHANGED_FILES');
   if (noDiffLoop) {
     job.quality = { ...(job.quality || {}), status: 'needs_human_review', checkedAt: nowIso(), reason: 'repeated_no_changed_files' };
@@ -228,7 +228,7 @@ for (const job of jobs) {
     ],
     gaps: first.codes.map((c) => {
       if (c === 'EVIDENCE_WEAK') return 'Evidence is not yet strong enough to justify confident execution.';
-      if (c === 'IMPACT_LOW') return 'Impact statement is below build threshold and needs clearer measurable outcome.';
+      if (c === 'IMPACT_LOW') return 'Impact statement is below execution threshold and needs clearer measurable outcome.';
       if (c === 'CONFIDENCE_LOW') return 'Confidence is low; proposal needs stronger verification framing.';
       if (c === 'USER_FACING_MISS') return 'Proposal must connect directly to user-facing value.';
       if (c === 'KPI_TARGET_MISSING') return 'KPI target is missing; no measurable success threshold is defined.';
@@ -237,7 +237,7 @@ for (const job of jobs) {
       if (c === 'BENCHMARK_DELTA_VAGUE') return 'Benchmark delta is too vague; baseline/target/closure step are unclear.';
       if (c === 'RISK_CONTROLS_WEAK') return 'Risk controls are weak; add execution and rollback safeguards.';
       if (c === 'FILE_PLAN_MISSING') return 'Proposal does not specify exact file-level implementation plan.';
-      if (c === 'FILE_PLAN_MISMATCH') return 'change_spec file does not align with files_expected; build target is ambiguous.';
+      if (c === 'FILE_PLAN_MISMATCH') return 'change_spec file does not align with files_expected; execution target is ambiguous.';
       if (c === 'GENERIC_TEXT') return 'Proposal narrative is too generic and not execution-specific.';
       return c;
     }),

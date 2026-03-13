@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   try {
     execSync(`node scripts/autonomous-engine/review-action.mjs ${action} ${jobId}`, { cwd: process.cwd(), stdio: 'pipe', maxBuffer: 20 * 1024 * 1024 });
   } catch (e) {
-    return NextResponse.json({ ok: false, error: String((e as any)?.message || e), redirect: '/admin/autonomous-engine?section=review' }, { status: 500 });
+    return NextResponse.json({ ok: false, error: String((e as any)?.message || e), redirect: '/admin/autonomous-engine?section=proposal' }, { status: 500 });
   }
 
   const u = new URL('/admin/autonomous-engine', req.url);

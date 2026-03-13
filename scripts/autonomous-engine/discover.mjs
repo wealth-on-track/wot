@@ -1,6 +1,19 @@
 #!/usr/bin/env node
 import { execSync } from 'child_process';
-import { ensureEngineFiles, files, makeId, readJson, writeJson, normalize, CATEGORIES, nowIso, parseLessons, proposalSimilarity } from './lib.mjs';
+import {
+  ensureEngineFiles,
+  files,
+  makeId,
+  readJson,
+  writeJson,
+  normalize,
+  CATEGORIES,
+  nowIso,
+  parseLessons,
+  proposalSimilarity,
+  normalizeJobs,
+  isActiveState,
+} from './lib.mjs';
 
 const REQUIRED_SCOUT_SCOPE = [
   'UX/usability/readability',
@@ -15,11 +28,24 @@ const REQUIRED_SCOUT_SCOPE = [
   'onboarding/conversion clarity',
 ];
 
+const RECENT_DUPLICATE_WINDOW_MS = 6 * 60 * 60 * 1000;
+const RECENT_FALLBACK_WINDOW_MS = 90 * 60 * 1000;
+
 await ensureEngineFiles();
 const lessons = await readJson(files.lessons);
 const proposals = await readJson(files.proposals);
+const jobs = normalizeJobs(await readJson(files.jobs));
+const history = await readJson(files.history);
 const deepState = await readJson(files.deepScanState);
 
+const activeJobs = jobs.filter((j) => isActiveState(j?.state));
+if (activeJobs.length > 0) {
+  console.log('[discover] skipped (active job in progress)');
+  process.exit(0);
+}
+
+const queuedOpenProposals = proposals.filter((p) => !p?._planned);
+const queueEmpty = queuedOpenProposals.length === 0;
 const { liked, disliked, byCategory } = parseLessons(lessons);
 const neverDoAgain = String((lessons || []).map((l) => `${l?.disliked || ''} ${l?.notes || ''}`).join(' ')).toLowerCase();
 const scanHints = [];
@@ -31,7 +57,6 @@ try {
 
 const scopedHint = (hint) => ({ ...hint, scoutScopeCoverage: REQUIRED_SCOUT_SCOPE });
 
-// Mandatory scout scope coverage (10 categories)
 scanHints.push(scopedHint({
   category: 'ux',
   title: 'Raise first-read UX clarity in public portfolio empty/onboarding state',
@@ -72,6 +97,52 @@ if (!lastDeep || Date.now() - lastDeep > 7 * 24 * 60 * 60 * 1000) {
   await writeJson(files.deepScanState, { lastDeepScanAt: nowIso() });
 }
 
+const toTs = (value) => {
+  const ts = new Date(value || 0).getTime();
+  return Number.isFinite(ts) ? ts : 0;
+};
+
+const activityPool = [
+  ...queuedOpenProposals.map((item) => ({ kind: 'proposal', item, ts: toTs(item?._plannedAt || item?.timestamps?.createdAt || item?.createdAt) })),
+  ...jobs.map((item) => ({ kind: 'job', item, ts: toTs(item?.timestamps?.updatedAt || item?.timestamps?.createdAt) })),
+  ...history.map((item) => ({ kind: 'history', item, ts: toTs(item?.timestamps?.updatedAt || item?.timestamps?.createdAt) })),
+];
+
+function recentSignalFor(proposal) {
+  const now = Date.now();
+  let strongest = null;
+  for (const signal of activityPool) {
+    const candidate = signal.item || {};
+    const compare = {
+      title: candidate.title,
+      problem: candidate.problem || candidate.summary,
+      files_expected: candidate.files_expected || candidate.changedFiles || [],
+    };
+    const sim = proposalSimilarity(compare, proposal);
+    if (!sim.titleSimilar && !sim.problemSimilar && sim.fileOverlap === 0) continue;
+    const ageMs = signal.ts > 0 ? now - signal.ts : Number.POSITIVE_INFINITY;
+    const score = (sim.titleSimilar ? 4 : 0) + (sim.problemSimilar ? 3 : 0) + Math.min(sim.fileOverlap, 2);
+    if (!strongest || score > strongest.score || (score === strongest.score && ageMs < strongest.ageMs)) {
+      strongest = { ...signal, sim, ageMs, score };
+    }
+  }
+  return strongest;
+}
+
+function shouldSuppressCandidate(proposal) {
+  const duplicate = recentSignalFor(proposal);
+  if (!duplicate) return false;
+  const veryRecent = duplicate.ageMs <= RECENT_DUPLICATE_WINDOW_MS;
+  const exactish = duplicate.sim.titleSimilar && duplicate.sim.fileOverlap > 0;
+  const broadMatch = duplicate.sim.problemSimilar && duplicate.sim.fileOverlap > 0;
+
+  if (queueEmpty) {
+    return exactish || (veryRecent && broadMatch);
+  }
+
+  return exactish || broadMatch || (veryRecent && duplicate.score >= 4);
+}
+
 const candidates = scanHints
   .filter((c) => CATEGORIES.includes(c.category))
   .map((c) => {
@@ -81,9 +152,12 @@ const candidates = scanHints
     if (disliked && disliked.split(' ').some((w) => w.length > 4 && n.includes(w))) score -= 3;
     const cat = byCategory[c.category] || { liked: 0, disliked: 0 };
     score += Number(cat.liked || 0) - Number(cat.disliked || 0);
+    if (c.category === 'ux' || c.category === 'branding') score += 2;
+    if ((c.targetFile || '').includes('portfolio_public')) score += 1;
+    if ((c.targetFile || '').includes('PublicPortfolioView')) score += 1;
     return { ...c, score };
   })
-  .sort((a, b) => b.score - a.score);
+  .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
 
 let created = 0;
 
@@ -109,7 +183,7 @@ for (const c of candidates) {
     risk,
     impact,
     priority,
-    impactScore: 4,
+    impactScore: c.category === 'ux' || c.category === 'branding' ? 5 : 4,
     confidenceScore: 4,
     effortScore: 2,
     userFacing: true,
@@ -123,7 +197,7 @@ for (const c of candidates) {
     risk_controls: [
       `Scope lock: modify only ${targetFile} with one functional intent.`,
       'Rollback guard: revert single-file patch if required checks fail.',
-      'Gate: do not move to review_ready without verification artifacts and check-pass evidence.',
+      'Gate: do not move to QA completion without verification artifacts and check-pass evidence.',
     ],
     non_goals: ['No unrelated refactor.', 'No broad redesign outside scoped files.', 'No production deploy.'],
     files_expected: [targetFile],
@@ -136,45 +210,71 @@ for (const c of candidates) {
     rollback_plan: 'Revert local branch commit and restore previous scoped file state.',
   };
 
-  const dup = proposals.find((p) => {
-    const s = proposalSimilarity(p, proposal);
-    return s.titleSimilar || (s.problemSimilar && s.fileOverlap > 0);
-  });
-  if (dup) continue;
+  if (shouldSuppressCandidate(proposal)) continue;
 
   proposals.push(proposal);
-  created += 1;
+  created = 1;
+  break;
 }
 
-// Hard guarantee: at least one proposal is produced every run.
-if (created === 0) {
-  const runTag = nowIso().slice(0, 16);
-  proposals.push({
-    id: makeId('PRP'),
-    title: `Run-guarantee premium UX microcopy refinement (${runTag})`,
-    category: 'ux',
-    scout_scope_coverage: REQUIRED_SCOUT_SCOPE,
-    problem: 'No unique proposal was created in this run; force-generate one scoped premium UX improvement to preserve loop continuity.',
-    evidence: ['run_guarantee: no_unique_candidate_created', `scout_scope_coverage_count=${REQUIRED_SCOUT_SCOPE.length}`],
-    proposed_change: 'Refine empty/onboarding state microcopy for first-read clarity and trust signal on public portfolio page.',
-    expected_benefit: 'Maintains autonomous loop output while improving conversion clarity in a user-facing flow.',
-    risk: 'low',
-    impact: 'high',
-    priority: 'P1',
-    impactScore: 4,
-    confidenceScore: 4,
-    effortScore: 1,
-    userFacing: true,
-    success_metrics: ['Before/after clarity checklist captured', 'Required checks pass'],
-    kpi_target: 'Increase first-read comprehension from <=60% to >=90% over 20 checklist runs.',
-    benchmark_delta: 'Close >=70% of premium empty-state clarity gap vs benchmark references.',
-    risk_controls: ['Scope lock: one file', 'Rollback if checks fail', 'No deploy'],
-    files_expected: ['src/app/[username]/portfolio_public/page.tsx'],
-    change_spec: [{ file: 'src/app/[username]/portfolio_public/page.tsx', change: 'Apply one scoped copy/clarity adjustment for owner/visitor empty state.', why: 'Highest leverage onboarding clarity path.' }],
-    tests_required: ['unit'],
-    rollback_plan: 'git revert scoped commit',
-  });
-  created = 1;
+if (created === 0 && queueEmpty) {
+  const fallbackCandidates = [
+    {
+      title: `Run-guarantee premium UX microcopy refinement (${nowIso().slice(0, 16)})`,
+      category: 'ux',
+      targetFile: 'src/app/[username]/portfolio_public/page.tsx',
+      problem: 'No unique proposal was created in this run; force-generate one scoped premium UX improvement to preserve loop continuity.',
+      proposed_change: 'Refine empty/onboarding state microcopy for first-read clarity and trust signal on public portfolio page.',
+      expected_benefit: 'Maintains autonomous loop output while improving conversion clarity in a user-facing flow.',
+      evidence: ['run_guarantee: no_unique_candidate_created'],
+    },
+    {
+      title: `Run-guarantee premium trust cue refinement (${nowIso().slice(0, 16)})`,
+      category: 'branding',
+      targetFile: 'src/components/PublicPortfolioView.tsx',
+      problem: 'No unique proposal was created in this run; use a trust-signal fallback on the highest-traffic public portfolio surface.',
+      proposed_change: 'Refine one premium trust cue on the public portfolio view to improve first-read reassurance without adding clutter.',
+      expected_benefit: 'Preserves schedule reliability with a small but reviewer-visible quality win.',
+      evidence: ['run_guarantee: secondary_branding_fallback'],
+    },
+  ];
+
+  for (const fallback of fallbackCandidates) {
+    const recentFallback = recentSignalFor({
+      title: fallback.title,
+      problem: fallback.problem,
+      files_expected: [fallback.targetFile],
+    });
+    if (recentFallback && recentFallback.ageMs <= RECENT_FALLBACK_WINDOW_MS && recentFallback.sim.fileOverlap > 0) continue;
+
+    proposals.push({
+      id: makeId('PRP'),
+      title: fallback.title,
+      category: fallback.category,
+      scout_scope_coverage: REQUIRED_SCOUT_SCOPE,
+      problem: fallback.problem,
+      evidence: [...fallback.evidence, `scout_scope_coverage_count=${REQUIRED_SCOUT_SCOPE.length}`],
+      proposed_change: fallback.proposed_change,
+      expected_benefit: fallback.expected_benefit,
+      risk: 'low',
+      impact: 'high',
+      priority: 'P1',
+      impactScore: 4,
+      confidenceScore: 4,
+      effortScore: 1,
+      userFacing: true,
+      success_metrics: ['Before/after clarity checklist captured', 'Required checks pass'],
+      kpi_target: 'Increase first-read comprehension from <=60% to >=90% over 20 checklist runs.',
+      benchmark_delta: 'Close >=70% of premium public-share clarity gap vs benchmark references.',
+      risk_controls: ['Scope lock: one file', 'Rollback if checks fail', 'No deploy'],
+      files_expected: [fallback.targetFile],
+      change_spec: [{ file: fallback.targetFile, change: fallback.proposed_change, why: 'Highest leverage fallback path when scout would otherwise emit nothing.' }],
+      tests_required: ['unit'],
+      rollback_plan: 'git revert scoped commit',
+    });
+    created = 1;
+    break;
+  }
 }
 
 await writeJson(files.proposals, proposals);

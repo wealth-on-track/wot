@@ -1,6 +1,13 @@
 export const cleanAssetName = (name: string): string => {
     let cleaned = name.trim();
 
+    cleaned = cleaned
+        .replace(/Anadolu\s+Hayat\s+Emeklilik\s*A\.?Ş\.?/gi, 'AHE')
+        .replace(/Anadolu\s+Hayat\s+Emeklilik\s*A\.S\./gi, 'AHE')
+        .replace(/Emeklilik\s+Yat[ıi]r[ıi]m\s+Fonu/gi, 'EYF')
+        .replace(/\s+/g, ' ')
+        .trim();
+
     // 1. Clean British stock nominal value patterns FIRST (e.g., "ORD 28 101/108P", "ORD 25P", "ORD GBP0.10")
     // These appear in LSE stock names like "DIAGEO PLC ORD 28 101/108P"
     const britishPatterns = [

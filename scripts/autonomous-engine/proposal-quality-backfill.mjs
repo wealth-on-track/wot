@@ -16,7 +16,7 @@ for (const p of proposals) {
     changed = true;
   }
   if (!Array.isArray(p.risk_controls) || p.risk_controls.length < 2) {
-    p.risk_controls = ['Single-intent scoped implementation', 'Verification artifacts required before review_ready'];
+    p.risk_controls = ['Single-intent scoped implementation', 'QA artifacts required before completion'];
     changed = true;
   }
   if (changed) {

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { Check } from 'lucide-react';
 
 export default function DeployButton() {
   const router = useRouter();
@@ -39,10 +40,24 @@ export default function DeployButton() {
       type="button"
       onClick={run}
       disabled={busy}
-      style={{ border: '1px solid #93c5fd', background: '#eff6ff', color: '#1d4ed8', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', opacity: busy ? 0.7 : 1 }}
+      style={{
+        border: '1px solid #d7e3ef',
+        background: '#fff',
+        color: '#0f172a',
+        borderRadius: 12,
+        padding: '10px 14px',
+        fontSize: 12,
+        fontWeight: 800,
+        opacity: busy ? 0.7 : 1,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+        cursor: busy ? 'default' : 'pointer'
+      }}
       title="Deploy all local approved changes"
     >
-      {busy ? 'Deploying…' : 'Deploy'}
+      <span>{busy ? 'Deploying…' : 'Deploy'}</span>
+      <Check size={14} />
     </button>
   );
 }

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, appendEvent, buildProposalIndex, proposalLineageRoot } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, appendEvent, buildProposalIndex, proposalLineageRoot, normalizeJobs } from './lib.mjs';
 
 await ensureEngineFiles();
-const jobs = await readJson(files.jobs);
+const jobs = normalizeJobs(await readJson(files.jobs));
 const proposals = await readJson(files.proposals);
 const proposalIndex = buildProposalIndex(proposals);
 
@@ -10,7 +10,7 @@ const proposalIds = new Set(proposals.map((p) => p.id));
 let fixed = 0;
 
 for (const j of jobs) {
-  if (j.state !== 'proposal' && !['approved_for_build','build','test'].includes(j.state)) continue;
+  if (j.state !== 'proposal' && !['executer_sync', 'execution', 'qa_review'].includes(j.state)) continue;
 
   const hasRef = [...proposalIds].some((id) => j.proposalId === id || String(j.proposalId || '').startsWith(String(id)));
   if (!hasRef) {
@@ -29,7 +29,7 @@ for (const j of jobs) {
 }
 
 const reviewReadyByRoot = new Map();
-for (const job of jobs.filter((entry) => entry.state === 'review_ready')) {
+for (const job of jobs.filter((entry) => entry.state === 'qa_review')) {
   const rootId = proposalLineageRoot(job.proposalId, proposalIndex);
   if (!rootId) continue;
   const bucket = reviewReadyByRoot.get(rootId) || [];
@@ -43,10 +43,10 @@ for (const [rootId, duplicates] of reviewReadyByRoot.entries()) {
   const [, ...superseded] = duplicates;
   for (const job of superseded) {
     job.state = 'abandoned_with_reason';
-    job.finalReason = `superseded_review_ready_lineage:${rootId}`;
+    job.finalReason = `superseded_qa_review_lineage:${rootId}`;
     job.timestamps.updatedAt = nowIso();
     fixed += 1;
-    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'abandoned_with_reason', message: `Self-heal retired duplicate review_ready job for lineage ${rootId}` });
+    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'abandoned_with_reason', message: `Self-heal retired duplicate qa_review job for lineage ${rootId}` });
   }
 }
 

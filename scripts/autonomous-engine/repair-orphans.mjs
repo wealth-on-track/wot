@@ -1,15 +1,15 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, makeId, appendEvent } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, makeId, appendEvent, normalizeJobs } from './lib.mjs';
 
 await ensureEngineFiles();
-const jobs = await readJson(files.jobs);
+const jobs = normalizeJobs(await readJson(files.jobs));
 const proposals = await readJson(files.proposals);
 
 const hasProposal = (job) => proposals.some((p) => p.id === job.proposalId || String(job.proposalId || '').startsWith(String(p.id || '')));
 let repaired = 0;
 
 for (const j of jobs) {
-  if (!['proposal','approved_for_build','build','test'].includes(j.state)) continue;
+  if (!['proposal', 'executer_sync', 'execution', 'qa_review'].includes(j.state)) continue;
   if (hasProposal(j)) continue;
 
   const syntheticId = makeId('PRP');
@@ -39,7 +39,7 @@ for (const j of jobs) {
   proposals.push(synthetic);
   j.proposalId = syntheticId;
   j.state = 'proposal';
-  j.ownerAgent = 'planner';
+  j.ownerAgent = 'scout';
   j.quality = { status: 'pending', checkedAt: nowIso(), sessionCount: 0, repaired: true };
   j.timestamps.updatedAt = nowIso();
   await appendEvent({ jobId: j.id, proposalId: syntheticId, stage: 'proposal', message: `Orphan repair generated synthetic proposal ${syntheticId}` });

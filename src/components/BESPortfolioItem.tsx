@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Pencil, Building2, RefreshCw, TrendingUp, Shield, Coins, Landmark, PiggyBank } from 'lucide-react';
-import { BESMetadata, calculateBESTotals, BESFundWithPrice, getFundAllocation } from '@/lib/besTypes';
+import { BESMetadata, calculateBESTotals, BESFundWithPrice, getFundAllocation, formatBESFundDisplayName } from '@/lib/besTypes';
 import { getBESFundPrices } from '@/app/actions/marketData';
 
 interface BESPortfolioItemProps {
@@ -359,7 +359,7 @@ export function BESPortfolioItem({
                           overflow: 'hidden',
                           textOverflow: 'ellipsis'
                         }}>
-                          {priceData?.name || fund.name}
+                          {formatBESFundDisplayName(priceData?.name || fund.name)}
                         </span>
                       </div>
                       {/* Asset Class Tags */}

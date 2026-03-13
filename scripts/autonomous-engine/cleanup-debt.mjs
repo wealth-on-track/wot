@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, appendEvent } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, appendEvent, normalizeJobs } from './lib.mjs';
 
 await ensureEngineFiles();
-const jobs = await readJson(files.jobs);
-const history = await readJson(files.history);
+const jobs = normalizeJobs(await readJson(files.jobs));
+const history = normalizeJobs(await readJson(files.history));
 
 let cleaned = 0;
 const keptHistory = [];
@@ -24,10 +24,10 @@ if (cleaned > 0) {
 for (const j of jobs) {
   if (j.state !== 'abandoned_with_reason') continue;
   j.state = 'proposal';
-  j.ownerAgent = 'planner';
+  j.ownerAgent = 'scout';
   j.finalReason = undefined;
   j.quality = { status: 'needs_human_review', checkedAt: nowIso(), sessionCount: Number(j.quality?.sessionCount || 0), reason: 'legacy_abandoned_requeued' };
-  j.retries = { planning: 0, build: 0, testing: 0, verification: 0 };
+  j.retries = { scout: 0, sync: 0, executer: 0, qa: 0 };
   j.timestamps.updatedAt = nowIso();
   cleaned += 1;
 }

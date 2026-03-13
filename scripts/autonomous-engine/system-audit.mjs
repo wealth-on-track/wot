@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, readJson, buildProposalIndex, proposalLineageRoot } from './lib.mjs';
+import { ensureEngineFiles, files, readJson, buildProposalIndex, proposalLineageRoot, normalizeJobs } from './lib.mjs';
 
 await ensureEngineFiles();
-const jobs = await readJson(files.jobs);
+const jobs = normalizeJobs(await readJson(files.jobs));
 const proposals = await readJson(files.proposals);
 const proposalIndex = buildProposalIndex(proposals);
 
@@ -19,17 +19,17 @@ for (const [id, c] of proposalIdCount.entries()) if (c > 1) add('critical', 'DUP
 
 const proposalIds = new Set(proposals.map((p) => p.id));
 for (const j of jobs) {
-  if (['proposal', 'approved_for_build', 'build', 'test'].includes(j.state)) {
+  if (['proposal', 'executer_sync', 'execution', 'qa_review'].includes(j.state)) {
     const ok = [...proposalIds].some((id) => j.proposalId === id || String(j.proposalId || '').startsWith(String(id)));
     if (!ok) add('critical', 'ORPHAN_JOB', `${j.id} has missing proposal ${j.proposalId}`);
   }
 }
 
-const active = jobs.filter((j) => ['approved_for_build', 'build', 'test'].includes(j.state));
+const active = jobs.filter((j) => ['executer_sync', 'execution', 'qa_review'].includes(j.state));
 if (active.length > 1) add('high', 'MULTI_ACTIVE', `active queue has ${active.length} jobs`);
 
 const lineageCounts = new Map();
-for (const job of jobs.filter((j) => ['proposal', 'approved_for_build', 'build', 'test', 'review_ready'].includes(j.state))) {
+for (const job of jobs.filter((j) => ['proposal', 'executer_sync', 'execution', 'qa_review'].includes(j.state))) {
   const rootId = proposalLineageRoot(job.proposalId, proposalIndex);
   if (!rootId) continue;
   lineageCounts.set(rootId, (lineageCounts.get(rootId) || 0) + 1);

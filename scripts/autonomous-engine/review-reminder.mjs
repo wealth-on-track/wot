@@ -1,15 +1,15 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, appendEvent } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, appendEvent, normalizeJobs } from './lib.mjs';
 
 await ensureEngineFiles();
-const jobs = await readJson(files.jobs);
+const jobs = normalizeJobs(await readJson(files.jobs));
 
 const now = Date.now();
 const remindAfterMin = 30;
 let reminded = 0;
 
 for (const j of jobs) {
-  if (j.state !== 'review_ready') continue;
+  if (j.state !== '__disabled__') continue;
   const updatedAt = new Date(j.timestamps?.updatedAt || j.timestamps?.createdAt || 0).getTime();
   if (!updatedAt) continue;
   const ageMin = Math.floor((now - updatedAt) / 60000);
@@ -22,8 +22,8 @@ for (const j of jobs) {
   await appendEvent({
     jobId: j.id,
     proposalId: j.proposalId,
-    stage: 'review_ready',
-    message: `Review reminder: waiting ${ageMin}m for human decision (approve/reject).`,
+    stage: 'approved',
+    message: `auto-complete reminder disabled`,
   });
   reminded += 1;
 }

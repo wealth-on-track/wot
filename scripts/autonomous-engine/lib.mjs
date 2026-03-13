@@ -17,9 +17,23 @@ const FILES = {
 };
 
 export const CATEGORIES = ['ux', 'performance', 'security', 'branding', 'product', 'operations', 'benchmark', 'patch'];
-export const FINAL_STATES = ['review_ready', 'reverted', 'abandoned_with_reason'];
-export const AGENTS = ['scout', 'planner', 'builder', 'verifier'];
-export const WORKFLOW = ['discover', 'proposal', 'approved_for_build', 'build', 'test', 'review_ready', 'approved', 'reverted', 'abandoned_with_reason'];
+export const ACTIVE_STATES = ['proposal', 'scout_update', 'executer_sync', 'execution', 'qa_review'];
+export const FINAL_STATES = ['approved', 'reverted', 'abandoned_with_reason'];
+export const AGENTS = ['scout', 'executer', 'qa'];
+export const WORKFLOW = [...ACTIVE_STATES, ...FINAL_STATES];
+export const LEGACY_STATE_MAP = {
+  discover: 'proposal',
+  approved_for_build: 'executer_sync',
+  build: 'execution',
+  test: 'qa_review',
+  review_ready: 'qa_review',
+};
+export const LEGACY_AGENT_MAP = {
+  planner: 'scout',
+  builder: 'executer',
+  verifier: 'qa',
+  dispatcher: 'scout',
+};
 
 async function ensureFile(filePath, fallback) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
@@ -60,29 +74,130 @@ export function makeId(prefix) {
   return `${prefix}-${y}${m}${day}-${h}${mi}${s}${ms}-${String(__seq).padStart(3, '0')}${rnd}`;
 }
 
+export function nextDailySequenceId(existingIds = [], date = new Date()) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  const base = `${y}${m}${d}`;
+  let max = 0;
+  for (const raw of existingIds || []) {
+    const id = String(raw || '');
+    const match = id.match(new RegExp(`^${base}\\.(\\d{3})$`));
+    if (match) max = Math.max(max, Number(match[1] || 0));
+  }
+  return `${base}.${String(max + 1).padStart(3, '0')}`;
+}
+
 export function normalize(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
 
+export function primaryTargetFile(item = {}) {
+  const fileFromList = (item?.files_expected || item?.changedFiles || [])[0];
+  const fileFromSpec = (item?.change_spec || [])[0]?.file;
+  return String(fileFromList || fileFromSpec || '').trim();
+}
+
+export function proposalTitleStem(title) {
+  return normalize(title)
+    .replace(/\b\d+\b/g, ' ')
+    .replace(/\btriaged\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function proposalIntentKey(item = {}) {
+  const file = primaryTargetFile(item).toLowerCase();
+  const title = proposalTitleStem(item?.title);
+  return `${file}::${title}`.trim();
+}
+
+export function sameProposalIntent(a = {}, b = {}) {
+  const fileA = primaryTargetFile(a).toLowerCase();
+  const fileB = primaryTargetFile(b).toLowerCase();
+  if (!fileA || !fileB || fileA !== fileB) return false;
+
+  const titleA = proposalTitleStem(a?.title);
+  const titleB = proposalTitleStem(b?.title);
+  return Boolean(titleA && titleB && titleA === titleB);
+}
+
+export function itemTimestampMs(item = {}) {
+  const ts = item?.timestamps?.updatedAt
+    || item?.timestamps?.createdAt
+    || item?.updatedAt
+    || item?.createdAt
+    || item?._plannedAt
+    || null;
+  const ms = ts ? new Date(ts).getTime() : 0;
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+export function compareProposalPriority(a = {}, b = {}) {
+  const priorityRank = { P1: 1, P2: 2, P3: 3 };
+  return (priorityRank[a?.priority] || 9) - (priorityRank[b?.priority] || 9)
+    || (Number(b?.impactScore || 0) - Number(a?.impactScore || 0))
+    || (Number(b?.confidenceScore || 0) - Number(a?.confidenceScore || 0))
+    || (Number(a?.effortScore || 99) - Number(b?.effortScore || 99))
+    || ((Array.isArray(b?.evidence) ? b.evidence.length : 0) - (Array.isArray(a?.evidence) ? a.evidence.length : 0))
+    || (itemTimestampMs(a) - itemTimestampMs(b))
+    || String(a?.id || '').localeCompare(String(b?.id || ''));
+}
+
+export function canonicalState(state) {
+  return LEGACY_STATE_MAP[String(state || '').trim()] || String(state || '').trim();
+}
+
+export function isActiveState(state) {
+  return ACTIVE_STATES.includes(canonicalState(state));
+}
+
+export function isCompletedState(state) {
+  return FINAL_STATES.includes(canonicalState(state));
+}
+
+export function normalizeRetries(retries = {}) {
+  return {
+    scout: Number(retries.scout ?? retries.planning ?? 0),
+    sync: Number(retries.sync ?? 0),
+    executer: Number(retries.executer ?? retries.build ?? 0),
+    qa: Number(retries.qa ?? retries.testing ?? retries.verification ?? 0),
+  };
+}
+
+export function normalizeJob(job = {}) {
+  const normalized = { ...job };
+  normalized.state = canonicalState(normalized.state);
+  normalized.ownerAgent = LEGACY_AGENT_MAP[String(normalized.ownerAgent || '').trim()] || normalized.ownerAgent || stageOwner(normalized.state);
+  normalized.retries = normalizeRetries(normalized.retries);
+  normalized.timestamps ||= { createdAt: nowIso(), updatedAt: nowIso() };
+  normalized.timestamps.createdAt ||= normalized.timestamps.updatedAt || nowIso();
+  normalized.timestamps.updatedAt ||= normalized.timestamps.createdAt || nowIso();
+  return normalized;
+}
+
+export function normalizeJobs(jobs = []) {
+  return (jobs || []).map((job) => normalizeJob(job));
+}
+
 export function stageOwner(state) {
-  if (state === 'discover') return 'scout';
-  if (state === 'proposal' || state === 'approved_for_build') return 'planner';
-  if (state === 'build') return 'builder';
-  if (state === 'test') return 'verifier';
+  const current = canonicalState(state);
+  if (current === 'proposal' || current === 'scout_update') return 'scout';
+  if (current === 'executer_sync' || current === 'execution') return 'executer';
+  if (current === 'qa_review') return 'qa';
   return null;
 }
 
 export function canTransition(from, to) {
   const allowed = {
-    discover: ['proposal', 'abandoned_with_reason'],
-    proposal: ['approved_for_build', 'abandoned_with_reason'],
-    approved_for_build: ['build', 'abandoned_with_reason'],
-    build: ['test', 'approved_for_build', 'abandoned_with_reason'],
-    test: ['review_ready', 'build', 'abandoned_with_reason'],
-    review_ready: ['approved', 'reverted'],
+    proposal: ['executer_sync', 'abandoned_with_reason'],
+    scout_update: ['executer_sync', 'abandoned_with_reason'],
+    executer_sync: ['execution', 'scout_update', 'abandoned_with_reason'],
+    execution: ['qa_review', 'executer_sync', 'scout_update', 'abandoned_with_reason'],
+    qa_review: ['approved', 'reverted', 'scout_update', 'execution', 'abandoned_with_reason'],
     approved: [],
     reverted: [],
     abandoned_with_reason: [],
   };
-  return (allowed[from] || []).includes(to);
+  return (allowed[canonicalState(from)] || []).includes(canonicalState(to));
 }
 
 export function validateProposal(p) {
@@ -100,7 +215,7 @@ export function validateProposal(p) {
   return { ok: true };
 }
 
-export const WIP_LIMITS = { planning: 10, building: 3, testing: 3, reviewReady: 20 };
+export const WIP_LIMITS = { scout: 10, executer: 3, qa: 20 };
 
 export function proposalSimilarity(a, b) {
   const t1 = normalize(a?.title);

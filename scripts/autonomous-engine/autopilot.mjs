@@ -12,7 +12,7 @@ const states = () => {
 for (let i = 1; i <= maxCycles; i++) {
   execSync('node scripts/autonomous-engine/tick.mjs', { stdio: 'inherit' });
   const s = states();
-  const active = (s.approved_for_build || 0) + (s.build || 0) + (s.test || 0) + (s.proposal || 0);
+  const active = (s.executer_sync || 0) + (s.execution || 0) + (s.qa_review || 0) + (s.proposal || 0);
   if (active === 0) {
     console.log(`[autopilot] settled after ${i} cycle(s)`);
     process.exit(0);

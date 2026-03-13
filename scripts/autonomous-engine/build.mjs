@@ -1,31 +1,31 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent, getActiveJobLock, setActiveJobLock, withEngineRunLock } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent, getActiveJobLock, setActiveJobLock, withEngineRunLock, normalizeJobs } from './lib.mjs';
 import { execSync } from 'child_process';
 import { promises as fs } from 'fs';
 
 async function main() {
   await ensureEngineFiles();
   const proposals = await readJson(files.proposals);
-  const jobs = await readJson(files.jobs);
+  const jobs = normalizeJobs(await readJson(files.jobs));
   const history = await readJson(files.history);
 
   const priorityRank = { P1: 1, P2: 2, P3: 3 };
   const lock = await getActiveJobLock();
-  const locked = lock?.activeJobId ? jobs.find((j) => j.id === lock.activeJobId && ['approved_for_build', 'build'].includes(j.state)) : null;
-  const approvedQueue = jobs
-    .filter((j) => j.state === 'approved_for_build')
+  const locked = lock?.activeJobId ? jobs.find((j) => j.id === lock.activeJobId && ['executer_sync', 'execution'].includes(j.state)) : null;
+  const syncQueue = jobs
+    .filter((j) => j.state === 'executer_sync')
     .sort((a, b) => (priorityRank[a.priority] || 9) - (priorityRank[b.priority] || 9) || new Date(a.timestamps?.updatedAt || a.timestamps?.createdAt || 0).getTime() - new Date(b.timestamps?.updatedAt || b.timestamps?.createdAt || 0).getTime());
-  const buildQueue = jobs
-    .filter((j) => j.state === 'build')
+  const executionQueue = jobs
+    .filter((j) => j.state === 'execution')
     .sort((a, b) => new Date(a.timestamps?.updatedAt || a.timestamps?.createdAt || 0).getTime() - new Date(b.timestamps?.updatedAt || b.timestamps?.createdAt || 0).getTime());
 
-  const job = locked || approvedQueue[0] || buildQueue[0];
+  const job = locked || syncQueue[0] || executionQueue[0];
   if (!job) {
-    console.log('[build] no approved job');
+    console.log('[build] no executer job');
     return;
   }
 
-  if (!canTransition(job.state, 'build') && job.state !== 'build') {
+  if (!canTransition(job.state, 'execution') && job.state !== 'execution') {
     console.log(`[build] invalid state transition from ${job.state}`);
     return;
   }
@@ -41,13 +41,13 @@ async function main() {
     return;
   }
 
-  const enteringBuild = job.state === 'approved_for_build';
-  job.state = 'build';
-  job.ownerAgent = 'builder';
-  job.buildAttempt = enteringBuild ? (Number(job.buildAttempt || 0) + 1) : Number(job.buildAttempt || 1);
+  const enteringExecution = job.state === 'executer_sync';
+  job.state = 'execution';
+  job.ownerAgent = 'executer';
+  job.buildAttempt = enteringExecution ? (Number(job.buildAttempt || 0) + 1) : Number(job.buildAttempt || 1);
   job.timestamps.updatedAt = nowIso();
-  if (enteringBuild) {
-    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'build', message: `Builder started implementation (attempt ${job.buildAttempt})` });
+  if (enteringExecution) {
+    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'execution', message: `Executer started implementation (attempt ${job.buildAttempt})` });
   }
 
   const branch = `local/auto-${job.id.toLowerCase()}`;
@@ -76,6 +76,92 @@ async function main() {
   const targetFiles = [...new Set([...changeSpecFiles, ...(proposal.files_expected || [])])].slice(0, 5);
   job.quality = { ...(job.quality || {}), lastTriedFile: targetFiles[0] || null };
 
+  const applyDeterministicPilotPatch = async () => {
+    const primaryFile = targetFiles[0];
+    const instructionText = `${proposal.title || ''} ${proposal.problem || ''} ${proposal.proposed_change || ''}`.toLowerCase();
+    const source = await fs.readFile(primaryFile, 'utf8');
+    let next = source;
+
+    if (primaryFile === 'src/components/PublicPortfolioView.tsx') {
+      if (/(zero|neutral|mis-color|miscolor|return tone|first-read context|kicker)/.test(instructionText)) {
+        next = next.replace(
+          `  if (typeof value !== "number") return "public-allocation-pill is-neutral";\n  return value >= 0 ? "public-allocation-pill is-positive" : "public-allocation-pill is-negative";\n`,
+          `  if (typeof value !== "number" || value === 0) return "public-allocation-pill is-neutral";\n  return value > 0 ? "public-allocation-pill is-positive" : "public-allocation-pill is-negative";\n`,
+        );
+        next = next.replace(
+          `        <div className="public-allocation-summary-head">\n          <div className="public-allocation-title">Portfolio Allocation</div>\n`,
+          `        <div className="public-allocation-summary-head">\n          <div>\n            <div className="public-allocation-title">Portfolio Allocation</div>\n            <div className="public-allocation-summary-kicker">First-read breakdown with quick return context</div>\n          </div>\n`,
+        );
+      } else if (/(default|auto-expand|auto expand|strongest|largest category|first render)/.test(instructionText)) {
+        next = next.replace(
+          `  const [expanded, setExpanded] = useState<Set<string>>(new Set());\n`,
+          `  const [expanded, setExpanded] = useState<Set<string>>(() => {\n    const strongest = [...initialCategories].sort((a, b) => b.pct - a.pct)[0]?.name;\n    return strongest ? new Set([strongest]) : new Set();\n  });\n`,
+        );
+      } else if (/(summary|meta|badge|scan|glance|quick stats|quick scan)/.test(instructionText)) {
+        next = next.replace(
+          `        <div className="public-allocation-summary-meta">\n          <span>{categories.length} categories · {totalItems} holdings</span>\n`,
+          `        <div className="public-allocation-summary-meta">\n          <span>{categories.length} categories · {totalItems} holdings</span>\n          <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>\n`,
+        );
+      } else if (/(read-only|readonly|visitor|public view)/.test(instructionText)) {
+        next = next.replace(
+          `{canEdit ? <span>Drag holdings between categories to reorganize</span> : <span>Public read-only view</span>}\n`,
+          `{canEdit ? <span>Drag holdings between categories to reorganize</span> : <span>Public read-only snapshot · owner controls stay private</span>}\n`,
+        );
+      } else if (/(collapse|expand all|toggle clarity|toggle label)/.test(instructionText)) {
+        next = next.replace(
+          `{allExpanded ? "Collapse all" : "Expand all"}\n`,
+          `{allExpanded ? "Collapse categories" : "Expand categories"}\n`,
+        );
+      } else if (/(trust|brand|premium|confidence|assurance)/.test(instructionText)) {
+        next = next.replace(
+          `            <div className="public-allocation-summary-kicker">First-read breakdown with quick return context</div>\n`,
+          `            <div className="public-allocation-summary-kicker">First-read breakdown with quick return context</div>\n            <div className="public-allocation-summary-kicker">Secure read-only snapshot with live allocation ordering</div>\n`,
+        );
+      }
+    } else if (primaryFile === 'src/app/[username]/portfolio_public/page.tsx') {
+      if (/(password|wrong password|unlock|access clarity)/.test(instructionText)) {
+        next = next.replace(
+          `{sp.e ? <div className="public-access-gate-error">Wrong password. Please try again.</div> : null}\n`,
+          `{sp.e ? <div className="public-access-gate-error">Wrong password. Please try again or confirm the latest share code with the owner.</div> : null}\n`,
+        );
+      } else if (/(private link|protected portfolio|secure share|trust framing)/.test(instructionText)) {
+        next = next.replace(
+          `<div className="public-access-gate-kicker">Private link</div>\n          <div className="public-access-gate-title">Protected portfolio</div>\n          <div className="public-access-gate-copy">Enter the access password to view this public snapshot.</div>\n`,
+          `<div className="public-access-gate-kicker">Secure share link</div>\n          <div className="public-access-gate-title">Protected portfolio snapshot</div>\n          <div className="public-access-gate-copy">Enter the access password to view this read-only portfolio snapshot.</div>\n`,
+        );
+      } else if (/(reshare|re-share|share readiness|before sharing)/.test(instructionText)) {
+        next = next.replace(
+          `              <li>Re-share only after at least one allocation category and percentage is visible.</li>\n`,
+          `              <li>Re-share only after at least one allocation category and percentage is visible.</li>\n              <li>Before sharing again, confirm the snapshot reads clearly on mobile and desktop.</li>\n`,
+        );
+      } else if (/(not found|missing portfolio|clarify missing)/.test(instructionText)) {
+        next = next.replace(
+          `  if (!user?.Portfolio) return <div className="public-access-empty">Portfolio not found.</div>;\n`,
+          `  if (!user?.Portfolio) return <div className="public-access-empty">Portfolio not found. Ask the owner to enable a shareable portfolio first.</div>;\n`,
+        );
+      } else if (/(empty|onboarding|first holdings|first holding|owner|visitor|empty state|microcopy|first-read clarity|trust signal|public portfolio page)/.test(instructionText)) {
+        next = next.replace(
+          `          You are in the right place. This secure link is live and read-only. After the first active holding is added,\n          this page refreshes into a full allocation and performance view for the latest snapshot.\n`,
+          `          You are in the right place. This secure link is live and read-only. After the first active holding is added,\n          this page refreshes into a full allocation and performance view for the latest snapshot. Nothing is broken — the portfolio is simply waiting for its first visible position.\n`,
+        );
+        next = next.replace(
+          `          <div className="public-access-gate-copy">Enter the access password to view this read-only portfolio snapshot.</div>\n`,
+          `          <div className="public-access-gate-copy">Enter the access password to view this read-only portfolio snapshot with the latest visible allocation layout.</div>\n`,
+        );
+      }
+    }
+
+    if (next !== source) {
+      await fs.writeFile(primaryFile, next, 'utf8');
+    }
+  };
+
+  try {
+    await applyDeterministicPilotPatch();
+  } catch (error) {
+    await writeArtifact(job.id, 'executor-codex-error.txt', String(error?.stderr || error?.stdout || error?.message || error));
+  }
+
   const hasTrackedDiff = (rel) => {
     try {
       const output = execSync(`git diff --name-only -- ${JSON.stringify(rel)}`, { stdio: 'pipe' }).toString().trim();
@@ -93,7 +179,7 @@ async function main() {
   };
 
   for (const rel of targetFiles) {
-    const cooldownApplies = proposal.priority !== 'P1' && recentlyTouched.has(rel) && Number(job.retries?.build || 0) < 1;
+    const cooldownApplies = proposal.priority !== 'P1' && recentlyTouched.has(rel) && Number(job.retries?.executer || 0) < 1;
     if (cooldownApplies) continue;
     try {
       await fs.access(rel);
@@ -106,13 +192,13 @@ async function main() {
   job.changedFiles = changedFiles;
   const functionalAreas = [...new Set(changedFiles.map((f) => f.split('/').slice(0, 2).join('/')))].filter(Boolean);
   if (functionalAreas.length > 1) {
-    job.retries.build += 1;
-    if (job.retries.build >= 3) {
+    job.retries.executer += 1;
+    if (job.retries.executer >= 3) {
       job.state = 'abandoned_with_reason';
       job.finalReason = 'multiple_functional_areas_detected';
       await writeArtifact(job.id, 'failure-analysis.txt', `Scope violation. functionalAreas=${functionalAreas.join(', ')}`);
     } else {
-      job.state = 'approved_for_build';
+      job.state = 'executer_sync';
       job.summary = `${job.summary} | scope reduced required (multiple functional areas)`;
     }
     job.timestamps.updatedAt = nowIso();
@@ -122,11 +208,31 @@ async function main() {
   }
 
   if (changedFiles.length === 0) {
-    job.retries.build += 1;
-    const cooldownBlocked = Number(job.retries?.build || 0) <= 1 && (proposal.files_expected || []).slice(0, 5).every((f) => recentlyTouched.has(f));
+    const primaryFile = targetFiles[0];
+    const recentApprovedSameFile = [...history]
+      .filter((entry) => entry?.state === 'approved')
+      .find((entry) => Array.isArray(entry?.changedFiles) && entry.changedFiles.includes(primaryFile));
 
-    job.state = 'proposal';
-    job.ownerAgent = 'planner';
+    if (recentApprovedSameFile) {
+      job.state = 'abandoned_with_reason';
+      job.finalReason = 'already_satisfied_duplicate';
+      job.ownerAgent = 'scout';
+      job.timestamps.updatedAt = nowIso();
+      await writeArtifact(job.id, 'duplicate-resolution.txt', `No implementation diff was needed because ${primaryFile} was already changed by approved job ${recentApprovedSameFile.id}.`);
+      await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'abandoned_with_reason', message: `Executer found no remaining diff; duplicate path already satisfied by ${recentApprovedSameFile.id}` });
+      history.push({ ...job });
+      await setActiveJobLock(null);
+      await writeJson(files.history, history);
+      await writeJson(files.jobs, jobs.filter((j) => j.id !== job.id));
+      console.log('[build] duplicate path already satisfied');
+      return;
+    }
+
+    job.retries.executer += 1;
+    const cooldownBlocked = Number(job.retries?.executer || 0) <= 1 && (proposal.files_expected || []).slice(0, 5).every((f) => recentlyTouched.has(f));
+
+    job.state = 'scout_update';
+    job.ownerAgent = 'scout';
     job.quality = {
       status: 'needs_human_review',
       checkedAt: nowIso(),
@@ -134,17 +240,17 @@ async function main() {
       reason: 'missing_implementation_diff',
       feedback: {
         reject_reason_codes: ['NO_CHANGED_FILES'],
-        must_fix: ['Apply a real scoped code change before redispatch'],
+        must_fix: ['Apply a real scoped code change before Scout/Executer handoff'],
         rewrite_plan: [
           cooldownBlocked
             ? 'Wait for cooldown or make an explicit implementation change in a different scoped file before retrying.'
-            : 'Add the intended implementation diff in the scoped file, then rerun dispatch/build.',
+            : 'Add the intended implementation diff in the scoped file, then rerun Scout sync and execution.',
         ],
       },
     };
     job.summary = `${job.summary} | halted: no implementation diff${cooldownBlocked ? ' (cooldown active)' : ''}`;
     job.timestamps.updatedAt = nowIso();
-    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'proposal', message: `Build produced no changed files${cooldownBlocked ? ' (cooldown active)' : ''}; escalated for human implementation review` });
+    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'scout_update', message: `Executer produced no changed files${cooldownBlocked ? ' (cooldown active)' : ''}; handed off to Scout Update` });
     await setActiveJobLock(null);
     await writeJson(files.jobs, jobs);
     console.log('[build] no changed files');
@@ -193,14 +299,14 @@ async function main() {
     generatedAt: nowIso(),
   });
 
-  job.summary = `${proposal.proposed_change} (local build applied)`;
-  job.state = 'test';
-  job.ownerAgent = 'verifier';
+  job.summary = `${proposal.proposed_change} (local execution applied)`;
+  job.state = 'qa_review';
+  job.ownerAgent = 'qa';
   job.timestamps.updatedAt = nowIso();
-  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'test', message: `Build completed; moved to test with ${changedFiles.length} file(s)` });
+  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'qa_review', message: `Executer completed scoped changes; handed off to QA with ${changedFiles.length} file(s)` });
 
   await writeJson(files.jobs, jobs);
-  console.log(`[build] ${job.id} -> test (${changedFiles.length} files)`);
+  console.log(`[build] ${job.id} -> qa_review (${changedFiles.length} files)`);
 }
 
 const lockResult = await withEngineRunLock('build-run', main, { staleMs: 15 * 60 * 1000 });

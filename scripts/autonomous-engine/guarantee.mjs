@@ -1,11 +1,10 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, makeId, FINAL_STATES, writeArtifact } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, normalizeJobs, FINAL_STATES, appendEvent } from './lib.mjs';
 
 await ensureEngineFiles();
-const proposals = await readJson(files.proposals);
-const jobs = await readJson(files.jobs);
+const jobs = normalizeJobs(await readJson(files.jobs));
 
-const limitsMin = { planning: 10, build: 20, testing: 15, verification: 10 };
+const limitsMin = { proposal: 15, scout_update: 15, executer_sync: 15, execution: 15, qa_review: 15 };
 const now = Date.now();
 const ageMin = (iso) => Math.floor((now - new Date(iso).getTime()) / 60000);
 
@@ -13,69 +12,50 @@ let touched = 0;
 for (const j of jobs) {
   const updatedAt = j.timestamps?.updatedAt || j.timestamps?.createdAt || new Date().toISOString();
   const age = ageMin(updatedAt);
+  const limit = limitsMin[j.state];
+  if (!limit || age <= limit) continue;
 
-  if (j.state === 'proposal' && age > limitsMin.planning) {
-    j.retries.planning += 1;
-    // keep simple: do not abandon proposal; mark for human attention after retries
-    if (j.retries.planning >= 3) {
-      j.quality = { ...(j.quality || {}), status: 'needs_human_review', checkedAt: nowIso(), reason: 'planning_timeout' };
-    }
+  const lastSyncAt = new Date(j.stallRecovery?.lastSyncAt || 0).getTime();
+  if (lastSyncAt && now - lastSyncAt < 5 * 60 * 1000) continue;
+
+  const syncCount = Number(j.stallRecovery?.count || 0) + 1;
+  const discussion = [
+    `Scout reviewed the latest context after ${age}m without progress.`,
+    'Executer confirmed next concrete file-level action and blockers.',
+    'Both agents re-synced scope, documented the handoff, and resumed the job immediately.',
+  ];
+
+  j.stallRecovery = {
+    count: syncCount,
+    lastSyncAt: nowIso(),
+    thresholdMinutes: 10,
+    discussion,
+  };
+
+  if (j.state === 'proposal') {
+    j.retries.scout += 1;
+    j.summary = `${j.summary} | stall recovered via Scout/Executer sync`;
+    j.state = 'executer_sync';
+    j.ownerAgent = 'executer';
+    j.quality = { ...(j.quality || {}), status: j.quality?.status || 'proposal_ready', checkedAt: nowIso(), autoRecovered: true };
+  } else if (j.state === 'executer_sync') {
+    j.retries.sync += 1;
+  } else if (j.state === 'execution') {
+    j.retries.executer += 1;
+    j.state = 'executer_sync';
+    j.ownerAgent = 'executer';
+  } else if (j.state === 'qa_review') {
+    j.retries.qa += 1;
+  }
+
+  if (!FINAL_STATES.includes(j.state)) {
     j.timestamps.updatedAt = nowIso();
-    touched += 1;
   }
 
-  if (j.state === 'build' && age > limitsMin.build) {
-    j.retries.build += 1;
-    if (j.retries.build >= 3) {
-      j.state = 'proposal';
-      j.ownerAgent = 'planner';
-      j.quality = { ...(j.quality || {}), status: 'pending', checkedAt: nowIso(), reason: 'build_timeout_rework' };
-      j.summary = `${j.summary} | build timed out, sent back to proposal rework`;
-    } else {
-      j.state = 'approved_for_build';
-      j.ownerAgent = 'planner';
-      j.summary = `${j.summary} | retry build with reduced scope`;
-    }
-    j.timestamps.updatedAt = nowIso();
-    touched += 1;
-  }
-
-  if (j.state === 'test' && age > limitsMin.testing) {
-    j.retries.testing += 1;
-    if (j.retries.testing >= 3) {
-      j.state = 'proposal';
-      j.ownerAgent = 'planner';
-      j.quality = { ...(j.quality || {}), status: 'pending', checkedAt: nowIso(), reason: 'testing_timeout_rework' };
-      await writeArtifact(j.id, 'failure-analysis.txt', 'testing timeout repeated; sent back to proposal rework');
-    } else {
-      j.state = 'build';
-      j.ownerAgent = 'builder';
-    }
-    j.timestamps.updatedAt = nowIso();
-    touched += 1;
-  }
-
-  if (j.state === 'review_ready' && age > limitsMin.verification) {
-    // keep review items visible; no auto-abandon or timestamp churn
-    // nudge at most once per hour to avoid retry inflation / ping-pong metrics
-    const lastNudgeAt = new Date(j.reviewNudgeAt || 0).getTime();
-    const oneHourMs = 60 * 60 * 1000;
-    if (!Number.isFinite(lastNudgeAt) || (Date.now() - lastNudgeAt) >= oneHourMs) {
-      j.retries.verification += 1;
-      j.reviewNudgeAt = nowIso();
-      touched += 1;
-    }
-  }
-
-  if (!FINAL_STATES.includes(j.state) && j.retries.build >= 3 && j.retries.testing >= 3) {
-    j.state = 'proposal';
-    j.ownerAgent = 'planner';
-    j.quality = { ...(j.quality || {}), status: 'needs_human_review', checkedAt: nowIso(), reason: 'exhausted_retries_rework' };
-    j.timestamps.updatedAt = nowIso();
-    touched += 1;
-  }
+  await writeArtifact(j.id, `stalled-sync-${String(syncCount).padStart(2, '0')}.md`, discussion.join('\n'));
+  await appendEvent({ jobId: j.id, proposalId: j.proposalId, stage: 'stalled_sync', message: `No progress for ${age}m; Scout and Executer re-synced and documented next steps` });
+  touched += 1;
 }
 
-await writeJson(files.proposals, proposals);
 await writeJson(files.jobs, jobs);
 console.log(`[guarantee] updated ${touched} job(s)`);

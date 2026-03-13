@@ -1,20 +1,20 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent, setActiveJobLock, withEngineRunLock } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent, setActiveJobLock, withEngineRunLock, normalizeJobs } from './lib.mjs';
 import { execSync } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
 
 async function main() {
   await ensureEngineFiles();
-  const jobs = await readJson(files.jobs);
+  const jobs = normalizeJobs(await readJson(files.jobs));
   const proposals = await readJson(files.proposals);
-  const job = jobs.find((j) => j.state === 'test');
+  const job = jobs.find((j) => j.state === 'qa_review');
   if (!job) {
     console.log('[verify] no job');
     return;
   }
 
-  if (!canTransition('test', 'review_ready')) {
+  if (!canTransition('qa_review', 'approved')) {
     console.log('[verify] invalid workflow graph');
     process.exit(1);
   }
@@ -22,7 +22,7 @@ async function main() {
   const proposal = proposals.find((p) => p.id === job.proposalId || p.id.startsWith(`${job.proposalId}-S`));
   const requiredSet = new Set((proposal?.tests_required || ['lint']).map((x) => String(x).toLowerCase()));
 
-  job.ownerAgent = 'verifier';
+  job.ownerAgent = 'qa';
   job.timestamps.updatedAt = nowIso();
 
   const fileArgs = (job.changedFiles || []).filter(Boolean).join(' ');
@@ -55,14 +55,15 @@ async function main() {
   await writeArtifact(job.id, 'verification-results.json', results);
 
   if (allPass) {
-    job.state = 'review_ready';
+    job.state = 'approved';
     await setActiveJobLock(null);
     try {
       await fs.unlink(path.join(process.cwd(), 'Agent Team', 'autonomous-engine', 'artifacts', job.id, 'failure-analysis.txt'));
     } catch {}
-    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'review_ready', message: 'Verifier passed all required checks; ready for review' });
+    await writeArtifact(job.id, 'approval-note.txt', 'Auto-completed after passing all required checks.');
+    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'approved', message: 'Auto-completed after passing required checks' });
   } else {
-    job.retries.testing += 1;
+    job.retries.qa += 1;
     const failedChecks = results.filter((r) => r.status === 'fail').map((r) => r.check);
     const feedback = {
       reject_reason_codes: ['VERIFY_FAIL'],
@@ -70,12 +71,12 @@ async function main() {
       rewrite_plan: [
         'Address failing checks only (keep scope small).',
         'Update proposal evidence and tests_required to match failure cause.',
-        'Resubmit proposal through quality gate.',
+        'Return to Scout, refresh the handoff, and resubmit through QA.',
       ],
     };
 
     job.state = 'proposal';
-    job.ownerAgent = 'planner';
+    job.ownerAgent = 'scout';
     job.quality = {
       status: 'needs_revision',
       checkedAt: nowIso(),
@@ -84,11 +85,20 @@ async function main() {
     };
     await setActiveJobLock(null);
     await writeArtifact(job.id, 'failure-analysis.txt', `Verification failed checks: ${failedChecks.join(', ')}`);
-    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'proposal', message: `Verification failed (${failedChecks.join(', ')}); sent back to proposal for revision` });
+    await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'proposal', message: `QA failed (${failedChecks.join(', ')}); returned to Scout for revision` });
   }
 
   job.timestamps.updatedAt = nowIso();
-  await writeJson(files.jobs, jobs);
+
+  if (job.state === 'approved') {
+    const history = await readJson(files.history);
+    history.push({ ...job });
+    await writeJson(files.history, history);
+    await writeJson(files.jobs, jobs.filter((j) => j.id !== job.id));
+  } else {
+    await writeJson(files.jobs, jobs);
+  }
+
   console.log(`[verify] ${job.id} => ${job.testResults}`);
 }
 

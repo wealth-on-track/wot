@@ -1,10 +1,36 @@
-
+import fs from "fs";
+import path from "path";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getDailyStats, getActivityStats } from "@/services/telemetry";
 import { RefreshPricesButton } from "@/components/RefreshPricesButton";
 import { RefreshMetadataButton } from "@/components/RefreshMetadataButton";
 
 export const dynamic = 'force-dynamic';
+
+function readEngineSummary() {
+    try {
+        const base = path.join(process.cwd(), "Agent Team", "autonomous-engine");
+        const jobs = JSON.parse(fs.readFileSync(path.join(base, "jobs.json"), "utf8"));
+        const history = JSON.parse(fs.readFileSync(path.join(base, "history.json"), "utf8"));
+        const normalizeState = (state: string) => ({
+            discover: "proposal",
+            approved_for_build: "executer_sync",
+            build: "execution",
+            test: "qa_review",
+            review_ready: "qa_review"
+        }[state] || state);
+        const proposal = jobs.filter((job: any) => !["approved", "reverted", "abandoned_with_reason"].includes(normalizeState(job.state))).length;
+        const completed = [...jobs, ...history].filter((job: any) => ["approved", "reverted", "abandoned_with_reason"].includes(normalizeState(job.state))).length;
+        const stalled = jobs.filter((job: any) => {
+            const updatedAt = new Date(job.timestamps?.updatedAt || job.timestamps?.createdAt || 0).getTime();
+            return updatedAt > 0 && (Date.now() - updatedAt) / 60000 >= 10 && !["approved", "reverted", "abandoned_with_reason"].includes(normalizeState(job.state));
+        }).length;
+        return { proposal, completed, stalled };
+    } catch {
+        return { proposal: 0, completed: 0, stalled: 0 };
+    }
+}
 
 export default async function AdminPage() {
     const stats = await getDailyStats();
@@ -20,6 +46,7 @@ export default async function AdminPage() {
     // Aggregation
     const totalRequests = stats.reduce((acc, s) => acc + s.successCount + s.errorCount, 0);
     const totalErrors = stats.reduce((acc, s) => acc + s.errorCount, 0);
+    const engine = readEngineSummary();
 
     return (
         <div style={{ padding: '1rem 1.5rem', width: '100%', maxWidth: '100%', height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -33,7 +60,7 @@ export default async function AdminPage() {
             </div>
 
             {/* Stats Grid - Compact */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.75rem', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.75rem', marginBottom: '0.75rem' }}>
                 <div className="card" style={{ padding: '0.75rem', textAlign: 'center' }}>
                     <h3 style={{ fontSize: '0.7rem', color: '#888', marginBottom: '0.25rem', fontWeight: 700 }}>API Requests</h3>
                     <div style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>{totalRequests}</div>
@@ -69,6 +96,14 @@ export default async function AdminPage() {
                     <div style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>{cacheCount}</div>
                     <div style={{ fontSize: '0.6rem', color: '#888', marginTop: '0.15rem' }}>Symbols</div>
                 </div>
+
+                <Link href="/admin/autonomous-engine?section=proposal" className="card" style={{ padding: '0.75rem', textAlign: 'center', textDecoration: 'none', borderLeft: '3px solid #2563eb', color: 'inherit' }}>
+                    <h3 style={{ fontSize: '0.7rem', color: '#888', marginBottom: '0.25rem', fontWeight: 700 }}>Agent Team</h3>
+                    <div style={{ fontSize: '1.15rem', fontWeight: 'bold' }}>P {engine.proposal} • C {engine.completed}</div>
+                    <div style={{ fontSize: '0.6rem', color: engine.stalled > 0 ? '#dc2626' : '#888', marginTop: '0.15rem' }}>
+                        {engine.stalled} stalled over 10m
+                    </div>
+                </Link>
             </div>
 
             {/* Two Column Layout */}

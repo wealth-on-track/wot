@@ -42,4 +42,9 @@ if (stale) {
   }
 }
 
+if (!needsStart && !pid) {
+  needsStart = true;
+}
+
 if (needsStart) startLoop();
+else console.log('[ensure-loop] no action needed');

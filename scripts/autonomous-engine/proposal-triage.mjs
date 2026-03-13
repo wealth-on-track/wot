@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, makeId, appendEvent } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, makeId, appendEvent, normalizeJobs } from './lib.mjs';
 
 await ensureEngineFiles();
-const jobs = await readJson(files.jobs);
+const jobs = normalizeJobs(await readJson(files.jobs));
 const proposals = await readJson(files.proposals);
 
 let triaged = 0;
@@ -51,7 +51,7 @@ for (const job of jobs) {
   proposals.push(narrowed);
   job.proposalId = narrowed.id;
   job.quality = { status: 'pending', checkedAt: nowIso(), sessionCount: 0, triagedAt: nowIso(), triageFromQuality: 'needs_human_review' };
-  job.retries = { planning: 0, build: 0, testing: 0, verification: 0 };
+  job.retries = { scout: 0, sync: 0, executer: 0, qa: 0 };
   job.summary = `${job.summary || ''} | triaged to narrower proposal scope`.trim();
   job.timestamps.updatedAt = nowIso();
 
