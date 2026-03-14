@@ -6,6 +6,7 @@ import { ensureEngineFiles, files, nowIso, readJson, writeJson } from './lib.mjs
 await ensureEngineFiles();
 const jobs = await readJson(files.jobs);
 const history = await readJson(files.history);
+const proposals = await readJson(files.proposals);
 
 const runtimeDir = path.join(process.cwd(), 'Agent Team', 'autonomous-engine', 'runtime');
 await fs.mkdir(runtimeDir, { recursive: true });
@@ -42,6 +43,20 @@ for (const j of jobs) {
   }
 }
 
+// prune stale/unplannable proposals so empty queue can generate fresh work again
+const activeProposalIds = new Set(keep.map((j) => String(j.proposalId || '')));
+const recentCompletedProposalIds = new Set(history.slice(-300).map((j) => String(j.proposalId || '')));
+const recentCompletedTitles = new Set(history.slice(-300).map((j) => String(j.title || '').trim().toLowerCase()).filter(Boolean));
+const cleanedProposals = proposals.filter((p) => {
+  const id = String(p?.id || '');
+  const title = String(p?.title || '').trim().toLowerCase();
+  if (activeProposalIds.has(id)) return true;
+  if (!p?._planned) return false;
+  if (recentCompletedProposalIds.has(id)) return false;
+  if (title && recentCompletedTitles.has(title)) return false;
+  return false;
+});
+
 // compact events to last 1200 lines
 const eventsPath = path.join(process.cwd(), 'Agent Team', 'autonomous-engine', 'events.jsonl');
 try {
@@ -52,6 +67,7 @@ try {
 
 await writeJson(files.jobs, keep);
 await writeJson(files.history, history.slice(-1500));
+await writeJson(files.proposals, cleanedProposals);
 state.lastRunAt = nowIso();
 await fs.writeFile(stateFile, JSON.stringify(state, null, 2), 'utf8');
 
