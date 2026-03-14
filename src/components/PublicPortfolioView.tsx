@@ -102,6 +102,7 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }: 
           <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
           <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
           <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
+          <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
           {canEdit ? <span>Drag holdings between categories to reorganize</span> : <span>Public read-only snapshot · owner controls stay private</span>}
         </div>
       </div>
