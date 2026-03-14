@@ -86,23 +86,19 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }: 
       <div className="public-allocation-summary">
         <div className="public-allocation-summary-head">
           <div>
-            <div className="public-allocation-title">Portfolio Allocation</div>
+            <div className="public-allocation-title">Portfolio Snapshot</div>
             <div className="public-allocation-summary-kicker">First-read breakdown with quick return context</div>
             <div className="public-allocation-summary-kicker">Secure read-only snapshot with live allocation ordering</div>
-            <div className="public-allocation-summary-kicker">Secure read-only snapshot with live allocation ordering</div>
+            <div className="public-allocation-summary-kicker">Live mix ranked by current weight for faster first-read scanning</div>
           </div>
           <button onClick={toggleAll} className="public-allocation-toggle-all">
-            {allExpanded ? "Collapse categories" : "Expand categories"}
+            {allExpanded ? "Collapse all categories" : "Expand all categories"}
           </button>
         </div>
         <div className="public-allocation-summary-meta">
           <span>{categories.length} categories · {totalItems} holdings</span>
           <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
-          <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
-          <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
-          <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
-          <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
-          <span>{allExpanded ? "All categories expanded" : "Top category open by default"}</span>
+          <span>{canEdit ? "Owner editing view" : "Read-only public share view"}</span>
           {canEdit ? <span>Drag holdings between categories to reorganize</span> : <span>Public read-only snapshot · owner controls stay private</span>}
         </div>
       </div>
@@ -126,7 +122,7 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }: 
             <button onClick={() => toggleOne(c.name)} className="public-allocation-category-head">
               <div className="public-allocation-category-title-wrap">
                 <b className="public-allocation-category-title">{c.name}</b>
-                <span className="public-allocation-category-count">{c.items.length} holdings</span>
+                <span className="public-allocation-category-count">{c.items.length} visible holdings</span>
               </div>
               <div className="public-allocation-category-right">
                 <b className="public-allocation-category-pct">{Math.round(c.pct)}%</b>
@@ -136,7 +132,7 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }: 
 
             {isOpen && (
               <div>
-                {c.items.length === 0 && <div className="public-allocation-empty">No holdings in this category.</div>}
+                {c.items.length === 0 && <div className="public-allocation-empty">No visible holdings in this category yet.</div>}
 
                 {c.items.map((a) => (
                   <div
@@ -148,14 +144,14 @@ export function PublicPortfolioView({ categories: initialCategories, canEdit }: 
                     <span className="public-allocation-row-name">{a.name}</span>
 
                     <span className={toneClass(a.oneDay)} aria-label={`1 day return ${formatSignedPercent(a.oneDay)}`}>
-                      1D {formatSignedPercent(a.oneDay)}
+                      Day {formatSignedPercent(a.oneDay)}
                     </span>
 
                     <span className={toneClass(a.allTime)} aria-label={`All time return ${formatSignedPercent(a.allTime)}`}>
-                      ALL {formatSignedPercent(a.allTime)}
+                      Total {formatSignedPercent(a.allTime)}
                     </span>
 
-                    <span className="public-allocation-row-pct">{Math.round(a.pct)}%</span>
+                    <span className="public-allocation-row-pct">Share {Math.round(a.pct)}%</span>
                   </div>
                 ))}
               </div>
