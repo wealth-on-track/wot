@@ -19,7 +19,7 @@ if (openQueue.length > 0) {
 }
 
 const now = Date.now();
-const WINDOW_MS = 30 * 60 * 1000;
+const WINDOW_MS = 20 * 60 * 1000;
 const recentTs = [];
 for (const item of [...proposals, ...jobs, ...history]) {
   const ts = new Date(item?.timestamps?.createdAt || item?.timestamps?.updatedAt || item?.createdAt || item?._plannedAt || 0).getTime();
@@ -46,9 +46,9 @@ const proposal = {
   id: makeId('PRP'),
   title: `Hourly guarantee premium fallback (${nowIso().slice(0, 16)})`,
   category: 'ux',
-  problem: 'No new autonomous work was produced within the last 30 minutes and discovery returned no open proposal.',
-  evidence: ['hourly_guarantee: no_new_job_within_30m', 'single-job policy preserved', 'discover_returned_zero_open_proposals'],
-  proposed_change: 'Create one safe, scoped user-facing improvement so the autonomous engine never goes silent for more than 30 minutes.',
+  problem: 'No new autonomous work was produced within the last 20 minutes and discovery returned no open proposal.',
+  evidence: ['hourly_guarantee: no_new_job_within_20m', 'single-job policy preserved', 'discover_returned_zero_open_proposals'],
+  proposed_change: 'Create one safe, scoped user-facing improvement so the autonomous engine never goes silent for more than 20 minutes.',
   expected_benefit: 'Keeps the system productive and continuously improving without emitting duplicate backlog spam.',
   risk: 'low',
   impact: 'medium',
@@ -66,8 +66,8 @@ const proposal = {
     change: 'Apply one small premium UX refinement.',
     why: 'Reliable low-risk continuity path when primary discovery yields nothing.'
   }],
-  kpi_target: 'At least one fresh scoped pilot per 30 minutes when the queue is empty.',
-  benchmark_delta: 'Prevent idle 30-minute gaps in the autonomous iteration loop.',
+  kpi_target: 'At least one fresh scoped pilot per 20 minutes when the queue is empty.',
+  benchmark_delta: 'Prevent idle 20-minute gaps in the autonomous iteration loop.',
   risk_controls: ['Single file only', 'Single active job only', 'Rollback via git'],
   createdAt: nowIso(),
 };

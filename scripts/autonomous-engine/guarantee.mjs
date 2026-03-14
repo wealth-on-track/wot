@@ -4,7 +4,8 @@ import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, n
 await ensureEngineFiles();
 const jobs = normalizeJobs(await readJson(files.jobs));
 
-const limitsMin = { proposal: 15, scout_update: 15, executer_sync: 15, execution: 15, qa_review: 15 };
+const limitsMin = { proposal: 5, scout_update: 5, executer_sync: 5, execution: 5, qa_review: 5 };
+const totalJobLimitMin = 15;
 const now = Date.now();
 const ageMin = (iso) => Math.floor((now - new Date(iso).getTime()) / 60000);
 
@@ -12,6 +13,7 @@ let touched = 0;
 for (const j of jobs) {
   const updatedAt = j.timestamps?.updatedAt || j.timestamps?.createdAt || new Date().toISOString();
   const age = ageMin(updatedAt);
+  const totalAge = ageMin(j.timestamps?.createdAt || updatedAt);
   const limit = limitsMin[j.state];
   if (!limit || age <= limit) continue;
 
@@ -21,6 +23,7 @@ for (const j of jobs) {
   const syncCount = Number(j.stallRecovery?.count || 0) + 1;
   const discussion = [
     `Scout reviewed the latest context after ${age}m without progress.`,
+    `Total job age is ${totalAge}m from generation time.`,
     'Executer confirmed next concrete file-level action and blockers.',
     'Both agents re-synced scope, documented the handoff, and resumed the job immediately.',
   ];
@@ -28,7 +31,7 @@ for (const j of jobs) {
   j.stallRecovery = {
     count: syncCount,
     lastSyncAt: nowIso(),
-    thresholdMinutes: 10,
+    thresholdMinutes: 5,
     discussion,
   };
 

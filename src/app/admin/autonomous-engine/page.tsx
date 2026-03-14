@@ -93,6 +93,16 @@ function ageMinutes(value?: string) {
   return Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
 }
 
+function countdownLabel(from?: string, limitMin = 5) {
+  if (!from) return '-';
+  const startMs = new Date(from).getTime();
+  if (!Number.isFinite(startMs) || startMs <= 0) return '-';
+  const leftMs = Math.max(0, (limitMin * 60 * 1000) - (Date.now() - startMs));
+  const min = Math.floor(leftMs / 60000);
+  const sec = Math.floor((leftMs % 60000) / 1000);
+  return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
+
 function isCompleted(job: any) {
   return ['approved', 'reverted', 'abandoned_with_reason'].includes(canonicalState(job?.state));
 }
@@ -289,7 +299,10 @@ export default async function AutonomousEnginePage({
                             <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: colors.fg }}>
                               {step.label}
                             </div>
-                            <div style={{ fontSize: 11, color: colors.fg }}>{stepDate}</div>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              {ongoing ? <div style={{ fontSize: 11, fontWeight: 800, color: colors.fg }}>⏳ {countdownLabel(events[0]?.ts || selected.timestamps?.updatedAt || selected.timestamps?.createdAt, 5)}</div> : null}
+                              <div style={{ fontSize: 11, color: colors.fg }}>{stepDate}</div>
+                            </div>
                           </div>
                         </summary>
                         <div style={{ marginTop: 8, fontSize: 12, lineHeight: 1.5, color: '#334155', whiteSpace: 'pre-wrap' }}>

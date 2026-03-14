@@ -8,7 +8,7 @@ const history = await readJson(files.history);
 const now = Date.now();
 const ageMin = (job) => Math.floor((now - new Date(job.timestamps?.updatedAt || job.timestamps?.createdAt || 0).getTime()) / 60000);
 
-let completed = 0;
+let recovered = 0;
 for (const job of [...jobs]) {
   const age = ageMin(job);
   if (age < 15) continue;
@@ -17,22 +17,22 @@ for (const job of [...jobs]) {
   const unrecoverableNoDiff = String(job?.quality?.reason || '') === 'repeated_no_changed_files'
     || (Array.isArray(job?.quality?.feedback?.reject_reason_codes) && job.quality.feedback.reject_reason_codes.includes('NO_CHANGED_FILES'));
 
-  job.state = 'approved';
-  job.ownerAgent = 'executer';
-  job.testResults = job.testResults === 'pass' ? 'pass' : 'pass';
-  if (!Array.isArray(job.changedFiles) || job.changedFiles.length === 0) {
-    const fallback = String(job.quality?.lastTriedFile || job.constraints?.functionalScope || 'src/components/PublicPortfolioView.tsx');
-    job.changedFiles = [fallback.includes('/') ? fallback : 'src/components/PublicPortfolioView.tsx'];
+  if (unrecoverableNoDiff) {
+    job.state = 'scout_update';
+    job.ownerAgent = 'scout';
+    job.retries.scout = Number(job.retries?.scout || 0) + 1;
+  } else {
+    job.state = 'executer_sync';
+    job.ownerAgent = 'executer';
+    job.retries.sync = Number(job.retries?.sync || 0) + 1;
   }
-  job.timestamps.updatedAt = nowIso();
 
-  await writeArtifact(job.id, 'stall-completion-note.txt', `Auto-completed after ${age}m to enforce zero-stall policy.${unrecoverableNoDiff ? ' Cause: repeated no-diff path.' : ''}`);
-  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'approved', message: `stall-guard: auto-completed after ${age}m without leaving the job unfinished${unrecoverableNoDiff ? ' (repeated no-diff path)' : ''}` });
-  history.push({ ...job });
-  completed += 1;
+  job.timestamps.updatedAt = nowIso();
+  await writeArtifact(job.id, 'stall-recovery-note.txt', `Forced live intervention after ${age}m.${unrecoverableNoDiff ? ' Returned to Scout Update for a real implementation path.' : ' Returned to Executer Sync for immediate continuation.'}`);
+  await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: unrecoverableNoDiff ? 'scout_update' : 'executer_sync', message: `stall-guard: intervened after ${age}m and resumed live work${unrecoverableNoDiff ? ' via Scout Update' : ' via Executer Sync'}` });
+  recovered += 1;
 }
 
-await writeJson(files.history, history);
-await writeJson(files.jobs, jobs.filter((j) => !history.some((h) => h.id === j.id)));
+await writeJson(files.jobs, jobs);
 await setActiveJobLock(null);
-console.log(`[complete-stalled-job] completed ${completed} job(s)`);
+console.log(`[complete-stalled-job] recovered ${recovered} job(s)`);
