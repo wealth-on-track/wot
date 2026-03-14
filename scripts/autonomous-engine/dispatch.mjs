@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, WIP_LIMITS, appendEvent, getActiveJobLock, setActiveJobLock, withEngineRunLock, buildProposalIndex, proposalLineageRoot, normalizeJobs } from './lib.mjs';
+import { ensureEngineFiles, files, readJson, writeJson, writeArtifact, WIP_LIMITS, appendEvent, getActiveJobLock, setActiveJobLock, withEngineRunLock, buildProposalIndex, proposalLineageRoot, normalizeJobs, transitionJob } from './lib.mjs';
 
 async function main() {
   await ensureEngineFiles();
@@ -53,9 +53,7 @@ async function main() {
     )[0];
 
   if (next) {
-    next.state = 'executer_sync';
-    next.ownerAgent = 'executer';
-    next.timestamps.updatedAt = nowIso();
+    transitionJob(next, 'executer_sync', { ownerAgent: 'executer' });
     await writeArtifact(next.id, 'dispatch-decision.txt', `Scout synced proposal with Executer and queued execution (priority=${next.priority || 'P2'}).`);
     await appendEvent({ jobId: next.id, proposalId: next.proposalId, stage: 'executer_sync', message: `Scout synced with Executer and queued execution (priority=${next.priority || 'P2'})` });
     await setActiveJobLock(next.id);

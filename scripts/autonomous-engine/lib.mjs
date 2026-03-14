@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 
 const ROOT = process.cwd();
 const BASE = path.join(ROOT, 'Agent Team', 'autonomous-engine');
@@ -171,6 +172,7 @@ export function normalizeJob(job = {}) {
   normalized.timestamps ||= { createdAt: nowIso(), updatedAt: nowIso() };
   normalized.timestamps.createdAt ||= normalized.timestamps.updatedAt || nowIso();
   normalized.timestamps.updatedAt ||= normalized.timestamps.createdAt || nowIso();
+  normalized.stageStartedAt ||= normalized.timestamps.updatedAt || normalized.timestamps.createdAt || nowIso();
   return normalized;
 }
 
@@ -347,4 +349,71 @@ export async function withEngineRunLock(name, fn, { staleMs = 8 * 60 * 1000 } = 
       try { await fs.unlink(lockPath); } catch {}
     }
   }
+}
+
+export function currentStageStartedAt(job = {}) {
+  return job?.stageStartedAt || job?.timestamps?.updatedAt || job?.timestamps?.createdAt || null;
+}
+
+export function stageAgeMinutes(job = {}, nowMs = Date.now()) {
+  const startedAt = new Date(currentStageStartedAt(job) || 0).getTime();
+  if (!Number.isFinite(startedAt) || startedAt <= 0) return 0;
+  return Math.max(0, Math.floor((nowMs - startedAt) / 60000));
+}
+
+export function transitionJob(job = {}, nextState, { ownerAgent, resetStageStartedAt = false } = {}) {
+  const normalizedNext = canonicalState(nextState);
+  const now = nowIso();
+  const previousState = canonicalState(job?.state);
+
+  job.state = normalizedNext;
+  if (ownerAgent !== undefined) job.ownerAgent = ownerAgent;
+  job.timestamps ||= { createdAt: now, updatedAt: now };
+  job.timestamps.createdAt ||= now;
+  job.timestamps.updatedAt = now;
+  if (resetStageStartedAt || previousState !== normalizedNext || !job.stageStartedAt) {
+    job.stageStartedAt = now;
+  }
+
+  return job;
+}
+
+export async function finalizeJob(jobs = [], history = [], job = {}) {
+  await setActiveJobLock(null);
+  history.push({ ...job });
+  await writeJson(files.history, history);
+  await writeJson(files.jobs, jobs.filter((entry) => entry.id !== job.id));
+}
+
+export function approvedJobSummary(job = {}, proposal = {}) {
+  const change = String(proposal?.proposed_change || job?.summary || job?.title || 'Updated the public portfolio page').trim().replace(/\s+/g, ' ');
+  const files = Array.isArray(job?.changedFiles) && job.changedFiles.length > 0
+    ? ` across ${job.changedFiles.length} file${job.changedFiles.length === 1 ? '' : 's'}`
+    : '';
+  const sentence = `${change}${files}, and the public portfolio page now shows this change in the completed before/after preview.`;
+  return sentence.replace(/\s+/g, ' ').trim();
+}
+
+export function capturePublicPreviewCommand(outputPath) {
+  const quotedPath = JSON.stringify(outputPath);
+  return [
+    `WOT_PREVIEW_OUTPUT=${quotedPath} node scripts/autonomous-engine/capture-public-preview.mjs`,
+    `WOT_PREVIEW_OUTPUT=${quotedPath} npx -y -p playwright node scripts/autonomous-engine/capture-public-preview.mjs`,
+    `WOT_PREVIEW_OUTPUT=${quotedPath} npx playwright test scripts/autonomous-engine/capture-public-preview.spec.js --reporter=line --workers=1`,
+  ];
+}
+
+export async function capturePublicPreview(outputPath, { timeoutMs = 180000 } = {}) {
+  let lastError = null;
+  for (const cmd of capturePublicPreviewCommand(outputPath)) {
+    try {
+      execSync(cmd, { stdio: 'pipe', timeout: timeoutMs, cwd: ROOT });
+      return { ok: true, command: cmd };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  const detail = lastError ? String(lastError?.stderr || lastError?.stdout || lastError?.message || lastError) : 'unknown_capture_error';
+  return { ok: false, error: detail };
 }

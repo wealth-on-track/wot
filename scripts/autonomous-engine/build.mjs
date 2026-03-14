@@ -1,7 +1,26 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent, getActiveJobLock, setActiveJobLock, withEngineRunLock, normalizeJobs } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent, getActiveJobLock, setActiveJobLock, withEngineRunLock, normalizeJobs, capturePublicPreview, transitionJob } from './lib.mjs';
 import { execSync } from 'child_process';
 import { promises as fs } from 'fs';
+
+const escapeXml = (value = '') => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&apos;');
+
+const makePreviewSvg = ({ label, file, content }) => {
+  const lines = String(content || '').split('\n').slice(0, 18).map((line) => line.slice(0, 92));
+  const text = lines.map((line, i) => `<tspan x="24" dy="${i === 0 ? 0 : 18}">${escapeXml(line || ' ')}</tspan>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+    <rect width="1200" height="720" rx="24" fill="#0f172a"/>
+    <rect x="20" y="20" width="1160" height="680" rx="18" fill="#111827" stroke="#334155"/>
+    <text x="24" y="48" fill="#93c5fd" font-size="24" font-family="Inter, Arial, sans-serif" font-weight="700">${escapeXml(label)}</text>
+    <text x="24" y="78" fill="#cbd5e1" font-size="18" font-family="Inter, Arial, sans-serif">${escapeXml(file || '-')}</text>
+    <text x="24" y="130" fill="#e2e8f0" font-size="16" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">${text}</text>
+  </svg>`;
+};
 
 async function main() {
   await ensureEngineFiles();
@@ -42,10 +61,8 @@ async function main() {
   }
 
   const enteringExecution = job.state === 'executer_sync';
-  job.state = 'execution';
-  job.ownerAgent = 'executer';
+  transitionJob(job, 'execution', { ownerAgent: 'executer' });
   job.buildAttempt = enteringExecution ? (Number(job.buildAttempt || 0) + 1) : Number(job.buildAttempt || 1);
-  job.timestamps.updatedAt = nowIso();
   if (enteringExecution) {
     await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'execution', message: `Executer started implementation (attempt ${job.buildAttempt})` });
   }
@@ -76,11 +93,15 @@ async function main() {
   const targetFiles = [...new Set([...changeSpecFiles, ...(proposal.files_expected || [])])].slice(0, 5);
   job.quality = { ...(job.quality || {}), lastTriedFile: targetFiles[0] || null };
 
+  let beforePreviewPayload = { file: targetFiles[0] || '-', content: '' };
+  let afterPreviewPayload = { file: targetFiles[0] || '-', content: '' };
+
   const applyDeterministicPilotPatch = async () => {
     const primaryFile = targetFiles[0];
     const instructionText = `${proposal.title || ''} ${proposal.problem || ''} ${proposal.proposed_change || ''}`.toLowerCase();
     const source = await fs.readFile(primaryFile, 'utf8');
     let next = source;
+    beforePreviewPayload = { file: primaryFile, content: source };
 
     if (primaryFile === 'src/components/PublicPortfolioView.tsx') {
       if (/(zero|neutral|mis-color|miscolor|return tone|first-read context|kicker)/.test(instructionText)) {
@@ -150,6 +171,8 @@ async function main() {
         );
       }
     }
+
+    afterPreviewPayload = { file: primaryFile, content: next };
 
     if (next !== source) {
       await fs.writeFile(primaryFile, next, 'utf8');
@@ -257,6 +280,15 @@ async function main() {
     return;
   }
 
+  const previewPath = '/dev1/portfolio_public';
+  const beforeScreenshotPath = `Agent Team/autonomous-engine/artifacts/${job.id}/before-page.png`;
+  const afterScreenshotPath = `Agent Team/autonomous-engine/artifacts/${job.id}/after-page.png`;
+
+  const beforeCapture = await capturePublicPreview(beforeScreenshotPath, { timeoutMs: 180000 });
+  if (!beforeCapture.ok) {
+    await writeArtifact(job.id, 'before-screenshot-error.txt', beforeCapture.error);
+  }
+
   let diff = '# no diff produced';
   try {
     const targets = (changedFiles || []).map((f) => `"${f}"`).join(' ');
@@ -286,23 +318,32 @@ async function main() {
     await writeArtifact(job.id, 'commit-error.txt', String(e.message || e));
   }
 
+  const afterCapture = await capturePublicPreview(afterScreenshotPath, { timeoutMs: 180000 });
+  if (!afterCapture.ok) {
+    await writeArtifact(job.id, 'after-screenshot-error.txt', afterCapture.error);
+  }
+
   await writeArtifact(job.id, 'code.diff.patch', diff || '# no diff produced');
   await writeArtifact(job.id, 'commit-message.txt', commitMsg);
   await writeArtifact(job.id, 'commit-sha.txt', commitSha || 'no-commit-sha');
   await writeArtifact(job.id, 'changed-files.json', changedFiles);
   await writeArtifact(job.id, 'test-plan.txt', testPlan);
   await writeArtifact(job.id, 'summary-report.json', summary);
+  await writeArtifact(job.id, 'before-preview.svg', makePreviewSvg({ label: 'Before', file: beforePreviewPayload.file, content: beforePreviewPayload.content }));
+  await writeArtifact(job.id, 'after-preview.svg', makePreviewSvg({ label: 'After', file: afterPreviewPayload.file, content: afterPreviewPayload.content }));
   await writeArtifact(job.id, 'preview.json', {
-    previewUrl: '/dev1',
-    screenshot: null,
+    previewUrl: previewPath,
+    screenshot: 'after-page.png',
+    beforeScreenshot: 'before-page.png',
+    afterScreenshot: 'after-page.png',
     beforeAfterDiff: 'code.diff.patch',
+    beforePreview: 'before-preview.svg',
+    afterPreview: 'after-preview.svg',
     generatedAt: nowIso(),
   });
 
   job.summary = `${proposal.proposed_change} (local execution applied)`;
-  job.state = 'qa_review';
-  job.ownerAgent = 'qa';
-  job.timestamps.updatedAt = nowIso();
+  transitionJob(job, 'qa_review', { ownerAgent: 'qa' });
   await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'qa_review', message: `Executer completed scoped changes; handed off to QA with ${changedFiles.length} file(s)` });
 
   await writeJson(files.jobs, jobs);

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, appendEvent, setActiveJobLock, normalizeJobs } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeArtifact, appendEvent, normalizeJobs, transitionJob, finalizeJob, approvedJobSummary } from './lib.mjs';
 
 const action = process.argv[2];
 const jobId = process.argv[3];
@@ -21,20 +21,17 @@ job.timestamps.updatedAt = nowIso();
 
 if (action === 'approve') {
   // Approve now only marks completed (no auto deploy)
-  job.state = 'approved';
+  transitionJob(job, 'approved', { ownerAgent: 'qa' });
+  await writeArtifact(job.id, 'completion-summary.txt', approvedJobSummary(job));
   await writeArtifact(job.id, 'approval-note.txt', 'Approved and moved to completed. Deployment is manual via Deploy button.');
   await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'approved', message: 'Approved: moved to completed (no auto deploy)' });
   console.log(`[review] approved ${jobId}; no deploy`);
 } else {
-  job.state = 'reverted';
+  transitionJob(job, 'reverted', { ownerAgent: 'qa' });
   job.finalReason = 'rejected_by_human';
   await writeArtifact(job.id, 'revert-note.txt', 'QA rejected the job and moved it to completed without mutating unrelated workspace changes.');
   await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'reverted', message: 'Rejected during QA decision; job moved to completed without destructive workspace reset' });
   console.log(`[review] rejected ${jobId}`);
 }
 
-history.push({ ...job });
-const remaining = jobs.filter((j) => j.id !== jobId);
-await writeJson(files.jobs, remaining);
-await writeJson(files.history, history);
-await setActiveJobLock(null);
+await finalizeJob(jobs, history, job);

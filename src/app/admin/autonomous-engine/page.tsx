@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import Link from 'next/link';
-import DeployButton from './DeployButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -103,6 +102,16 @@ function countdownLabel(from?: string, limitMin = 5) {
   return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 
+function svgToDataUri(svg?: string) {
+  if (!svg || !svg.trim().startsWith('<svg')) return null;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function readArtifactText(artifactMap: Record<string, string>, name: string) {
+  const value = artifactMap[name];
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 function isCompleted(job: any) {
   return ['approved', 'reverted', 'abandoned_with_reason'].includes(canonicalState(job?.state));
 }
@@ -159,7 +168,12 @@ export default async function AutonomousEnginePage({
       new Date(a.timestamps?.updatedAt || a.timestamps?.createdAt || 0).getTime(),
   );
 
-  const currentList = selectedSection === 'completed' ? completedItems : proposalItems;
+  const currentList = [...proposalItems, ...completedItems].sort((a, b) => {
+    const aCompleted = isCompleted(a);
+    const bCompleted = isCompleted(b);
+    if (aCompleted !== bCompleted) return Number(aCompleted) - Number(bCompleted);
+    return new Date(b.timestamps?.updatedAt || b.timestamps?.createdAt || 0).getTime() - new Date(a.timestamps?.updatedAt || a.timestamps?.createdAt || 0).getTime();
+  });
   const selected = currentList.find((job) => job.id === selectedJobId) || currentList[0] || null;
 
   const parsedEvents = eventsRaw
@@ -189,9 +203,16 @@ export default async function AutonomousEnginePage({
     const artifactDir = path.join(ARTIFACTS, selected.id);
     try {
       artifactNames = (await fs.readdir(artifactDir)).sort();
-      for (const fileName of artifactNames.slice(0, 30)) {
+      for (const fileName of artifactNames.slice(0, 40)) {
         try {
-          artifactMap[fileName] = (await fs.readFile(path.join(artifactDir, fileName), 'utf8')).slice(0, 1800);
+          const fullPath = path.join(artifactDir, fileName);
+          if (/\.(png|jpg|jpeg|webp)$/i.test(fileName)) {
+            const buf = await fs.readFile(fullPath);
+            const mime = fileName.endsWith('.png') ? 'image/png' : fileName.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+            artifactMap[fileName] = `data:${mime};base64,${buf.toString('base64')}`;
+          } else {
+            artifactMap[fileName] = (await fs.readFile(fullPath, 'utf8')).slice(0, 1800);
+          }
         } catch {
           artifactMap[fileName] = '(binary or unreadable)';
         }
@@ -199,9 +220,13 @@ export default async function AutonomousEnginePage({
     } catch {}
   }
 
-  const selectedUpdatedAt = selected?.timestamps?.updatedAt || selected?.timestamps?.createdAt;
+  const selectedUpdatedAt = selected?.stageStartedAt || selected?.timestamps?.updatedAt || selected?.timestamps?.createdAt;
   const selectedAgeMin = ageMinutes(selectedUpdatedAt);
   const stale = !!selected && !isCompleted(selected) && selectedAgeMin >= 10;
+  const beforePreview = artifactMap['before-page.png'] || null;
+  const afterPreview = artifactMap['after-page.png'] || null;
+  const completionSummary = readArtifactText(artifactMap, 'completion-summary.txt');
+  const approvalNote = readArtifactText(artifactMap, 'approval-note.txt');
   const groupedEvents = new Map<string, any[]>();
   for (const event of selectedTimeline) {
     const phase = eventPhase(event.stage);
@@ -212,42 +237,31 @@ export default async function AutonomousEnginePage({
 
   return (
     <main style={{ padding: '12px 12px 12px 52px', display: 'grid', gap: 12, background: '#f3f7fb', color: '#0f172a' }}>
-      <header style={{ border: '1px solid #d7e3ef', borderRadius: 16, background: '#fff', padding: 16, boxShadow: '0 8px 24px rgba(15,23,42,0.06)' }}>
-        <div style={{ display: 'grid', gap: 12, justifyItems: 'start' }}>
-          <div style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#475569' }}>Agent Team</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-start' }}>
-            <Link href="/admin/autonomous-engine?section=proposal" style={{ textDecoration: 'none', padding: '10px 14px', borderRadius: 12, border: selectedSection === 'proposal' ? '1px solid #60a5fa' : '1px solid #d7e3ef', background: '#fff', fontWeight: 800 }}>
-              Proposal ({proposalItems.length})
-            </Link>
-            <Link href="/admin/autonomous-engine?section=completed" style={{ textDecoration: 'none', padding: '10px 14px', borderRadius: 12, border: selectedSection === 'completed' ? '1px solid #60a5fa' : '1px solid #d7e3ef', background: '#fff', fontWeight: 800 }}>
-              Completed ({completedItems.length})
-            </Link>
-            <DeployButton />
-          </div>
-        </div>
-      </header>
 
       <section className="ae-grid" style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 12 }}>
         <aside style={{ border: '1px solid #d7e3ef', borderRadius: 16, background: '#fff', padding: 8, boxShadow: '0 8px 24px rgba(15,23,42,0.05)' }}>
           <div style={{ display: 'grid', gap: 8 }}>
             {currentList.length === 0 ? (
               <div style={{ padding: 16, borderRadius: 12, background: '#f8fafc', color: '#64748b' }}>
-                {selectedSection === 'proposal' ? 'No live proposals.' : 'No completed items.'}
+                No items.
               </div>
             ) : currentList.map((job) => {
-              const jobAgeMin = ageMinutes(job.timestamps?.updatedAt || job.timestamps?.createdAt);
-              const jobStale = !isCompleted(job) && jobAgeMin >= 10;
-              const tone = statusTone(job.state, jobStale);
+              const state = canonicalState(job.state);
+              const tone = isCompleted(job)
+                ? { border: '#22c55e', bg: '#f0fdf4', fg: '#166534' }
+                : (state === 'proposal' || state === 'scout_update')
+                  ? { border: '#ef4444', bg: '#fef2f2', fg: '#991b1b' }
+                  : { border: '#f59e0b', bg: '#fffbeb', fg: '#92400e' };
               return (
                 <Link
                   key={job.id}
-                  href={`/admin/autonomous-engine?section=${selectedSection}&job=${encodeURIComponent(job.id)}`}
+                  href={`/admin/autonomous-engine?job=${encodeURIComponent(job.id)}`}
                   style={{
                     display: 'block',
                     textDecoration: 'none',
                     borderRadius: 10,
-                    border: selected?.id === job.id ? `1px solid ${tone.border}` : `1px solid ${tone.border}33`,
-                    background: selected?.id === job.id ? tone.bg : '#fff',
+                    border: `1px solid ${tone.border}`,
+                    background: tone.bg,
                     padding: '7px 8px',
                     color: '#0f172a',
                   }}
@@ -259,16 +273,16 @@ export default async function AutonomousEnginePage({
           </div>
         </aside>
 
-        <section style={{ display: 'grid', gap: 12 }}>
+        <section style={{ display: 'grid', gap: 8, alignContent: 'start' }}>
           {!selected ? (
             <div style={{ border: '1px solid #d7e3ef', borderRadius: 16, background: '#fff', padding: 20 }}>No item selected.</div>
           ) : (
             <>
-              <section style={{ border: '1px solid #d7e3ef', borderRadius: 16, background: '#fff', padding: 16, display: 'grid', gap: 8, boxShadow: '0 8px 24px rgba(15,23,42,0.05)' }}>
-                <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900, lineHeight: 1.2 }}>{selected.title}</h2>
+              <section style={{ border: '1px solid #d7e3ef', borderRadius: 16, background: '#fff', padding: '10px 14px', display: 'grid', gap: 0, boxShadow: '0 8px 24px rgba(15,23,42,0.05)' }}>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, lineHeight: 1.2 }}>{selected.id} - {selected.title}</h2>
               </section>
 
-              <section style={{ display: 'grid', gap: 12 }}>
+              <section style={{ display: 'grid', gap: 8, alignContent: 'start' }}>
                 <section style={{ border: '1px solid #d7e3ef', borderRadius: 16, background: '#fff', padding: 16, display: 'grid', gap: 8, boxShadow: '0 8px 24px rgba(15,23,42,0.05)' }}>
                   {PROCESS_STEPS.map((step, index) => {
                     const events = groupedEvents.get(step.key) || [];
@@ -300,7 +314,7 @@ export default async function AutonomousEnginePage({
                               {step.label}
                             </div>
                             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                              {ongoing ? <div style={{ fontSize: 11, fontWeight: 800, color: colors.fg }}>⏳ {countdownLabel(events[0]?.ts || selected.timestamps?.updatedAt || selected.timestamps?.createdAt, 5)}</div> : null}
+                              {ongoing ? <div style={{ fontSize: 11, fontWeight: 800, color: colors.fg }}>⏳ {countdownLabel(selected.stageStartedAt || events[0]?.ts || selected.timestamps?.updatedAt || selected.timestamps?.createdAt, 5)}</div> : null}
                               <div style={{ fontSize: 11, color: colors.fg }}>{stepDate}</div>
                             </div>
                           </div>
@@ -337,6 +351,22 @@ export default async function AutonomousEnginePage({
                     );
                   })}
                 </section>
+
+                {(beforePreview || afterPreview) ? (
+                  <section style={{ border: '1px solid #d7e3ef', borderRadius: 16, background: '#fff', padding: 16, display: 'grid', gap: 12, boxShadow: '0 8px 24px rgba(15,23,42,0.05)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#475569' }}>Before / After</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div style={{ display: 'grid', gap: 8 }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: '#0f172a' }}>Before</div>
+                        {beforePreview ? <img src={beforePreview} alt="Before preview" style={{ width: '100%', borderRadius: 12, border: '1px solid #d7e3ef', background: '#fff' }} /> : <div style={{ color: '#64748b', fontSize: 12 }}>No before preview</div>}
+                      </div>
+                      <div style={{ display: 'grid', gap: 8 }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: '#0f172a' }}>After</div>
+                        {afterPreview ? <img src={afterPreview} alt="After preview" style={{ width: '100%', borderRadius: 12, border: '1px solid #d7e3ef', background: '#fff' }} /> : <div style={{ color: '#64748b', fontSize: 12 }}>No after preview</div>}
+                      </div>
+                    </div>
+                  </section>
+                ) : null}
 
               </section>
             </>

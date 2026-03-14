@@ -44,7 +44,7 @@
     "auto:sla": "node scripts/autonomous-engine/sla-guard.mjs",
     "auto:complete-stalled": "node scripts/autonomous-engine/complete-stalled-job.mjs",
     "auto:health": "node scripts/autonomous-engine/health-report.mjs",
-    "auto:autopilot": "node scripts/autonomous-engine/autopilot.mjs 6",
+    "auto:autopilot": "node scripts/autonomous-engine/autopilot.mjs 10",
     "auto:reset": "node scripts/autonomous-engine/reset-state.mjs",
     "auto:tick": "node scripts/autonomous-engine/tick.mjs",
     "auto:loop": "node scripts/autonomous-engine/loop.mjs 60",
@@ -81,6 +81,7 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
@@ -98,6 +99,7 @@
     "eslint-config-next": "16.1.0",
     "jsdom": "^27.4.0",
     "pg": "^8.18.0",
+    "playwright": "^1.58.2",
     "prisma": "5.22.0",
     "typescript": "^5",
     "vitest": "^4.0.16"

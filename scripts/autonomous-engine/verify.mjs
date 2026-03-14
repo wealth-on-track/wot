@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent, setActiveJobLock, withEngineRunLock, normalizeJobs } from './lib.mjs';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, writeArtifact, canTransition, appendEvent, setActiveJobLock, withEngineRunLock, normalizeJobs, capturePublicPreview, transitionJob, finalizeJob, approvedJobSummary } from './lib.mjs';
 import { execSync } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -55,11 +55,16 @@ async function main() {
   await writeArtifact(job.id, 'verification-results.json', results);
 
   if (allPass) {
-    job.state = 'approved';
-    await setActiveJobLock(null);
+    transitionJob(job, 'approved', { ownerAgent: 'qa' });
     try {
       await fs.unlink(path.join(process.cwd(), 'Agent Team', 'autonomous-engine', 'artifacts', job.id, 'failure-analysis.txt'));
     } catch {}
+    const outputPath = path.join(process.cwd(), 'Agent Team', 'autonomous-engine', 'artifacts', job.id, 'after-page.png');
+    const captureResult = await capturePublicPreview(outputPath);
+    if (!captureResult.ok) {
+      await writeArtifact(job.id, 'after-screenshot-error.txt', captureResult.error);
+    }
+    await writeArtifact(job.id, 'completion-summary.txt', approvedJobSummary(job, proposal));
     await writeArtifact(job.id, 'approval-note.txt', 'Auto-completed after passing all required checks.');
     await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'approved', message: 'Auto-completed after passing required checks' });
   } else {
@@ -75,15 +80,13 @@ async function main() {
       ],
     };
 
-    job.state = 'proposal';
-    job.ownerAgent = 'scout';
+    transitionJob(job, 'proposal', { ownerAgent: 'scout' });
     job.quality = {
       status: 'needs_revision',
       checkedAt: nowIso(),
       sessionCount: Number(job.quality?.sessionCount || 0),
       feedback,
     };
-    await setActiveJobLock(null);
     await writeArtifact(job.id, 'failure-analysis.txt', `Verification failed checks: ${failedChecks.join(', ')}`);
     await appendEvent({ jobId: job.id, proposalId: job.proposalId, stage: 'proposal', message: `QA failed (${failedChecks.join(', ')}); returned to Scout for revision` });
   }
@@ -92,10 +95,9 @@ async function main() {
 
   if (job.state === 'approved') {
     const history = await readJson(files.history);
-    history.push({ ...job });
-    await writeJson(files.history, history);
-    await writeJson(files.jobs, jobs.filter((j) => j.id !== job.id));
+    await finalizeJob(jobs, history, job);
   } else {
+    await setActiveJobLock(null);
     await writeJson(files.jobs, jobs);
   }
 

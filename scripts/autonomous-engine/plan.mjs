@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { ensureEngineFiles, files, nowIso, readJson, writeJson, nextDailySequenceId, validateProposal, writeArtifact, WIP_LIMITS, appendEvent, FINAL_STATES, ACTIVE_STATES, normalizeJobs, sameProposalIntent, compareProposalPriority } from './lib.mjs';
+import path from 'path';
+import { ensureEngineFiles, files, nowIso, readJson, writeJson, nextDailySequenceId, validateProposal, writeArtifact, WIP_LIMITS, appendEvent, FINAL_STATES, ACTIVE_STATES, normalizeJobs, sameProposalIntent, compareProposalPriority, capturePublicPreview } from './lib.mjs';
 
 await ensureEngineFiles();
 const proposals = await readJson(files.proposals);
@@ -122,6 +123,7 @@ for (const p of pendingCandidates.slice(0, 1)) {
     ownerAgent: 'scout',
     quality: { status: 'pending', sessionCount: 0, checkedAt: null },
     timestamps: { createdAt: now, updatedAt: now },
+    stageStartedAt: now,
   };
 
   jobs.push(job);
@@ -129,6 +131,11 @@ for (const p of pendingCandidates.slice(0, 1)) {
   p._plannedAt = now;
   await writeArtifact(job.id, 'proposal.json', p);
   await writeArtifact(job.id, 'dispatch-decision.txt', 'Scout created one deterministic job from the strongest validated proposal.');
+  const outputPath = path.join(process.cwd(), 'Agent Team', 'autonomous-engine', 'artifacts', job.id, 'before-page.png');
+  const captureResult = await capturePublicPreview(outputPath);
+  if (!captureResult.ok) {
+    await writeArtifact(job.id, 'before-screenshot-error.txt', captureResult.error);
+  }
   await appendEvent({ jobId: job.id, proposalId: p.id, stage: 'proposal', message: `Scout created ${job.id} from ${p.id}` });
   created += 1;
 }

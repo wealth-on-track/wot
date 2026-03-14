@@ -2,7 +2,7 @@
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 
-const maxCycles = Number(process.argv[2] || 6);
+const maxCycles = Number(process.argv[2] || 10);
 
 const states = () => {
   const jobs = JSON.parse(readFileSync('Agent Team/autonomous-engine/jobs.json', 'utf8'));
