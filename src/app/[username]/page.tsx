@@ -29,28 +29,34 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
     const decodedUsername = decodeURIComponent(username);
 
-    // @ts-ignore - Prisma Client type mismatch workaround
-    let user = await prisma.user.findFirst({
-        where: {
-            OR: [
-                { username: decodedUsername },
-                { email: decodedUsername }
-            ]
-        },
-        include: {
-            Portfolio: { // Capitalized Relation workaround
-                include: {
-                    Asset: { // Capitalized Relation workaround
-                        orderBy: [
-                            { sortOrder: 'asc' },
-                            { createdAt: 'desc' }  // Newest assets first
-                        ]
-                    },
-                    Goal: { orderBy: { createdAt: 'asc' } } // Capitalized
+    let user;
+    try {
+        // @ts-ignore - Prisma Client type mismatch workaround
+        user = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { username: decodedUsername },
+                    { email: decodedUsername }
+                ]
+            },
+            include: {
+                Portfolio: { // Capitalized Relation workaround
+                    include: {
+                        Asset: { // Capitalized Relation workaround
+                            orderBy: [
+                                { sortOrder: 'asc' },
+                                { createdAt: 'desc' }  // Newest assets first
+                            ]
+                        },
+                        Goal: { orderBy: { createdAt: 'asc' } } // Capitalized
+                    }
                 }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('[ProfilePage] User lookup failed', error);
+        redirect(decodedUsername.toLowerCase() === 'demo' ? '/demo' : '/login');
+    }
 
     // Workaround: Map capitalized Portfolio back to lowercase property for compatibility
     if (user && (user as any).Portfolio) {
@@ -66,18 +72,24 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
     if (!user || !(user as any).portfolio) {
         console.warn(`[Dashboard] User not found by username "${decodedUsername}". Trying email fallback...`);
-        // @ts-ignore - Prisma Client type mismatch workaround
-        const fallbackUser = await prisma.user.findFirst({
-            where: { email: decodedUsername },
-            include: {
-                Portfolio: { // Capitalized Relation workaround
-                    include: {
-                        Asset: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }] },
-                        Goal: { orderBy: { createdAt: 'asc' } }
+        let fallbackUser;
+        try {
+            // @ts-ignore - Prisma Client type mismatch workaround
+            fallbackUser = await prisma.user.findFirst({
+                where: { email: decodedUsername },
+                include: {
+                    Portfolio: { // Capitalized Relation workaround
+                        include: {
+                            Asset: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }] },
+                            Goal: { orderBy: { createdAt: 'asc' } }
+                        }
                     }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error('[ProfilePage] Fallback user lookup failed', error);
+            redirect(decodedUsername.toLowerCase() === 'demo' ? '/demo' : '/login');
+        }
 
         if (fallbackUser && (fallbackUser as any).Portfolio) {
             (fallbackUser as any).portfolio = (fallbackUser as any).Portfolio;

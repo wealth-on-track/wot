@@ -13,27 +13,33 @@ export default async function MobilePortfolioPage({ params }: { params: Promise<
 
     const decodedUsername = decodeURIComponent(username);
 
-    const user = await prisma.user.findFirst({
-        where: {
-            OR: [
-                { username: decodedUsername },
-                { email: decodedUsername }
-            ]
-        },
-        include: {
-            Portfolio: {
-                include: {
-                    Asset: {
-                        orderBy: [
-                            { sortOrder: 'asc' },
-                            { createdAt: 'desc' }  // Newest assets first
-                        ]
-                    },
-                    Goal: { orderBy: { createdAt: 'asc' } }
+    let user;
+    try {
+        user = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { username: decodedUsername },
+                    { email: decodedUsername }
+                ]
+            },
+            include: {
+                Portfolio: {
+                    include: {
+                        Asset: {
+                            orderBy: [
+                                { sortOrder: 'asc' },
+                                { createdAt: 'desc' }  // Newest assets first
+                            ]
+                        },
+                        Goal: { orderBy: { createdAt: 'asc' } }
+                    }
                 }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('[MobilePortfolioPage] User lookup failed', error);
+        redirect(decodedUsername.toLowerCase() === 'demo' ? '/demo' : '/login');
+    }
 
     if (!user || !user.Portfolio) {
         notFound();
