@@ -13,6 +13,26 @@ export const dynamic = 'force-dynamic';
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
     const { username } = await params;
+    const decodedUsername = decodeURIComponent(username);
+    const normalizedUsername = decodedUsername.toLowerCase();
+
+    const lightweightUser = await prisma.user.findFirst({
+        where: {
+            OR: [
+                { username: decodedUsername },
+                { email: decodedUsername }
+            ]
+        },
+        select: { id: true, email: true, username: true }
+    });
+
+    if (!lightweightUser) {
+        if (normalizedUsername === 'demo') {
+            redirect('/demo');
+        }
+        redirect('/login?error=UserNotFound');
+    }
+
     const session = await auth();
 
     // Check if mobile device and redirect to mobile view
@@ -25,9 +45,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     if (isMobileDevice(userAgent) && !forceDesktop) {
         redirect(`/${username}/mobile`);
     }
-
-
-    const decodedUsername = decodeURIComponent(username);
 
     let user;
     try {

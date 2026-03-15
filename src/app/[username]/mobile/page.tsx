@@ -9,9 +9,27 @@ export const dynamic = 'force-dynamic';
 
 export default async function MobilePortfolioPage({ params }: { params: Promise<{ username: string }> }) {
     const { username } = await params;
-    const session = await auth();
-
     const decodedUsername = decodeURIComponent(username);
+    const normalizedUsername = decodedUsername.toLowerCase();
+
+    const lightweightUser = await prisma.user.findFirst({
+        where: {
+            OR: [
+                { username: decodedUsername },
+                { email: decodedUsername }
+            ]
+        },
+        select: { id: true }
+    });
+
+    if (!lightweightUser) {
+        if (normalizedUsername === 'demo') {
+            redirect('/demo');
+        }
+        redirect('/login?error=UserNotFound');
+    }
+
+    const session = await auth();
 
     let user;
     try {
